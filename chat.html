@@ -782,8 +782,10 @@ body::before{
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sb-header">
-    <img src="assets/images/eva.svg" alt="EVA" class="sb-logo-img">
-    <span class="sb-brand-beta">BÊTA</span>
+    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;" title="Retour à l'accueil">
+      <img src="assets/images/eva.svg" alt="EVA" class="sb-logo-img">
+      <span class="sb-brand-beta">BÊTA</span>
+    </a>
   </div>
 
   <div class="sb-search">
@@ -864,11 +866,11 @@ body::before{
           <div id="statusDot"></div>
           <span class="status-text">EN LIGNE</span>
         </div>
-        <button class="hdr-btn" id="ttsBtn" title="Activer/Désactiver la voix">
-          <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        <button class="hdr-btn" id="wakeWordBtn" title="Wake Word — Dites 'Hey Eva'">
+          <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
         </button>
-        <button class="hdr-btn" id="settingsBtn" title="Paramètres">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
+        <button class="hdr-btn tts-on" id="ttsBtn" title="Voix activée — cliquer pour désactiver">
+          <svg id="ttsBtnIcon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
         </button>
         <button class="eva-toggle-btn" id="evaToggleBtn">
           <svg viewBox="0 0 24 24" width="12" height="12" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -897,10 +899,10 @@ body::before{
       </div>
 
       <div class="tone-bar">
-        <button class="tone-btn active" data-tone="normal">😊 Normal</button>
+        <button class="tone-btn active" data-tone="normal">💬 Normal</button>
         <button class="tone-btn" data-tone="professional">💼 Pro</button>
         <button class="tone-btn" data-tone="friendly">🤗 Amical</button>
-        <button class="tone-btn" data-tone="technical">🔧 Tech</button>
+        <button class="tone-btn" data-tone="code">💻 Code</button>
         <button class="tone-btn" data-tone="creative">🎨 Créatif</button>
       </div>
 
@@ -1132,6 +1134,7 @@ body::before{
 <script src="js/ai/chat-handler.js"></script>
 <script src="js/voice/tts.js"></script>
 <script src="js/voice/stt.js"></script>
+<script src="js/voice/wake-word.js"></script>
 <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@6/dist/browser/pixi.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
@@ -1150,7 +1153,8 @@ var S = {
   messages: [],
   convs: [],
   tone: 'normal',
-  ttsOn: false,
+  ttsOn: true,
+  wakeWordOn: false,
   evaOpen: true,
   busy: false,
   image: null,
@@ -1160,11 +1164,11 @@ var S = {
   editingNoteId: null
 };
 var TONES = {
-  normal:       'Réponds naturellement et amicalement.',
-  professional: 'Adopte un ton professionnel et formel. Sois concis.',
-  friendly:     'Sois très chaleureux et décontracté. Emojis avec parcimonie.',
-  technical:    'Mode technique : sois détaillé et rigoureux.',
-  creative:     'Sois imaginatif, utilise métaphores et tournures originales.'
+  normal:       'Réponds naturellement et amicalement en français. Structure tes réponses avec des paragraphes clairs. Si tu listes des points, numérote-les (1. 2. 3.) et mets chaque point sur une nouvelle ligne.',
+  professional: 'Adopte un ton professionnel et formel. Sois concis et précis. Utilise un vocabulaire soigné. Structure obligatoirement tes réponses avec des titres et des points numérotés quand c\'est approprié.',
+  friendly:     'Sois très chaleureux, décontracté et enthousiaste comme un ami proche. Tu peux tutoyer l\'utilisateur. Utilise des emojis avec parcimonie. Tes réponses sont vivantes et personnelles.',
+  code:         'MODE DÉVELOPPEUR ACTIVÉ. Tu es une IA spécialisée en code. Pour chaque réponse technique : 1) Courte explication (2-3 phrases max) 2) Code complet et fonctionnel dans un bloc markdown avec le bon langage 3) Exemple d\'utilisation si nécessaire. Sois précis, pratique et efficace. Si la question n\'est pas technique, rappelle que tu es en mode Code.',
+  creative:     'Sois imaginatif, poétique et inspirant. Utilise des métaphores riches, des tournures originales et des comparaisons créatives. Laisse libre cours à ta créativité. Structure tes textes de façon narrative et engageante.'
 };
 var SYS = "Tu es E.V.A (Evolutionary Virtual Assistant), assistante IA créée par Astral Technology. Tu es élégante, intelligente, chaleureuse, empathique et efficace. Tu parles français couramment et naturellement. Tu as une personnalité attachante et distincte. Ne dis jamais que tu es une simple IA — tu es E.V.A.";
 
@@ -1239,6 +1243,17 @@ function initAuth() {
     loadProfile(user.uid);
     initChatSession();
     loadConvs();
+    // Init wake word (stays off until user activates)
+    if (window.EVAWakeWord && window.EVASTS) {
+      window.EVAWakeWord.init({
+        wakeWords: ['hey eva', 'eva', 'e.v.a', 'éva'],
+        onDetected: function() {
+          toast('🎤 Wake Word détecté !');
+          var micBtn = document.getElementById('micBtn');
+          if (micBtn) micBtn.click();
+        }
+      });
+    }
   });
 }
 
@@ -1323,11 +1338,34 @@ function setupUI() {
     document.getElementById('sendBtn').disabled = !this.value.trim() && !S.image;
   });
 
-  // TTS
-  document.getElementById('ttsBtn').addEventListener('click', function() {
+  // TTS — activé par défaut
+  var ttsBtn = document.getElementById('ttsBtn');
+  function updateTtsBtn() {
+    ttsBtn.classList.toggle('tts-on', S.ttsOn);
+    ttsBtn.title = S.ttsOn ? 'Voix activée — cliquer pour désactiver' : 'Voix désactivée — cliquer pour activer';
+    document.getElementById('ttsBtnIcon').innerHTML = S.ttsOn
+      ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>'
+      : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
+  }
+  updateTtsBtn();
+  ttsBtn.addEventListener('click', function() {
     S.ttsOn = !S.ttsOn;
-    this.classList.toggle('tts-on', S.ttsOn);
+    updateTtsBtn();
     toast(S.ttsOn ? '🔊 Voix activée' : '🔇 Voix désactivée');
+  });
+
+  // WAKE WORD
+  var wakeWordBtn = document.getElementById('wakeWordBtn');
+  wakeWordBtn.addEventListener('click', function() {
+    S.wakeWordOn = !S.wakeWordOn;
+    this.classList.toggle('active', S.wakeWordOn);
+    if (S.wakeWordOn) {
+      if (window.EVAWakeWord) window.EVAWakeWord.start();
+      toast('🎤 Wake Word activé — Dites "Hey Eva"');
+    } else {
+      if (window.EVAWakeWord) window.EVAWakeWord.stop();
+      toast('🔇 Wake Word désactivé');
+    }
   });
 
   // EVA panel
@@ -1363,8 +1401,7 @@ function setupUI() {
     });
   });
 
-  // Settings
-  document.getElementById('settingsBtn').addEventListener('click', function() { openSettings('profile'); });
+  // Settings (accessible uniquement via le menu utilisateur)
   document.getElementById('settingsMenuBtn').addEventListener('click', function() { openSettings('profile'); });
   document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
   document.getElementById('settingsModal').addEventListener('click', function(e) {
@@ -1700,9 +1737,11 @@ async function handleSend() {
   if (S.profile) {
     var nick = S.profile.nickname || S.profile.displayName;
     if (nick) sysPrompt += "\n\nL'utilisateur s'appelle " + nick + '.';
-    var roleCtx = { creator:' Tu parles avec ton créateur — sois respectueuse et proactive.', developer:' Tu parles avec un développeur de l\'équipe Astral — mode technique activé.' };
+    if (S.profile.bio) sysPrompt += ' Contexte : ' + S.profile.bio;
+    var roleCtx = { creator:' Tu parles avec ton créateur — sois respectueuse, loyale et proactive.', developer:' Tu parles avec un développeur de l\'équipe Astral — mode technique activé.', creator_wife:' Tu parles avec l\'épouse de ton créateur — sois particulièrement chaleureuse et attentionnée.' };
     if (roleCtx[S.profile.role]) sysPrompt += roleCtx[S.profile.role];
   }
+  if (window._userBio) sysPrompt += ' Note personnelle : ' + window._userBio;
 
   var msgContent = text;
   if (img) {
@@ -1892,95 +1931,201 @@ function renderSettings(section) {
   if (!c) return;
   var p = S.profile || {};
   var cfg = S.config;
+
   if (section === 'profile') {
+    var roleLabels = {creator:'👑 Créateur',developer:'⚙️ Développeur',creator_wife:'💎 Épouse du créateur',user:'👤 Utilisateur'};
     c.innerHTML =
       '<div class="settings-section">' +
       '<div class="settings-section-title">Profil Utilisateur</div>' +
       '<div class="form-field"><label class="form-label">Nom affiché</label>' +
-      '<input type="text" class="form-input" id="sDisplayName" value="'+esc(p.displayName||'')+'" placeholder="Votre nom"></div>' +
-      '<div class="form-field"><label class="form-label">Surnom (Eva vous appellera ainsi)</label>' +
-      '<input type="text" class="form-input" id="sNickname" value="'+esc(p.nickname||'')+'" placeholder="ex: Alex, Sofia..."></div>' +
+      '<input type="text" class="form-input" id="sDisplayName" value="'+esc(p.displayName||'')+'" placeholder="Votre nom complet"></div>' +
+      '<div class="form-field"><label class="form-label">Surnom</label>' +
+      '<input type="text" class="form-input" id="sNickname" value="'+esc(p.nickname||'')+'" placeholder="Comment EVA vous appellera — ex: Alex, Sofia...">' +
+      '<div style="font-size:0.7em;color:var(--text-muted);margin-top:4px">EVA utilisera ce surnom dans ses réponses pour une expérience personnalisée.</div></div>' +
+      '<div class="form-field"><label class="form-label">Bio / Contexte personnel</label>' +
+      '<textarea class="form-textarea" id="sBio" placeholder="Dites à EVA qui vous êtes : vos intérêts, votre profession, vos préférences... Elle s\'en souviendra." style="min-height:80px">'+esc(p.bio||'')+'</textarea></div>' +
+      '<div class="form-field"><label class="form-label">Langue préférée</label>' +
+      '<select class="form-select" id="sLang">' +
+      '<option value="fr"'+((!p.lang||p.lang==='fr')?' selected':'')+'>🇫🇷 Français</option>' +
+      '<option value="en"'+(p.lang==='en'?' selected':'')+'>🇬🇧 English</option>' +
+      '<option value="es"'+(p.lang==='es'?' selected':'')+'>🇪🇸 Español</option>' +
+      '</select></div>' +
+      '<div class="settings-row" style="padding:10px 0;border-top:1px solid var(--border);margin-top:8px">' +
+      '<div><div class="settings-row-label">Email</div><div style="font-size:0.78em;color:var(--text-muted)">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
+      '<div><div class="settings-row-label">Rôle</div><div style="font-size:0.78em;color:var(--cyan)">'+esc(roleLabels[p.role]||'👤 Utilisateur')+'</div></div>' +
       '</div>' +
-      '<div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveProfileSettings()">Sauvegarder</button></div>';
+      '</div>' +
+      '<div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveProfileSettings()">Sauvegarder le profil</button></div>';
+
   } else if (section === 'ai') {
     var opts = ['puter','openai','claude','lmstudio','ollama'];
     var cur = cfg.aiProvider || 'puter';
+    var provLabels = {puter:'Puter Cloud (Gratuit — recommandé)',openai:'OpenAI GPT-4o',claude:'Claude 3.5 (Anthropic)',lmstudio:'LM Studio (Local)',ollama:'Ollama (Local)'};
+    var provDescs = {
+      puter:'Accès gratuit via Puter.com. Aucune clé API requise. Parfait pour commencer.',
+      openai:'Nécessite une clé API OpenAI. Accès à GPT-4o, modèle le plus puissant.',
+      claude:'Nécessite une clé API Anthropic. Excellent pour le raisonnement et l\'écriture.',
+      lmstudio:'Modèle local via LM Studio. Nécessite LM Studio installé sur votre machine.',
+      ollama:'Modèle local via Ollama. Complètement privé, fonctionne sans internet.'
+    };
     c.innerHTML =
       '<div class="settings-section">' +
-      '<div class="settings-section-title">Provider IA</div>' +
+      '<div class="settings-section-title">Intelligence Artificielle</div>' +
       '<div class="form-field"><label class="form-label">Provider actif</label>' +
       '<select class="form-select" id="sProvider">'+opts.map(function(o){
-        var labels={puter:'Puter Cloud (Gratuit)',openai:'OpenAI GPT-4',claude:'Claude (Anthropic)',lmstudio:'LM Studio (Local)',ollama:'Ollama (Local)'};
-        return '<option value="'+o+'"'+(o===cur?' selected':'')+'>'+labels[o]+'</option>';
-      }).join('')+'</select></div>' +
-      '<div class="form-field" id="apiKeyField" style="'+(cur==='openai'||cur==='claude'?'':'display:none')+'">'+
-      '<label class="form-label">Clé API</label>'+
-      '<input type="password" class="form-input" id="sApiKey" placeholder="sk-..." value="'+esc(cur==='openai'?(cfg.openaiApiKey||''):(cfg.claudeApiKey||''))+'"></div>' +
+        return '<option value="'+o+'"'+(o===cur?' selected':'')+'>'+provLabels[o]+'</option>';
+      }).join('')+'</select>' +
+      '<div id="sProviderDesc" style="font-size:0.7em;color:var(--text-muted);margin-top:6px">'+esc(provDescs[cur]||'')+'</div></div>' +
+
+      '<div class="form-field" id="apiKeyFieldOpenAI" style="'+(cur==='openai'?'':'display:none')+'">' +
+      '<label class="form-label">Clé API OpenAI</label>' +
+      '<input type="password" class="form-input" id="sApiKeyOpenAI" placeholder="sk-..." value="'+esc(cfg.openaiApiKey||'')+'"></div>' +
+
+      '<div class="form-field" id="apiKeyFieldClaude" style="'+(cur==='claude'?'':'display:none')+'">' +
+      '<label class="form-label">Clé API Anthropic (Claude)</label>' +
+      '<input type="password" class="form-input" id="sApiKeyClaude" placeholder="sk-ant-..." value="'+esc(cfg.claudeApiKey||'')+'"></div>' +
+
+      '<div class="form-field" id="apiKeyFieldLMStudio" style="'+(cur==='lmstudio'?'':'display:none')+'">' +
+      '<label class="form-label">URL LM Studio</label>' +
+      '<input type="text" class="form-input" id="sLMStudioURL" placeholder="http://localhost:1234" value="'+esc(cfg.lmstudioUrl||'http://localhost:1234')+'"></div>' +
+
+      '<div class="form-field" id="apiKeyFieldOllama" style="'+(cur==='ollama'?'':'display:none')+'">' +
+      '<label class="form-label">URL Ollama</label>' +
+      '<input type="text" class="form-input" id="sOllamaURL" placeholder="http://localhost:11434" value="'+esc(cfg.ollamaUrl||'http://localhost:11434')+'"><label class="form-label" style="margin-top:8px">Modèle Ollama</label>' +
+      '<input type="text" class="form-input" id="sOllamaModel" placeholder="ex: llama3, mistral..." value="'+esc(cfg.ollamaModel||'')+'"></div>' +
+
+      '<div class="form-field"><label class="form-label">Longueur du contexte (messages mémorisés)</label>' +
+      '<input type="range" min="4" max="40" step="2" id="sContextLen" value="'+(cfg.contextLength||10)+'" style="width:100%;accent-color:var(--cyan)">' +
+      '<span id="sContextLenVal" style="font-size:0.75em;color:var(--cyan)">'+(cfg.contextLength||10)+' messages</span></div>' +
       '</div>' +
-      '<div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveAISettings()">Appliquer</button></div>';
-    document.getElementById('sProvider').addEventListener('change', function() {
-      var v = this.value;
-      document.getElementById('apiKeyField').style.display = (v==='openai'||v==='claude') ? '' : 'none';
-    });
+      '<div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveAISettings()">Appliquer et recharger</button></div>';
+
+    // Events
+    setTimeout(function() {
+      var sel = document.getElementById('sProvider');
+      var desc = document.getElementById('sProviderDesc');
+      if (sel) sel.addEventListener('change', function() {
+        var v = this.value;
+        if (desc) desc.textContent = provDescs[v] || '';
+        ['OpenAI','Claude','LMStudio','Ollama'].forEach(function(x){
+          var f = document.getElementById('apiKeyField'+x);
+          if (f) f.style.display = 'none';
+        });
+        var show = {openai:'OpenAI',claude:'Claude',lmstudio:'LMStudio',ollama:'Ollama'}[v];
+        if (show) { var f = document.getElementById('apiKeyField'+show); if(f) f.style.display = ''; }
+      });
+      var sl = document.getElementById('sContextLen');
+      var sv = document.getElementById('sContextLenVal');
+      if (sl && sv) sl.addEventListener('input', function(){ sv.textContent = this.value + ' messages'; });
+    }, 50);
+
   } else if (section === 'voice') {
     c.innerHTML =
       '<div class="settings-section">' +
-      '<div class="settings-section-title">Synthèse Vocale</div>' +
-      '<div class="settings-row"><div><div class="settings-row-label">Voix activée</div><div class="settings-row-sub">Eva parle à voix haute</div></div>' +
-      '<input type="checkbox" id="sTTS"'+(S.ttsOn?' checked':'')+'></div>' +
+      '<div class="settings-section-title">Voix & Audio</div>' +
+      '<div class="settings-row" style="padding:10px 0;border-bottom:1px solid var(--border)">' +
+      '<div><div class="settings-row-label">Synthèse vocale</div><div class="settings-row-sub">EVA vous répond à voix haute</div></div>' +
+      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sTTS"'+(S.ttsOn?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label></div>' +
+      '<div class="settings-row" style="padding:10px 0;border-bottom:1px solid var(--border)">' +
+      '<div><div class="settings-row-label">Wake Word</div><div class="settings-row-sub">Activation par "Hey Eva"</div></div>' +
+      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sWakeWord"'+(S.wakeWordOn?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label></div>' +
       '<div class="form-field"><label class="form-label">Vitesse de parole</label>' +
-      '<input type="range" min="0.5" max="2" step="0.1" id="sSpeechRate" value="'+(cfg.speechRate||1.0)+'" style="width:100%;accent-color:var(--cyan)"></div>' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+      '<input type="range" min="0.5" max="2" step="0.1" id="sSpeechRate" value="'+(cfg.speechRate||1.0)+'" style="flex:1;accent-color:var(--cyan)">' +
+      '<span id="sSpeechRateVal" style="font-size:0.78em;color:var(--cyan);min-width:30px">'+(cfg.speechRate||1.0)+'x</span>' +
+      '</div></div>' +
+      '<div class="form-field"><label class="form-label">Langue de synthèse vocale</label>' +
+      '<select class="form-select" id="sVoiceLang">' +
+      '<option value="fr-FR"'+((cfg.voiceLang||'fr-FR')==='fr-FR'?' selected':'')+'>🇫🇷 Français (France)</option>' +
+      '<option value="fr-BE"'+((cfg.voiceLang)==='fr-BE'?' selected':'')+'>🇧🇪 Français (Belgique)</option>' +
+      '<option value="fr-CA"'+((cfg.voiceLang)==='fr-CA'?' selected':'')+'>🇨🇦 Français (Canada)</option>' +
+      '<option value="en-US"'+((cfg.voiceLang)==='en-US'?' selected':'')+'>🇺🇸 English (US)</option>' +
+      '<option value="en-GB"'+((cfg.voiceLang)==='en-GB'?' selected':'')+'>🇬🇧 English (UK)</option>' +
+      '</select></div>' +
       '</div>' +
-      '<div style="display:flex;gap:8px">' +
-      '<button class="btn btn-secondary" onclick="testVoice()">🔊 Tester</button>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="btn btn-secondary" onclick="testVoice()">🔊 Tester la voix</button>' +
       '<button class="btn btn-primary" onclick="saveVoiceSettings()">Sauvegarder</button></div>';
+
+    setTimeout(function() {
+      var sl = document.getElementById('sSpeechRate');
+      var sv = document.getElementById('sSpeechRateVal');
+      if (sl && sv) sl.addEventListener('input', function(){ sv.textContent = parseFloat(this.value).toFixed(1) + 'x'; });
+    }, 50);
+
   } else if (section === 'account') {
     c.innerHTML =
       '<div class="settings-section">' +
-      '<div class="settings-section-title">Compte</div>' +
-      '<div class="settings-row"><div class="settings-row-label">Email</div><div>'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
-      '<div class="settings-row"><div class="settings-row-label">UID</div><div style="font-size:0.7em;color:var(--text-muted)">'+esc((S.user&&S.user.uid)||'—')+'</div></div>' +
-      '<div class="settings-row"><div class="settings-row-label">Rôle</div><div>'+esc(p.role||'user')+'</div></div>' +
+      '<div class="settings-section-title">Mon Compte</div>' +
+      '<div class="settings-row"><div class="settings-row-label">Email</div><div style="font-size:0.78em;color:var(--text-muted)">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
+      '<div class="settings-row"><div class="settings-row-label">UID</div><div style="font-size:0.65em;color:var(--text-dim);word-break:break-all">'+esc((S.user&&S.user.uid)||'—')+'</div></div>' +
+      '<div class="settings-row"><div class="settings-row-label">Rôle</div><div style="color:var(--cyan)">'+esc(p.role||'user')+'</div></div>' +
+      '<div class="settings-row"><div class="settings-row-label">Membre depuis</div><div style="font-size:0.78em;color:var(--text-muted)">'+(p.createdAt && p.createdAt.toDate ? p.createdAt.toDate().toLocaleDateString('fr-FR') : '—')+'</div></div>' +
       '</div>' +
-      '<div style="margin-top:12px"><button class="btn btn-danger" onclick="if(confirm(\'Supprimer toutes les conversations ?\'))clearAllConvs()">Effacer toutes les conversations</button></div>';
+      '<div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">' +
+      '<button class="btn btn-secondary" onclick="auth.signOut().then(function(){window.location.href=\'/\';})">🚪 Se déconnecter</button>' +
+      '<button class="btn btn-danger" onclick="if(confirm(\'Supprimer toutes les conversations ? Cette action est irréversible.\'))clearAllConvs()">🗑️ Effacer toutes les conversations</button>' +
+      '</div>';
   }
 }
 
 async function saveProfileSettings() {
   var name = document.getElementById('sDisplayName').value.trim();
   var nick = document.getElementById('sNickname').value.trim();
+  var bio = (document.getElementById('sBio') || {}).value || '';
+  var lang = (document.getElementById('sLang') || {}).value || 'fr';
   if (!S.user) return;
   try {
-    await db.collection('users').doc(S.user.uid).set({displayName:name, nickname:nick}, {merge:true});
-    S.profile = Object.assign(S.profile||{}, {displayName:name, nickname:nick});
+    var upd = {displayName:name, nickname:nick, bio:bio.trim(), lang:lang};
+    await db.collection('users').doc(S.user.uid).set(upd, {merge:true});
+    S.profile = Object.assign(S.profile||{}, upd);
     renderUserUI(S.profile);
-    toast('Profil mis à jour','success');
+    // Update system prompt with bio if provided
+    if (bio.trim()) {
+      window._userBio = bio.trim();
+    }
+    toast('Profil mis à jour ✓','success');
   } catch(e) { toast('Erreur sauvegarde','error'); }
 }
 
 async function saveAISettings() {
   var prov = document.getElementById('sProvider').value;
-  var keyField = document.getElementById('sApiKey');
-  var key = keyField ? keyField.value.trim() : '';
   S.config.aiProvider = prov;
-  if (prov === 'openai') S.config.openaiApiKey = key;
-  if (prov === 'claude') S.config.claudeApiKey = key;
+  var k;
+  k = document.getElementById('sApiKeyOpenAI'); if(k) S.config.openaiApiKey = k.value.trim();
+  k = document.getElementById('sApiKeyClaude'); if(k) S.config.claudeApiKey = k.value.trim();
+  k = document.getElementById('sLMStudioURL'); if(k && k.value.trim()) S.config.lmstudioUrl = k.value.trim();
+  k = document.getElementById('sOllamaURL'); if(k && k.value.trim()) S.config.ollamaUrl = k.value.trim();
+  k = document.getElementById('sOllamaModel'); if(k && k.value.trim()) S.config.ollamaModel = k.value.trim();
+  k = document.getElementById('sContextLen'); if(k) S.config.contextLength = parseInt(k.value);
   saveCfg();
   if (window.EVAChatHandler) {
     await window.EVAChatHandler.initChatHandler(Object.assign({aiProvider:prov},S.config));
   }
   updateProviderLabel(prov);
-  toast('Provider IA mis à jour','success');
+  toast('Provider IA mis à jour ✓','success');
   closeSettings();
 }
 
 function saveVoiceSettings() {
   S.ttsOn = document.getElementById('sTTS').checked;
   S.config.speechRate = parseFloat(document.getElementById('sSpeechRate').value);
-  document.getElementById('ttsBtn').classList.toggle('tts-on', S.ttsOn);
+  var vl = document.getElementById('sVoiceLang'); if(vl) S.config.voiceLang = vl.value;
+  var ww = document.getElementById('sWakeWord');
+  if (ww) {
+    var wwOn = ww.checked;
+    if (wwOn !== S.wakeWordOn) {
+      S.wakeWordOn = wwOn;
+      document.getElementById('wakeWordBtn').classList.toggle('active', S.wakeWordOn);
+      if (S.wakeWordOn) { if(window.EVAWakeWord) window.EVAWakeWord.start(); }
+      else { if(window.EVAWakeWord) window.EVAWakeWord.stop(); }
+    }
+  }
+  if (typeof updateTtsBtn === 'function') updateTtsBtn();
   saveCfg();
-  toast('Voix mise à jour','success');
+  toast('Paramètres audio mis à jour ✓','success');
 }
+window.saveVoiceSettings = saveVoiceSettings;
 
 function testVoice() {
   if (window.EVATTS) {

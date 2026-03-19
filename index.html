@@ -69,6 +69,38 @@ nav.scrolled{background:rgba(5,8,13,0.95);border-bottom-color:var(--border);}
 }
 .nav-user-btn:hover{border-color:var(--cyan);color:var(--cyan);}
 
+/* Profile dropdown (when logged in) */
+.nav-profile{position:relative;}
+.nav-profile-avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:0.85em;color:#000;
+  border:2px solid transparent;transition:border-color 0.2s;
+}
+.nav-profile-avatar:hover{border-color:var(--cyan);}
+.nav-profile-menu{
+  position:absolute;top:calc(100% + 10px);right:0;
+  background:rgba(6,11,18,0.98);border:1px solid var(--border);
+  border-radius:12px;min-width:220px;padding:6px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  opacity:0;pointer-events:none;transform:translateY(-6px);
+  transition:all 0.18s ease;backdrop-filter:blur(20px);
+  z-index:200;
+}
+.nav-profile-menu.open{opacity:1;pointer-events:all;transform:translateY(0);}
+.nav-profile-info{padding:8px 10px 6px;font-family:'Space Mono',monospace;}
+.nav-profile-item{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 12px;border-radius:8px;
+  text-decoration:none;color:var(--text);
+  font-size:0.8em;font-family:'Space Mono',monospace;
+  transition:background 0.15s;cursor:pointer;
+  background:none;border:none;width:100%;text-align:left;
+}
+.nav-profile-item:hover{background:rgba(0,212,255,0.08);color:var(--cyan);}
+.nav-profile-item.danger:hover{background:rgba(255,77,109,0.1);color:#ff4d6d;}
+
 /* HERO */
 .hero{
   position:relative;z-index:1;
@@ -504,15 +536,34 @@ window.addEventListener('scroll', function() {
   document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 50);
 });
 
-// Auth state - show "Continuer" if logged in
+// Auth state - show profile dropdown if logged in
 auth.onAuthStateChanged(function(user) {
   var navUser = document.getElementById('navUser');
   var heroBtn = document.getElementById('heroMainBtn');
   var ctaBtn = document.getElementById('ctaMainBtn');
   if (user) {
-    if (navUser) navUser.innerHTML = '<a href="/chat.html" target="_top" class="nav-cta">Ouvrir EVA →</a>';
-    if (heroBtn) { heroBtn.textContent = 'Ouvrir EVA'; heroBtn.href = '/chat.html'; heroBtn.target = '_top'; }
-    if (ctaBtn) { ctaBtn.textContent = 'Ouvrir EVA'; ctaBtn.href = '/chat.html'; ctaBtn.target = '_top'; }
+    var initial = (user.displayName || user.email || 'U')[0].toUpperCase();
+    if (navUser) {
+      navUser.innerHTML =
+        '<div class="nav-profile" id="navProfile">' +
+        '<div class="nav-profile-avatar" id="navProfileAvatar" onclick="document.getElementById(\'navProfileMenu\').classList.toggle(\'open\')" style="cursor:pointer;">'+initial+'</div>' +
+        '<div class="nav-profile-menu" id="navProfileMenu">' +
+        '<div class="nav-profile-info"><div style="font-weight:700;font-size:0.85em">'+(user.displayName||user.email)+'</div><div style="font-size:0.72em;color:rgba(0,212,255,0.6)">'+user.email+'</div></div>' +
+        '<div style="height:1px;background:rgba(0,212,255,0.1);margin:4px 0"></div>' +
+        '<a href="/chat.html" target="_top" class="nav-profile-item">⚡ Accéder à EVA</a>' +
+        '<a href="/chat.html#settings" target="_top" class="nav-profile-item">⚙️ Paramètres</a>' +
+        '<div style="height:1px;background:rgba(0,212,255,0.1);margin:4px 0"></div>' +
+        '<button class="nav-profile-item danger" onclick="auth.signOut()">🚪 Déconnexion</button>' +
+        '</div></div>';
+      document.addEventListener('click', function(e) {
+        if (!document.getElementById('navProfile').contains(e.target)) {
+          var m = document.getElementById('navProfileMenu');
+          if (m) m.classList.remove('open');
+        }
+      });
+    }
+    if (heroBtn) { heroBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Accéder à EVA'; heroBtn.href = '/chat.html'; heroBtn.target = '_top'; }
+    if (ctaBtn) { ctaBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Accéder à EVA'; ctaBtn.href = '/chat.html'; ctaBtn.target = '_top'; }
   }
 });
 </script>
