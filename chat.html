@@ -1992,11 +1992,13 @@ function handleMic() {
     if (window.EvaCharacter) window.EvaCharacter.setIdle();
     var st = document.getElementById('statusDot');
     if (st) st.className = '';
+    if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 600);
     return;
   }
   var perm = window.EVASTS.requestMicPermission();
   perm.then(function(ok) {
     if (!ok) { toast('Permission micro refusée','error'); return; }
+    if (S.wakeWordOn && window.EVAWakeWord) window.EVAWakeWord.stop();
     btn.classList.add('recording');
     if (window.EvaCharacter) window.EvaCharacter.setListening();
     var st = document.getElementById('statusDot');
@@ -2011,12 +2013,14 @@ function handleMic() {
           if (window.EvaCharacter) window.EvaCharacter.setIdle();
           if (st) st.className = '';
           if (transcript.trim()) setTimeout(handleSend, 300);
+          if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 800);
         }
       },
       function() {
         btn.classList.remove('recording');
         if (window.EvaCharacter) window.EvaCharacter.setIdle();
         if (st) st.className = '';
+        if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 800);
       }
     );
   });
