@@ -1722,19 +1722,61 @@ async function handleSend() {
   hideTyping();
 
   if (result.success) {
-    appendMsg('eva', result.content);
-    if (window.EvaCharacter) window.EvaCharacter.setHappy();
-
-    if (S.ttsOn && window.EVATTS) {
-      var plain = result.content.replace(/<[^>]*>/g,'').slice(0,600);
-      window.EVATTS.speakText(plain, S.config);
-    }
+    streamEvaMsg(result.content);
     saveConvMsg(text || '[Image]', result.content);
   } else {
     appendMsg('eva', "Désolée, une erreur est survenue. Vérifiez le provider IA dans les paramètres.");
     if (window.EvaCharacter) window.EvaCharacter.setIdle();
     toast('Erreur IA — vérifiez les paramètres','error');
   }
+}
+
+function streamEvaMsg(content) {
+  var time = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  var list = document.getElementById('messagesList');
+  if (!list) return;
+  var welcome = document.getElementById('chatWelcome');
+  if (welcome) welcome.style.display = 'none';
+
+  var div = document.createElement('div');
+  div.className = 'message eva';
+  div.innerHTML =
+    '<div class="msg-ava"><svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:#00d4ff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="#00d4ff" stroke="none"/></svg></div>' +
+    '<div class="msg-content">' +
+      '<div class="msg-bubble"></div>' +
+      '<div class="msg-time">'+time+'</div>' +
+      '<div class="msg-actions"><button class="msg-act" onclick="copyMsg(this)">📋 Copier</button><button class="msg-act" onclick="speakMsg(this)">🔊</button></div>' +
+    '</div>';
+  list.appendChild(div);
+  scrollDown();
+
+  var bubble = div.querySelector('.msg-bubble');
+  var plain = content.replace(/[#*`_>\[\]]/g, '').replace(/<[^>]*>/g, '');
+
+  if (S.ttsOn && window.EVATTS) {
+    var ttsText = plain.slice(0, 600);
+    window.EVATTS.speakText(ttsText, S.config);
+  } else {
+    if (window.EvaCharacter) window.EvaCharacter.setHappy();
+  }
+
+  var i = 0;
+  var streamed = '';
+  var speed = Math.max(1, Math.floor(content.length / 120));
+
+  function tick() {
+    if (i >= content.length) {
+      bubble.innerHTML = mdToHtml(content);
+      scrollDown();
+      return;
+    }
+    var end = Math.min(i + speed, content.length);
+    while (i < end) { streamed += content[i++]; }
+    bubble.textContent = streamed;
+    scrollDown();
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 
 async function analyzeImage(base64Data, prompt) {
