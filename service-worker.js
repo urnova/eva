@@ -39,7 +39,7 @@ self.addEventListener('message', function(e) {
 /* ═══ AFFICHER NOTIFICATION ALARME ═══ */
 function showAlarmNotification(label, id) {
   var tag = 'alarm_' + (id || Date.now());
-  self.registration.showNotification('⏰ E.V.A — Alarme', {
+  return self.registration.showNotification('⏰ E.V.A — Alarme', {
     body: label || 'Alarme',
     icon: '/assets/images/eva.svg',
     badge: '/assets/images/favicon.svg',
@@ -57,13 +57,15 @@ function showAlarmNotification(label, id) {
       firedAt: Date.now(),
       url: '/chat'
     }
+  }).catch(function(err) {
+    console.warn('[SW] showNotification alarm failed:', err.message);
   });
 }
 
 /* ═══ AFFICHER NOTIFICATION RAPPEL ═══ */
 function showReminderNotification(text, id) {
   var tag = 'reminder_' + (id || Date.now());
-  self.registration.showNotification('📌 E.V.A — Rappel', {
+  return self.registration.showNotification('📌 E.V.A — Rappel', {
     body: text || 'Rappel',
     icon: '/assets/images/eva.svg',
     badge: '/assets/images/favicon.svg',
@@ -79,6 +81,8 @@ function showReminderNotification(text, id) {
       type: 'reminder',
       url: '/chat'
     }
+  }).catch(function(err) {
+    console.warn('[SW] showNotification reminder failed:', err.message);
   });
 }
 

@@ -3737,6 +3737,7 @@ async function requestNotificationPermission() {
 
 function showSwNotification(type, payload) {
   if (!swRegistration || !swRegistration.active) return false;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return false;
   var msg = Object.assign({ type: type }, payload || {});
   swRegistration.active.postMessage(msg);
   return true;
