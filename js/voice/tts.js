@@ -94,11 +94,16 @@ function setEvaSpeaking(speaking) {
     if (speaking) window.EvaCharacter.startTalking();
     else window.EvaCharacter.stopTalking();
   }
-  var dot = document.getElementById('statusDot');
-  if (dot) dot.className = speaking ? 'status-dot speaking' : 'status-dot';
+  if (window.setEvaStatusHeader) {
+    if (speaking) window.setEvaStatusHeader('EVA PARLE...', 'speaking');
+    else window.setEvaStatusHeader(null);
+  }
 }
 
-window.EVATTS = { initVoices, speak, speakWithPuter, speakText, stopTTS, setMuted, getMuted, toggleMuted, getBestFrenchVoice };
+function skipTTS() { stopTTS(); }
+
+window.EVATTS = { initVoices, speak, speakWithPuter, speakText, stopTTS, skipTTS, setMuted, getMuted, toggleMuted, getBestFrenchVoice };
+window.skipTTS = skipTTS;
 if (typeof window !== 'undefined') window.addEventListener('load', initVoices);
 initVoices();
 })();

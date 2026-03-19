@@ -290,22 +290,36 @@ body::before{
 .hdr-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .hdr-btn:hover{background:var(--surface2);color:var(--cyan);}
 .hdr-btn.active,.hdr-btn.tts-on{color:var(--cyan);}
-.status-pill{
-  display:flex;align-items:center;gap:5px;
-  padding:4px 11px;border-radius:20px;
-  background:rgba(0,255,136,0.07);
-  border:1px solid rgba(0,255,136,0.2);
-  font-size:0.68em;color:var(--green);letter-spacing:1.5px;
+
+.eva-hdr-status{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 10px 4px 8px;
+  background:rgba(0,212,255,0.07);
+  border:1px solid rgba(0,212,255,0.18);
+  border-radius:20px;
+  font-size:0.65em;color:var(--cyan);
+  letter-spacing:0.1em;font-weight:600;
   font-family:'Orbitron',monospace;
+  transition:all 0.3s;
 }
-#statusDot{
-  width:6px;height:6px;border-radius:50%;
+.eva-hdr-dot{
+  width:6px;height:6px;border-radius:50%;flex-shrink:0;
   background:var(--green);
-  animation:sPulse 2s ease-in-out infinite;
+  animation:hdrPulse 2.5s ease-in-out infinite;
 }
-#statusDot.speaking{background:var(--cyan);animation:sPulse 0.35s ease-in-out infinite;}
-#statusDot.listening{background:var(--green);animation:sPulse 0.55s ease-in-out infinite;}
-@keyframes sPulse{0%,100%{opacity:1}50%{opacity:0.35}}
+.eva-hdr-dot.thinking{background:var(--cyan);animation:hdrPulse 0.7s ease-in-out infinite;}
+.eva-hdr-dot.writing{background:var(--cyan);animation:hdrPulse 0.5s ease-in-out infinite;}
+.eva-hdr-dot.speaking{background:#ff9800;animation:hdrPulse 0.4s ease-in-out infinite;}
+.eva-hdr-dot.listening{background:var(--green);animation:hdrPulse 0.5s ease-in-out infinite;}
+.eva-hdr-dot.action{background:#b388ff;animation:hdrPulse 0.6s ease-in-out infinite;}
+@keyframes hdrPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.75)}}
+#skipTtsBtn{
+  display:none;background:none;border:none;cursor:pointer;
+  color:var(--cyan);padding:0 0 0 2px;
+  align-items:center;opacity:0.75;transition:opacity 0.15s;
+}
+#skipTtsBtn:hover{opacity:1;}
+#skipTtsBtn svg{display:block;}
 .eva-toggle-btn{
   background:var(--cyan-dim);border:1px solid rgba(0,212,255,0.22);
   color:var(--cyan);cursor:pointer;padding:4px 10px;border-radius:8px;
@@ -465,23 +479,6 @@ body::before{
 .tone-btn:hover{border-color:var(--border-h);color:var(--text);background:var(--surface3);}
 .tone-btn.active{background:var(--cyan);border-color:var(--cyan);color:#000;font-weight:700;}
 /* EVA status bar */
-.eva-status-bar{
-  display:none;align-items:center;justify-content:center;gap:7px;
-  padding:4px 16px;
-  font-size:0.68em;letter-spacing:0.08em;
-  color:var(--cyan);
-  background:rgba(0,212,255,0.07);
-  border-bottom:1px solid rgba(0,212,255,0.12);
-  flex-shrink:0;
-  animation:fadeInDown 0.2s ease;
-}
-@keyframes fadeInDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-.eva-status-bar.visible{display:flex;}
-.eva-status-dot{
-  width:5px;height:5px;border-radius:50%;background:var(--cyan);
-  animation:statusPulse 1s ease-in-out infinite;flex-shrink:0;
-}
-@keyframes statusPulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
 
 /* Input area */
 .input-area{
@@ -808,7 +805,7 @@ body::before{
   .sidebar-overlay.active{opacity:1;pointer-events:all;}
   .app-main{margin-left:0;}
   .hamburger{display:flex!important;}
-  .status-pill .status-text{display:none;}
+  #evaHdrText{display:none;}
   /* Header */
   .top-bar{padding:0 10px 0 8px;}
   .top-bar-title{font-size:0.8em;letter-spacing:2px;}
@@ -939,9 +936,12 @@ body::before{
         <span class="conv-title-header" id="convTitleHeader">Nouvelle conversation</span>
       </div>
       <div class="header-right">
-        <div class="status-pill">
-          <div id="statusDot"></div>
-          <span class="status-text">EN LIGNE</span>
+        <div class="eva-hdr-status" id="evaHdrStatus">
+          <div class="eva-hdr-dot" id="evaHdrDot"></div>
+          <span id="evaHdrText">EN LIGNE</span>
+          <button id="skipTtsBtn" onclick="skipTTS()" title="Couper la voix d'EVA">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          </button>
         </div>
         <button class="hdr-btn" id="wakeWordBtn" title="Wake Word — Dites 'Hey Eva'">
           <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -963,12 +963,6 @@ body::before{
           EVA
         </button>
       </div>
-    </div>
-
-    <!-- EVA Status -->
-    <div class="eva-status-bar" id="evaStatusBar">
-      <div class="eva-status-dot"></div>
-      <span id="evaStatusText">EVA réfléchit...</span>
     </div>
 
     <!-- View: Chat -->
@@ -1344,17 +1338,14 @@ function initAuth() {
     // Init wake word (stays off until user activates)
     if (window.EVAWakeWord) {
       window.EVAWakeWord.init({
-        wakeWords: ['hey eva', 'eva', 'e.v.a', 'éva'],
-        onDetected: function() {
+        wakeWords: ['eva', 'éva', 'hey eva', 'e.v.a'],
+        onCommand: function(cmd) {
           if (S.busy) return;
           if (window.EVASTS && window.EVASTS.getIsListening()) return;
-          window.EVAWakeWord.stop();
-          setEvaStatus('🎤 Parlez maintenant...');
+          sendVoiceCommand(cmd);
           setTimeout(function() {
-            setEvaStatus(null);
-            var micBtn = document.getElementById('micBtn');
-            if (micBtn) micBtn.click();
-          }, 700);
+            if (S.wakeWordOn && window.EVAWakeWord && !S.busy) window.EVAWakeWord.start();
+          }, 5000);
         }
       });
     }
@@ -1782,15 +1773,43 @@ function appendMsg(role, content, imgUrl) {
   scrollDown();
 }
 
-function setEvaStatus(text) {
-  var bar = document.getElementById('evaStatusBar');
-  var txt = document.getElementById('evaStatusText');
-  if (text) {
-    if (bar) bar.classList.add('visible');
-    if (txt) txt.textContent = text;
-  } else {
-    if (bar) bar.classList.remove('visible');
+function setEvaStatus(text, type) {
+  setEvaStatusHeader(text, type);
+}
+
+function setEvaStatusHeader(text, type) {
+  var dot = document.getElementById('evaHdrDot');
+  var label = document.getElementById('evaHdrText');
+  var skip = document.getElementById('skipTtsBtn');
+  if (!dot || !label) return;
+  if (!text) {
+    dot.className = 'eva-hdr-dot';
+    label.textContent = 'EN LIGNE';
+    if (skip) skip.style.display = 'none';
+    return;
   }
+  dot.className = 'eva-hdr-dot ' + (type || 'thinking');
+  label.textContent = text;
+  if (skip) skip.style.display = (type === 'speaking') ? 'inline-flex' : 'none';
+}
+window.setEvaStatusHeader = setEvaStatusHeader;
+
+function skipTTS() {
+  if (window.EVATTS) window.EVATTS.stopTTS();
+  setEvaStatusHeader(null);
+  if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 400);
+}
+window.skipTTS = skipTTS;
+
+function sendVoiceCommand(cmd) {
+  if (S.busy) return;
+  var input = document.getElementById('msgInput');
+  if (input) {
+    input.value = cmd;
+    var sendBtn = document.getElementById('sendBtn');
+    if (sendBtn) sendBtn.disabled = false;
+  }
+  handleSend();
 }
 
 function showTyping() {
@@ -1806,7 +1825,7 @@ function showTyping() {
   list.appendChild(div);
   scrollDown();
   if (window.EvaCharacter) window.EvaCharacter.setThinking();
-  setEvaStatus('EVA réfléchit...');
+  setEvaStatus('EVA RÉFLÉCHIT...', 'thinking');
 }
 
 function hideTyping() {
@@ -2000,8 +2019,7 @@ function handleMic() {
     window.EVASTS.stopListening();
     btn.classList.remove('recording');
     if (window.EvaCharacter) window.EvaCharacter.setIdle();
-    var st = document.getElementById('statusDot');
-    if (st) st.className = '';
+    setEvaStatusHeader(null);
     if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 600);
     return;
   }
@@ -2011,8 +2029,7 @@ function handleMic() {
     if (S.wakeWordOn && window.EVAWakeWord) window.EVAWakeWord.stop();
     btn.classList.add('recording');
     if (window.EvaCharacter) window.EvaCharacter.setListening();
-    var st = document.getElementById('statusDot');
-    if (st) st.className = 'listening';
+    setEvaStatusHeader('🎤 ÉCOUTE...', 'listening');
     window.EVASTS.startListening(
       function(transcript, isFinal) {
         document.getElementById('msgInput').value = transcript;
@@ -2021,7 +2038,7 @@ function handleMic() {
         if (isFinal) {
           btn.classList.remove('recording');
           if (window.EvaCharacter) window.EvaCharacter.setIdle();
-          if (st) st.className = '';
+          setEvaStatusHeader(null);
           if (transcript.trim()) setTimeout(handleSend, 300);
           if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 800);
         }
@@ -2029,7 +2046,7 @@ function handleMic() {
       function() {
         btn.classList.remove('recording');
         if (window.EvaCharacter) window.EvaCharacter.setIdle();
-        if (st) st.className = '';
+        setEvaStatusHeader(null);
         if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 800);
       }
     );
@@ -2507,7 +2524,7 @@ async function executeEvaAction(action) {
   var uid = S.user.uid;
   try {
     if (action.type === 'note') {
-      setEvaStatus('📝 Création de la note en cours...');
+      setEvaStatus('📝 CRÉATION NOTE...', 'action');
       await db.collection('users').doc(uid).collection('notes').add({
         title: action.title || 'Note d\'EVA',
         body: action.body || action.content || '',
@@ -2516,11 +2533,11 @@ async function executeEvaAction(action) {
         updatedAt: window.timestamp()
       });
       toast('📝 Note créée par EVA : ' + (action.title || ''), 'success');
-      setEvaStatus('📝 Note créée !');
+      setEvaStatus('📝 NOTE CRÉÉE !', 'action');
       setTimeout(function(){ setEvaStatus(null); }, 3000);
 
     } else if (action.type === 'alarm') {
-      setEvaStatus('⏰ Création de l\'alarme en cours...');
+      setEvaStatus('⏰ CRÉATION ALARME...', 'action');
       await db.collection('users').doc(uid).collection('alarms').add({
         time: action.time || '08:00',
         label: action.label || 'Alarme EVA',
@@ -2529,11 +2546,11 @@ async function executeEvaAction(action) {
         createdAt: window.timestamp()
       });
       toast('⏰ Alarme créée par EVA : ' + (action.label || action.time || ''), 'success');
-      setEvaStatus('⏰ Alarme créée !');
+      setEvaStatus('⏰ ALARME CRÉÉE !', 'action');
       setTimeout(function(){ setEvaStatus(null); }, 3000);
 
     } else if (action.type === 'event') {
-      setEvaStatus('📅 Ajout à l\'agenda en cours...');
+      setEvaStatus('📅 AGENDA...', 'action');
       await db.collection('users').doc(uid).collection('events').add({
         title: action.title || 'Événement EVA',
         date: action.date || new Date().toISOString().slice(0,10),
@@ -2542,7 +2559,7 @@ async function executeEvaAction(action) {
         createdAt: window.timestamp()
       });
       toast('📅 Événement ajouté par EVA : ' + (action.title || ''), 'success');
-      setEvaStatus('📅 Événement ajouté à l\'agenda !');
+      setEvaStatus('📅 ÉVÉNEMENT AJOUTÉ !', 'action');
       setTimeout(function(){ setEvaStatus(null); }, 3000);
     }
   } catch(e) {
