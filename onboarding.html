@@ -9,489 +9,312 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-<link rel="stylesheet" href="assets/styles/main.css">
 <style>
-.onboarding-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-lg);
-  position: relative;
-  z-index: 1;
+:root {
+  --cyan: #00d4ff;
+  --cyan-dim: rgba(0,212,255,0.09);
+  --cyan-glow: rgba(0,212,255,0.45);
+  --green: #00ff88;
+  --purple: #b794f6;
+  --bg: #060b12;
+  --surface: #0c1520;
+  --surface2: #0f1c2e;
+  --surface3: #142030;
+  --border: rgba(0,212,255,0.13);
+  --text: #d0e8f8;
+  --text-muted: #4a6285;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(0,212,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.018) 1px,transparent 1px);
+  background-size:55px 55px;pointer-events:none;z-index:0;
+}
+.bg-orb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(120px);z-index:0;}
+.bg-orb-1{width:600px;height:600px;top:-200px;right:-200px;background:rgba(0,212,255,0.04);animation:orbDrift 16s ease-in-out infinite;}
+.bg-orb-2{width:500px;height:500px;bottom:-200px;left:-100px;background:rgba(183,148,246,0.03);animation:orbDrift 20s ease-in-out infinite reverse;}
+@keyframes orbDrift{0%,100%{transform:translate(0,0)}50%{transform:translate(25px,-25px)}}
+
+.page{
+  position:relative;z-index:1;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
 }
 
-.onboarding-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-2xl);
-  max-width: 550px;
-  width: 100%;
-  box-shadow: var(--shadow-lg);
+.ob-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:40px;max-width:520px;width:100%;
+  box-shadow:0 30px 80px rgba(0,0,0,0.6);
+  animation:cardIn 0.45s cubic-bezier(0.34,1.56,0.64,1);
 }
+@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(0.97)}to{opacity:1;transform:none}}
 
-.onboarding-header {
-  text-align: center;
-  margin-bottom: var(--spacing-2xl);
+.ob-header{text-align:center;margin-bottom:32px;}
+.ob-logo{
+  width:72px;height:72px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,212,255,0.18),rgba(0,212,255,0.04));
+  border:1px solid rgba(0,212,255,0.35);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 18px;
+  box-shadow:0 0 40px rgba(0,212,255,0.18);
+  animation:logoFloat 3.5s ease-in-out infinite;
 }
+@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.ob-logo svg{width:32px;height:32px;stroke:var(--cyan);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.ob-title{font-family:'Orbitron',monospace;font-size:1.5em;font-weight:900;letter-spacing:3px;color:var(--cyan);margin-bottom:6px;}
+.ob-sub{font-size:0.82em;color:var(--text-muted);line-height:1.6;}
 
-.onboarding-logo {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto var(--spacing-lg);
-  filter: drop-shadow(0 0 20px var(--cyan-glow));
-  animation: logoFloat 3s ease-in-out infinite;
-}
+/* Progress */
+.ob-progress{display:flex;gap:6px;margin-bottom:28px;}
+.ob-step{flex:1;height:4px;background:var(--surface3);border-radius:10px;transition:all 0.35s;}
+.ob-step.active{background:var(--cyan);box-shadow:0 0 8px var(--cyan-glow);}
 
-@keyframes logoFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
+/* Steps */
+.ob-view{display:none;}
+.ob-view.active{display:block;animation:fadeUp 0.3s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
-.onboarding-title {
-  font-family: 'Orbitron', monospace;
-  font-size: 1.6rem;
-  font-weight: 900;
-  letter-spacing: 3px;
-  color: var(--cyan);
-  margin-bottom: var(--spacing-sm);
+/* Avatar */
+.ava-wrap{display:flex;justify-content:center;margin-bottom:20px;}
+.ava-preview{
+  width:100px;height:100px;border-radius:50%;
+  background:var(--cyan-dim);border:2px solid var(--cyan);
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.4em;font-weight:700;color:var(--cyan);
+  cursor:pointer;transition:all 0.2s;overflow:hidden;
 }
+.ava-preview:hover{transform:scale(1.06);box-shadow:0 0 20px var(--cyan-glow);}
+.ava-preview img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 
-.onboarding-subtitle {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  line-height: 1.6;
+/* Form fields */
+.field{margin-bottom:16px;}
+.field-label{display:block;font-size:0.76em;color:var(--text-muted);margin-bottom:6px;letter-spacing:0.5px;text-transform:uppercase;}
+.field-hint{font-size:0.72em;color:var(--text-muted);margin-top:4px;opacity:0.7;}
+.field-input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:10px 13px;color:var(--text);
+  font-family:'Space Mono',monospace;font-size:0.85em;outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;
 }
+.field-input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,212,255,0.08);}
 
-.progress-bar {
-  display: flex;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-2xl);
+/* Voice option */
+.voice-opt{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;border-radius:10px;
+  background:var(--surface2);border:1px solid var(--border);
+  cursor:pointer;transition:all 0.2s;margin-bottom:10px;
 }
+.voice-opt:hover,.voice-opt.selected{border-color:var(--cyan);background:var(--cyan-dim);}
+.voice-opt-info .voice-name{font-size:0.85em;font-weight:700;color:var(--text);}
+.voice-opt-info .voice-desc{font-size:0.72em;color:var(--text-muted);margin-top:2px;}
+.voice-test-btn{
+  background:transparent;border:1px solid var(--cyan);color:var(--cyan);
+  padding:5px 12px;border-radius:7px;font-size:0.75em;cursor:pointer;
+  transition:all 0.2s;font-family:'Space Mono',monospace;
+}
+.voice-test-btn:hover{background:var(--cyan);color:#000;}
 
-.progress-step {
-  flex: 1;
-  height: 4px;
-  background: var(--surface2);
-  border-radius: var(--radius-full);
-  transition: all var(--transition-base);
+/* Actions */
+.ob-actions{display:flex;gap:10px;margin-top:24px;}
+.btn-skip{
+  flex:1;background:transparent;color:var(--text-muted);
+  border:1px solid var(--border);padding:12px;border-radius:10px;
+  font-family:'Space Mono',monospace;font-size:0.82em;font-weight:700;
+  cursor:pointer;transition:all 0.2s;
 }
+.btn-skip:hover{background:var(--surface2);color:var(--text);}
+.btn-next{
+  flex:2;background:linear-gradient(135deg,var(--cyan),#0099cc);color:#000;
+  border:none;padding:12px;border-radius:10px;
+  font-family:'Orbitron',monospace;font-size:0.82em;font-weight:700;
+  letter-spacing:2px;cursor:pointer;transition:all 0.2s;
+  box-shadow:0 0 20px rgba(0,212,255,0.3);
+}
+.btn-next:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(0,212,255,0.5);}
+.btn-next:active{transform:translateY(0);}
 
-.progress-step.active {
-  background: var(--cyan);
-  box-shadow: 0 0 10px var(--cyan-glow);
-}
+/* Finish state */
+.finish-icon{font-size:3.5em;text-align:center;margin-bottom:16px;}
+.finish-title{font-family:'Orbitron',monospace;color:var(--cyan);font-size:1.2em;text-align:center;margin-bottom:10px;}
+.finish-text{color:var(--text-muted);text-align:center;font-size:0.82em;line-height:1.7;margin-bottom:24px;}
 
-.onboarding-step {
-  display: none;
-}
-
-.onboarding-step.active {
-  display: block;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.form-field {
-  margin-bottom: var(--spacing-lg);
-}
-
-.form-label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: var(--spacing-sm);
-}
-
-.form-hint {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin-top: var(--spacing-xs);
-}
-
-.form-input {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-md);
-  color: var(--text);
-  font-family: 'Space Mono', monospace;
-  font-size: 0.95rem;
-  width: 100%;
-  transition: all var(--transition-fast);
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--cyan);
-  box-shadow: 0 0 0 3px var(--cyan-dim);
-}
-
-.avatar-selector {
-  display: flex;
-  justify-content: center;
-  margin-bottom: var(--spacing-xl);
-}
-
-.avatar-preview {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: var(--cyan-dim);
-  border: 3px solid var(--cyan);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-  font-weight: 700;
-  color: var(--cyan);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  overflow: hidden;
-}
-
-.avatar-preview:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 20px var(--cyan-glow);
-}
-
-.avatar-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatar-input {
-  display: none;
-}
-
-.onboarding-actions {
-  display: flex;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-xl);
-}
-
-.btn-skip {
-  flex: 1;
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  font-family: 'Space Mono', monospace;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-skip:hover {
-  background: var(--surface2);
-  color: var(--text);
-}
-
-.btn-next {
-  flex: 2;
-}
-
-.voice-selector {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-}
-
-.voice-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
-  background: var(--surface3);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.voice-option:hover {
-  border-color: var(--cyan);
-  background: var(--cyan-dim);
-}
-
-.voice-option.selected {
-  border-color: var(--cyan);
-  background: var(--cyan-dim);
-}
-
-.voice-info {
-  flex: 1;
-}
-
-.voice-name {
-  font-weight: 700;
-  color: var(--text);
-  font-size: 0.9rem;
-}
-
-.voice-desc {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.voice-test {
-  background: transparent;
-  border: 1px solid var(--cyan);
-  color: var(--cyan);
-  padding: var(--spacing-xs) var(--spacing-md);
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.voice-test:hover {
-  background: var(--cyan);
-  color: var(--navy);
-}
-
-@media (max-width: 768px) {
-  .onboarding-card {
-    padding: var(--spacing-xl);
-  }
-  
-  .onboarding-title {
-    font-size: 1.3rem;
-  }
-  
-  .avatar-preview {
-    width: 100px;
-    height: 100px;
-    font-size: 2.5rem;
-  }
-}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:10px}
 </style>
 </head>
 <body>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
 
-<div class="onboarding-container">
-  <div class="onboarding-card">
-    <div class="onboarding-header">
-      <img src="assets/images/eva.svg" alt="E.V.A" class="onboarding-logo">
-      <h1 class="onboarding-title">Configuration</h1>
-      <p class="onboarding-subtitle">Personnalisez votre expérience Eva</p>
+<div class="page">
+  <div class="ob-card">
+
+    <div class="ob-header">
+      <div class="ob-logo">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+      </div>
+      <div class="ob-title">CONFIGURATION</div>
+      <div class="ob-sub">Personnalisez votre expérience E.V.A</div>
     </div>
 
-    <div class="progress-bar">
-      <div class="progress-step active" id="progress1"></div>
-      <div class="progress-step" id="progress2"></div>
-      <div class="progress-step" id="progress3"></div>
+    <div class="ob-progress">
+      <div class="ob-step active" id="step-bar-1"></div>
+      <div class="ob-step" id="step-bar-2"></div>
+      <div class="ob-step" id="step-bar-3"></div>
     </div>
 
-    <!-- STEP 1: Profil -->
-    <div class="onboarding-step active" id="step1">
-      <div class="avatar-selector">
-        <div class="avatar-preview" id="avatarPreview" onclick="document.getElementById('avatarInput').click()">
-          <span id="avatarInitials">U</span>
+    <!-- Step 1: Profil -->
+    <div class="ob-view active" id="ob1">
+      <div class="ava-wrap">
+        <div class="ava-preview" id="avaPreview" onclick="document.getElementById('avaFile').click()">
+          <span id="avaInitials">?</span>
         </div>
-        <input type="file" id="avatarInput" class="avatar-input" accept="image/*" onchange="handleAvatarChange(event)">
+        <input type="file" id="avaFile" accept="image/*" style="display:none" onchange="handleAvaFile(event)">
       </div>
-
-      <div class="form-field">
-        <label class="form-label" for="displayName">Nom complet</label>
-        <input type="text" id="displayName" class="form-input" placeholder="Jean Dupont" required>
-        <p class="form-hint">Comment vous appelez-vous ?</p>
+      <div class="field">
+        <label class="field-label">Nom complet *</label>
+        <input type="text" class="field-input" id="displayName" placeholder="Jean Dupont">
+        <div class="field-hint">Votre identité dans E.V.A</div>
       </div>
-
-      <div class="form-field">
-        <label class="form-label" for="nickname">Surnom</label>
-        <input type="text" id="nickname" class="form-input" placeholder="Jean">
-        <p class="form-hint">Comment Eva doit vous appeler</p>
+      <div class="field">
+        <label class="field-label">Surnom</label>
+        <input type="text" class="field-input" id="nickname" placeholder="Jean">
+        <div class="field-hint">Comment E.V.A va vous appeler</div>
       </div>
-
-      <div class="onboarding-actions">
-        <button class="btn-skip" onclick="skipOnboarding()">Passer</button>
-        <button class="btn-next btn-primary" onclick="nextStep()">Suivant</button>
+      <div class="ob-actions">
+        <button class="btn-skip" onclick="skipAll()">Passer</button>
+        <button class="btn-next" onclick="goStep(2)">SUIVANT →</button>
       </div>
     </div>
 
-    <!-- STEP 2: Voix -->
-    <div class="onboarding-step" id="step2">
-      <div class="form-field">
-        <label class="form-label">Voix d'Eva</label>
-        <p class="form-hint">Choisissez la voix de votre assistante</p>
+    <!-- Step 2: Voix -->
+    <div class="ob-view" id="ob2">
+      <div class="field">
+        <label class="field-label">Choisissez la voix d'E.V.A</label>
       </div>
-
-      <div class="voice-selector">
-        <div class="voice-option selected" data-voice="auto" onclick="selectVoice('auto')">
-          <div class="voice-info">
-            <div class="voice-name">🎯 Auto (Recommandé)</div>
-            <div class="voice-desc">Meilleure voix féminine française disponible</div>
-          </div>
-          <button class="voice-test" onclick="testVoice('auto', event)">🔊 Tester</button>
+      <div class="voice-opt selected" id="voiceAuto" onclick="selectVoice('auto',this)">
+        <div class="voice-opt-info">
+          <div class="voice-name">🎯 Auto (Recommandé)</div>
+          <div class="voice-desc">Meilleure voix féminine française disponible</div>
         </div>
+        <button class="voice-test-btn" onclick="testVoice('auto',event)">▶ Tester</button>
       </div>
-
-      <div class="onboarding-actions">
-        <button class="btn-skip" onclick="prevStep()">Retour</button>
-        <button class="btn-next btn-primary" onclick="nextStep()">Suivant</button>
+      <div class="voice-opt" id="voiceFR" onclick="selectVoice('fr-fr',this)">
+        <div class="voice-opt-info">
+          <div class="voice-name">🇫🇷 Française</div>
+          <div class="voice-desc">Voix française naturelle du navigateur</div>
+        </div>
+        <button class="voice-test-btn" onclick="testVoice('fr-fr',event)">▶ Tester</button>
       </div>
-    </div>
-
-    <!-- STEP 3: Terminé -->
-    <div class="onboarding-step" id="step3">
-      <div style="text-align: center; padding: var(--spacing-xl) 0;">
-        <div style="font-size: 4rem; margin-bottom: var(--spacing-lg);">🎉</div>
-        <h2 style="font-family: 'Orbitron', monospace; color: var(--cyan); margin-bottom: var(--spacing-md);">
-          Tout est prêt !
-        </h2>
-        <p style="color: var(--text-muted); margin-bottom: var(--spacing-xl);">
-          Votre profil a été configuré avec succès.<br>
-          Vous pouvez maintenant profiter pleinement d'Eva.
-        </p>
-        <button class="btn-primary" style="width: 100%;" onclick="finishOnboarding()">
-          Accéder à Eva
-        </button>
+      <div class="ob-actions">
+        <button class="btn-skip" onclick="goStep(1)">← Retour</button>
+        <button class="btn-next" onclick="goStep(3)">SUIVANT →</button>
       </div>
     </div>
+
+    <!-- Step 3: Terminé -->
+    <div class="ob-view" id="ob3">
+      <div class="finish-icon">🎉</div>
+      <div class="finish-title">Tout est prêt !</div>
+      <div class="finish-text">
+        Votre profil E.V.A a été configuré avec succès.<br>
+        Bienvenue dans votre nouveau monde intelligent.
+      </div>
+      <button class="btn-next" style="width:100%;font-size:0.9em" onclick="finish()">
+        ⚡ ACCÉDER À E.V.A
+      </button>
+    </div>
+
   </div>
 </div>
 
+<script src="js/core/firebase-config.js"></script>
 <script>
-// Configuration Firebase
-firebase.initializeApp({
-  apiKey: "AIzaSyDrXk8X9Ow7CcOc0Sr-yv3mXvzatNxpj3o",
-  authDomain: "eva-assistant-a4fdf.firebaseapp.com",
-  projectId: "eva-assistant-a4fdf",
-  storageBucket: "eva-assistant-a4fdf.firebasestorage.app",
-  messagingSenderId: "594189556810",
-  appId: "1:594189556810:web:0d72c2110245af92099ab3"
+var currentStep = 1;
+var selectedVoice = 'auto';
+var currentUser = null;
+
+auth.onAuthStateChanged(function(user) {
+  if (!user) { window.location.href = '/login.html'; return; }
+  currentUser = user;
+  loadUserData(user.uid);
 });
 
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-let currentStep = 1;
-let selectedVoice = 'auto';
-let currentUser = null;
-
-// Vérifier auth
-auth.onAuthStateChanged((user) => {
-  if (!user) {
-    window.location.href = '/login';
-  } else {
-    currentUser = user;
-    loadUserData();
-  }
-});
-
-async function loadUserData() {
-  const doc = await db.collection('users').doc(currentUser.uid).get();
-  if (doc.exists) {
-    const data = doc.data();
-    document.getElementById('displayName').value = data.displayName || '';
-    document.getElementById('nickname').value = data.nickname || '';
-    updateAvatarPreview();
-  }
-}
-
-function updateAvatarPreview() {
-  const displayName = document.getElementById('displayName').value;
-  const initials = displayName
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || 'U';
-  
-  document.getElementById('avatarInitials').textContent = initials;
-}
-
-function handleAvatarChange(event) {
-  const file = event.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const preview = document.getElementById('avatarPreview');
-      preview.innerHTML = `<img src="${e.target.result}" alt="Avatar">`;
-    };
-    reader.readAsDataURL(file);
-  }
-}
-
-document.getElementById('displayName').addEventListener('input', updateAvatarPreview);
-
-function nextStep() {
-  if (currentStep === 1) {
-    const displayName = document.getElementById('displayName').value.trim();
-    const nickname = document.getElementById('nickname').value.trim() || displayName.split(' ')[0];
-    
-    if (!displayName) {
-      alert('Veuillez entrer votre nom');
-      return;
+async function loadUserData(uid) {
+  try {
+    var doc = await db.collection('users').doc(uid).get();
+    if (doc.exists) {
+      var d = doc.data();
+      if (d.displayName) document.getElementById('displayName').value = d.displayName;
+      if (d.nickname) document.getElementById('nickname').value = d.nickname;
+      updateAvaPreview();
     }
-    
-    // Sauvegarder step 1
-    saveProfile({ displayName, nickname });
-  }
-  
-  if (currentStep < 3) {
-    document.getElementById(`step${currentStep}`).classList.remove('active');
-    document.getElementById(`progress${currentStep}`).classList.remove('active');
-    
-    currentStep++;
-    
-    document.getElementById(`step${currentStep}`).classList.add('active');
-    document.getElementById(`progress${currentStep}`).classList.add('active');
-  }
+  } catch(e) {}
 }
 
-function prevStep() {
-  if (currentStep > 1) {
-    document.getElementById(`step${currentStep}`).classList.remove('active');
-    document.getElementById(`progress${currentStep}`).classList.remove('active');
-    
-    currentStep--;
-    
-    document.getElementById(`step${currentStep}`).classList.add('active');
-    document.getElementById(`progress${currentStep}`).classList.add('active');
-  }
+document.getElementById('displayName').addEventListener('input', updateAvaPreview);
+
+function updateAvaPreview() {
+  var name = document.getElementById('displayName').value;
+  var initials = name.split(' ').map(function(n){ return n[0]||''; }).join('').toUpperCase().slice(0,2) || '?';
+  var el = document.getElementById('avaInitials');
+  if (el && el.tagName !== 'IMG') el.textContent = initials;
 }
 
-function selectVoice(voice) {
+function handleAvaFile(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var preview = document.getElementById('avaPreview');
+    preview.innerHTML = '<img src="'+e.target.result+'" alt="Avatar">';
+  };
+  reader.readAsDataURL(file);
+}
+
+function goStep(n) {
+  if (n === 2) {
+    var name = document.getElementById('displayName').value.trim();
+    if (!name) { alert('Veuillez entrer votre nom'); return; }
+    var nick = document.getElementById('nickname').value.trim() || name.split(' ')[0];
+    saveProfile({ displayName: name, nickname: nick });
+  }
+  document.getElementById('ob'+currentStep).classList.remove('active');
+  document.getElementById('step-bar-'+currentStep).classList.remove('active');
+  currentStep = n;
+  document.getElementById('ob'+currentStep).classList.add('active');
+  document.getElementById('step-bar-'+currentStep).classList.add('active');
+}
+
+function selectVoice(voice, el) {
   selectedVoice = voice;
-  document.querySelectorAll('.voice-option').forEach(opt => {
-    opt.classList.remove('selected');
-  });
-  event.target.closest('.voice-option').classList.add('selected');
+  document.querySelectorAll('.voice-opt').forEach(function(o){ o.classList.remove('selected'); });
+  el.classList.add('selected');
 }
 
 function testVoice(voice, event) {
   event.stopPropagation();
-  const utterance = new SpeechSynthesisUtterance("Bonjour ! Je suis Eva, votre assistante virtuelle. Comment puis-je vous aider aujourd'hui ?");
-  utterance.lang = 'fr-FR';
-  utterance.rate = 1.0;
-  utterance.pitch = 1.0;
-  speechSynthesis.speak(utterance);
+  if (typeof speechSynthesis === 'undefined') return;
+  speechSynthesis.cancel();
+  var utt = new SpeechSynthesisUtterance("Bonjour, je suis E.V.A, votre assistante virtuelle. Comment puis-je vous aider aujourd'hui ?");
+  utt.lang = 'fr-FR';
+  utt.rate = 1.0;
+  utt.pitch = 1.0;
+  speechSynthesis.speak(utt);
 }
 
 async function saveProfile(data) {
+  if (!currentUser) return;
   try {
     await db.collection('users').doc(currentUser.uid).set(data, { merge: true });
-  } catch (error) {
-    console.error('Error saving profile:', error);
-  }
+  } catch(e) { console.error('saveProfile:', e); }
 }
 
-async function finishOnboarding() {
+async function finish() {
+  if (!currentUser) return;
   try {
     await db.collection('users').doc(currentUser.uid).set({
       onboardingCompleted: true,
@@ -499,23 +322,20 @@ async function finishOnboarding() {
         voiceProvider: 'native',
         selectedVoice: selectedVoice,
         voiceLang: 'fr-FR',
-        speechRate: 1.0
+        speechRate: 1.0,
+        aiProvider: 'puter'
       }
     }, { merge: true });
-    
-    window.location.href = '/chat';
-  } catch (error) {
-    console.error('Error finishing onboarding:', error);
-    alert('Erreur lors de la finalisation');
+    window.location.href = '/chat.html';
+  } catch(e) {
+    console.error('finish:', e);
+    window.location.href = '/chat.html';
   }
 }
 
-function skipOnboarding() {
-  if (confirm('Êtes-vous sûr de vouloir passer cette étape ?')) {
-    window.location.href = '/chat';
-  }
+function skipAll() {
+  window.location.href = '/chat.html';
 }
 </script>
-
 </body>
 </html>
