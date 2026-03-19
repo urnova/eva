@@ -3659,8 +3659,20 @@ var RS = {
 /* ── Afficher section gold selon le rôle ──── */
 function isAdminRole() {
   var role = ((S.profile && S.profile.role) || 'user').toLowerCase().trim();
-  var adminRoles = ['creator', 'developer', 'createur', 'créateur', 'developpeur', 'développeur'];
-  return adminRoles.indexOf(role) !== -1;
+  var label = ((S.profile && S.profile.devKeyLabel) || '').toLowerCase();
+
+  // Rôles explicitement exclus de l'admin — même s'ils contiennent un mot-clé admin
+  var excluded = ['creator_wife', 'user', 'guest', 'epouse', 'épouse', 'wife'];
+  if (excluded.indexOf(role) !== -1) return false;
+
+  // Vérification sur le rôle (flexible, couvre les variantes de casse/accent)
+  var adminTerms = ['creator', 'createur', 'créateur', 'developer', 'développeur', 'developpeur'];
+  if (adminTerms.some(function(t) { return role === t || role.indexOf(t) !== -1; })) return true;
+
+  // Fallback sur le libellé de clé — mais pas si la clé contient des termes "épouse"
+  var wifeTerms = ['femme', 'epouse', 'épouse', 'wife'];
+  if (wifeTerms.some(function(t) { return label.indexOf(t) !== -1; })) return false;
+  return adminTerms.some(function(t) { return label.indexOf(t) !== -1; });
 }
 function setupReportsAccess() {
   if (isAdminRole()) {
