@@ -1748,6 +1748,12 @@ var S = {
   calMonth: new Date().getMonth(),
   editingNoteId: null
 };
+
+/* ── Timestamp Firestore ──────────────────────────────────── */
+window.timestamp = function() {
+  return firebase.firestore.FieldValue.serverTimestamp();
+};
+
 var TONES = {
   normal:       'Réponds naturellement et amicalement en français. Sois fluide, claire et agréable. Structure tes réponses en paragraphes lisibles. Si tu listes des points, numérote-les et mets chaque point sur une nouvelle ligne.',
   professional: 'MODE PROFESSIONNEL ACTIVÉ. Tu dois impérativement adopter un ton formel, sobre et précis. Utilise du vocabulaire professionnel et soigné. Évite tout familiarisme, emoji ou langage décontracté. Structure tes réponses avec des titres et des points numérotés. Sois concis et factuel.',
@@ -2553,31 +2559,56 @@ function streamEvaMsg(content) {
   var plain = content.replace(/[#*`_>\[\]]/g, '').replace(/<[^>]*>/g, '');
 
   if (S.ttsOn && window.EVATTS) {
-    var ttsText = plain.slice(0, 600);
-    window.EVATTS.speakText(ttsText, S.config);
-  } else {
-    if (window.EvaCharacter) window.EvaCharacter.setHappy();
-  }
+    /* ── Mode TTS : streaming synchronisé avec la parole ─── */
+    // Vitesse TTS française : ~15 chars/sec à rate 1.0
+    var rate = (S.config && S.config.speechRate) || 1.0;
+    var msPerChar = Math.round(62 / rate); // ~16 chars/sec → ajuste selon le rate
 
-  var i = 0;
-  var streamed = '';
-  var speed = Math.max(1, Math.floor(content.length / 120));
-  if (!S.ttsOn) setEvaStatus('EVA ÉCRIT...', 'writing');
+    setEvaStatus('EVA PARLE...', 'speaking');
 
-  function tick() {
-    if (i >= content.length) {
-      bubble.innerHTML = mdToHtml(content);
+    // Lancer le TTS
+    window.EVATTS.speakText(plain.slice(0, 700), S.config);
+
+    // Streaming calé sur la même vitesse que la voix
+    var i = 0;
+    var streamed = '';
+    var streamTimer = setInterval(function() {
+      if (i >= content.length) {
+        clearInterval(streamTimer);
+        bubble.innerHTML = mdToHtml(content);
+        scrollDown();
+        return;
+      }
+      // Avancer de 1 char à la fois pour rester en sync avec la voix
+      streamed += content[i++];
+      bubble.textContent = streamed;
       scrollDown();
-      if (!S.ttsOn) setEvaStatus(null);
-      return;
+    }, msPerChar);
+
+  } else {
+    /* ── Mode sans TTS : streaming rapide classique ─────── */
+    if (window.EvaCharacter) window.EvaCharacter.setHappy();
+    setEvaStatus('EVA ÉCRIT...', 'writing');
+
+    var i = 0;
+    var streamed = '';
+    var speed = Math.max(1, Math.floor(content.length / 120));
+
+    function tick() {
+      if (i >= content.length) {
+        bubble.innerHTML = mdToHtml(content);
+        scrollDown();
+        setEvaStatus(null);
+        return;
+      }
+      var end = Math.min(i + speed, content.length);
+      while (i < end) { streamed += content[i++]; }
+      bubble.textContent = streamed;
+      scrollDown();
+      requestAnimationFrame(tick);
     }
-    var end = Math.min(i + speed, content.length);
-    while (i < end) { streamed += content[i++]; }
-    bubble.textContent = streamed;
-    scrollDown();
     requestAnimationFrame(tick);
   }
-  requestAnimationFrame(tick);
 }
 
 async function analyzeImage(base64Data, prompt) {
