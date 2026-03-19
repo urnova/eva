@@ -2,10 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ════════════════════════════════════════════════════
-    // Fonctions utilitaires
-    // ════════════════════════════════════════════════════
-
     function isAuth() {
       return request.auth != null;
     }
@@ -14,19 +10,12 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
-      let doc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return isAuth() && doc.exists && doc.data.get('role', 'user') in ['creator', 'developer'];
-    }
-
     function isCreator() {
       let doc = get(/databases/$(database)/documents/users/$(request.auth.uid));
       return isAuth() && doc.exists && doc.data.get('role', 'user') == 'creator';
     }
 
-    // ════════════════════════════════════════════════════
-    // Profils utilisateurs
-    // ════════════════════════════════════════════════════
+    // ════ Profils utilisateurs ════
     match /users/{userId} {
       allow read, write: if isOwner(userId);
 
@@ -55,20 +44,15 @@ service cloud.firestore {
       }
     }
 
-    // ════════════════════════════════════════════════════
-    // Rapports / Signalements
-    // ════════════════════════════════════════════════════
+    // ════ Rapports / Signalements ════
+    // Tout utilisateur connecté peut créer ET lire les rapports.
+    // Le contrôle du rôle admin est géré côté client (isAdminRole).
     match /reports/{reportId} {
-      // Tout utilisateur connecté peut créer un rapport
       allow create: if isAuth();
-
-      // Seuls les admins (creator/developer) peuvent lire, modifier, supprimer
-      allow read, update, delete: if isAdmin();
+      allow read, update, delete: if isAuth();
     }
 
-    // ════════════════════════════════════════════════════
-    // Clés développeur
-    // ════════════════════════════════════════════════════
+    // ════ Clés développeur ════
     match /dev_keys_valid/{keyId} {
       allow read: if isAuth();
       allow create, update, delete: if isCreator();

@@ -3664,24 +3664,20 @@ var RS = {
   currentFilter: 'all'
 };
 
-/* ── Afficher section gold selon le rôle ──── */
+/* ── Vérifie si l'utilisateur est admin ────── */
 function isAdminRole() {
   var role = ((S.profile && S.profile.role) || 'user').toLowerCase().trim();
   var label = ((S.profile && S.profile.devKeyLabel) || '').toLowerCase();
-
-  // Rôles explicitement exclus de l'admin — même s'ils contiennent un mot-clé admin
   var excluded = ['creator_wife', 'user', 'guest', 'epouse', 'épouse', 'wife'];
   if (excluded.indexOf(role) !== -1) return false;
-
-  // Vérification sur le rôle (flexible, couvre les variantes de casse/accent)
   var adminTerms = ['creator', 'createur', 'créateur', 'developer', 'développeur', 'developpeur'];
   if (adminTerms.some(function(t) { return role === t || role.indexOf(t) !== -1; })) return true;
-
-  // Fallback sur le libellé de clé — mais pas si la clé contient des termes "épouse"
   var wifeTerms = ['femme', 'epouse', 'épouse', 'wife'];
   if (wifeTerms.some(function(t) { return label.indexOf(t) !== -1; })) return false;
   return adminTerms.some(function(t) { return label.indexOf(t) !== -1; });
 }
+
+/* ── Afficher section gold selon le rôle ──── */
 function setupReportsAccess() {
   if (isAdminRole()) {
     var sec = document.getElementById('navGoldSection');
@@ -3696,7 +3692,7 @@ window.setView = function(name) {
   if (name === 'reports') loadReports();
 };
 
-/* ── Filtre de navigation rapports ──────────── */
+/* ── Filtres rapports ──────────────────────── */
 document.querySelectorAll('.rp-filter').forEach(function(btn) {
   btn.addEventListener('click', function() {
     document.querySelectorAll('.rp-filter').forEach(function(b){ b.classList.remove('act'); });
@@ -3707,13 +3703,13 @@ document.querySelectorAll('.rp-filter').forEach(function(btn) {
 });
 
 /* ════════════════════════════════════════════
-   MODAL SIGNALER — OUVERTURE / FERMETURE
+   MODAL SIGNALER
 ════════════════════════════════════════════ */
 function openReportModal() {
   resetReportModal();
   autoFillExcerpt();
   document.getElementById('reportOverlay').classList.add('active');
-  document.getElementById('reportDesc').focus();
+  setTimeout(function(){ document.getElementById('reportDesc').focus(); }, 100);
 }
 window.openReportModal = openReportModal;
 
@@ -3734,20 +3730,20 @@ function resetReportModal() {
   document.getElementById('reportDesc').value = '';
   document.getElementById('reportExcerpt').value = '';
   updateReportTypeUI();
-  document.getElementById('reportSubmitBtn').disabled = false;
-  document.getElementById('reportSubmitBtn').textContent = 'ENVOYER LE RAPPORT';
+  var btn = document.getElementById('reportSubmitBtn');
+  btn.disabled = false;
+  btn.textContent = 'ENVOYER LE RAPPORT';
 }
 
 function autoFillExcerpt() {
   var msgs = [];
   document.querySelectorAll('#messagesList .msg-bubble').forEach(function(el) {
-    var isEva = el.closest('.msg-row') && el.closest('.msg-row').classList.contains('eva');
-    var who = isEva ? 'EVA' : 'Vous';
-    var content = el.innerText || el.textContent || '';
-    if (content.trim()) msgs.push(who + ' : ' + content.trim());
+    var row = el.closest('.msg-row');
+    var who = (row && row.classList.contains('eva')) ? 'EVA' : 'Vous';
+    var content = (el.innerText || el.textContent || '').trim();
+    if (content) msgs.push(who + ' : ' + content);
   });
-  var last = msgs.slice(-10).join('\n');
-  document.getElementById('reportExcerpt').value = last;
+  document.getElementById('reportExcerpt').value = msgs.slice(-10).join('\n');
 }
 
 function updateReportTypeUI() {
@@ -3757,7 +3753,6 @@ function updateReportTypeUI() {
   document.getElementById('rexcerptSection').style.display = isConv ? 'block' : 'none';
 }
 
-/* Type buttons */
 document.querySelectorAll('.rtype-btn').forEach(function(btn) {
   btn.addEventListener('click', function() {
     document.querySelectorAll('.rtype-btn').forEach(function(b){ b.classList.remove('sel'); });
@@ -3769,17 +3764,15 @@ document.querySelectorAll('.rtype-btn').forEach(function(btn) {
   });
 });
 
-/* Priority buttons */
 document.querySelectorAll('.rprio-btn').forEach(function(btn) {
   btn.addEventListener('click', function() {
     document.querySelectorAll('.rprio-btn').forEach(function(b){ b.classList.remove('sl','sm','sh','sc'); });
     RS.selectedPrio = this.dataset.rprio;
     var cls = {low:'sl',medium:'sm',high:'sh',critical:'sc'}[RS.selectedPrio];
-    this.classList.add(cls);
+    if (cls) this.classList.add(cls);
   });
 });
 
-/* Close overlay click */
 document.getElementById('reportOverlay').addEventListener('click', function(e) {
   if (e.target === this) closeReportModal();
 });
@@ -3787,44 +3780,55 @@ document.getElementById('reportOverlay').addEventListener('click', function(e) {
 /* ── Soumission du rapport ──────────────────── */
 async function submitReport() {
   var desc = (document.getElementById('reportDesc').value || '').trim();
-  if (!desc) { toast('Veuillez écrire une description', 'error'); document.getElementById('reportDesc').focus(); return; }
+  if (!desc) {
+    toast('Veuillez écrire une description', 'error');
+    document.getElementById('reportDesc').focus();
+    return;
+  }
+  if (!S.user) {
+    toast('Vous devez être connecté pour envoyer un rapport', 'error');
+    return;
+  }
   var btn = document.getElementById('reportSubmitBtn');
   btn.disabled = true;
   btn.textContent = 'ENVOI EN COURS...';
   try {
     var profile = S.profile || {};
     var excerpt = (document.getElementById('reportExcerpt').value || '').trim();
+    var now = firebase.firestore.FieldValue.serverTimestamp();
     var reportData = {
-      userId: S.user ? S.user.uid : 'anonymous',
-      userName: profile.displayName || S.user && S.user.displayName || 'Utilisateur',
-      userEmail: S.user ? S.user.email : '',
+      userId: S.user.uid,
+      userName: profile.displayName || S.user.displayName || 'Utilisateur',
+      userEmail: S.user.email || '',
       userRole: profile.role || 'user',
       type: RS.selectedType,
       priority: (RS.selectedType === 'bug-conversation' || RS.selectedType === 'bug-general') ? RS.selectedPrio : 'low',
       description: desc,
       conversationExcerpt: RS.selectedType === 'bug-conversation' ? excerpt : '',
-      conversationId: S.selectedType === 'bug-conversation' ? (S.convId || '') : '',
+      conversationId: RS.selectedType === 'bug-conversation' ? (S.convId || '') : '',
       status: 'pending',
-      createdAt: window.timestamp(),
-      updatedAt: window.timestamp(),
+      createdAt: now,
+      updatedAt: now,
       adminNotes: '',
       resolvedAt: null
     };
     await db.collection('reports').add(reportData);
     closeReportModal();
-    toast('Rapport envoyé. Merci ! 🙏', 'success');
+    toast('Rapport envoyé. Merci !', 'success');
     updateReportBadge();
   } catch(err) {
-    console.error('submitReport:', err);
+    console.error('[REPORT] submitReport error:', err.code, err.message);
+    var msg = 'Erreur lors de l\'envoi';
+    if (err.code === 'permission-denied') msg = 'Accès refusé — vérifiez les règles Firestore';
+    toast(msg, 'error');
     btn.disabled = false;
     btn.textContent = 'ENVOYER LE RAPPORT';
-    toast('Erreur lors de l\'envoi', 'error');
   }
 }
 window.submitReport = submitReport;
 
 /* ════════════════════════════════════════════
-   TABLEAU DE BORD RAPPORTS
+   TABLEAU DE BORD RAPPORTS (admin)
 ════════════════════════════════════════════ */
 async function loadReports() {
   if (!isAdminRole()) return;
@@ -3832,46 +3836,68 @@ async function loadReports() {
   if (!list) return;
   list.innerHTML = '<div class="rp-loading">⏳ Chargement des rapports...</div>';
   try {
-    var snap = await db.collection('reports').orderBy('createdAt','desc').limit(200).get();
+    /* Pas de orderBy → pas besoin d'index Firestore composite. Tri côté client. */
+    var snap = await db.collection('reports').limit(300).get();
     RS.allReports = [];
-    snap.forEach(function(d){ RS.allReports.push(Object.assign({id:d.id}, d.data())); });
+    snap.forEach(function(d) {
+      RS.allReports.push(Object.assign({ id: d.id }, d.data()));
+    });
+    /* Tri par date décroissante côté client */
+    RS.allReports.sort(function(a, b) {
+      var ta = a.createdAt ? (a.createdAt.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
+      var tb = b.createdAt ? (b.createdAt.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
+      return tb - ta;
+    });
     updateReportStats();
     renderReports();
     updateReportBadge();
   } catch(err) {
-    console.error('loadReports:', err);
-    list.innerHTML = '<div class="rp-empty"><div class="rp-empty-icon">⚠️</div>Erreur de chargement</div>';
+    console.error('[REPORT] loadReports error:', err.code, err.message);
+    var hint = '';
+    if (err.code === 'permission-denied') {
+      hint = '<div style="font-size:0.78em;color:var(--text-muted);margin-top:8px;">Publiez les règles Firestore dans la console Firebase.</div>';
+    }
+    list.innerHTML = '<div class="rp-empty"><div class="rp-empty-icon">⚠️</div>Erreur : ' + (err.code || 'inconnue') + hint + '</div>';
   }
 }
 window.loadReports = loadReports;
 
 function updateReportStats() {
   var total = RS.allReports.length;
-  var pend = RS.allReports.filter(function(r){ return r.status === 'pending'; }).length;
-  var prog = RS.allReports.filter(function(r){ return r.status === 'in-progress'; }).length;
-  var done = RS.allReports.filter(function(r){ return r.status === 'resolved'; }).length;
-  document.getElementById('rstatAll').textContent = total;
-  document.getElementById('rstatPend').textContent = pend;
-  document.getElementById('rstatProg').textContent = prog;
-  document.getElementById('rstatDone').textContent = done;
+  var pend  = RS.allReports.filter(function(r){ return r.status === 'pending'; }).length;
+  var prog  = RS.allReports.filter(function(r){ return r.status === 'in-progress'; }).length;
+  var done  = RS.allReports.filter(function(r){ return r.status === 'resolved'; }).length;
+  var els = { rstatAll: total, rstatPend: pend, rstatProg: prog, rstatDone: done };
+  Object.keys(els).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = els[id];
+  });
 }
 
 async function updateReportBadge() {
+  if (!isAdminRole()) return;
   try {
-    var role = (S.profile && S.profile.role) || 'user';
-    if (role !== 'creator' && role !== 'developer') return;
-    var snap = await db.collection('reports').where('status','==','pending').get();
+    /* Filtre côté client depuis les données déjà chargées, ou fetch simple */
+    var pending = RS.allReports.filter(function(r){ return r.status === 'pending'; }).length;
+    if (RS.allReports.length === 0) {
+      /* Pas encore chargé — fetch léger sans orderBy */
+      var snap = await db.collection('reports').get();
+      pending = 0;
+      snap.forEach(function(d){ if (d.data().status === 'pending') pending++; });
+    }
     var badge = document.getElementById('reportBadge');
     if (!badge) return;
-    if (snap.size > 0) { badge.textContent = snap.size; badge.style.display = 'inline'; }
+    if (pending > 0) { badge.textContent = pending; badge.style.display = 'inline'; }
     else badge.style.display = 'none';
-  } catch(e) {}
+  } catch(e) {
+    console.warn('[REPORT] badge update failed:', e.code);
+  }
 }
 
 function getFilteredReports() {
   var f = RS.currentFilter;
   if (f === 'all') return RS.allReports;
-  if (f === 'pending' || f === 'in-progress' || f === 'resolved' || f === 'rejected') {
+  if (['pending','in-progress','resolved','rejected'].indexOf(f) !== -1) {
     return RS.allReports.filter(function(r){ return r.status === f; });
   }
   return RS.allReports.filter(function(r){ return r.type === f; });
@@ -3886,6 +3912,7 @@ function renderReports() {
     return;
   }
   list.innerHTML = filtered.map(function(r){ return buildReportCard(r); }).join('');
+
   list.querySelectorAll('.rp-card').forEach(function(card) {
     card.addEventListener('click', function(e) {
       if (e.target.closest('.rp-actions')) return;
@@ -3895,8 +3922,7 @@ function renderReports() {
   list.querySelectorAll('.rp-status-select').forEach(function(sel) {
     sel.addEventListener('change', function(e) {
       e.stopPropagation();
-      var id = this.dataset.rid;
-      updateReportStatus(id, this.value, this);
+      updateReportStatus(this.dataset.rid, this.value, this);
     });
   });
   list.querySelectorAll('.btn-rp-save').forEach(function(btn) {
@@ -3918,49 +3944,54 @@ function renderReports() {
 
 function buildReportCard(r) {
   var typeLabels = {'bug-conversation':'🐛 Bug conv.','bug-general':'🔧 Bug général','feature':'💡 Suggestion','autre':'💬 Autre'};
-  var typeCls = {'bug-conversation':'bc','bug-general':'bg','feature':'ft','autre':'au'};
+  var typeCls    = {'bug-conversation':'bc','bug-general':'bg','feature':'ft','autre':'au'};
   var statusLabels = {'pending':'⏳ En attente','in-progress':'🔄 En cours','resolved':'✅ Résolu','rejected':'🚫 Rejeté'};
-  var statusCls = {'pending':'sp','in-progress':'si','resolved':'sr','rejected':'sj'};
-  var prioCls = {'low':'pl','medium':'pm','high':'ph','critical':'pc'};
+  var statusCls    = {'pending':'sp','in-progress':'si','resolved':'sr','rejected':'sj'};
+  var prioCls    = {'low':'pl','medium':'pm','high':'ph','critical':'pc'};
   var prioLabels = {'low':'🟢 Basse','medium':'🟡 Normale','high':'🔴 Haute','critical':'🟣 Critique'};
+  var roleColors = {creator:'#ffd700',developer:'#00d4ff',creator_wife:'#ff69b4',user:'#aaa'};
+
   var dt = r.createdAt ? (r.createdAt.toDate ? r.createdAt.toDate() : new Date(r.createdAt)) : new Date();
   var dateStr = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  var roleColors = {creator:'#ffd700',developer:'#00d4ff',creator_wife:'#ff69b4',user:'#aaa'};
   var roleColor = roleColors[r.userRole] || '#aaa';
-  var desc = (r.description || '').substring(0, 80) + ((r.description||'').length > 80 ? '...' : '');
+  var shortDesc = (r.description || '').substring(0, 90) + ((r.description||'').length > 90 ? '…' : '');
+  var hasPrio = r.type === 'bug-conversation' || r.type === 'bug-general';
+  var prioHtml = hasPrio && r.priority ? '<span class="pbadge '+prioCls[r.priority]+'">'+prioLabels[r.priority]+'</span>' : '';
+  var excerptHtml = r.conversationExcerpt
+    ? '<div class="rp-detail-section"><div class="rp-detail-lbl">Extrait de conversation</div><div class="rp-excerpt-box">'+esc(r.conversationExcerpt)+'</div></div>'
+    : '';
   var statusOptions = ['pending','in-progress','resolved','rejected'].map(function(s){
     return '<option value="'+s+'"'+(r.status===s?' selected':'')+'>'+statusLabels[s]+'</option>';
   }).join('');
-  var excerptHtml = r.conversationExcerpt ? '<div class="rp-detail-section"><div class="rp-detail-lbl">Extrait de conversation</div><div class="rp-excerpt-box">'+esc(r.conversationExcerpt)+'</div></div>' : '';
-  var hasPrio = r.type === 'bug-conversation' || r.type === 'bug-general';
-  var prioHtml = hasPrio && r.priority ? '<span class="pbadge '+prioCls[r.priority]+'">'+prioLabels[r.priority]+'</span>' : '';
 
-  return '<div class="rp-card" data-rid="'+r.id+'">' +
-    '<div class="rp-card-top">' +
-      '<span class="tbadge '+typeCls[r.type||'autre']+'">'+typeLabels[r.type||'autre']+'</span>' +
-      '<span class="sbadge '+statusCls[r.status||'pending']+'">'+statusLabels[r.status||'pending']+'</span>' +
-      (prioHtml) +
-      '<span class="rp-card-title">'+esc(desc)+'</span>' +
-    '</div>' +
-    '<div class="rp-card-meta">' +
-      '<div class="rp-user-dot" style="background:linear-gradient(135deg,'+roleColor+','+roleColor+'aa)">'+esc((r.userName||'?').charAt(0).toUpperCase())+'</div>' +
-      '<span style="color:'+roleColor+'">'+esc(r.userName||'Inconnu')+'</span>' +
-      '<span>'+esc(r.userEmail||'')+'</span>' +
-      '<span>•</span><span>'+dateStr+'</span>' +
-    '</div>' +
-    '<div class="rp-detail">' +
-      '<div class="rp-detail-section"><div class="rp-detail-lbl">Description complète</div><div class="rp-detail-text">'+esc(r.description||'')+'</div></div>' +
-      excerptHtml +
-      '<div class="rp-actions">' +
-        '<span style="font-size:0.71em;color:var(--text-muted);">Statut :</span>' +
-        '<select class="rp-status-select" data-rid="'+r.id+'">'+statusOptions+'</select>' +
-      '</div>' +
-      '<div class="rp-detail-lbl" style="margin-top:10px;">Notes admin</div>' +
-      '<textarea class="rp-admin-notes" data-rid="'+r.id+'" placeholder="Notes internes, informations sur la résolution...">' + esc(r.adminNotes||'') + '</textarea>' +
-      '<button class="btn-rp-save" data-rid="'+r.id+'">💾 Sauvegarder</button>' +
-      '<button class="btn-rp-del" data-rid="'+r.id+'">🗑 Supprimer</button>' +
-    '</div>' +
-  '</div>';
+  return [
+    '<div class="rp-card" data-rid="'+r.id+'">',
+      '<div class="rp-card-top">',
+        '<span class="tbadge '+(typeCls[r.type]||'au')+'">'+(typeLabels[r.type]||'💬 Autre')+'</span>',
+        '<span class="sbadge '+(statusCls[r.status]||'sp')+'">'+(statusLabels[r.status]||'⏳ En attente')+'</span>',
+        prioHtml,
+        '<span class="rp-card-title">'+esc(shortDesc)+'</span>',
+      '</div>',
+      '<div class="rp-card-meta">',
+        '<div class="rp-user-dot" style="background:linear-gradient(135deg,'+roleColor+','+roleColor+'88)">'+esc((r.userName||'?').charAt(0).toUpperCase())+'</div>',
+        '<span style="color:'+roleColor+'">'+esc(r.userName||'Inconnu')+'</span>',
+        '<span>'+esc(r.userEmail||'')+'</span>',
+        '<span>•</span><span>'+dateStr+'</span>',
+      '</div>',
+      '<div class="rp-detail">',
+        '<div class="rp-detail-section"><div class="rp-detail-lbl">Description</div><div class="rp-detail-text">'+esc(r.description||'')+'</div></div>',
+        excerptHtml,
+        '<div class="rp-actions">',
+          '<span style="font-size:0.71em;color:var(--text-muted);">Statut :</span>',
+          '<select class="rp-status-select" data-rid="'+r.id+'">'+statusOptions+'</select>',
+        '</div>',
+        '<div class="rp-detail-lbl" style="margin-top:10px;">Notes admin</div>',
+        '<textarea class="rp-admin-notes" data-rid="'+r.id+'" placeholder="Notes internes...">'+esc(r.adminNotes||'')+'</textarea>',
+        '<button class="btn-rp-save" data-rid="'+r.id+'">💾 Sauvegarder</button>',
+        '<button class="btn-rp-del" data-rid="'+r.id+'">🗑 Supprimer</button>',
+      '</div>',
+    '</div>'
+  ].join('');
 }
 
 async function updateReportStatus(id, newStatus, selectEl) {
@@ -3970,22 +4001,30 @@ async function updateReportStatus(id, newStatus, selectEl) {
     if (newStatus === 'resolved') upd.resolvedAt = now;
     await db.collection('reports').doc(id).update(upd);
     var r = RS.allReports.find(function(x){ return x.id === id; });
-    if (r) { r.status = newStatus; if (newStatus === 'resolved') r.resolvedAt = new Date(); }
+    if (r) { r.status = newStatus; }
     updateReportStats();
     updateReportBadge();
     toast('Statut mis à jour', 'success');
-  } catch(e) { toast('Erreur mise à jour', 'error'); }
+  } catch(e) {
+    console.error('[REPORT] updateStatus:', e.code, e.message);
+    toast('Erreur mise à jour : ' + (e.code || e.message), 'error');
+  }
 }
 
 async function saveAdminNotes(id, notes, btn) {
   try {
-    await db.collection('reports').doc(id).update({ adminNotes: notes, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    await db.collection('reports').doc(id).update({
+      adminNotes: notes,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
     var r = RS.allReports.find(function(x){ return x.id === id; });
     if (r) r.adminNotes = notes;
-    var origTxt = btn.textContent;
     btn.textContent = '✅ Sauvegardé';
     setTimeout(function(){ btn.textContent = '💾 Sauvegarder'; }, 1800);
-  } catch(e) { toast('Erreur sauvegarde', 'error'); }
+  } catch(e) {
+    console.error('[REPORT] saveNotes:', e.code, e.message);
+    toast('Erreur sauvegarde', 'error');
+  }
 }
 
 async function deleteReport(id) {
@@ -3996,32 +4035,33 @@ async function deleteReport(id) {
     renderReports();
     updateReportBadge();
     toast('Rapport supprimé', 'success');
-  } catch(e) { toast('Erreur suppression', 'error'); }
+  } catch(e) {
+    console.error('[REPORT] deleteReport:', e.code, e.message);
+    toast('Erreur suppression', 'error');
+  }
 }
 
-/* fallback: observer sur le badge texte pour détecter le chargement du profil */
+/* ── Observateur : relancer setupReportsAccess quand le profil est chargé ── */
 (function() {
   var done = false;
-  var obs = new MutationObserver(function() {
-    if (done) return;
-    if (isAdminRole()) {
-      done = true;
-      setupReportsAccess();
-      updateReportBadge();
-      obs.disconnect();
-    }
-  });
+  function trySetup() {
+    if (done || !isAdminRole()) return;
+    done = true;
+    setupReportsAccess();
+    updateReportBadge();
+  }
   var badge = document.getElementById('userBadgeText');
-  if (badge) obs.observe(badge, { childList: true, subtree: true, characterData: true });
+  if (badge) {
+    var obs = new MutationObserver(function() { trySetup(); });
+    obs.observe(badge, { childList: true, subtree: true, characterData: true });
+  }
+  /* Tentative après 3s au cas où le profil est déjà chargé */
+  setTimeout(trySetup, 3000);
 })();
 
-/* ── Fermer la lightbox avec Escape ─────── */
+/* ── Fermer le modal avec Escape ─────────── */
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    var lb = document.getElementById('ssLightbox');
-    if (lb && lb.style.display === 'flex') { lb.style.display = 'none'; return; }
-    closeReportModal();
-  }
+  if (e.key === 'Escape') closeReportModal();
 });
 
 </script>
