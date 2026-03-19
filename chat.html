@@ -963,27 +963,25 @@ body::before{
   button{min-height:44px;min-width:44px;}
   .new-conv-btn,.conv-del,.conv-edit,.tone-btn,.prompt-chip,.voice-test-btn,.hdr-btn,.hamburger{min-height:unset;min-width:unset;}
 
-  /* Modals: bottom-sheet plein écran sur mobile */
-  .modal-overlay{align-items:flex-end;padding:0;}
+  /* Modals: pleine page sur mobile */
+  .modal-overlay{
+    align-items:stretch;justify-content:stretch;
+    padding:0;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;
+  }
   .modal-box{
     width:100vw;max-width:100vw;
-    min-height:82dvh;max-height:92dvh;
-    border-radius:20px 20px 0 0;
-    margin:0;
+    height:100dvh;max-height:100dvh;min-height:100dvh;
+    border-radius:0;margin:0;
     display:flex;flex-direction:column;
+    box-shadow:none;animation:none;
   }
   .modal-header{
-    padding:14px 16px 12px;
+    padding:env(safe-area-inset-top,0px) 14px 12px;
+    padding-top:max(env(safe-area-inset-top,0px),14px);
     position:sticky;top:0;z-index:2;
-    background:var(--surface);
+    background:var(--surface);border-bottom:1px solid var(--border);
   }
-  /* Handle bar visuel en haut de la feuille */
-  .modal-header::before{
-    content:'';display:block;
-    width:38px;height:4px;border-radius:2px;
-    background:rgba(255,255,255,0.15);
-    margin:0 auto 12px;
-  }
+  .modal-header::before{display:none;}
   /* Settings: empilé verticalement */
   .modal-body{
     flex-direction:column;
@@ -1641,7 +1639,7 @@ function renderUserUI(p) {
   var roles = { creator:'👑 Créateur', developer:'⚙️ Développeur', creator_wife:'💎 Épouse', user:'👤 Utilisateur' };
   if (badge) {
     var roleKey = (p.role||'user').toLowerCase();
-    badge.textContent = roles[roleKey] || (p.role ? '⚙️ '+p.role : '👤 Utilisateur');
+    badge.textContent = roles[roleKey] || p.devKeyLabel || p.role || '👤 Utilisateur';
   }
   var ava = document.getElementById('userAvatar');
   if (ava) {
@@ -2411,7 +2409,7 @@ function renderSettings(section) {
       '</select></div>' +
       '<div class="settings-row mobile-stack" style="padding:10px 0;border-top:1px solid var(--border);margin-top:8px">' +
       '<div><div class="settings-row-label">Email</div><div style="font-size:0.76em;color:var(--text-muted);word-break:break-all">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
-      '<div><div class="settings-row-label">Rôle</div><div style="font-size:0.78em;color:var(--cyan)">'+esc(roleLabels[(p.role||'user').toLowerCase()]||roleLabels.user)+'</div></div>' +
+      '<div><div class="settings-row-label">Rôle</div><div style="font-size:0.78em;color:var(--cyan)">'+esc(roleLabels[(p.role||'user').toLowerCase()]||p.devKeyLabel||p.role||roleLabels.user)+'</div></div>' +
       '</div>' +
       '<div class="settings-row" style="padding:10px 0;border-top:1px solid var(--border)">' +
       '<div><div class="settings-row-label">Panneau EVA</div><div class="settings-row-sub">Afficher le personnage animé EVA</div></div>' +
@@ -2573,7 +2571,7 @@ function renderSettings(section) {
       '<div class="settings-section-title">Clés Développeur</div>' +
       '<div class="settings-row" style="padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:12px">' +
       '<div><div class="settings-row-label">Rôle actuel</div></div>' +
-      '<div style="font-size:0.82em;color:'+esc(roleColors[devRole]||'#aaa')+'">'+esc(roleLabels[devRole]||devRole)+'</div>' +
+      '<div style="font-size:0.82em;color:'+esc(roleColors[devRole.toLowerCase()]||roleColors[devRole]||'#aaa')+'">'+esc(roleLabels[devRole.toLowerCase()]||roleLabels[devRole]||devLabel||devRole)+'</div>' +
       '</div>' +
       (devKey ?
         '<div style="font-size:0.76em;color:var(--text-muted);margin-bottom:12px">Clé active : <code style="color:var(--cyan)">'+esc(devKey)+'</code>' +

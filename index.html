@@ -616,10 +616,11 @@ auth.onAuthStateChanged(function(user) {
         '<a href="/chat.html" target="_top" class="nav-profile-item">⚡ Accéder à EVA</a>' +
         '<a href="/chat.html#settings" target="_top" class="nav-profile-item">⚙️ Paramètres</a>' +
         '<div style="height:1px;background:rgba(0,212,255,0.1);margin:4px 0"></div>' +
-        '<button class="nav-profile-item danger" onclick="auth.signOut()">🚪 Déconnexion</button>' +
+        '<button class="nav-profile-item danger" onclick="auth.signOut().then(function(){window.location.reload();})">🚪 Déconnexion</button>' +
         '</div></div>';
       document.addEventListener('click', function(e) {
-        if (!document.getElementById('navProfile').contains(e.target)) {
+        var prof = document.getElementById('navProfile');
+        if (prof && !prof.contains(e.target)) {
           var m = document.getElementById('navProfileMenu');
           if (m) m.classList.remove('open');
         }
@@ -627,6 +628,10 @@ auth.onAuthStateChanged(function(user) {
     }
     if (heroBtn) { heroBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Accéder à EVA'; heroBtn.href = '/chat.html'; heroBtn.target = '_top'; }
     if (ctaBtn) { ctaBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Accéder à EVA'; ctaBtn.href = '/chat.html'; ctaBtn.target = '_top'; }
+  } else {
+    if (navUser) navUser.innerHTML = '<a href="/login.html" target="_top" class="nav-user-btn">Connexion</a><a href="/login.html" target="_top" class="nav-cta">Essayer gratuitement</a>';
+    if (heroBtn) { heroBtn.textContent = 'Commencer maintenant'; heroBtn.href = '/login.html'; heroBtn.target = '_top'; }
+    if (ctaBtn) { ctaBtn.textContent = 'Commencer maintenant'; ctaBtn.href = '/login.html'; ctaBtn.target = '_top'; }
   }
 });
 </script>
