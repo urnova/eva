@@ -1,301 +1,104 @@
-/* ═══════════════════════════════════════════════════════════
-   EVA V3 - TTS.JS
-   Text-to-Speech avec Microsoft Denise (voix féminine française)
-   ═══════════════════════════════════════════════════════════ */
+(function() {
+'use strict';
 
-import { PREFERRED_FRENCH_VOICES } from '../core/config.js';
-import { toast } from '../core/utils.js';
+var currentAudio = null;
+var isMuted = false;
 
-// Variables globales
-let currentAudio = null;
-let isMuted = false;
-let availableVoices = [];
-
-// ═══ INIT VOICES ═══
-export function initVoices() {
-  // Charger les voix disponibles
-  availableVoices = speechSynthesis.getVoices();
-  
-  // iOS Safari needs this
+function initVoices() {
+  if (typeof speechSynthesis === 'undefined') return;
+  speechSynthesis.getVoices();
   if (speechSynthesis.onvoiceschanged !== undefined) {
-    speechSynthesis.onvoiceschanged = () => {
-      availableVoices = speechSynthesis.getVoices();
-    };
+    speechSynthesis.onvoiceschanged = function() { speechSynthesis.getVoices(); };
   }
 }
 
-// ═══ GET AVAILABLE VOICES ═══
-export function getAvailableVoices(lang = 'fr-FR') {
-  const voices = speechSynthesis.getVoices();
-  return voices.filter(voice => voice.lang.startsWith(lang.split('-')[0]));
-}
-
-// ═══ GET BEST FRENCH VOICE ═══
-export function getBestFrenchVoice() {
-  const voices = speechSynthesis.getVoices();
-  
-  // Chercher la meilleure voix dans l'ordre de préférence
-  for (const preferred of PREFERRED_FRENCH_VOICES) {
-    const voice = voices.find(v => 
-      v.name.includes(preferred) || v.name === preferred
-    );
-    if (voice) {
-      console.log('🎤 Voix sélectionnée:', voice.name);
-      return voice;
-    }
+function getBestFrenchVoice() {
+  var voices = speechSynthesis.getVoices();
+  var preferred = ['Microsoft Denise', 'Google français', 'Amélie', 'Thomas', 'fr-FR'];
+  for (var i = 0; i < preferred.length; i++) {
+    var v = voices.find(function(v) { return v.name.includes(preferred[i]) || v.lang === preferred[i]; });
+    if (v) return v;
   }
-  
-  // Fallback: n'importe quelle voix française
-  const frenchVoice = voices.find(v => v.lang.startsWith('fr'));
-  if (frenchVoice) {
-    console.log('🎤 Voix française fallback:', frenchVoice.name);
-    return frenchVoice;
-  }
-  
-  console.warn('⚠️ Aucune voix française trouvée');
-  return null;
+  return voices.find(function(v) { return v.lang && v.lang.startsWith('fr'); }) || null;
 }
 
-// ═══ GET VOICE BY NAME ═══
-export function getVoiceByName(name) {
-  const voices = speechSynthesis.getVoices();
-  return voices.find(v => v.name === name);
-}
-
-// ═══ SPEAK (Web Speech API) ═══
-export function speak(text, config = {}) {
-  return new Promise((resolve, reject) => {
-    if (isMuted) {
-      resolve();
-      return;
-    }
-    
-    // Arrêter toute synthèse en cours
-    stop();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Sélectionner la voix
-    let voice = null;
+function speak(text, config) {
+  config = config || {};
+  return new Promise(function(resolve) {
+    if (isMuted) { resolve(); return; }
+    if (typeof speechSynthesis === 'undefined') { resolve(); return; }
+    speechSynthesis.cancel();
+    var utterance = new SpeechSynthesisUtterance(text);
+    var voice = getBestFrenchVoice();
     if (config.selectedVoice && config.selectedVoice !== 'auto') {
-      voice = getVoiceByName(config.selectedVoice);
+      var namedVoice = speechSynthesis.getVoices().find(function(v) { return v.name === config.selectedVoice; });
+      if (namedVoice) voice = namedVoice;
     }
-    
-    if (!voice) {
-      voice = getBestFrenchVoice();
-    }
-    
-    if (voice) {
-      utterance.voice = voice;
-    }
-    
-    // Configuration
+    if (voice) utterance.voice = voice;
     utterance.lang = config.voiceLang || 'fr-FR';
     utterance.rate = config.speechRate || 1.0;
-    utterance.pitch = config.speechPitch || 1.0;
+    utterance.pitch = config.speechPitch || 1.1;
     utterance.volume = 1.0;
-    
-    // Events
-    utterance.onstart = () => {
-      console.log('🗣️ Speaking:', text.substring(0, 50) + '...');
-      setLogoSpeaking(true);
-    };
-    
-    utterance.onend = () => {
-      console.log('✅ Speech ended');
-      setLogoSpeaking(false);
-      resolve();
-    };
-    
-    utterance.onerror = (error) => {
-      console.error('❌ Speech error:', error);
-      setLogoSpeaking(false);
-      reject(error);
-    };
-    
-    // Speak
+    utterance.onstart = function() { setEvaSpeaking(true); };
+    utterance.onend = function() { setEvaSpeaking(false); resolve(); };
+    utterance.onerror = function() { setEvaSpeaking(false); resolve(); };
     speechSynthesis.speak(utterance);
   });
 }
 
-// ═══ SPEAK WITH PUTER ═══
-export async function speakWithPuter(text, config = {}) {
-  if (typeof puter === 'undefined') {
-    throw new Error('Puter not loaded');
-  }
-  
+async function speakWithPuter(text, config) {
+  config = config || {};
+  if (typeof puter === 'undefined') throw new Error('Puter not loaded');
+  setEvaSpeaking(true);
   try {
-    setLogoSpeaking(true);
-    
-    const voice = config.puterVoice || 'nova';
-    
-    const audio = await puter.ai.txt2speech(text, {
-      provider: 'openai',
-      model: 'tts-1',
-      voice
-    });
-    
-    // Create audio element
-    const blob = audio instanceof Blob ? audio : new Blob([audio], { type: 'audio/mpeg' });
-    const url = URL.createObjectURL(blob);
-    
+    var voice = config.puterVoice || 'nova';
+    var audio = await puter.ai.txt2speech(text, { provider: 'openai', model: 'tts-1', voice: voice });
+    var blob = audio instanceof Blob ? audio : new Blob([audio], { type: 'audio/mpeg' });
+    var url = URL.createObjectURL(blob);
     currentAudio = new Audio(url);
-    
-    currentAudio.onplay = () => {
-      console.log('🗣️ Playing Puter TTS');
-    };
-    
-    currentAudio.onended = () => {
-      console.log('✅ Puter TTS ended');
-      setLogoSpeaking(false);
-      URL.revokeObjectURL(url);
-    };
-    
-    currentAudio.onerror = (error) => {
-      console.error('❌ Puter TTS error:', error);
-      setLogoSpeaking(false);
-      URL.revokeObjectURL(url);
-    };
-    
+    currentAudio.onended = function() { setEvaSpeaking(false); URL.revokeObjectURL(url); };
+    currentAudio.onerror = function() { setEvaSpeaking(false); URL.revokeObjectURL(url); };
     await currentAudio.play();
-  } catch (error) {
-    setLogoSpeaking(false);
-    throw error;
+  } catch(e) {
+    setEvaSpeaking(false);
+    throw e;
   }
 }
 
-// ═══ SPEAK (Main function) ═══
-export async function speakText(text, config = {}) {
+async function speakText(text, config) {
+  config = config || {};
+  if (isMuted) return;
   try {
-    const provider = config.voiceProvider || 'native';
-    
-    if (provider === 'puter' && typeof puter !== 'undefined') {
+    if (config.voiceProvider === 'puter' && typeof puter !== 'undefined') {
       await speakWithPuter(text, config);
     } else {
-      // Fallback to native
       await speak(text, config);
     }
-  } catch (error) {
-    console.error('Speech error:', error);
-    toast('Erreur de synthèse vocale', 'error');
-    
-    // Try fallback to native if Puter failed
-    if (config.voiceProvider === 'puter') {
-      try {
-        await speak(text, { ...config, voiceProvider: 'native' });
-      } catch (fallbackError) {
-        console.error('Fallback speech error:', fallbackError);
-      }
-    }
+  } catch(e) {
+    try { await speak(text, config); } catch(e2) {}
   }
 }
 
-// ═══ STOP ═══
-export function stop() {
-  // Stop Web Speech API
-  if (speechSynthesis.speaking) {
-    speechSynthesis.cancel();
+function stopTTS() {
+  if (typeof speechSynthesis !== 'undefined' && speechSynthesis.speaking) speechSynthesis.cancel();
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  setEvaSpeaking(false);
+}
+
+function setMuted(val) { isMuted = val; if (val) stopTTS(); }
+function getMuted() { return isMuted; }
+function toggleMuted() { isMuted = !isMuted; if (isMuted) stopTTS(); return isMuted; }
+
+function setEvaSpeaking(speaking) {
+  if (window.EvaCharacter) {
+    if (speaking) window.EvaCharacter.startTalking();
+    else window.EvaCharacter.stopTalking();
   }
-  
-  // Stop audio player (Puter)
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio = null;
-  }
-  
-  setLogoSpeaking(false);
+  var dot = document.getElementById('statusDot');
+  if (dot) dot.className = speaking ? 'status-dot speaking' : 'status-dot';
 }
 
-// ═══ PAUSE / RESUME ═══
-export function pause() {
-  if (speechSynthesis.speaking && !speechSynthesis.paused) {
-    speechSynthesis.pause();
-  }
-  
-  if (currentAudio && !currentAudio.paused) {
-    currentAudio.pause();
-  }
-}
-
-export function resume() {
-  if (speechSynthesis.paused) {
-    speechSynthesis.resume();
-  }
-  
-  if (currentAudio && currentAudio.paused) {
-    currentAudio.play();
-  }
-}
-
-// ═══ MUTE / UNMUTE ═══
-export function mute() {
-  isMuted = true;
-  stop();
-}
-
-export function unmute() {
-  isMuted = false;
-}
-
-export function toggleMute() {
-  isMuted = !isMuted;
-  if (isMuted) {
-    stop();
-  }
-  return isMuted;
-}
-
-export function isSpeaking() {
-  return speechSynthesis.speaking || (currentAudio && !currentAudio.paused);
-}
-
-// ═══ SET LOGO SPEAKING STATE ═══
-function setLogoSpeaking(speaking) {
-  const logo = document.getElementById('evaLogo');
-  const statusDot = document.getElementById('statusDot');
-  
-  if (speaking) {
-    logo?.classList.add('speaking');
-    statusDot?.classList.add('speaking');
-  } else {
-    logo?.classList.remove('speaking');
-    statusDot?.classList.remove('speaking');
-  }
-}
-
-// ═══ TEST VOICE ═══
-export async function testVoice(config = {}) {
-  const testText = "Bonjour ! Je suis Eva, votre assistante virtuelle. Comment puis-je vous aider aujourd'hui ?";
-  
-  try {
-    await speakText(testText, config);
-    toast('Test vocal réussi', 'success');
-  } catch (error) {
-    console.error('Voice test error:', error);
-    toast('Erreur lors du test vocal', 'error');
-  }
-}
-
-// Init on load
-if (typeof window !== 'undefined') {
-  window.addEventListener('load', initVoices);
-  initVoices();
-}
-
-export default {
-  initVoices,
-  getAvailableVoices,
-  getBestFrenchVoice,
-  getVoiceByName,
-  speak,
-  speakWithPuter,
-  speakText,
-  stop,
-  pause,
-  resume,
-  mute,
-  unmute,
-  toggleMute,
-  isSpeaking,
-  testVoice
-};
+window.EVATTS = { initVoices, speak, speakWithPuter, speakText, stopTTS, setMuted, getMuted, toggleMuted, getBestFrenchVoice };
+if (typeof window !== 'undefined') window.addEventListener('load', initVoices);
+initVoices();
+})();
