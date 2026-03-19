@@ -3835,10 +3835,23 @@ window.alarmStop = alarmStop;
 function alarmSnooze() {
   var label = (document.getElementById('alarmOverlayLabel') || {}).textContent || 'Alarme';
   stopAlarmAudio();
-  hideAlarmOverlay();
-  toast('💤 Alarme reportée de 5 minutes', 'info');
+
+  // Afficher la nouvelle heure dans l'overlay avant de masquer
+  var snoozeTime = new Date(Date.now() + 5 * 60 * 1000);
+  var snoozeHH = snoozeTime.getHours().toString().padStart(2,'0');
+  var snoozeMM = snoozeTime.getMinutes().toString().padStart(2,'0');
+  var timeEl = document.getElementById('alarmOverlayTime');
+  var labelEl = document.getElementById('alarmOverlayLabel');
+  if (timeEl) timeEl.textContent = '💤 Reportée à ' + snoozeHH + ':' + snoozeMM;
+  if (labelEl) labelEl.textContent = label;
+  // Masquer l'overlay après 2 secondes
   setTimeout(function() {
-    triggerAlarm(label + ' (Reportée)', null);
+    hideAlarmOverlay();
+  }, 2000);
+
+  toast('💤 Alarme reportée à ' + snoozeHH + ':' + snoozeMM, 'info');
+  setTimeout(function() {
+    triggerAlarm(label + ' ⏰ +5 min', null);
   }, 5 * 60 * 1000);
 }
 window.alarmSnooze = alarmSnooze;
