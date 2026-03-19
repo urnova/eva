@@ -1354,6 +1354,10 @@ async function loadProfile(uid) {
     var doc = await db.collection('users').doc(uid).get();
     if (doc.exists) {
       S.profile = doc.data();
+      if (!S.profile.onboardingCompleted) {
+        window.location.href = '/onboarding.html';
+        return;
+      }
       renderUserUI(S.profile);
       if (S.profile.preferences) {
         S.config = Object.assign({}, S.profile.preferences, S.config);
@@ -1374,8 +1378,7 @@ async function createProfile(user) {
   };
   try {
     await db.collection('users').doc(user.uid).set(p);
-    S.profile = p;
-    renderUserUI(p);
+    window.location.href = '/onboarding.html';
   } catch(e) {}
 }
 

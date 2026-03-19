@@ -278,8 +278,19 @@ function showMsg(msg, type) {
 }
 function clearMsg() { document.getElementById('authMessage').className = 'auth-message'; }
 
-auth.onAuthStateChanged(function(user) {
-  if (user) window.location.href = '/chat.html';
+auth.onAuthStateChanged(async function(user) {
+  if (!user) return;
+  try {
+    var doc = await db.collection('users').doc(user.uid).get();
+    if (!doc.exists) return;
+    if (doc.data().onboardingCompleted) {
+      window.location.href = '/chat.html';
+    } else {
+      window.location.href = '/onboarding.html';
+    }
+  } catch(e) {
+    window.location.href = '/chat.html';
+  }
 });
 
 var ERR = {
