@@ -478,8 +478,6 @@ body::before{
 }
 .tone-btn:hover{border-color:var(--border-h);color:var(--text);background:var(--surface3);}
 .tone-btn.active{background:var(--cyan);border-color:var(--cyan);color:#000;font-weight:700;}
-/* EVA status bar */
-
 /* Input area */
 .input-area{
   padding:10px 18px 16px;flex-shrink:0;
@@ -817,10 +815,9 @@ body::before{
   .prompt-chips{gap:6px;}
   .prompt-chip{font-size:0.71em;padding:6px 10px;}
   /* Input area */
-  .input-outer{padding:8px 10px 10px;}
-  .input-wrap{padding:6px 8px 6px 10px;border-radius:16px;}
-  .input-box{font-size:0.88em;}
-  .tone-scroll{gap:5px;}
+  .input-area{padding:8px 10px 10px;}
+  .input-box{font-size:0.88em;border-radius:12px;}
+  .tone-bar{padding:6px 10px 5px;gap:5px;}
   .tone-btn{font-size:0.65em;padding:3px 8px;}
   /* Modals */
   .modal-box{width:96vw;max-width:96vw;max-height:88vh;border-radius:14px;}
@@ -1943,11 +1940,13 @@ function streamEvaMsg(content) {
   var i = 0;
   var streamed = '';
   var speed = Math.max(1, Math.floor(content.length / 120));
+  if (!S.ttsOn) setEvaStatus('EVA ÉCRIT...', 'writing');
 
   function tick() {
     if (i >= content.length) {
       bubble.innerHTML = mdToHtml(content);
       scrollDown();
+      if (!S.ttsOn) setEvaStatus(null);
       return;
     }
     var end = Math.min(i + speed, content.length);
