@@ -3659,14 +3659,8 @@ var RS = {
 /* ── Afficher section gold selon le rôle ──── */
 function isAdminRole() {
   var role = ((S.profile && S.profile.role) || 'user').toLowerCase().trim();
-  var label = ((S.profile && S.profile.devKeyLabel) || '').toLowerCase();
-  return role === 'creator' || role === 'developer' ||
-    role.indexOf('creator') !== -1 || role.indexOf('createur') !== -1 ||
-    role.indexOf('créateur') !== -1 || role.indexOf('developer') !== -1 ||
-    role.indexOf('développeur') !== -1 ||
-    label.indexOf('créateur') !== -1 || label.indexOf('createur') !== -1 ||
-    label.indexOf('creator') !== -1 || label.indexOf('developer') !== -1 ||
-    label.indexOf('développeur') !== -1;
+  var adminRoles = ['creator', 'developer', 'createur', 'créateur', 'developpeur', 'développeur'];
+  return adminRoles.indexOf(role) !== -1;
 }
 function setupReportsAccess() {
   if (isAdminRole()) {
@@ -3833,6 +3827,7 @@ window.submitReport = submitReport;
    TABLEAU DE BORD RAPPORTS
 ════════════════════════════════════════════ */
 async function loadReports() {
+  if (!isAdminRole()) return;
   var list = document.getElementById('reportsList');
   if (!list) return;
   list.innerHTML = '<div class="rp-loading">⏳ Chargement des rapports...</div>';
