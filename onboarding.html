@@ -391,6 +391,19 @@ body::before{
         </label>
       </div>
 
+      <div class="toggle-row" id="notifToggleRow">
+        <div class="toggle-info">
+          <div class="toggle-name">🔔 Notifications push</div>
+          <div class="toggle-desc">Recevez les alarmes et rappels E.V.A même hors du site</div>
+        </div>
+        <button id="notifPermBtn" onclick="requestObNotifPermission()" style="
+          padding:8px 16px;border-radius:8px;border:1px solid var(--cyan);
+          background:transparent;color:var(--cyan);font-family:'Orbitron',monospace;
+          font-size:0.68em;font-weight:700;letter-spacing:1px;cursor:pointer;
+          transition:all 0.2s;white-space:nowrap;
+        ">ACTIVER</button>
+      </div>
+
       <div class="pc-note">
         <div class="pc-note-title">💻 Forme physique d'E.V.A</div>
         <div class="pc-note-body">
@@ -566,9 +579,55 @@ function showFieldError(id, msg) {
   setTimeout(function(){ el.classList.remove('error'); el.placeholder = id === 'obNewPass' ? 'Minimum 6 caractères' : 'Idem ci-dessus'; }, 2500);
 }
 
+async function requestObNotifPermission() {
+  if (!('Notification' in window)) {
+    var btn = document.getElementById('notifPermBtn');
+    if (btn) { btn.textContent = 'Non supporté'; btn.style.opacity = '0.4'; btn.disabled = true; }
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    var btn = document.getElementById('notifPermBtn');
+    if (btn) { btn.textContent = '✅ Activées'; btn.style.color = 'var(--cyan)'; btn.disabled = true; }
+    return;
+  }
+  var perm = await Notification.requestPermission();
+  var btn = document.getElementById('notifPermBtn');
+  if (!btn) return;
+  if (perm === 'granted') {
+    btn.textContent = '✅ Activées';
+    btn.style.borderColor = 'var(--cyan)';
+    btn.disabled = true;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js').catch(function(){});
+    }
+  } else {
+    btn.textContent = '❌ Refusées';
+    btn.style.borderColor = '#ff4d6d';
+    btn.style.color = '#ff4d6d';
+  }
+}
+window.requestObNotifPermission = requestObNotifPermission;
+
+function updateNotifBtnState() {
+  if (!('Notification' in window)) return;
+  var btn = document.getElementById('notifPermBtn');
+  if (!btn) return;
+  if (Notification.permission === 'granted') {
+    btn.textContent = '✅ Activées';
+    btn.style.color = 'var(--cyan)';
+    btn.disabled = true;
+  } else if (Notification.permission === 'denied') {
+    btn.textContent = '❌ Bloquées';
+    btn.style.borderColor = '#ff4d6d';
+    btn.style.color = '#ff4d6d';
+    btn.disabled = true;
+  }
+}
+
 function goStep(n) {
   // If not Google-only, skip step 2
   if (!isGoogleOnlyUser && n === 2) { n = 3; }
+  if (n === 5) { setTimeout(updateNotifBtnState, 100); }
 
   if (currentStep === 1 && n > 1) {
     var name = document.getElementById('displayName').value.trim();

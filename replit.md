@@ -60,6 +60,19 @@ An AI-powered intelligent virtual assistant web app with a Grok-like chat interf
 - **Gold sidebar section "Admin"** — visible only to creator/developer roles
 - **Reports dashboard** (viewReports) — stats bar (total/pending/in-progress/resolved), filters by type/status, expandable cards, status selector (pending/in-progress/resolved/rejected), admin notes, delete
 
+## Reminders System (2025-03)
+- **Rappels view** — new sidebar nav item + full view panel (viewReminders) in `chat.html`
+- **CRUD:** Create (with date/time), complete (checkbox), delete — all synced to Firestore `users/{uid}/reminders`
+- **Reminder checker** — `checkRemindersTime()` runs every 60s; fires toast + browser/SW notification when time is reached
+- **EVA can create reminders** — added `[ACTION:{"type":"reminder",...}]` to system prompt + action parser
+
+## Push Notifications (2025-03)
+- **Service Worker** — `service-worker.js` at root; handles alarm + reminder notifications with action buttons
+- **Alarm notifications:** Stop (dismiss) + Snooze (+5 min) action buttons; SW re-triggers after 5 min on snooze
+- **Alarm overlay:** Full-screen overlay in `chat.html` with looping audio (2 min max), Stop/Snooze buttons
+- **Permission flow:** Asked in onboarding step 5 + manageable in Settings > Notifications
+- **Settings section "Notifications"** — shows permission state, activate/deactivate button, tips for denied state
+
 ## Live2D Character (EVA Panel)
 - Character panel in `chat.html` uses **Live2D** via `pixi-live2d-display` + PixiJS 6
 - Model: Shizuku (Cubism 2) loaded from jsDelivr CDN
