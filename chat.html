@@ -963,42 +963,61 @@ body::before{
   button{min-height:44px;min-width:44px;}
   .new-conv-btn,.conv-del,.conv-edit,.tone-btn,.prompt-chip,.voice-test-btn,.hdr-btn,.hamburger{min-height:unset;min-width:unset;}
 
-  /* Modals: full screen on mobile */
+  /* Modals: bottom-sheet plein écran sur mobile */
   .modal-overlay{align-items:flex-end;padding:0;}
   .modal-box{
     width:100vw;max-width:100vw;
-    max-height:92dvh;border-radius:18px 18px 0 0;
+    min-height:82dvh;max-height:92dvh;
+    border-radius:20px 20px 0 0;
     margin:0;
+    display:flex;flex-direction:column;
   }
-  .modal-header{padding:12px 14px 10px;}
+  .modal-header{
+    padding:14px 16px 12px;
+    position:sticky;top:0;z-index:2;
+    background:var(--surface);
+  }
+  /* Handle bar visuel en haut de la feuille */
+  .modal-header::before{
+    content:'';display:block;
+    width:38px;height:4px;border-radius:2px;
+    background:rgba(255,255,255,0.15);
+    margin:0 auto 12px;
+  }
   /* Settings: empilé verticalement */
   .modal-body{
     flex-direction:column;
     overflow:hidden;
+    flex:1;
     padding:0;
   }
   .modal-sidebar{
     width:100%;flex-direction:row;
     border-right:none;border-bottom:1px solid var(--border);
-    padding:6px 8px;gap:3px;
+    padding:4px 8px 6px;gap:2px;
     overflow-x:auto;-webkit-overflow-scrolling:touch;
     scrollbar-width:none;flex-shrink:0;
   }
   .modal-sidebar::-webkit-scrollbar{display:none;}
   .settings-nav{
-    flex-direction:column;gap:2px;
-    padding:6px 10px;font-size:0.65em;
+    flex-direction:column;gap:3px;align-items:center;
+    padding:8px 12px;font-size:0.62em;letter-spacing:0.5px;
     white-space:nowrap;width:auto;flex-shrink:0;
-    min-height:unset;min-width:unset;
+    min-height:unset;min-width:unset;border-radius:10px;
   }
-  .settings-nav svg{width:16px;height:16px;}
+  .settings-nav svg{width:18px;height:18px;}
   .modal-content{
-    flex:1;padding:14px;
+    flex:1;padding:16px;
     overflow-y:auto;-webkit-overflow-scrolling:touch;
-    padding-bottom:calc(14px + env(safe-area-inset-bottom));
+    padding-bottom:calc(20px + env(safe-area-inset-bottom));
   }
+  /* Lignes Email/Rôle → empilées */
+  .settings-row.mobile-stack{flex-direction:column;align-items:flex-start;gap:6px;}
   .form-row{flex-direction:column;gap:6px;}
   .form-row label{min-width:unset;}
+  /* Boutons d'action : wrapping sur mobile */
+  .modal-content [style*="display:flex"][style*="gap:8px"]{flex-wrap:wrap;}
+  .modal-content .btn{flex:1;min-width:120px;justify-content:center;}
 
   /* Views */
   .view-header{padding:12px 12px 10px;}
@@ -2390,9 +2409,9 @@ function renderSettings(section) {
       '<option value="en"'+(p.lang==='en'?' selected':'')+'>🇬🇧 English</option>' +
       '<option value="es"'+(p.lang==='es'?' selected':'')+'>🇪🇸 Español</option>' +
       '</select></div>' +
-      '<div class="settings-row" style="padding:10px 0;border-top:1px solid var(--border);margin-top:8px">' +
-      '<div><div class="settings-row-label">Email</div><div style="font-size:0.78em;color:var(--text-muted)">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
-      '<div><div class="settings-row-label">Rôle</div><div style="font-size:0.78em;color:var(--cyan)">'+esc(roleLabels[p.role]||'👤 Utilisateur')+'</div></div>' +
+      '<div class="settings-row mobile-stack" style="padding:10px 0;border-top:1px solid var(--border);margin-top:8px">' +
+      '<div><div class="settings-row-label">Email</div><div style="font-size:0.76em;color:var(--text-muted);word-break:break-all">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
+      '<div><div class="settings-row-label">Rôle</div><div style="font-size:0.78em;color:var(--cyan)">'+esc(roleLabels[(p.role||'user').toLowerCase()]||roleLabels.user)+'</div></div>' +
       '</div>' +
       '<div class="settings-row" style="padding:10px 0;border-top:1px solid var(--border)">' +
       '<div><div class="settings-row-label">Panneau EVA</div><div class="settings-row-sub">Afficher le personnage animé EVA</div></div>' +
@@ -2514,7 +2533,7 @@ function renderSettings(section) {
       '<div class="settings-section">' +
       '<div class="settings-section-title">Mon Compte</div>' +
       '<div class="settings-row"><div class="settings-row-label">Email actuel</div><div style="font-size:0.78em;color:var(--text-muted)">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
-      '<div class="settings-row"><div class="settings-row-label">Rôle</div><div style="color:var(--cyan)">'+esc(p.role||'user')+'</div></div>' +
+      '<div class="settings-row"><div class="settings-row-label">Rôle</div><div style="color:var(--cyan);font-size:0.82em">'+esc({creator:'👑 Créateur',developer:'⚙️ Développeur',creator_wife:'💎 Épouse du créateur',user:'👤 Utilisateur'}[(p.role||'user').toLowerCase()]||p.role||'user')+'</div></div>' +
       '<div class="settings-row"><div class="settings-row-label">Connexion</div><div style="font-size:0.76em;color:var(--text-muted)">'+connLabel+'</div></div>' +
       '</div>' +
       (!isGoogleUser ?
