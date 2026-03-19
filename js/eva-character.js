@@ -2,13 +2,12 @@
 'use strict';
 
 /* ─── CONFIG ───────────────────────────────────────────── */
-var MODEL_URL = 'https://cdn.jsdelivr.net/gh/Eikanya/Live2d-model@master/Live2D/Senko_Normals/senko.model3.json';
+var MODEL_URL = 'https://cdn.jsdelivr.net/gh/guansss/pixi-live2d-display@master/test/assets/haru/haru_greeter_t03.model3.json';
 
 var MOTION = {
   idle:     { group: 'Idle',    index: 0 },
-  anim:     { group: 'Tap',     index: 0 },
-  sing:     { group: 'Taphead', index: 0 },
-  sleep:    { group: 'Taphead', index: 1 }
+  talking:  { group: 'TapBody', index: 0 },
+  happy:    { group: 'TapBody', index: 1 }
 };
 
 var STATUS = {
@@ -26,9 +25,7 @@ var state      = 'idle';
 var lipActive  = false;
 var lipPhase   = 0;
 var lipIds     = null;   // fetched from model's LipSync group
-var blinkTimer = 0;
-var blinkState = 0;      // 0=open 1=closing 2=open-wait
-var blinkVal   = 0;
+var idleTimer  = null;
 
 /* ─── ENTRY POINT ───────────────────────────────────────── */
 function create(containerId) {
@@ -76,7 +73,7 @@ function initPixi(wrap) {
   canvas.style.transform = 'translateX(-50%)';
   lc.appendChild(canvas);
 
-  console.log('[EVA] Loading Senko...');
+  console.log('[EVA] Loading Haru...');
 
   var timer = setTimeout(function() { if (!model) showFallback(); }, 20000);
 
@@ -98,13 +95,13 @@ function initPixi(wrap) {
       /* start main ticker */
       pixiApp.ticker.add(tick);
 
-      /* play idle — it has Loop:true so it runs forever */
-      playMotion('Idle', 0);
+      /* play idle loop */
+      startIdleLoop();
 
       var loading = document.getElementById('evaLoading');
       if (loading) loading.style.display = 'none';
 
-      console.log('[EVA] Senko ready! lipIds:', lipIds);
+      console.log('[EVA] Haru ready! lipIds:', lipIds);
     })
     .catch(function(e) {
       clearTimeout(timer);
@@ -113,11 +110,20 @@ function initPixi(wrap) {
     });
 }
 
+/* ─── IDLE LOOP ─────────────────────────────────────────── */
+function startIdleLoop() {
+  if (idleTimer) clearTimeout(idleTimer);
+  if (state !== 'idle') return;
+  playMotion(MOTION.idle.group, MOTION.idle.index);
+  idleTimer = setTimeout(function() {
+    if (state === 'idle') startIdleLoop();
+  }, 8000);
+}
+
 /* ─── FIT MODEL ─────────────────────────────────────────── */
 function fitModel(W, H) {
   if (!model) return;
   var oh = model.internalModel.originalHeight || model.height;
-  var ow = model.internalModel.originalWidth  || model.width;
 
   /* fill ~100% of height; bottom-anchor with ~6% feet crop */
   var scale = (H / oh) * 1.02;
@@ -320,14 +326,15 @@ window.EvaCharacter = {
   setIdle: function() {
     lipActive = false;
     setStatus('idle');
+    startIdleLoop();
   },
 
   setTalking: function() {
+    if (idleTimer) clearTimeout(idleTimer);
     lipActive = true;
     lipPhase  = 0;
     setStatus('talking');
-    /* play the animated motion (loops naturally) */
-    playMotion('Tap', 0);
+    playMotion(MOTION.talking.group, MOTION.talking.index);
   },
 
   startTalking: function() { window.EvaCharacter.setTalking(); },
@@ -335,29 +342,30 @@ window.EvaCharacter = {
   stopTalking: function() {
     lipActive = false;
     setStatus('idle');
-    /* return to idle loop */
-    playMotion('Idle', 0);
+    startIdleLoop();
   },
 
   setListening: function() {
+    if (idleTimer) clearTimeout(idleTimer);
     lipActive = false;
     setStatus('listening');
   },
 
   setThinking: function() {
+    if (idleTimer) clearTimeout(idleTimer);
     lipActive = false;
     setStatus('thinking');
   },
 
   setHappy: function() {
+    if (idleTimer) clearTimeout(idleTimer);
     lipActive = false;
     setStatus('happy');
-    /* brief sing animation then back to idle */
-    playMotion('Taphead', 0);
+    playMotion(MOTION.happy.group, MOTION.happy.index);
     setTimeout(function() {
       if (state === 'happy') {
         setStatus('idle');
-        playMotion('Idle', 0);
+        startIdleLoop();
       }
     }, 4000);
   }
