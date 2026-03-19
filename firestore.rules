@@ -2,42 +2,97 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Profils utilisateurs ──────────────────────────────
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // ════════════════════════════════════════════════════
+    // Fonctions utilitaires
+    // ════════════════════════════════════════════════════
 
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuth() && getUserRole() in ['creator', 'developer'];
+    }
+
+    function isCreator() {
+      return isAuth() && getUserRole() == 'creator';
+    }
+
+    // ════════════════════════════════════════════════════
+    // Profils utilisateurs
+    // ════════════════════════════════════════════════════
+    match /users/{userId} {
+      // Chaque utilisateur peut lire et modifier son propre profil
+      allow read, write: if isOwner(userId);
+
+      // Conversations
       match /conversations/{convId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
 
         match /messages/{msgId} {
-          allow read, write: if request.auth != null && request.auth.uid == userId;
+          allow read, write: if isOwner(userId);
         }
       }
 
-      match /alarms/{alarmId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Notes
+      match /notes/{noteId} {
+        allow read, write: if isOwner(userId);
       }
 
+      // Alarmes
+      match /alarms/{alarmId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Rappels
       match /reminders/{reminderId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
+      }
+
+      // Événements / Agenda
+      match /events/{eventId} {
+        allow read, write: if isOwner(userId);
       }
     }
 
-    // ── Rapports / Signalements ──────────────────────────
+    // ════════════════════════════════════════════════════
+    // Rapports / Signalements
+    // ════════════════════════════════════════════════════
     match /reports/{reportId} {
-      // N'importe quel utilisateur connecté peut créer un rapport
-      allow create: if request.auth != null;
+      // Tout utilisateur connecté peut créer un rapport
+      allow create: if isAuth();
 
-      // L'auteur peut lire son propre rapport
-      // Les admins (creator, developer) peuvent tout lire
-      allow read: if request.auth != null && (
-        resource.data.userId == request.auth.uid ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['creator', 'developer']
+      // Un utilisateur peut lire ses propres rapports
+      // Les admins (creator, developer) peuvent lire tous les rapports
+      allow read: if isAuth() && (
+        resource.data.userId == request.auth.uid || isAdmin()
       );
 
-      // Seuls les admins peuvent modifier ou supprimer
-      allow update, delete: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['creator', 'developer'];
+      // Seuls les admins peuvent modifier le statut, ajouter des notes, etc.
+      allow update: if isAdmin();
+
+      // Seuls les admins peuvent supprimer un rapport
+      allow delete: if isAdmin();
+    }
+
+    // ════════════════════════════════════════════════════
+    // Clés développeur
+    // ════════════════════════════════════════════════════
+    match /dev_keys_valid/{keyId} {
+      // Tout utilisateur connecté peut lire une clé pour la valider
+      // (nécessaire pour l'activation de clé dans les paramètres)
+      allow read: if isAuth();
+
+      // Seul le créateur peut créer, modifier ou supprimer des clés
+      allow create, update, delete: if isCreator();
     }
 
   }
