@@ -45,3 +45,16 @@ An AI-powered intelligent virtual assistant web app with a Grok-like chat interf
 - Firebase is initialized via CDN imports in the HTML files
 - Configuration is in `js/core/firebase-config.js`
 - Requires Firebase project credentials to be set up for Auth and Firestore to work
+
+## Live2D Character (EVA Panel)
+- Character panel in `chat.html` uses **Live2D** via `pixi-live2d-display` + PixiJS 6
+- Model: Shizuku (Cubism 2) loaded from jsDelivr CDN
+- CDN scripts loaded in `chat.html` before `eva-character.js`:
+  - `live2dcubismcore.min.js` (cubism.live2d.com)
+  - `pixi.js@6` (jsDelivr)
+  - `pixi-live2d-display` (jsDelivr)
+- Character module: `js/eva-character.js` — exposes `window.EvaCharacter` API
+  - `create(containerId)` — initializes PIXI app and loads Live2D model
+  - `setIdle()`, `setTalking()`, `setListening()`, `setThinking()`, `setHappy()` — trigger motions
+- Mouse tracking: model head follows cursor via parameter injection
+- Loading spinner shown while model downloads from CDN (~3-5 seconds)
