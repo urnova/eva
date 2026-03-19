@@ -2624,16 +2624,13 @@ async function activateDevKeyDirect() {
   var statusEl = document.getElementById('sDevKeyStatus');
   if (statusEl) statusEl.textContent = 'Vérification en cours...';
   try {
-    var snap = await db.collection('dev_keys_valid')
-      .where('key', '==', key)
-      .where('active', '==', true)
-      .get();
-    if (snap.empty) {
+    var docRef = await db.collection('dev_keys_valid').doc(key).get();
+    if (!docRef.exists || !docRef.data().active) {
       if (statusEl) statusEl.innerHTML = '<span style="color:var(--red)">❌ Clé invalide ou inactive</span>';
       toast('Clé invalide', 'error');
       return;
     }
-    var data = snap.docs[0].data();
+    var data = docRef.data();
     var role = data.role || 'developer';
     var label = data.label || role;
     await db.collection('users').doc(S.user.uid).set({ role: role, devKey: key, devKeyLabel: label }, { merge: true });
