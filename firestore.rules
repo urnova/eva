@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Profils utilisateurs ──────────────────────────────
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /conversations/{convId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        match /messages/{msgId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+
+      match /alarms/{alarmId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /reminders/{reminderId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // ── Rapports / Signalements ──────────────────────────
+    match /reports/{reportId} {
+      // N'importe quel utilisateur connecté peut créer un rapport
+      allow create: if request.auth != null;
+
+      // L'auteur peut lire son propre rapport
+      // Les admins (creator, developer) peuvent tout lire
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['creator', 'developer']
+      );
+
+      // Seuls les admins peuvent modifier ou supprimer
+      allow update, delete: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['creator', 'developer'];
+    }
+
+  }
+}
