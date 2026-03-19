@@ -1121,13 +1121,6 @@ body::before{
 }
 .rtextarea:focus{border-color:rgba(255,77,109,0.5);}
 .rtextarea.excerpt-ta{min-height:65px;font-size:0.74em;color:var(--text-muted);}
-.rscreenshot-zone{
-  border:2px dashed var(--border);border-radius:9px;padding:14px;
-  text-align:center;cursor:pointer;transition:all 0.15s;margin-bottom:13px;
-}
-.rscreenshot-zone:hover{border-color:rgba(255,77,109,0.4);background:rgba(255,77,109,0.03);}
-.rscreenshot-zone.has-img{border-style:solid;border-color:rgba(255,77,109,0.5);}
-.rscreenshot-zone img{max-width:100%;max-height:110px;border-radius:6px;object-fit:contain;}
 .rss-hint{font-size:0.72em;color:var(--text-muted);}
 .rsubmit-row{display:flex;gap:8px;margin-top:4px;}
 .btn-rcancel{
@@ -1194,7 +1187,6 @@ body::before{
 .rp-detail-lbl{font-size:0.67em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;}
 .rp-detail-text{font-size:0.79em;color:var(--text);line-height:1.6;white-space:pre-wrap;background:var(--surface);border-radius:7px;padding:8px 10px;}
 .rp-excerpt-box{font-size:0.74em;color:var(--text-muted);background:rgba(0,0,0,0.3);border-radius:7px;padding:8px 10px;font-family:'Space Mono',monospace;max-height:110px;overflow-y:auto;line-height:1.6;}
-.rp-ss-thumb{max-width:100%;max-height:160px;border-radius:7px;object-fit:contain;cursor:zoom-in;margin-top:5px;border:1px solid var(--border);}
 .rp-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
 .rp-status-select{
   background:var(--surface2);border:1px solid var(--border);border-radius:7px;
@@ -1642,7 +1634,6 @@ body::before{
 </div>
 
 <input type="file" id="fileInput" accept="image/*" style="display:none">
-<input type="file" id="reportScreenshotInput" accept="image/*" style="display:none">
 <div id="evaToast"></div>
 
 <!-- ════════════════ REPORT MODAL ════════════════ -->
@@ -1691,15 +1682,6 @@ body::before{
       <textarea class="rtextarea excerpt-ta" id="reportExcerpt" placeholder="Les derniers messages de la conversation..."></textarea>
     </div>
 
-    <!-- Screenshot -->
-    <div class="rscreenshot-zone" id="rscreenshotZone" onclick="document.getElementById('reportScreenshotInput').click()">
-      <div id="rssPreview">
-        <div style="font-size:1.5em;margin-bottom:6px">📸</div>
-        <div class="rss-hint">Cliquer pour ajouter une capture d'écran (optionnel)</div>
-        <div class="rss-hint" style="opacity:0.5;font-size:0.9em;margin-top:3px">PNG, JPG, WEBP — max 2 Mo</div>
-      </div>
-    </div>
-
     <div class="rsubmit-row">
       <button class="btn-rcancel" onclick="closeReportModal()">Annuler</button>
       <button class="btn-rsubmit" id="reportSubmitBtn" onclick="submitReport()">ENVOYER LE RAPPORT</button>
@@ -1707,10 +1689,6 @@ body::before{
   </div>
 </div>
 
-<!-- ════════════════ SCREENSHOT LIGHTBOX ════════════════ -->
-<div id="ssLightbox" style="position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;cursor:zoom-out;" onclick="this.style.display='none'">
-  <img id="ssLightboxImg" style="max-width:90vw;max-height:90vh;border-radius:10px;object-fit:contain;" src="" alt="">
-</div>
 
 <!-- ════════════════ SCRIPTS ════════════════ -->
 <script src="js/core/firebase-config.js"></script>
@@ -3682,7 +3660,6 @@ window.cancelEventForm = cancelEventForm;
 var RS = {
   selectedType: 'bug-conversation',
   selectedPrio: 'medium',
-  screenshotB64: null,
   allReports: [],
   currentFilter: 'all'
 };
@@ -3748,7 +3725,6 @@ window.closeReportModal = closeReportModal;
 function resetReportModal() {
   RS.selectedType = 'bug-conversation';
   RS.selectedPrio = 'medium';
-  RS.screenshotB64 = null;
   document.querySelectorAll('.rtype-btn').forEach(function(b){ b.classList.remove('sel'); });
   var def = document.querySelector('.rtype-btn[data-rtype="bug-conversation"]');
   if (def) def.classList.add('sel');
@@ -3757,8 +3733,6 @@ function resetReportModal() {
   if (pm) pm.classList.add('sm');
   document.getElementById('reportDesc').value = '';
   document.getElementById('reportExcerpt').value = '';
-  document.getElementById('rssPreview').innerHTML = '<div style="font-size:1.5em;margin-bottom:6px">📸</div><div class="rss-hint">Cliquer pour ajouter une capture d\'écran (optionnel)</div><div class="rss-hint" style="opacity:0.5;font-size:0.9em;margin-top:3px">PNG, JPG, WEBP — max 2 Mo</div>';
-  document.getElementById('rscreenshotZone').classList.remove('has-img');
   updateReportTypeUI();
   document.getElementById('reportSubmitBtn').disabled = false;
   document.getElementById('reportSubmitBtn').textContent = 'ENVOYER LE RAPPORT';
@@ -3805,22 +3779,6 @@ document.querySelectorAll('.rprio-btn').forEach(function(btn) {
   });
 });
 
-/* Screenshot upload */
-document.getElementById('reportScreenshotInput').addEventListener('change', function(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  if (file.size > 2 * 1024 * 1024) { toast('Capture trop lourde (max 2 Mo)', 'error'); return; }
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    RS.screenshotB64 = ev.target.result;
-    var zone = document.getElementById('rscreenshotZone');
-    zone.classList.add('has-img');
-    document.getElementById('rssPreview').innerHTML = '<img src="'+RS.screenshotB64+'" alt="screenshot" style="max-width:100%;max-height:110px;border-radius:6px;object-fit:contain;"><div class="rss-hint" style="margin-top:6px;font-size:0.8em;">Cliquez pour changer</div>';
-  };
-  reader.readAsDataURL(file);
-  e.target.value = '';
-});
-
 /* Close overlay click */
 document.getElementById('reportOverlay').addEventListener('click', function(e) {
   if (e.target === this) closeReportModal();
@@ -3846,7 +3804,6 @@ async function submitReport() {
       description: desc,
       conversationExcerpt: RS.selectedType === 'bug-conversation' ? excerpt : '',
       conversationId: S.selectedType === 'bug-conversation' ? (S.convId || '') : '',
-      screenshot: RS.screenshotB64 || null,
       status: 'pending',
       createdAt: window.timestamp(),
       updatedAt: window.timestamp(),
@@ -3957,14 +3914,6 @@ function renderReports() {
       if (confirm('Supprimer ce rapport définitivement ?')) deleteReport(id);
     });
   });
-  list.querySelectorAll('.rp-ss-thumb').forEach(function(img) {
-    img.addEventListener('click', function(e) {
-      e.stopPropagation();
-      var lb = document.getElementById('ssLightbox');
-      document.getElementById('ssLightboxImg').src = this.src;
-      lb.style.display = 'flex';
-    });
-  });
 }
 
 function buildReportCard(r) {
@@ -3982,7 +3931,6 @@ function buildReportCard(r) {
   var statusOptions = ['pending','in-progress','resolved','rejected'].map(function(s){
     return '<option value="'+s+'"'+(r.status===s?' selected':'')+'>'+statusLabels[s]+'</option>';
   }).join('');
-  var ssHtml = r.screenshot ? '<div class="rp-detail-section"><div class="rp-detail-lbl">Capture d\'écran</div><img class="rp-ss-thumb" src="'+r.screenshot+'" alt="screenshot"></div>' : '';
   var excerptHtml = r.conversationExcerpt ? '<div class="rp-detail-section"><div class="rp-detail-lbl">Extrait de conversation</div><div class="rp-excerpt-box">'+esc(r.conversationExcerpt)+'</div></div>' : '';
   var hasPrio = r.type === 'bug-conversation' || r.type === 'bug-general';
   var prioHtml = hasPrio && r.priority ? '<span class="pbadge '+prioCls[r.priority]+'">'+prioLabels[r.priority]+'</span>' : '';
@@ -4003,7 +3951,6 @@ function buildReportCard(r) {
     '<div class="rp-detail">' +
       '<div class="rp-detail-section"><div class="rp-detail-lbl">Description complète</div><div class="rp-detail-text">'+esc(r.description||'')+'</div></div>' +
       excerptHtml +
-      ssHtml +
       '<div class="rp-actions">' +
         '<span style="font-size:0.71em;color:var(--text-muted);">Statut :</span>' +
         '<select class="rp-status-select" data-rid="'+r.id+'">'+statusOptions+'</select>' +
