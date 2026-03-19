@@ -16,6 +16,7 @@
   --cyan-glow: rgba(0,212,255,0.45);
   --green: #00ff88;
   --purple: #b794f6;
+  --red: #ff4d6d;
   --bg: #060b12;
   --surface: #0c1520;
   --surface2: #0f1c2e;
@@ -51,27 +52,20 @@ body::before{
 @keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(0.97)}to{opacity:1;transform:none}}
 
 .ob-header{text-align:center;margin-bottom:32px;}
-.ob-logo{
-  display:flex;align-items:center;justify-content:center;
-  margin:0 auto 18px;
-  animation:logoFloat 3.5s ease-in-out infinite;
-}
+.ob-logo{display:flex;align-items:center;justify-content:center;margin:0 auto 18px;animation:logoFloat 3.5s ease-in-out infinite;}
 @keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 .ob-logo img{width:120px;height:auto;}
 .ob-title{font-family:'Orbitron',monospace;font-size:1.5em;font-weight:900;letter-spacing:3px;color:var(--cyan);margin-bottom:6px;}
 .ob-sub{font-size:0.82em;color:var(--text-muted);line-height:1.6;}
 
-/* Progress */
 .ob-progress{display:flex;gap:6px;margin-bottom:28px;}
 .ob-step{flex:1;height:4px;background:var(--surface3);border-radius:10px;transition:all 0.35s;}
 .ob-step.active{background:var(--cyan);box-shadow:0 0 8px var(--cyan-glow);}
 
-/* Steps */
 .ob-view{display:none;}
 .ob-view.active{display:block;animation:fadeUp 0.3s ease;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
-/* Avatar */
 .ava-wrap{display:flex;justify-content:center;margin-bottom:20px;}
 .ava-preview{
   width:100px;height:100px;border-radius:50%;
@@ -82,8 +76,8 @@ body::before{
 }
 .ava-preview:hover{transform:scale(1.06);box-shadow:0 0 20px var(--cyan-glow);}
 .ava-preview img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.ava-hint{font-size:0.71em;color:var(--text-muted);text-align:center;margin-top:6px;}
 
-/* Form fields */
 .field{margin-bottom:16px;}
 .field-label{display:block;font-size:0.76em;color:var(--text-muted);margin-bottom:6px;letter-spacing:0.5px;text-transform:uppercase;}
 .field-hint{font-size:0.72em;color:var(--text-muted);margin-top:4px;opacity:0.7;}
@@ -94,8 +88,21 @@ body::before{
   transition:border-color 0.2s,box-shadow 0.2s;
 }
 .field-input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,212,255,0.08);}
+.field-input.error{border-color:var(--red);}
 
-/* Voice option */
+.pass-strength{height:3px;border-radius:10px;margin-top:6px;transition:all 0.3s;background:var(--surface3);}
+.pass-strength.weak{background:var(--red);width:33%;}
+.pass-strength.medium{background:var(--orange,#ff9500);width:66%;}
+.pass-strength.strong{background:var(--green);width:100%;}
+.pass-strength-label{font-size:0.68em;color:var(--text-muted);margin-top:3px;}
+
+.pass-info-box{
+  background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.12);
+  border-radius:10px;padding:12px 14px;margin-bottom:16px;
+  font-size:0.78em;color:var(--text-muted);line-height:1.6;
+}
+.pass-info-box strong{color:var(--cyan);}
+
 .voice-opt{
   display:flex;align-items:center;justify-content:space-between;
   padding:12px 14px;border-radius:10px;
@@ -112,7 +119,6 @@ body::before{
 }
 .voice-test-btn:hover{background:var(--cyan);color:#000;}
 
-/* Actions */
 .ob-actions{display:flex;gap:10px;margin-top:24px;}
 .btn-skip{
   flex:1;background:transparent;color:var(--text-muted);
@@ -130,8 +136,10 @@ body::before{
 }
 .btn-next:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(0,212,255,0.5);}
 .btn-next:active{transform:translateY(0);}
+.btn-next:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
 
-/* Finish state */
+.step-label{font-family:'Orbitron',monospace;font-size:0.72em;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+
 .finish-icon{font-size:3.5em;text-align:center;margin-bottom:16px;}
 .finish-title{font-family:'Orbitron',monospace;color:var(--cyan);font-size:1.2em;text-align:center;margin-bottom:10px;}
 .finish-text{color:var(--text-muted);text-align:center;font-size:0.82em;line-height:1.7;margin-bottom:24px;}
@@ -143,11 +151,6 @@ body::before{
   .ob-card{padding:28px 20px;border-radius:16px;margin:10px;}
   .ob-title{font-size:1.2em;letter-spacing:2px;}
   .ob-logo img{width:90px;}
-  .step-title{font-size:1em;}
-  .form-label{font-size:0.78em;}
-  .form-input{padding:9px 12px;font-size:0.9em;}
-  .btn-next,.btn-prev{padding:11px;font-size:0.82em;}
-  .voice-options{grid-template-columns:1fr 1fr;}
 }
 </style>
 </head>
@@ -171,16 +174,21 @@ body::before{
       <div class="ob-step" id="step-bar-2"></div>
       <div class="ob-step" id="step-bar-3"></div>
       <div class="ob-step" id="step-bar-4"></div>
+      <div class="ob-step" id="step-bar-5"></div>
     </div>
 
     <!-- Step 1: Profil -->
     <div class="ob-view active" id="ob1">
+      <div class="step-label">Étape 1 — Profil</div>
       <div class="ava-wrap">
-        <div class="ava-preview" id="avaPreview" onclick="document.getElementById('avaFile').click()">
-          <span id="avaInitials">?</span>
+        <div>
+          <div class="ava-preview" id="avaPreview" onclick="document.getElementById('avaFile').click()">
+            <span id="avaInitials">?</span>
+          </div>
+          <div class="ava-hint">Cliquer pour changer</div>
         </div>
-        <input type="file" id="avaFile" accept="image/*" style="display:none" onchange="handleAvaFile(event)">
       </div>
+      <input type="file" id="avaFile" accept="image/*" style="display:none" onchange="handleAvaFile(event)">
       <div class="field">
         <label class="field-label">Nom complet *</label>
         <input type="text" class="field-input" id="displayName" placeholder="Jean Dupont">
@@ -192,13 +200,38 @@ body::before{
         <div class="field-hint">Comment E.V.A va vous appeler</div>
       </div>
       <div class="ob-actions">
-        <button class="btn-skip" onclick="skipAll()">Passer</button>
+        <button class="btn-skip" onclick="skipAll()">Passer tout</button>
         <button class="btn-next" onclick="goStep(2)">SUIVANT →</button>
       </div>
     </div>
 
-    <!-- Step 2: Voix -->
+    <!-- Step 2: Mot de passe (Google uniquement) -->
     <div class="ob-view" id="ob2">
+      <div class="step-label">Étape 2 — Sécurité</div>
+      <div class="pass-info-box" id="passInfoBox">
+        Vous êtes connecté via <strong>Google</strong>.<br>
+        Créez un mot de passe optionnel pour pouvoir aussi vous connecter directement avec votre email.
+      </div>
+      <div class="field">
+        <label class="field-label">Nouveau mot de passe</label>
+        <input type="password" class="field-input" id="obNewPass" placeholder="Minimum 6 caractères" oninput="checkPassStrength()">
+        <div class="pass-strength" id="passStrength"></div>
+        <div class="pass-strength-label" id="passStrengthLabel"></div>
+      </div>
+      <div class="field">
+        <label class="field-label">Confirmer le mot de passe</label>
+        <input type="password" class="field-input" id="obConfPass" placeholder="Idem ci-dessus">
+      </div>
+      <div class="ob-actions">
+        <button class="btn-skip" onclick="goStep(1)">← Retour</button>
+        <button class="btn-skip" onclick="goStep(3)" style="border-color:rgba(0,212,255,0.2);color:var(--text-muted)">Passer</button>
+        <button class="btn-next" onclick="savePasswordAndContinue()" id="obPassBtn">CRÉER →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Voix -->
+    <div class="ob-view" id="ob3">
+      <div class="step-label">Étape 3 — Voix</div>
       <div class="field">
         <label class="field-label">Choisissez la voix d'E.V.A</label>
       </div>
@@ -217,13 +250,14 @@ body::before{
         <button class="voice-test-btn" onclick="testVoice('fr-fr',event)">▶ Tester</button>
       </div>
       <div class="ob-actions">
-        <button class="btn-skip" onclick="goStep(1)">← Retour</button>
-        <button class="btn-next" onclick="goStep(3)">SUIVANT →</button>
+        <button class="btn-skip" onclick="goStep(isGoogleOnlyUser ? 2 : 1)">← Retour</button>
+        <button class="btn-next" onclick="goStep(4)">SUIVANT →</button>
       </div>
     </div>
 
-    <!-- Step 3: IA & Puter -->
-    <div class="ob-view" id="ob3">
+    <!-- Step 4: IA & Puter -->
+    <div class="ob-view" id="ob4">
+      <div class="step-label">Étape 4 — Intelligence artificielle</div>
       <div class="field">
         <label class="field-label">Provider IA</label>
         <div class="field-hint" style="margin-bottom:10px">Choisissez comment E.V.A va communiquer.</div>
@@ -251,13 +285,13 @@ body::before{
         </div>
       </div>
       <div class="ob-actions">
-        <button class="btn-skip" onclick="goStep(2)">← Retour</button>
-        <button class="btn-next" onclick="goStep(4)">SUIVANT →</button>
+        <button class="btn-skip" onclick="goStep(3)">← Retour</button>
+        <button class="btn-next" onclick="goStep(5)">SUIVANT →</button>
       </div>
     </div>
 
-    <!-- Step 4: Terminé -->
-    <div class="ob-view" id="ob4">
+    <!-- Step 5: Terminé -->
+    <div class="ob-view" id="ob5">
       <div class="finish-icon">🎉</div>
       <div class="finish-title">Tout est prêt !</div>
       <div class="finish-text">
@@ -279,10 +313,35 @@ var currentStep = 1;
 var selectedVoice = 'auto';
 var selectedProvider = 'puter';
 var currentUser = null;
+var isGoogleOnlyUser = false;
 
 auth.onAuthStateChanged(function(user) {
   if (!user) { window.location.href = '/login.html'; return; }
   currentUser = user;
+
+  // Detect Google-only account (no password linked)
+  isGoogleOnlyUser = user.providerData &&
+    user.providerData.some(function(p){ return p.providerId === 'google.com'; }) &&
+    !user.providerData.some(function(p){ return p.providerId === 'password'; });
+
+  // Pre-fill from Google data
+  if (user.displayName) {
+    document.getElementById('displayName').value = user.displayName;
+    var parts = user.displayName.split(' ');
+    document.getElementById('nickname').value = parts[0] || '';
+  }
+  if (user.photoURL) {
+    document.getElementById('avaPreview').innerHTML = '<img src="'+user.photoURL+'" alt="Avatar">';
+  } else {
+    updateAvaPreview();
+  }
+
+  // If not Google-only, hide step 2 from progress (collapse into 4 steps visually)
+  if (!isGoogleOnlyUser) {
+    document.getElementById('step-bar-2').style.display = 'none';
+  }
+
+  // Load extra data from Firestore
   loadUserData(user.uid);
 });
 
@@ -291,8 +350,12 @@ async function loadUserData(uid) {
     var doc = await db.collection('users').doc(uid).get();
     if (doc.exists) {
       var d = doc.data();
-      if (d.displayName) document.getElementById('displayName').value = d.displayName;
-      if (d.nickname) document.getElementById('nickname').value = d.nickname;
+      if (d.displayName && !document.getElementById('displayName').value) {
+        document.getElementById('displayName').value = d.displayName;
+      }
+      if (d.nickname && !document.getElementById('nickname').value) {
+        document.getElementById('nickname').value = d.nickname;
+      }
       updateAvaPreview();
     }
   } catch(e) {}
@@ -301,10 +364,12 @@ async function loadUserData(uid) {
 document.getElementById('displayName').addEventListener('input', updateAvaPreview);
 
 function updateAvaPreview() {
+  var preview = document.getElementById('avaPreview');
+  if (preview.querySelector('img')) return;
   var name = document.getElementById('displayName').value;
   var initials = name.split(' ').map(function(n){ return n[0]||''; }).join('').toUpperCase().slice(0,2) || '?';
   var el = document.getElementById('avaInitials');
-  if (el && el.tagName !== 'IMG') el.textContent = initials;
+  if (el) el.textContent = initials;
 }
 
 function handleAvaFile(event) {
@@ -312,23 +377,84 @@ function handleAvaFile(event) {
   if (!file) return;
   var reader = new FileReader();
   reader.onload = function(e) {
-    var preview = document.getElementById('avaPreview');
-    preview.innerHTML = '<img src="'+e.target.result+'" alt="Avatar">';
+    document.getElementById('avaPreview').innerHTML = '<img src="'+e.target.result+'" alt="Avatar">';
   };
   reader.readAsDataURL(file);
 }
 
+function checkPassStrength() {
+  var pass = document.getElementById('obNewPass').value;
+  var bar = document.getElementById('passStrength');
+  var label = document.getElementById('passStrengthLabel');
+  if (!pass) { bar.className = 'pass-strength'; label.textContent = ''; return; }
+  var score = 0;
+  if (pass.length >= 6) score++;
+  if (pass.length >= 10) score++;
+  if (/[A-Z]/.test(pass) && /[0-9]/.test(pass)) score++;
+  if (score === 1) { bar.className = 'pass-strength weak'; label.textContent = 'Faible'; }
+  else if (score === 2) { bar.className = 'pass-strength medium'; label.textContent = 'Moyen'; }
+  else { bar.className = 'pass-strength strong'; label.textContent = 'Fort'; }
+}
+
+async function savePasswordAndContinue() {
+  var newPass = document.getElementById('obNewPass').value;
+  var confPass = document.getElementById('obConfPass').value;
+  if (!newPass && !confPass) { goStep(3); return; }
+  if (!newPass) { showFieldError('obNewPass', 'Entrez un mot de passe'); return; }
+  if (newPass.length < 6) { showFieldError('obNewPass', 'Minimum 6 caractères'); return; }
+  if (newPass !== confPass) { showFieldError('obConfPass', 'Les mots de passe ne correspondent pas'); return; }
+
+  var btn = document.getElementById('obPassBtn');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, newPass);
+    await currentUser.linkWithCredential(cred);
+    goStep(3);
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'CRÉER →';
+    if (e.code === 'auth/provider-already-linked') {
+      goStep(3);
+    } else if (e.code === 'auth/weak-password') {
+      showFieldError('obNewPass', 'Mot de passe trop faible');
+    } else {
+      showFieldError('obConfPass', 'Erreur : ' + e.message);
+    }
+  }
+}
+
+function showFieldError(id, msg) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('error');
+  el.placeholder = msg;
+  el.value = '';
+  setTimeout(function(){ el.classList.remove('error'); el.placeholder = id === 'obNewPass' ? 'Minimum 6 caractères' : 'Idem ci-dessus'; }, 2500);
+}
+
 function goStep(n) {
-  if (n === 2) {
+  // If not Google-only, skip step 2
+  if (!isGoogleOnlyUser && n === 2) { n = 3; }
+
+  if (currentStep === 1 && n > 1) {
     var name = document.getElementById('displayName').value.trim();
-    if (!name) { alert('Veuillez entrer votre nom'); return; }
+    if (!name) {
+      var el = document.getElementById('displayName');
+      el.classList.add('error');
+      el.placeholder = 'Veuillez entrer votre nom';
+      setTimeout(function(){ el.classList.remove('error'); el.placeholder = 'Jean Dupont'; }, 2000);
+      return;
+    }
     var nick = document.getElementById('nickname').value.trim() || name.split(' ')[0];
     saveProfile({ displayName: name, nickname: nick });
   }
-  if (n === 3) {
-    // Load Puter status when entering provider step
+
+  if (n === 4) {
     setTimeout(checkObPuterStatus, 200);
   }
+
   document.getElementById('ob'+currentStep).classList.remove('active');
   document.getElementById('step-bar-'+currentStep).classList.remove('active');
   currentStep = n;
@@ -346,10 +472,7 @@ async function checkObPuterStatus() {
   var statusEl = document.getElementById('obPuterStatus');
   var btnEl = document.getElementById('obPuterBtn');
   if (!statusEl) return;
-  if (!window.puter) {
-    statusEl.textContent = '⚠️ SDK Puter non chargé';
-    return;
-  }
+  if (!window.puter) { statusEl.textContent = '⚠️ SDK Puter non chargé'; return; }
   try {
     var user = await puter.auth.getUser();
     if (user && user.username) {
@@ -361,9 +484,7 @@ async function checkObPuterStatus() {
       statusEl.textContent = 'Non connecté à Puter';
       if (btnEl) btnEl.textContent = '🔗 Connexion Puter';
     }
-  } catch(e) {
-    statusEl.textContent = 'Non connecté à Puter';
-  }
+  } catch(e) { statusEl.textContent = 'Non connecté à Puter'; }
 }
 
 async function obConnectPuter(e) {
@@ -373,9 +494,7 @@ async function obConnectPuter(e) {
     await puter.auth.signIn();
     var user = await puter.auth.getUser();
     if (user && user.username) {
-      if (currentUser) {
-        await db.collection('users').doc(currentUser.uid).set({puterUsername: user.username}, {merge:true});
-      }
+      if (currentUser) await db.collection('users').doc(currentUser.uid).set({puterUsername: user.username}, {merge:true});
       checkObPuterStatus();
     }
   } catch(err) { console.error('Puter connect:', err); }
@@ -398,17 +517,13 @@ function testVoice(voice, event) {
   if (typeof speechSynthesis === 'undefined') return;
   speechSynthesis.cancel();
   var utt = new SpeechSynthesisUtterance("Bonjour, je suis E.V.A, votre assistante virtuelle. Comment puis-je vous aider aujourd'hui ?");
-  utt.lang = 'fr-FR';
-  utt.rate = 1.0;
-  utt.pitch = 1.0;
+  utt.lang = 'fr-FR'; utt.rate = 1.0; utt.pitch = 1.0;
   speechSynthesis.speak(utt);
 }
 
 async function saveProfile(data) {
   if (!currentUser) return;
-  try {
-    await db.collection('users').doc(currentUser.uid).set(data, { merge: true });
-  } catch(e) { console.error('saveProfile:', e); }
+  try { await db.collection('users').doc(currentUser.uid).set(data, { merge: true }); } catch(e) {}
 }
 
 async function finish() {
@@ -426,7 +541,6 @@ async function finish() {
     }, { merge: true });
     window.location.href = '/chat.html';
   } catch(e) {
-    console.error('finish:', e);
     window.location.href = '/chat.html';
   }
 }

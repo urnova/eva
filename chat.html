@@ -2209,28 +2209,32 @@ function renderSettings(section) {
 
   } else if (section === 'account') {
     var isGoogleUser = S.user && S.user.providerData && S.user.providerData.some(function(p){return p.providerId==='google.com';});
+    var hasPassword = S.user && S.user.providerData && S.user.providerData.some(function(p){return p.providerId==='password';});
+    var isGoogleOnly = isGoogleUser && !hasPassword;
+    var connLabel = isGoogleUser && hasPassword ? '🔵 Google + 🔑 Mot de passe' : isGoogleUser ? '🔵 Google' : '📧 Email/Mot de passe';
     c.innerHTML =
       '<div class="settings-section">' +
       '<div class="settings-section-title">Mon Compte</div>' +
       '<div class="settings-row"><div class="settings-row-label">Email actuel</div><div style="font-size:0.78em;color:var(--text-muted)">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
       '<div class="settings-row"><div class="settings-row-label">Rôle</div><div style="color:var(--cyan)">'+esc(p.role||'user')+'</div></div>' +
-      '<div class="settings-row"><div class="settings-row-label">Connexion</div><div style="font-size:0.76em;color:var(--text-muted)">'+(isGoogleUser?'🔵 Google':'📧 Email/Mot de passe')+'</div></div>' +
+      '<div class="settings-row"><div class="settings-row-label">Connexion</div><div style="font-size:0.76em;color:var(--text-muted)">'+connLabel+'</div></div>' +
       '</div>' +
-      (isGoogleUser ? '' :
+      (!isGoogleUser ?
         '<div class="settings-section">' +
         '<div class="settings-section-title">Changer l\'adresse email</div>' +
         '<div class="form-field"><label class="form-label">Nouvel email</label><input type="email" class="form-input" id="sNewEmail" placeholder="nouveau@email.com"></div>' +
         '<div class="form-field"><label class="form-label">Mot de passe actuel (confirmation)</label><input type="password" class="form-input" id="sEmailPassword" placeholder="••••••••"></div>' +
         '<button class="btn btn-secondary" onclick="changeEmail()" style="margin-top:4px">Mettre à jour l\'email</button>' +
-        '</div>' +
-        '<div class="settings-section">' +
-        '<div class="settings-section-title">Changer le mot de passe</div>' +
-        '<div class="form-field"><label class="form-label">Mot de passe actuel</label><input type="password" class="form-input" id="sCurPassword" placeholder="••••••••"></div>' +
-        '<div class="form-field"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="sNewPassword" placeholder="Minimum 6 caractères"></div>' +
-        '<div class="form-field"><label class="form-label">Confirmer le nouveau mot de passe</label><input type="password" class="form-input" id="sConfPassword" placeholder="Idem ci-dessus"></div>' +
-        '<button class="btn btn-secondary" onclick="changePassword()" style="margin-top:4px">Mettre à jour le mot de passe</button>' +
         '</div>'
-      ) +
+      : '') +
+      '<div class="settings-section">' +
+      '<div class="settings-section-title">'+(isGoogleOnly ? 'Créer un mot de passe' : 'Changer le mot de passe')+'</div>' +
+      '<div style="font-size:0.74em;color:var(--text-muted);margin-bottom:10px">'+(isGoogleOnly ? 'Ajoutez un mot de passe à votre compte Google pour pouvoir vous connecter sans Google.' : '')+'</div>' +
+      (isGoogleOnly ? '' : '<div class="form-field"><label class="form-label">Mot de passe actuel</label><input type="password" class="form-input" id="sCurPassword" placeholder="••••••••"></div>') +
+      '<div class="form-field"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="sNewPassword" placeholder="Minimum 6 caractères"></div>' +
+      '<div class="form-field"><label class="form-label">Confirmer le mot de passe</label><input type="password" class="form-input" id="sConfPassword" placeholder="Idem ci-dessus"></div>' +
+      '<button class="btn btn-secondary" onclick="changePassword()" style="margin-top:4px">'+(isGoogleOnly ? 'Créer le mot de passe' : 'Mettre à jour le mot de passe')+'</button>' +
+      '</div>' +
       '<div class="settings-section">' +
       '<div class="settings-section-title">Danger zone</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
@@ -2459,28 +2463,50 @@ async function changeEmail() {
   }
 }
 async function changePassword() {
-  var curPass = (document.getElementById('sCurPassword') || {}).value;
   var newPass = (document.getElementById('sNewPassword') || {}).value;
   var confPass = (document.getElementById('sConfPassword') || {}).value;
-  if (!curPass || !newPass || !confPass) { toast('Renseignez tous les champs','error'); return; }
-  if (newPass !== confPass) { toast('Les nouveaux mots de passe ne correspondent pas','error'); return; }
-  if (newPass.length < 6) { toast('Le nouveau mot de passe doit faire au moins 6 caractères','error'); return; }
-  if (newPass === curPass) { toast('Le nouveau mot de passe doit être différent du mot de passe actuel','error'); return; }
+  if (!newPass || !confPass) { toast('Renseignez les champs mot de passe','error'); return; }
+  if (newPass !== confPass) { toast('Les mots de passe ne correspondent pas','error'); return; }
+  if (newPass.length < 6) { toast('Minimum 6 caractères requis','error'); return; }
   if (!auth.currentUser) return;
-  try {
-    var cred = firebase.auth.EmailAuthProvider.credential(auth.currentUser.email, curPass);
-    await auth.currentUser.reauthenticateWithCredential(cred);
-    await auth.currentUser.updatePassword(newPass);
-    toast('Mot de passe mis à jour ✓','success');
-    document.getElementById('sCurPassword').value = '';
-    document.getElementById('sNewPassword').value = '';
-    document.getElementById('sConfPassword').value = '';
-  } catch(e) {
-    var msg = e.code === 'auth/wrong-password' ? 'Mot de passe actuel incorrect'
-      : e.code === 'auth/weak-password' ? 'Mot de passe trop faible (minimum 6 caractères)'
-      : e.code === 'auth/requires-recent-login' ? 'Session expirée, reconnectez-vous'
-      : 'Erreur : ' + e.message;
-    toast(msg,'error');
+
+  var isGoogleOnly = auth.currentUser.providerData &&
+    auth.currentUser.providerData.some(function(p){return p.providerId==='google.com';}) &&
+    !auth.currentUser.providerData.some(function(p){return p.providerId==='password';});
+
+  if (isGoogleOnly) {
+    try {
+      var cred = firebase.auth.EmailAuthProvider.credential(auth.currentUser.email, newPass);
+      await auth.currentUser.linkWithCredential(cred);
+      toast('Mot de passe créé avec succès ✓','success');
+      document.getElementById('sNewPassword').value = '';
+      document.getElementById('sConfPassword').value = '';
+      renderSettings('account');
+    } catch(e) {
+      var msg = e.code === 'auth/provider-already-linked' ? 'Un mot de passe existe déjà — rechargez la page'
+        : e.code === 'auth/weak-password' ? 'Mot de passe trop faible (minimum 6 caractères)'
+        : 'Erreur : ' + e.message;
+      toast(msg,'error');
+    }
+  } else {
+    var curPass = (document.getElementById('sCurPassword') || {}).value;
+    if (!curPass) { toast('Renseignez le mot de passe actuel','error'); return; }
+    if (newPass === curPass) { toast('Le nouveau mot de passe doit être différent','error'); return; }
+    try {
+      var cred2 = firebase.auth.EmailAuthProvider.credential(auth.currentUser.email, curPass);
+      await auth.currentUser.reauthenticateWithCredential(cred2);
+      await auth.currentUser.updatePassword(newPass);
+      toast('Mot de passe mis à jour ✓','success');
+      document.getElementById('sCurPassword').value = '';
+      document.getElementById('sNewPassword').value = '';
+      document.getElementById('sConfPassword').value = '';
+    } catch(e) {
+      var msg = e.code === 'auth/wrong-password' ? 'Mot de passe actuel incorrect'
+        : e.code === 'auth/weak-password' ? 'Mot de passe trop faible (minimum 6 caractères)'
+        : e.code === 'auth/requires-recent-login' ? 'Session expirée — reconnectez-vous'
+        : 'Erreur : ' + e.message;
+      toast(msg,'error');
+    }
   }
 }
 
