@@ -1716,6 +1716,7 @@ body::before{
 <script src="js/core/firebase-config.js"></script>
 <script src="js/ai/providers.js"></script>
 <script src="js/ai/chat-handler.js"></script>
+<script src="js/ai/web-search.js"></script>
 <script src="js/voice/tts.js"></script>
 <script src="js/voice/stt.js"></script>
 <script src="js/voice/wake-word.js"></script>
@@ -1777,6 +1778,13 @@ CE QUE TU SAIS FAIRE :
 - Conversationnel naturel : écouter, conseiller, brainstormer, rédiger, traduire, résumer
 - Mémoriser le contexte de la conversation et s'y adapter au fil du temps
 - S'adapter à différents tons : professionnel, amical, créatif, technique, poétique
+- Accéder à des informations en temps réel : météo, date/heure, actualités, définitions, prix — grâce à une connexion internet active
+
+RECHERCHE WEB :
+- Quand tu reçois des données entre crochets [ DONNÉES TEMPS RÉEL INJECTÉES PAR LE SYSTÈME ], utilise-les pour formuler ta réponse de manière naturelle et précise.
+- Présente toujours ces informations comme si tu les connaissais directement, sans mentionner "le système" ou "les données injectées".
+- Si les données météo sont présentes, donne une vraie réponse météo complète et utile.
+- Si la date/heure est fournie, utilise-la pour répondre aux questions temporelles.
 
 RÈGLES ABSOLUES :
 - Tu réponds TOUJOURS en français sauf si l'utilisateur te parle dans une autre langue
@@ -2486,6 +2494,20 @@ async function handleSend() {
       var vision = await analyzeImage(img.data, text || 'Décris cette image.');
       msgContent = vision || text;
     } catch(e) {}
+  }
+
+  // Recherche web si nécessaire
+  if (window.EVAWebSearch && window.EVAWebSearch.needsSearch(msgContent)) {
+    setEvaStatus('🔍 RECHERCHE...', 'thinking');
+    try {
+      var searchData = await window.EVAWebSearch.search(msgContent);
+      if (searchData) {
+        msgContent = msgContent + '\n\n' + searchData;
+      }
+    } catch(e) {
+      console.warn('[EVA] Recherche web échouée:', e);
+    }
+    setEvaStatus('EVA RÉFLÉCHIT...', 'thinking');
   }
 
   // Override system prompt so chat-handler uses ours
