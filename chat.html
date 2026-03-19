@@ -789,38 +789,6 @@ body::before{
 #evaToast.info{border-color:rgba(0,212,255,0.3);color:var(--cyan);}
 
 /* ═══════════════════════════════════════════
-   BOTTOM NAV (mobile only — hidden by default)
-═══════════════════════════════════════════ */
-.bottom-nav{
-  display:none;
-  position:fixed;bottom:0;left:0;right:0;
-  height:62px;
-  background:rgba(6,11,18,0.97);
-  border-top:1px solid var(--border);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-  z-index:60;
-  padding-bottom:env(safe-area-inset-bottom);
-}
-.bottom-nav-inner{
-  display:flex;height:62px;
-}
-.bottom-nav-item{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:3px;background:none;border:none;color:var(--text-muted);
-  font-family:'Space Mono',monospace;font-size:0.6em;letter-spacing:0.5px;
-  cursor:pointer;transition:color 0.2s;padding:0;min-height:62px;
-}
-.bottom-nav-item svg{
-  width:20px;height:20px;stroke:currentColor;fill:none;
-  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
-  transition:filter 0.2s;
-}
-.bottom-nav-item.active{color:var(--cyan);}
-.bottom-nav-item.active svg{filter:drop-shadow(0 0 4px var(--cyan-glow));}
-.bottom-nav-item:active{opacity:0.7;}
-
-/* ═══════════════════════════════════════════
    RESPONSIVE
 ═══════════════════════════════════════════ */
 
@@ -928,8 +896,7 @@ body::before{
 
   /* Messages */
   .messages-area{
-    padding:12px 10px;
-    padding-bottom:calc(62px + env(safe-area-inset-bottom) + 8px);
+    padding:12px 10px 8px;
   }
   .msg-content{max-width:90%;}
   .msg-bubble{font-size:0.84em;padding:10px 13px;border-radius:13px;}
@@ -957,19 +924,16 @@ body::before{
   /* Input area */
   .input-area{
     padding:8px 10px;
-    padding-bottom:calc(62px + env(safe-area-inset-bottom) + 4px);
+    padding-bottom:calc(8px + env(safe-area-inset-bottom));
   }
   .input-box{font-size:0.87em;border-radius:12px;}
   .input-send{width:38px;height:38px;}
   .input-btn{width:34px;height:34px;font-size:0.95em;}
 
   /* Touch targets */
-  .nav-item,.conv-item,.menu-item,.bottom-nav-item{min-height:48px;}
+  .nav-item,.conv-item,.menu-item{min-height:48px;}
   button{min-height:44px;min-width:44px;}
   .new-conv-btn,.conv-del,.tone-btn,.prompt-chip,.voice-test-btn{min-height:36px;}
-
-  /* Bottom nav visible on mobile */
-  .bottom-nav{display:block;}
 
   /* Modals: full screen on mobile */
   .modal-overlay{align-items:flex-end;}
@@ -986,8 +950,7 @@ body::before{
   /* Views */
   .view-header{padding:12px 12px 10px;}
   .view-content{
-    padding:0 12px;
-    padding-bottom:calc(70px + env(safe-area-inset-bottom));
+    padding:0 12px 16px;
   }
   .notes-grid{grid-template-columns:1fr;}
   .alarm-item,.event-item{padding:10px 12px;}
@@ -1000,20 +963,15 @@ body::before{
 @media(max-width:420px){
   .conv-title-header{max-width:110px;}
   .msg-content{max-width:93%;}
-  .bottom-nav-item{font-size:0.55em;}
-  .bottom-nav-item svg{width:18px;height:18px;}
 }
 
 /* ── Landscape mobile (height ≤ 500px, orientation landscape) ── */
 @media(max-height:500px) and (orientation:landscape){
   .tone-bar{display:none;}
   .chat-welcome .welcome-icon{display:none;}
-  .bottom-nav{height:52px;}
-  .bottom-nav-inner{height:52px;}
-  .bottom-nav-item{min-height:52px;}
-  .bottom-nav-item span{display:none;}
-  .messages-area{padding-bottom:calc(52px + 4px);}
-  .input-area{padding-bottom:calc(52px + 4px);}
+  .messages-area{padding:8px 10px 6px;}
+  .input-area{padding:6px 10px calc(6px + env(safe-area-inset-bottom));}
+  .chat-header{min-height:46px;}
 }
 
 /* ═══ Empty view state ═══ */
@@ -1815,7 +1773,8 @@ function setView(name) {
   var cap = name.charAt(0).toUpperCase() + name.slice(1);
   var vEl = document.getElementById('view'+cap);
   if (vEl) vEl.classList.add('active');
-  document.querySelectorAll('.nav-item[data-view="'+name+'"]').forEach(function(el){el.classList.add('active');});
+  var nEl = document.querySelector('.nav-item[data-view="'+name+'"]');
+  if (nEl) nEl.classList.add('active');
   if (name === 'notes') loadNotes();
   if (name === 'alarms') loadAlarms();
   if (name === 'calendar') { loadEvents(); renderCalendar(); }
@@ -3260,28 +3219,6 @@ function cancelEventForm() { document.getElementById('eventFormCard').style.disp
 window.cancelEventForm = cancelEventForm;
 
 </script>
-
-<!-- ════ MOBILE BOTTOM NAV ════ -->
-<nav class="bottom-nav" id="bottomNav" aria-label="Navigation mobile">
-  <div class="bottom-nav-inner">
-    <button class="bottom-nav-item nav-item active" data-view="chat" aria-label="Chat">
-      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      <span>Chat</span>
-    </button>
-    <button class="bottom-nav-item nav-item" data-view="notes" aria-label="Notes">
-      <svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span>Notes</span>
-    </button>
-    <button class="bottom-nav-item nav-item" data-view="alarms" aria-label="Alarmes">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="m4 5 1.5 1.5M20 5l-1.5 1.5"/></svg>
-      <span>Alarmes</span>
-    </button>
-    <button class="bottom-nav-item nav-item" data-view="calendar" aria-label="Agenda">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span>Agenda</span>
-    </button>
-  </div>
-</nav>
 
 </body>
 </html>
