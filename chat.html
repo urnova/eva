@@ -188,11 +188,19 @@ body::before{
 .sb-footer{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;}
 .user-card{
   display:flex;align-items:center;gap:9px;
-  padding:8px 10px;border-radius:9px;
-  cursor:pointer;transition:background var(--trans);
+  padding:10px 12px;border-radius:11px;
+  cursor:pointer;transition:all var(--trans);
   position:relative;
+  border:1px solid var(--border);
+  background:var(--surface2);
 }
-.user-card:hover{background:var(--surface2);}
+.user-card:hover{background:var(--surface3);border-color:var(--cyan);box-shadow:0 0 12px rgba(0,212,255,0.08);}
+.user-card-gear{
+  flex-shrink:0;color:var(--text-dim);
+  transition:all var(--trans);
+  display:flex;align-items:center;
+}
+.user-card:hover .user-card-gear{color:var(--cyan);transform:rotate(22deg);}
 .user-ava{
   width:33px;height:33px;border-radius:50%;
   background:linear-gradient(135deg,var(--cyan),var(--purple));
@@ -434,19 +442,43 @@ body::before{
 
 /* Tone bar */
 .tone-bar{
-  display:flex;gap:5px;padding:8px 18px 0;flex-shrink:0;
+  display:flex;align-items:center;gap:6px;
+  padding:9px 18px 7px;flex-shrink:0;
   overflow-x:auto;scrollbar-width:none;
+  border-top:1px solid var(--border);
+  background:rgba(6,11,18,0.6);
 }
 .tone-bar::-webkit-scrollbar{display:none;}
+.tone-bar-label{
+  font-size:0.62em;color:var(--text-dim);white-space:nowrap;
+  flex-shrink:0;letter-spacing:0.06em;text-transform:uppercase;
+  margin-right:4px;
+}
 .tone-btn{
-  padding:3px 11px;border-radius:18px;
-  background:transparent;border:1px solid var(--border);
-  color:var(--text-muted);font-size:0.7em;
+  padding:5px 14px;border-radius:20px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text-muted);font-size:0.72em;
   cursor:pointer;transition:all var(--trans);
   font-family:'Space Mono',monospace;white-space:nowrap;flex-shrink:0;
+  display:flex;align-items:center;gap:5px;letter-spacing:0.02em;
 }
-.tone-btn:hover{border-color:var(--border-h);color:var(--text);}
-.tone-btn.active{background:var(--cyan-dim);border-color:var(--cyan);color:var(--cyan);}
+.tone-btn:hover{border-color:var(--border-h);color:var(--text);background:var(--surface3);}
+.tone-btn.active{background:var(--cyan);border-color:var(--cyan);color:#000;font-weight:700;}
+/* EVA status bar */
+.eva-status-bar{
+  display:none;align-items:center;gap:7px;
+  padding:5px 18px;
+  font-size:0.7em;color:var(--text-muted);
+  border-top:1px solid var(--border);
+  background:rgba(0,212,255,0.04);
+  flex-shrink:0;
+}
+.eva-status-bar.visible{display:flex;}
+.eva-status-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--cyan);
+  animation:statusPulse 1s ease-in-out infinite;flex-shrink:0;
+}
+@keyframes statusPulse{0%,100%{opacity:0.4;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
 
 /* Input area */
 .input-area{
@@ -865,11 +897,14 @@ body::before{
   </div>
 
   <div class="sb-footer">
-    <div class="user-card" id="userCard">
+    <div class="user-card" id="userCard" title="Paramètres & Profil">
       <div class="user-ava" id="userAvatar">U</div>
       <div class="user-info">
         <div class="user-name" id="userNameText">Chargement...</div>
         <div class="user-role" id="userBadgeText">👤 Utilisateur</div>
+      </div>
+      <div class="user-card-gear">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
       </div>
       <div class="user-menu">
         <button class="menu-item" id="settingsMenuBtn">
@@ -947,11 +982,17 @@ body::before{
       </div>
 
       <div class="tone-bar">
-        <button class="tone-btn active" data-tone="normal">💬 Normal</button>
-        <button class="tone-btn" data-tone="professional">💼 Pro</button>
-        <button class="tone-btn" data-tone="friendly">🤗 Amical</button>
-        <button class="tone-btn" data-tone="code">💻 Code</button>
-        <button class="tone-btn" data-tone="creative">🎨 Créatif</button>
+        <span class="tone-bar-label">Ton</span>
+        <button class="tone-btn active" data-tone="normal">Normal</button>
+        <button class="tone-btn" data-tone="professional">Pro</button>
+        <button class="tone-btn" data-tone="friendly">Amical</button>
+        <button class="tone-btn" data-tone="code">Code</button>
+        <button class="tone-btn" data-tone="creative">Créatif</button>
+      </div>
+
+      <div class="eva-status-bar" id="evaStatusBar">
+        <div class="eva-status-dot"></div>
+        <span id="evaStatusText">EVA réfléchit...</span>
       </div>
 
       <div class="input-area">
@@ -1278,6 +1319,7 @@ function esc(t) {
 document.addEventListener('DOMContentLoaded', function() {
   initChar();
   setupUI();
+  applyEvaPanelPreference();
   initAuth();
   initCalendar();
   setupNotifications();
@@ -1730,6 +1772,17 @@ function appendMsg(role, content, imgUrl) {
   scrollDown();
 }
 
+function setEvaStatus(text) {
+  var bar = document.getElementById('evaStatusBar');
+  var txt = document.getElementById('evaStatusText');
+  if (text) {
+    if (bar) bar.classList.add('visible');
+    if (txt) txt.textContent = text;
+  } else {
+    if (bar) bar.classList.remove('visible');
+  }
+}
+
 function showTyping() {
   S.busy = true;
   var list = document.getElementById('messagesList');
@@ -1743,12 +1796,14 @@ function showTyping() {
   list.appendChild(div);
   scrollDown();
   if (window.EvaCharacter) window.EvaCharacter.setThinking();
+  setEvaStatus('EVA réfléchit...');
 }
 
 function hideTyping() {
   S.busy = false;
   var el = document.getElementById('typingInd');
   if (el) el.remove();
+  setEvaStatus(null);
 }
 
 function scrollDown() {
@@ -2011,6 +2066,10 @@ function renderSettings(section) {
       '<div><div class="settings-row-label">Email</div><div style="font-size:0.78em;color:var(--text-muted)">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
       '<div><div class="settings-row-label">Rôle</div><div style="font-size:0.78em;color:var(--cyan)">'+esc(roleLabels[p.role]||'👤 Utilisateur')+'</div></div>' +
       '</div>' +
+      '<div class="settings-row" style="padding:10px 0;border-top:1px solid var(--border)">' +
+      '<div><div class="settings-row-label">Panneau EVA</div><div class="settings-row-sub">Afficher le personnage animé EVA</div></div>' +
+      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sEvaPanel"'+(localStorage.getItem('eva_show_panel')!=='false'?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;" onchange="toggleEvaPanelSetting(this.checked)"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label>' +
+      '</div>' +
       '</div>' +
       '<div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveProfileSettings()">Sauvegarder le profil</button></div>';
 
@@ -2147,7 +2206,10 @@ function renderSettings(section) {
       '<div style="display:flex;flex-direction:column;gap:8px">' +
       '<button class="btn btn-secondary" onclick="auth.signOut().then(function(){window.location.href=\'/\';})">🚪 Se déconnecter</button>' +
       '<button class="btn btn-danger" onclick="if(confirm(\'Supprimer toutes les conversations ? Cette action est irréversible.\'))clearAllConvs()">🗑️ Effacer toutes les conversations</button>' +
-      '</div></div>';
+      '<button class="btn btn-danger" onclick="deleteMyAccount()" style="margin-top:4px">⛔ Supprimer mon compte</button>' +
+      '</div>' +
+      '<div style="font-size:0.68em;color:var(--text-dim);margin-top:8px">La suppression du compte est irréversible. Toutes vos données seront effacées définitivement.</div>' +
+      '</div>';
 
   } else if (section === 'dev') {
     var devKey = (S.profile && S.profile.devKey) || '';
@@ -2431,6 +2493,7 @@ async function executeEvaAction(action) {
   var uid = S.user.uid;
   try {
     if (action.type === 'note') {
+      setEvaStatus('📝 Création de la note en cours...');
       await db.collection('users').doc(uid).collection('notes').add({
         title: action.title || 'Note d\'EVA',
         body: action.body || action.content || '',
@@ -2439,8 +2502,11 @@ async function executeEvaAction(action) {
         updatedAt: window.timestamp()
       });
       toast('📝 Note créée par EVA : ' + (action.title || ''), 'success');
+      setEvaStatus('📝 Note créée !');
+      setTimeout(function(){ setEvaStatus(null); }, 3000);
 
     } else if (action.type === 'alarm') {
+      setEvaStatus('⏰ Création de l\'alarme en cours...');
       await db.collection('users').doc(uid).collection('alarms').add({
         time: action.time || '08:00',
         label: action.label || 'Alarme EVA',
@@ -2449,8 +2515,11 @@ async function executeEvaAction(action) {
         createdAt: window.timestamp()
       });
       toast('⏰ Alarme créée par EVA : ' + (action.label || action.time || ''), 'success');
+      setEvaStatus('⏰ Alarme créée !');
+      setTimeout(function(){ setEvaStatus(null); }, 3000);
 
     } else if (action.type === 'event') {
+      setEvaStatus('📅 Ajout à l\'agenda en cours...');
       await db.collection('users').doc(uid).collection('events').add({
         title: action.title || 'Événement EVA',
         date: action.date || new Date().toISOString().slice(0,10),
@@ -2459,10 +2528,13 @@ async function executeEvaAction(action) {
         createdAt: window.timestamp()
       });
       toast('📅 Événement ajouté par EVA : ' + (action.title || ''), 'success');
+      setEvaStatus('📅 Événement ajouté à l\'agenda !');
+      setTimeout(function(){ setEvaStatus(null); }, 3000);
     }
   } catch(e) {
     console.error('executeEvaAction error:', e);
     toast('Erreur lors de la création par EVA', 'error');
+    setEvaStatus(null);
   }
 }
 
@@ -2514,6 +2586,71 @@ async function deactivateDevKeyDirect() {
   } catch(e) { toast('Erreur désactivation', 'error'); }
 }
 window.deactivateDevKeyDirect = deactivateDevKeyDirect;
+
+/* ═══════════════════════════════════════════════════
+   DELETE ACCOUNT
+═══════════════════════════════════════════════════ */
+async function deleteMyAccount() {
+  if (!S.user || !auth.currentUser) { toast('Non connecté', 'error'); return; }
+  var first = confirm('⛔ Supprimer définitivement votre compte E.V.A ?\n\nToutes vos données (conversations, notes, alarmes, événements) seront effacées. Cette action est IRRÉVERSIBLE.');
+  if (!first) return;
+  var second = confirm('Dernière confirmation : voulez-vous vraiment supprimer votre compte ? Tapez OK pour continuer.');
+  if (!second) return;
+  try {
+    toast('Suppression du compte en cours...', 'info');
+    var uid = S.user.uid;
+    var cols = ['conversations', 'notes', 'alarms', 'events', 'reminders'];
+    for (var i = 0; i < cols.length; i++) {
+      var snap = await db.collection('users').doc(uid).collection(cols[i]).get();
+      var batch = db.batch();
+      snap.forEach(function(d){ batch.delete(d.ref); });
+      if (!snap.empty) await batch.commit();
+    }
+    await db.collection('users').doc(uid).delete();
+    await auth.currentUser.delete();
+    toast('Compte supprimé', 'success');
+    setTimeout(function(){ window.location.href = '/'; }, 1500);
+  } catch(e) {
+    console.error('deleteMyAccount:', e);
+    if (e.code === 'auth/requires-recent-login') {
+      toast('Pour des raisons de sécurité, reconnectez-vous avant de supprimer votre compte.', 'error');
+    } else {
+      toast('Erreur lors de la suppression : ' + e.message, 'error');
+    }
+  }
+}
+window.deleteMyAccount = deleteMyAccount;
+
+/* ═══════════════════════════════════════════════════
+   EVA PANEL TOGGLE
+═══════════════════════════════════════════════════ */
+function toggleEvaPanelSetting(show) {
+  localStorage.setItem('eva_show_panel', show ? 'true' : 'false');
+  var panel = document.getElementById('evaPanel');
+  if (!panel) return;
+  if (show) {
+    panel.classList.remove('collapsed');
+    S.evaOpen = true;
+  } else {
+    panel.classList.add('collapsed');
+    S.evaOpen = false;
+  }
+  var btn = document.getElementById('evaToggleBtn');
+  if (btn) btn.style.opacity = show ? '1' : '0.5';
+}
+window.toggleEvaPanelSetting = toggleEvaPanelSetting;
+
+function applyEvaPanelPreference() {
+  var show = localStorage.getItem('eva_show_panel') !== 'false';
+  var panel = document.getElementById('evaPanel');
+  if (!panel) return;
+  if (!show) {
+    panel.classList.add('collapsed');
+    S.evaOpen = false;
+    var btn = document.getElementById('evaToggleBtn');
+    if (btn) btn.style.opacity = '0.5';
+  }
+}
 
 /* ═══════════════════════════════════════════════════
    NOTES
