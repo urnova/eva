@@ -197,6 +197,35 @@ body::before{
   .ob-logo img{width:76px;}
   .btn-next,.btn-skip{padding:11px;font-size:0.76em;}
 }
+
+/* ── Toggle switch ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);margin-bottom:10px;gap:12px;}
+.toggle-row:hover{border-color:rgba(0,212,255,0.25);}
+.toggle-info .toggle-name{font-size:0.85em;font-weight:700;color:var(--text);}
+.toggle-info .toggle-desc{font-size:0.72em;color:var(--text-muted);margin-top:3px;line-height:1.4;}
+.toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--surface3);border-radius:24px;transition:0.25s;}
+.toggle-slider:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.25s;}
+.toggle-switch input:checked + .toggle-slider{background:var(--cyan);box-shadow:0 0 10px rgba(0,212,255,0.4);}
+.toggle-switch input:checked + .toggle-slider:before{transform:translateX(20px);}
+
+/* ── PC note ── */
+.pc-note{background:rgba(183,148,246,0.07);border:1px solid rgba(183,148,246,0.22);border-radius:10px;padding:13px 15px;margin:14px 0 0;}
+.pc-note-title{font-size:0.8em;font-weight:700;color:var(--purple);margin-bottom:5px;}
+.pc-note-body{font-size:0.76em;color:var(--text-muted);line-height:1.65;}
+.pc-note-body strong{color:var(--purple);}
+
+/* ── Legal acceptance ── */
+.legal-section{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:4px;}
+.legal-check{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:0.8em;color:var(--text-muted);line-height:1.55;}
+.legal-check:last-child{margin-bottom:0;}
+.legal-check input[type="checkbox"]{width:16px;height:16px;accent-color:var(--cyan);flex-shrink:0;margin-top:2px;cursor:pointer;}
+.legal-check label{cursor:pointer;}
+.legal-check a{color:var(--cyan);text-decoration:none;}
+.legal-check a:hover{text-decoration:underline;}
+.legal-required{color:var(--red);font-size:0.75em;margin-top:10px;display:none;}
+.legal-required.visible{display:block;}
 </style>
 </head>
 <body>
@@ -220,6 +249,7 @@ body::before{
       <div class="ob-step" id="step-bar-3"></div>
       <div class="ob-step" id="step-bar-4"></div>
       <div class="ob-step" id="step-bar-5"></div>
+      <div class="ob-step" id="step-bar-6"></div>
     </div>
 
     <!-- Step 1: Profil -->
@@ -335,17 +365,74 @@ body::before{
       </div>
     </div>
 
-    <!-- Step 5: Terminé -->
+    <!-- Step 5: Préférences -->
     <div class="ob-view" id="ob5">
+      <div class="step-label">Étape 5 — Préférences</div>
+
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-name">🎙️ Wake Word "Hey EVA"</div>
+          <div class="toggle-desc">E.V.A s'active automatiquement quand vous dites "Hey EVA"</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="prefWakeWord">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-name">⚡ Lancer E.V.A directement</div>
+          <div class="toggle-desc">Accéder automatiquement au chat après la connexion</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="prefAutoLaunch" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="pc-note">
+        <div class="pc-note-title">💻 Forme physique d'E.V.A</div>
+        <div class="pc-note-body">
+          L'avatar animé 3D d'E.V.A (sa présence visuelle à l'écran) est disponible <strong>uniquement sur ordinateur (PC / Mac)</strong>. Sur mobile et tablette, l'expérience est optimisée pour le chat uniquement.
+        </div>
+      </div>
+
+      <div class="ob-actions">
+        <button class="btn-skip" onclick="goStep(4)">← Retour</button>
+        <button class="btn-next" onclick="goStep(6)">SUIVANT →</button>
+      </div>
+    </div>
+
+    <!-- Step 6: Terminé -->
+    <div class="ob-view" id="ob6">
       <div class="finish-icon">🎉</div>
       <div class="finish-title">Tout est prêt !</div>
       <div class="finish-text">
         Votre profil E.V.A a été configuré avec succès.<br>
-        Bienvenue dans votre nouveau monde intelligent.
+        Dernière étape avant d'entrer dans votre monde intelligent.
       </div>
-      <button class="btn-next" style="width:100%;font-size:0.9em" onclick="finish()">
+
+      <div class="legal-section">
+        <div class="legal-check">
+          <input type="checkbox" id="acceptTerms">
+          <label for="acceptTerms">J'accepte les <a href="/conditions.html" target="_blank">Conditions d'utilisation</a> *</label>
+        </div>
+        <div class="legal-check">
+          <input type="checkbox" id="acceptPrivacy">
+          <label for="acceptPrivacy">J'ai lu et j'accepte la <a href="/privacy.html" target="_blank">Politique de confidentialité</a> *</label>
+        </div>
+        <div class="legal-check">
+          <input type="checkbox" id="acceptCookies">
+          <label for="acceptCookies">J'accepte l'utilisation des <a href="/cookies.html" target="_blank">Cookies</a> pour améliorer mon expérience</label>
+        </div>
+        <div class="legal-required" id="legalError">⚠ Veuillez accepter les conditions et la politique de confidentialité pour continuer.</div>
+      </div>
+
+      <button class="btn-next" style="width:100%;font-size:0.9em;margin-top:16px" onclick="finish()">
         ⚡ ACCÉDER À E.V.A
       </button>
+      <button class="btn-skip" style="width:100%;margin-top:8px" onclick="goStep(5)">← Retour</button>
     </div>
 
   </div>
@@ -572,16 +659,34 @@ async function saveProfile(data) {
 }
 
 async function finish() {
+  var termsOk = document.getElementById('acceptTerms').checked;
+  var privacyOk = document.getElementById('acceptPrivacy').checked;
+  if (!termsOk || !privacyOk) {
+    document.getElementById('legalError').classList.add('visible');
+    setTimeout(function(){ document.getElementById('legalError').classList.remove('visible'); }, 3000);
+    return;
+  }
   if (!currentUser) return;
+  var wakeWord = document.getElementById('prefWakeWord') ? document.getElementById('prefWakeWord').checked : false;
+  var autoLaunch = document.getElementById('prefAutoLaunch') ? document.getElementById('prefAutoLaunch').checked : true;
+  var cookies = document.getElementById('acceptCookies') ? document.getElementById('acceptCookies').checked : false;
   try {
     await db.collection('users').doc(currentUser.uid).set({
       onboardingCompleted: true,
+      legalAccepted: {
+        terms: true,
+        privacy: true,
+        cookies: cookies,
+        date: new Date().toISOString()
+      },
       preferences: {
         voiceProvider: 'native',
         selectedVoice: selectedVoice,
         voiceLang: 'fr-FR',
         speechRate: 1.0,
-        aiProvider: selectedProvider
+        aiProvider: selectedProvider,
+        wakeWordEnabled: wakeWord,
+        autoLaunch: autoLaunch
       }
     }, { merge: true });
     window.location.href = '/chat.html';

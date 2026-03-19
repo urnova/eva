@@ -31,6 +31,12 @@ const PAGE_ROUTES = {
   '/chat.html':   'chat.html',
   '/onboarding':  'onboarding.html',
   '/onboarding.html': 'onboarding.html',
+  '/conditions':  'conditions.html',
+  '/conditions.html': 'conditions.html',
+  '/privacy':     'privacy.html',
+  '/privacy.html':'privacy.html',
+  '/cookies':     'cookies.html',
+  '/cookies.html':'cookies.html',
 };
 
 function serveFile(res, filePath) {

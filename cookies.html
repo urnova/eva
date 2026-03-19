@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Politique de cookies — E.V.A</title>
+<link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+<style>
+:root{--cyan:#00d4ff;--cyan-dim:rgba(0,212,255,0.09);--bg:#060b12;--surface:#0c1520;--surface2:#0f1c2e;--border:rgba(0,212,255,0.13);--text:#d0e8f8;--text-muted:#4a6285;--purple:#b794f6;--green:#00ff88;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.018) 1px,transparent 1px);background-size:55px 55px;pointer-events:none;z-index:0;}
+.page{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:60px 24px 80px;}
+.back{display:inline-flex;align-items:center;gap:8px;color:var(--text-muted);text-decoration:none;font-size:0.8em;margin-bottom:40px;transition:color 0.2s;}
+.back:hover{color:var(--cyan);}
+.doc-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.doc-logo img{height:28px;width:auto;}
+h1{font-family:'Orbitron',monospace;font-size:1.6em;font-weight:900;letter-spacing:3px;color:var(--cyan);margin-bottom:8px;}
+.doc-date{font-size:0.75em;color:var(--text-muted);margin-bottom:40px;border-bottom:1px solid var(--border);padding-bottom:20px;}
+h2{font-family:'Orbitron',monospace;font-size:0.95em;color:var(--text);letter-spacing:2px;margin:32px 0 12px;padding-left:12px;border-left:2px solid var(--cyan);}
+p{font-size:0.82em;color:var(--text-muted);line-height:1.9;margin-bottom:14px;}
+ul{padding-left:20px;margin-bottom:14px;}
+ul li{font-size:0.82em;color:var(--text-muted);line-height:1.8;margin-bottom:4px;}
+ul li::marker{color:var(--cyan);}
+a{color:var(--cyan);text-decoration:none;}
+a:hover{text-decoration:underline;}
+.highlight{background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:16px 20px;margin:24px 0;}
+.highlight p{margin-bottom:0;}
+.cookie-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:12px;}
+.cookie-card-title{font-family:'Orbitron',monospace;font-size:0.8em;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.cookie-badge{font-size:0.7em;padding:2px 8px;border-radius:10px;font-family:'Space Mono',monospace;font-weight:700;letter-spacing:1px;}
+.badge-essential{background:rgba(0,255,136,0.12);color:var(--green);border:1px solid rgba(0,255,136,0.3);}
+.badge-optional{background:rgba(0,212,255,0.1);color:var(--cyan);border:1px solid rgba(0,212,255,0.3);}
+.cookie-card-desc{font-size:0.78em;color:var(--text-muted);line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="page">
+  <a href="/" class="back">← Retour à l'accueil</a>
+
+  <div class="doc-logo">
+    <img src="assets/images/eva.svg" alt="EVA">
+  </div>
+
+  <h1>POLITIQUE DE COOKIES</h1>
+  <div class="doc-date">Version bêta — Dernière mise à jour : 2025 · Astral Technology</div>
+
+  <div class="highlight">
+    <p>E.V.A utilise des cookies et des technologies de stockage local pour vous offrir une expérience personnalisée et sécurisée. Voici tout ce que vous devez savoir.</p>
+  </div>
+
+  <h2>1. QU'EST-CE QU'UN COOKIE ?</h2>
+  <p>Un cookie est un petit fichier texte stocké sur votre appareil lorsque vous visitez un site web. Il permet de mémoriser vos préférences, de maintenir votre session active et d'améliorer votre expérience.</p>
+  <p>E.V.A utilise principalement le stockage local du navigateur (localStorage) et Firebase pour gérer votre session et vos préférences, en complément des cookies traditionnels.</p>
+
+  <h2>2. COOKIES ESSENTIELS</h2>
+  <p>Ces cookies sont indispensables au fonctionnement du service. Ils ne peuvent pas être désactivés.</p>
+
+  <div class="cookie-card">
+    <div class="cookie-card-title">Session Firebase <span class="cookie-badge badge-essential">ESSENTIEL</span></div>
+    <div class="cookie-card-desc">Maintient votre session de connexion active et sécurisée. Généré par Firebase Auth (Google).</div>
+  </div>
+  <div class="cookie-card">
+    <div class="cookie-card-title">Préférences E.V.A <span class="cookie-badge badge-essential">ESSENTIEL</span></div>
+    <div class="cookie-card-desc">Mémorise vos paramètres : voix choisie, fournisseur IA, thème, et autres préférences de personnalisation.</div>
+  </div>
+
+  <h2>3. COOKIES FONCTIONNELS</h2>
+  <p>Ces cookies améliorent votre expérience mais ne sont pas obligatoires.</p>
+
+  <div class="cookie-card">
+    <div class="cookie-card-title">Historique de conversation <span class="cookie-badge badge-optional">FONCTIONNEL</span></div>
+    <div class="cookie-card-desc">Stocke localement l'historique de vos échanges avec E.V.A pour une continuité entre les sessions.</div>
+  </div>
+  <div class="cookie-card">
+    <div class="cookie-card-title">Puter.com (IA Cloud) <span class="cookie-badge badge-optional">FONCTIONNEL</span></div>
+    <div class="cookie-card-desc">Si vous utilisez le provider Puter, ce service gère sa propre session de connexion. Soumis à la politique de Puter.com.</div>
+  </div>
+
+  <h2>4. DURÉE DE CONSERVATION</h2>
+  <ul>
+    <li>Cookies de session — supprimés à la fermeture du navigateur</li>
+    <li>Cookies persistants — conservés selon leur durée propre (en général 30 à 365 jours)</li>
+    <li>Stockage local — conservé jusqu'à suppression manuelle ou désinstallation de l'app</li>
+  </ul>
+
+  <h2>5. GÉRER VOS COOKIES</h2>
+  <p>Vous pouvez contrôler les cookies via les paramètres de votre navigateur :</p>
+  <ul>
+    <li><strong>Chrome</strong> — Paramètres › Confidentialité et sécurité › Cookies</li>
+    <li><strong>Firefox</strong> — Options › Vie privée et sécurité › Cookies</li>
+    <li><strong>Safari</strong> — Préférences › Confidentialité</li>
+    <li><strong>Edge</strong> — Paramètres › Confidentialité, recherche et services</li>
+  </ul>
+  <p>Attention : désactiver les cookies essentiels empêchera le bon fonctionnement de E.V.A.</p>
+
+  <h2>6. CONTACT</h2>
+  <p>Pour toute question sur notre utilisation des cookies, contactez-nous via l'application E.V.A ou consultez notre <a href="/privacy.html">politique de confidentialité</a>.</p>
+</div>
+</body>
+</html>
