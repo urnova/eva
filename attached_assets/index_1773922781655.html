@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E.V.A - Assistante Virtuelle Évolutive</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Cubism SDK JS -->
+    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+    <!-- PIXI.JS v7 -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7/dist/pixi.min.js"></script>
+    <!-- pixi-live2d-display v0.4.0 compatible PIXI v7 -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/pixi-live2d-display.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Live2D Avatar Space -->
+        <div class="avatar-container" id="avatar-container">
+            <canvas id="live2d-canvas"></canvas>
+            <div class="scan-line"></div>
+            <div class="noise-overlay"></div>
+            <div class="status-indicator">
+                <div class="pulse-dot"></div>
+                <span id="eva-status">Connecting...</span>
+            </div>
+            <div class="branding">
+                <h1 class="logo">E.V.A</h1>
+                <p class="subtitle">Assistante Virtuelle Évolutive v0.2.0</p>
+            </div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div class="chat-container">
+            <div class="chat-header">
+                <h2>Lien Terminal</h2>
+                <div class="tts-toggle" id="tts-toggle" title="Activer/désactiver la voix">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="speaker-icon"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+                </div>
+            </div>
+            <div class="chat-log" id="chat-log">
+                <!-- Messages will be injected here -->
+            </div>
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="chat-input" placeholder="Message à E.V.A..." autocomplete="off">
+                    <button id="send-button">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

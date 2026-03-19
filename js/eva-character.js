@@ -8,14 +8,14 @@ var mouseX = 0;
 var mouseY = 0;
 var trackMouse = false;
 
-var MODEL_URL = 'https://cdn.jsdelivr.net/gh/guansss/pixi-live2d-display@master/test/assets/shizuku/shizuku.model.json';
+var MODEL_URL = 'https://cdn.jsdelivr.net/gh/guansss/pixi-live2d-display@master/test/assets/haru/haru_greeter_t03.model3.json';
 
 var MOTIONS = {
-  idle:      { group: 'idle',      index: 0 },
-  talking:   { group: 'tap_body',  index: 0 },
-  listening: { group: 'idle',      index: 1 },
-  thinking:  { group: 'flick_head',index: 0 },
-  happy:     { group: 'tap_body',  index: 1 }
+  idle:      { group: 'Idle', index: 0 },
+  talking:   { group: 'Tap',  index: 0 },
+  listening: { group: 'Idle', index: 1 },
+  thinking:  { group: 'Idle', index: 2 },
+  happy:     { group: 'Tap',  index: 1 }
 };
 
 var STATUS_LABELS = {
@@ -57,6 +57,7 @@ function create(containerId) {
 
 #live2dContainer canvas {
   display: block;
+  pointer-events: auto;
 }
 
 .eva-bg-glow {
@@ -64,10 +65,10 @@ function create(containerId) {
   bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
-  width: 200px;
-  height: 200px;
+  width: 220px;
+  height: 220px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0,212,255,0.1) 0%, transparent 70%);
   animation: glowPulse 4s ease-in-out infinite;
   z-index: 0;
   pointer-events: none;
@@ -84,7 +85,7 @@ function create(containerId) {
   transform: translateX(-50%);
   width: 150px;
   height: 16px;
-  background: radial-gradient(ellipse, rgba(0,212,255,0.22) 0%, transparent 70%);
+  background: radial-gradient(ellipse, rgba(0,212,255,0.2) 0%, transparent 70%);
   border-radius: 50%;
   animation: groundPulse 5s ease-in-out infinite;
   z-index: 1;
@@ -92,7 +93,7 @@ function create(containerId) {
 }
 @keyframes groundPulse {
   0%,100% { opacity: 0.9; transform: translateX(-50%) scaleX(1); }
-  50%      { opacity: 0.4; transform: translateX(-50%) scaleX(0.7); }
+  50%      { opacity: 0.35; transform: translateX(-50%) scaleX(0.7); }
 }
 
 .eva-particles {
@@ -155,15 +156,15 @@ function create(containerId) {
   position: absolute;
   left: 16px; right: 16px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.5), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.45), transparent);
   animation: scanLine 5s ease-in-out infinite;
   z-index: 5;
   pointer-events: none;
 }
 @keyframes scanLine {
   0%   { bottom: 45px; opacity: 0; }
-  8%   { opacity: 0.55; }
-  92%  { opacity: 0.35; }
+  8%   { opacity: 0.5; }
+  92%  { opacity: 0.3; }
   100% { bottom: 95%; opacity: 0; }
 }
 
@@ -192,6 +193,7 @@ function create(containerId) {
   font-family: 'Space Mono', monospace;
   font-size: 0.62em;
   letter-spacing: 2px;
+  text-align: center;
 }
 .eva-loading-ring {
   width: 36px; height: 36px;
@@ -226,58 +228,77 @@ function create(containerId) {
   `;
 
   spawnParticles();
-  initLive2D(container);
 
   document.addEventListener('mousemove', function(e) {
     mouseX = e.clientX;
     mouseY = e.clientY;
   });
+
+  waitForLibraries(function() {
+    initLive2D(container);
+  });
+}
+
+function waitForLibraries(cb) {
+  var tries = 0;
+  function check() {
+    if (typeof PIXI !== 'undefined' && PIXI.live2d && PIXI.live2d.Live2DModel) {
+      cb();
+    } else if (tries < 40) {
+      tries++;
+      setTimeout(check, 200);
+    } else {
+      console.warn('[EVA] Live2D libraries not available after timeout');
+      showFallback();
+    }
+  }
+  check();
 }
 
 function initLive2D(container) {
-  if (typeof PIXI === 'undefined' || !PIXI.live2d) {
-    console.warn('[EVA] Live2D or PIXI not loaded');
-    showFallback();
-    return;
-  }
-
   var liveContainer = document.getElementById('live2dContainer');
   if (!liveContainer) return;
 
   var w = container.offsetWidth  || 265;
-  var h = (container.offsetHeight || 500) - 36;
+  var h = Math.max((container.offsetHeight || 500) - 36, 200);
 
-  pixiApp = new PIXI.Application({
-    width: w,
-    height: h,
-    backgroundAlpha: 0,
-    antialias: true,
-    autoDensity: true,
-    resolution: window.devicePixelRatio || 1
-  });
+  try {
+    pixiApp = new PIXI.Application({
+      width: w,
+      height: h,
+      backgroundAlpha: 0,
+      antialias: true,
+      autoDensity: true,
+      resolution: window.devicePixelRatio || 1
+    });
+  } catch(e) {
+    console.error('[EVA] PIXI Application error:', e);
+    showFallback();
+    return;
+  }
 
   liveContainer.appendChild(pixiApp.view);
 
-  console.log('[EVA] Loading Live2D model...');
+  console.log('[EVA] Loading Live2D model (Haru)...');
 
   var loadTimeout = setTimeout(function() {
     if (!live2dModel) {
-      console.warn('[EVA] Model load timeout — using fallback');
+      console.warn('[EVA] Model load timeout');
       showFallback();
     }
-  }, 20000);
+  }, 25000);
 
-  PIXI.live2d.Live2DModel.from(MODEL_URL).then(function(mdl) {
+  PIXI.live2d.Live2DModel.from(MODEL_URL, { autoInteract: false }).then(function(mdl) {
     clearTimeout(loadTimeout);
     live2dModel = mdl;
     pixiApp.stage.addChild(live2dModel);
 
-    var scale = Math.min(w / live2dModel.internalModel.originalWidth, h / live2dModel.internalModel.originalHeight) * 0.88;
+    var origW = live2dModel.internalModel.originalWidth  || live2dModel.width;
+    var origH = live2dModel.internalModel.originalHeight || live2dModel.height;
+    var scale = Math.min(w / origW, h / origH) * 0.95;
     live2dModel.scale.set(scale);
     live2dModel.x = (w - live2dModel.width) / 2;
-    live2dModel.y = (h - live2dModel.height) / 2 + h * 0.04;
-
-    live2dModel.interactive = false;
+    live2dModel.y = (h - live2dModel.height) / 2;
 
     trackMouse = true;
     pixiApp.ticker.add(mouseLookTick);
@@ -285,31 +306,32 @@ function initLive2D(container) {
     var loading = document.getElementById('evaLoading');
     if (loading) loading.style.display = 'none';
 
-    console.log('[EVA] Live2D model ready!');
+    console.log('[EVA] Live2D Haru ready!');
     playMotion('idle');
   }).catch(function(err) {
     clearTimeout(loadTimeout);
-    console.error('[EVA] Live2D model load failed:', err);
+    console.error('[EVA] Live2D load error:', err);
     showFallback();
   });
 }
 
 function mouseLookTick() {
-  if (!live2dModel || !trackMouse) return;
+  if (!live2dModel || !trackMouse || !pixiApp) return;
   var canvas = pixiApp.view;
   var rect = canvas.getBoundingClientRect();
-  var cx = rect.left + rect.width / 2;
+  if (!rect.width) return;
+  var cx = rect.left + rect.width  / 2;
   var cy = rect.top  + rect.height / 2;
-  var dx = (mouseX - cx) / (rect.width  / 2);
-  var dy = (mouseY - cy) / (rect.height / 2);
-  dx = Math.max(-1, Math.min(1, dx));
-  dy = Math.max(-1, Math.min(1, dy));
+  var dx = Math.max(-1, Math.min(1, (mouseX - cx) / (rect.width  / 2)));
+  var dy = Math.max(-1, Math.min(1, (mouseY - cy) / (rect.height / 2)));
   try {
-    live2dModel.internalModel.coreModel.setParameterValueById('ParamAngleX', dx * 25);
-    live2dModel.internalModel.coreModel.setParameterValueById('ParamAngleY', -dy * 20);
-    live2dModel.internalModel.coreModel.setParameterValueById('ParamBodyAngleX', dx * 8);
-    live2dModel.internalModel.coreModel.setParameterValueById('ParamEyeBallX', dx * 0.9);
-    live2dModel.internalModel.coreModel.setParameterValueById('ParamEyeBallY', -dy * 0.9);
+    var core = live2dModel.internalModel.coreModel;
+    core.setParameterValueById('ParamAngleX',    dx * 28);
+    core.setParameterValueById('ParamAngleY',   -dy * 22);
+    core.setParameterValueById('ParamAngleZ',    dx * -6);
+    core.setParameterValueById('ParamBodyAngleX', dx * 10);
+    core.setParameterValueById('ParamEyeBallX',  dx * 0.9);
+    core.setParameterValueById('ParamEyeBallY', -dy * 0.9);
   } catch(e) {}
 }
 
@@ -317,9 +339,12 @@ function playMotion(state) {
   if (!live2dModel) return;
   var m = MOTIONS[state] || MOTIONS.idle;
   try {
-    live2dModel.motion(m.group, m.index, PIXI.live2d.MotionPriority.NORMAL);
+    var priority = PIXI.live2d.MotionPriority
+      ? PIXI.live2d.MotionPriority.NORMAL
+      : 2;
+    live2dModel.motion(m.group, m.index, priority);
   } catch(e) {
-    try { live2dModel.motion('Idle', 0, PIXI.live2d.MotionPriority.NORMAL); } catch(_) {}
+    try { live2dModel.motion('Idle', 0); } catch(_) {}
   }
 }
 
@@ -327,15 +352,15 @@ function setStatus(state) {
   currentState = state;
   var bar = document.getElementById('evaStatusBar');
   var txt = document.getElementById('evaStatusTxt');
-  if (bar) {
-    bar.className = 'eva-status ' + (state !== 'idle' ? state : '');
-  }
+  if (bar) bar.className = 'eva-status' + (state !== 'idle' ? ' ' + state : '');
   if (txt) txt.textContent = STATUS_LABELS[state] || 'EN LIGNE';
 }
 
 function showFallback() {
   var loading = document.getElementById('evaLoading');
-  if (loading) loading.innerHTML = '<span style="color:rgba(0,212,255,0.5);font-family:Space Mono,monospace;font-size:0.65em;letter-spacing:2px;">EVA ONLINE</span>';
+  if (loading) {
+    loading.innerHTML = '<span style="color:rgba(0,212,255,0.5);font-family:Space Mono,monospace;font-size:0.65em;letter-spacing:2px;text-align:center;">EVA<br>ONLINE</span>';
+  }
 }
 
 function spawnParticles() {
@@ -382,7 +407,7 @@ window.EvaCharacter = {
     playMotion('happy');
     setTimeout(function() {
       if (currentState === 'happy') window.EvaCharacter.setIdle();
-    }, 3000);
+    }, 3500);
   }
 };
 
