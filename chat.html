@@ -904,14 +904,17 @@ body::before{
   #evaHdrText{display:none;}
   .conv-title-header{font-size:0.84em;max-width:none;flex:1;}
   .hdr-btn span{display:none;}
-  .hdr-btn{padding:7px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;}
-  /* Status indicator: just the dot, no pill on mobile */
+  .hdr-btn{padding:6px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;}
+  .hdr-btn svg{width:18px;height:18px;}
+  /* Status indicator: dot seul, sans pill */
   .eva-hdr-status{
-    background:none;border:none;padding:0 4px;gap:0;
-    border-radius:0;
+    background:none;border:none;padding:0 2px;gap:0;
+    border-radius:0;min-width:unset;
   }
-  .eva-hdr-dot{width:8px;height:8px;}
-  .header-right{gap:2px;flex-shrink:0;}
+  .eva-hdr-dot{width:9px;height:9px;}
+  /* Export caché sur mobile (pas de place) */
+  #hdrExportWrap{display:none!important;}
+  .header-right{gap:0;flex-shrink:0;}
 
   /* Safe area header */
   .chat-header{
@@ -958,17 +961,42 @@ body::before{
   /* Touch targets */
   .nav-item,.conv-item,.menu-item{min-height:48px;}
   button{min-height:44px;min-width:44px;}
-  .new-conv-btn,.conv-del,.tone-btn,.prompt-chip,.voice-test-btn{min-height:36px;}
+  .new-conv-btn,.conv-del,.conv-edit,.tone-btn,.prompt-chip,.voice-test-btn,.hdr-btn,.hamburger{min-height:unset;min-width:unset;}
 
   /* Modals: full screen on mobile */
-  .modal-overlay{align-items:flex-end;}
+  .modal-overlay{align-items:flex-end;padding:0;}
   .modal-box{
     width:100vw;max-width:100vw;
-    max-height:90vh;border-radius:18px 18px 0 0;
+    max-height:92dvh;border-radius:18px 18px 0 0;
     margin:0;
   }
-  .modal-header{padding:14px 16px 10px;}
-  .modal-body{padding:14px 16px;padding-bottom:calc(14px + env(safe-area-inset-bottom));}
+  .modal-header{padding:12px 14px 10px;}
+  /* Settings: empilé verticalement */
+  .modal-body{
+    flex-direction:column;
+    overflow:hidden;
+    padding:0;
+  }
+  .modal-sidebar{
+    width:100%;flex-direction:row;
+    border-right:none;border-bottom:1px solid var(--border);
+    padding:6px 8px;gap:3px;
+    overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;flex-shrink:0;
+  }
+  .modal-sidebar::-webkit-scrollbar{display:none;}
+  .settings-nav{
+    flex-direction:column;gap:2px;
+    padding:6px 10px;font-size:0.65em;
+    white-space:nowrap;width:auto;flex-shrink:0;
+    min-height:unset;min-width:unset;
+  }
+  .settings-nav svg{width:16px;height:16px;}
+  .modal-content{
+    flex:1;padding:14px;
+    overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding-bottom:calc(14px + env(safe-area-inset-bottom));
+  }
   .form-row{flex-direction:column;gap:6px;}
   .form-row label{min-width:unset;}
 
@@ -1591,8 +1619,11 @@ function renderUserUI(p) {
   var el = document.getElementById('userNameText');
   if (el) el.textContent = name;
   var badge = document.getElementById('userBadgeText');
-  var roles = { creator:'👑 Créateur', developer:'⚙️ Dev', creator_wife:'💎 Épouse', user:'👤 Utilisateur' };
-  if (badge) badge.textContent = roles[p.role] || '👤 Utilisateur';
+  var roles = { creator:'👑 Créateur', developer:'⚙️ Développeur', creator_wife:'💎 Épouse', user:'👤 Utilisateur' };
+  if (badge) {
+    var roleKey = (p.role||'user').toLowerCase();
+    badge.textContent = roles[roleKey] || (p.role ? '⚙️ '+p.role : '👤 Utilisateur');
+  }
   var ava = document.getElementById('userAvatar');
   if (ava) {
     if (p.photoURL) {
@@ -2326,6 +2357,7 @@ function openSettings(section) {
   document.querySelectorAll('.settings-nav').forEach(function(n){
     n.classList.toggle('active', n.dataset.section === section);
   });
+  if (S.profile) renderUserUI(S.profile);
   renderSettings(section || 'profile');
 }
 window.openSettings = openSettings;
