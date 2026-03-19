@@ -314,6 +314,49 @@ export function hideEmptyState() {
   }
 }
 
+// ═══ STREAM MESSAGE CONTENT ═══
+export function streamMessageContent(role, content, options = {}) {
+  return new Promise((resolve) => {
+    const messageEl = addMessage(role, '', options);
+    if (!messageEl) { resolve(messageEl); return; }
+
+    const bubble = messageEl.querySelector('.message-bubble');
+    if (!bubble) { resolve(messageEl); return; }
+
+    const words = content.split(' ');
+    let wordIndex = 0;
+    let accumulated = '';
+    const msPerWord = options.msPerWord || 18;
+
+    function revealNext() {
+      if (wordIndex >= words.length) {
+        bubble.innerHTML = renderMessageContent(content);
+        scrollToBottom();
+        resolve(messageEl);
+        return;
+      }
+
+      const chunkSize = wordIndex < 10 ? 1 : 2;
+      for (let i = 0; i < chunkSize && wordIndex < words.length; i++) {
+        accumulated += (accumulated ? ' ' : '') + words[wordIndex];
+        wordIndex++;
+      }
+
+      bubble.innerHTML = renderMessageContent(accumulated);
+
+      const chatMain = document.getElementById('chatMain');
+      if (chatMain) {
+        const isNearBottom = chatMain.scrollHeight - chatMain.scrollTop - chatMain.clientHeight < 200;
+        if (isNearBottom) scrollToBottom();
+      }
+
+      setTimeout(revealNext, msPerWord);
+    }
+
+    revealNext();
+  });
+}
+
 // ═══ INIT CHAT UI ═══
 export function initChatUI() {
   initAutoResizeTextarea('messageInput');
@@ -331,6 +374,7 @@ export default {
   showTypingIndicator,
   hideTypingIndicator,
   showErrorMessage,
+  streamMessageContent,
   loadMessages,
   initAutoResizeTextarea,
   initScrollDetection,

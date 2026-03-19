@@ -10,7 +10,7 @@ import { toast } from './core/utils.js';
 
 // Modules UI
 import { initSidebar } from './ui/sidebar.js';
-import { initChatUI } from './ui/chat-ui.js';
+import { initChatUI, streamMessageContent } from './ui/chat-ui.js';
 import { initModals } from './ui/modals.js';
 import { initAnimations } from './ui/animations.js';
 
@@ -260,12 +260,14 @@ window.sendMessage = async function() {
   
   // Show response
   if (response.success) {
-    window.addMessage('assistant', response.content);
+    // Launch TTS and text streaming simultaneously
+    const streamingPromise = streamMessageContent('assistant', response.content);
     
-    // Speak response if enabled
     if (window.currentConfig.ttsEnabled !== false) {
-      await speakText(response.content, window.currentConfig);
+      speakText(response.content, window.currentConfig);
     }
+    
+    await streamingPromise;
     
     // Save messages
     if (window.currentConversation) {
