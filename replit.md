@@ -46,6 +46,20 @@ An AI-powered intelligent virtual assistant web app with a Grok-like chat interf
 - Configuration is in `js/core/firebase-config.js`
 - Requires Firebase project credentials to be set up for Auth and Firestore to work
 
+## Roles & Permissions
+- **creator** (#ffd700 gold) — Enzo, PDG Astral Technologie — full access
+- **developer** (#00d4ff cyan) — Dev team — full access
+- **creator_wife** (#ff69b4 pink) — special access
+- **user** — standard access
+- Roles stored in Firestore `users.role`, activated via dev keys (`dev_keys_valid` collection)
+
+## Reports System (chat.html)
+- **Floating button** "SIGNALER" — visible to all authenticated users
+- **Report modal** — 4 types: bug-conversation (auto-fills last 10 messages), bug-général, suggestion, autre; priority selector for bugs; screenshot upload (base64, max 2 Mo)
+- **Reports stored** in Firestore `reports` collection — fields: userId, userName, userEmail, userRole, type, priority, description, conversationExcerpt, screenshot, status, createdAt, updatedAt, adminNotes, resolvedAt
+- **Gold sidebar section "Admin"** — visible only to creator/developer roles
+- **Reports dashboard** (viewReports) — stats bar (total/pending/in-progress/resolved), filters by type/status, expandable cards, status selector (pending/in-progress/resolved/rejected), admin notes, delete
+
 ## Live2D Character (EVA Panel)
 - Character panel in `chat.html` uses **Live2D** via `pixi-live2d-display` + PixiJS 6
 - Model: Shizuku (Cubism 2) loaded from jsDelivr CDN

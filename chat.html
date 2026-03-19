@@ -1060,6 +1060,182 @@ body::before{
 }
 .empty-state svg{width:48px;height:48px;stroke:var(--text-dim);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
 .empty-state p{font-size:0.8em;}
+
+/* ══════════════════════════════════════════════
+   SYSTÈME DE RAPPORTS
+══════════════════════════════════════════════ */
+.nav-gold-section{display:none;}
+.nav-gold-section.visible{display:block;}
+.nav-item.gold{color:#c8a400;}
+.nav-item.gold:hover,.nav-item.gold.active{background:rgba(255,215,0,0.09);color:#ffd700;}
+.nav-item.gold.active{box-shadow:inset 2px 0 0 #ffd700;}
+.nav-item.gold.active svg{filter:drop-shadow(0 0 4px rgba(255,215,0,0.6));}
+.sb-nav-label.gold-label{color:#ffd700;opacity:0.6;}
+
+/* Floating signaler button */
+.signaler-fab{
+  position:fixed;bottom:96px;right:20px;z-index:800;
+  background:linear-gradient(135deg,#ff4d6d 0%,#ff7043 100%);
+  border:none;border-radius:50px;padding:9px 16px;
+  color:#fff;font-family:'Orbitron',monospace;font-size:0.65em;
+  font-weight:700;letter-spacing:1.5px;cursor:pointer;
+  display:flex;align-items:center;gap:7px;
+  box-shadow:0 4px 20px rgba(255,77,109,0.45);
+  transition:all 0.2s;
+}
+.signaler-fab:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,77,109,0.55);}
+.signaler-fab svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
+
+/* Report submit modal */
+.report-overlay{
+  position:fixed;inset:0;z-index:3000;
+  background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+}
+.report-overlay.active{opacity:1;pointer-events:all;}
+.report-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:26px;max-width:520px;width:100%;
+  max-height:90vh;overflow-y:auto;
+  box-shadow:0 30px 80px rgba(0,0,0,0.8);
+  animation:rboxIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes rboxIn{from{transform:scale(0.95) translateY(12px)}to{transform:none}}
+.report-box-title{font-family:'Orbitron',monospace;font-size:1.05em;font-weight:900;color:var(--text);letter-spacing:2px;margin-bottom:4px;}
+.report-box-sub{font-size:0.77em;color:var(--text-muted);margin-bottom:18px;}
+.report-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:16px;}
+.rtype-btn{
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:11px 6px;border-radius:10px;border:1px solid var(--border);
+  background:var(--surface2);cursor:pointer;transition:all 0.15s;
+  font-family:'Space Mono',monospace;font-size:0.73em;color:var(--text-muted);text-align:center;
+}
+.rtype-btn:hover{border-color:rgba(255,77,109,0.4);color:var(--text);}
+.rtype-btn.sel{border-color:#ff4d6d;background:rgba(255,77,109,0.1);color:var(--text);}
+.rtype-icon{font-size:1.4em;line-height:1;}
+.rprio-row{display:flex;gap:5px;margin-bottom:14px;}
+.rprio-btn{
+  flex:1;padding:6px 4px;border-radius:7px;border:1px solid var(--border);
+  background:var(--surface2);font-family:'Space Mono',monospace;font-size:0.7em;
+  color:var(--text-muted);cursor:pointer;transition:all 0.15s;text-align:center;
+}
+.rprio-btn.sl{border-color:var(--green);background:rgba(0,255,136,0.08);color:var(--green);}
+.rprio-btn.sm{border-color:#ff9500;background:rgba(255,149,0,0.08);color:#ff9500;}
+.rprio-btn.sh{border-color:#ff4d6d;background:rgba(255,77,109,0.08);color:#ff4d6d;}
+.rprio-btn.sc{border-color:var(--purple);background:rgba(183,148,246,0.08);color:var(--purple);}
+.rfield{margin-bottom:13px;}
+.rlabel{display:block;font-size:0.71em;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;}
+.rtextarea{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:9px;padding:9px 12px;color:var(--text);
+  font-family:'Space Mono',monospace;font-size:0.82em;outline:none;
+  resize:vertical;min-height:85px;transition:border-color 0.2s;
+}
+.rtextarea:focus{border-color:rgba(255,77,109,0.5);}
+.rtextarea.excerpt-ta{min-height:65px;font-size:0.74em;color:var(--text-muted);}
+.rscreenshot-zone{
+  border:2px dashed var(--border);border-radius:9px;padding:14px;
+  text-align:center;cursor:pointer;transition:all 0.15s;margin-bottom:13px;
+}
+.rscreenshot-zone:hover{border-color:rgba(255,77,109,0.4);background:rgba(255,77,109,0.03);}
+.rscreenshot-zone.has-img{border-style:solid;border-color:rgba(255,77,109,0.5);}
+.rscreenshot-zone img{max-width:100%;max-height:110px;border-radius:6px;object-fit:contain;}
+.rss-hint{font-size:0.72em;color:var(--text-muted);}
+.rsubmit-row{display:flex;gap:8px;margin-top:4px;}
+.btn-rcancel{
+  flex:1;background:transparent;color:var(--text-muted);border:1px solid var(--border);
+  padding:10px;border-radius:9px;font-family:'Space Mono',monospace;font-size:0.8em;
+  font-weight:700;cursor:pointer;transition:all 0.2s;
+}
+.btn-rcancel:hover{background:var(--surface2);color:var(--text);}
+.btn-rsubmit{
+  flex:2;background:linear-gradient(135deg,#ff4d6d,#ff7043);color:#fff;
+  border:none;padding:10px;border-radius:9px;
+  font-family:'Orbitron',monospace;font-size:0.78em;font-weight:700;
+  letter-spacing:1.5px;cursor:pointer;transition:all 0.2s;
+  box-shadow:0 0 18px rgba(255,77,109,0.3);
+}
+.btn-rsubmit:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(255,77,109,0.45);}
+.btn-rsubmit:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
+
+/* Reports dashboard view */
+.rp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.rp-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px;text-align:center;}
+.rp-stat-num{font-family:'Orbitron',monospace;font-size:1.25em;font-weight:900;}
+.rp-stat-num.c-all{color:var(--text);}
+.rp-stat-num.c-pend{color:#ffd700;}
+.rp-stat-num.c-prog{color:var(--cyan);}
+.rp-stat-num.c-done{color:var(--green);}
+.rp-stat-lbl{font-size:0.65em;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;}
+.rp-filters{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.rp-filter{
+  padding:5px 13px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text-muted);font-family:'Space Mono',monospace;
+  font-size:0.71em;cursor:pointer;transition:all 0.15s;
+}
+.rp-filter.act{background:var(--cyan-dim);border-color:var(--cyan);color:var(--cyan);}
+.rp-card{
+  background:var(--surface2);border:1px solid var(--border);border-radius:11px;
+  padding:13px 15px;margin-bottom:9px;cursor:pointer;
+  transition:border-color 0.15s,background 0.15s;
+}
+.rp-card:hover{border-color:rgba(0,212,255,0.22);}
+.rp-card.expanded{border-color:rgba(0,212,255,0.35);}
+.rp-card-top{display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap;}
+.tbadge{font-size:0.62em;font-family:'Orbitron',monospace;letter-spacing:1px;padding:2px 7px;border-radius:5px;font-weight:700;white-space:nowrap;}
+.tbadge.bc{background:rgba(255,77,109,0.13);color:#ff4d6d;border:1px solid rgba(255,77,109,0.28);}
+.tbadge.bg{background:rgba(255,149,0,0.13);color:#ff9500;border:1px solid rgba(255,149,0,0.28);}
+.tbadge.ft{background:rgba(0,212,255,0.1);color:var(--cyan);border:1px solid rgba(0,212,255,0.28);}
+.tbadge.au{background:rgba(183,148,246,0.1);color:var(--purple);border:1px solid rgba(183,148,246,0.28);}
+.sbadge{font-size:0.62em;font-family:'Orbitron',monospace;letter-spacing:1px;padding:2px 7px;border-radius:5px;font-weight:700;white-space:nowrap;}
+.sbadge.sp{background:rgba(255,215,0,0.1);color:#ffd700;border:1px solid rgba(255,215,0,0.28);}
+.sbadge.si{background:rgba(0,212,255,0.1);color:var(--cyan);border:1px solid rgba(0,212,255,0.28);}
+.sbadge.sr{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.28);}
+.sbadge.sj{background:rgba(100,100,100,0.12);color:#666;border:1px solid rgba(100,100,100,0.28);}
+.pbadge{font-size:0.6em;padding:2px 6px;border-radius:4px;font-weight:700;white-space:nowrap;}
+.pbadge.pl{color:var(--green);background:rgba(0,255,136,0.09);}
+.pbadge.pm{color:#ff9500;background:rgba(255,149,0,0.09);}
+.pbadge.ph{color:#ff4d6d;background:rgba(255,77,109,0.09);}
+.pbadge.pc{color:var(--purple);background:rgba(183,148,246,0.09);}
+.rp-card-title{font-size:0.82em;color:var(--text);font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rp-card-meta{display:flex;align-items:center;gap:10px;font-size:0.71em;color:var(--text-muted);}
+.rp-user-dot{width:17px;height:17px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:0.6em;color:#000;font-weight:700;flex-shrink:0;}
+.rp-detail{display:none;padding-top:12px;border-top:1px solid var(--border);margin-top:11px;}
+.rp-card.expanded .rp-detail{display:block;}
+.rp-detail-section{margin-bottom:11px;}
+.rp-detail-lbl{font-size:0.67em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;}
+.rp-detail-text{font-size:0.79em;color:var(--text);line-height:1.6;white-space:pre-wrap;background:var(--surface);border-radius:7px;padding:8px 10px;}
+.rp-excerpt-box{font-size:0.74em;color:var(--text-muted);background:rgba(0,0,0,0.3);border-radius:7px;padding:8px 10px;font-family:'Space Mono',monospace;max-height:110px;overflow-y:auto;line-height:1.6;}
+.rp-ss-thumb{max-width:100%;max-height:160px;border-radius:7px;object-fit:contain;cursor:zoom-in;margin-top:5px;border:1px solid var(--border);}
+.rp-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.rp-status-select{
+  background:var(--surface2);border:1px solid var(--border);border-radius:7px;
+  color:var(--text);padding:5px 9px;font-family:'Space Mono',monospace;font-size:0.76em;
+  cursor:pointer;outline:none;flex:1;
+}
+.rp-admin-notes{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:7px;padding:8px 10px;color:var(--text);
+  font-family:'Space Mono',monospace;font-size:0.77em;outline:none;
+  resize:none;min-height:55px;margin-top:8px;transition:border-color 0.2s;
+}
+.rp-admin-notes:focus{border-color:var(--cyan);}
+.btn-rp-save{
+  background:var(--cyan-dim);border:1px solid var(--cyan);color:var(--cyan);
+  padding:5px 13px;border-radius:6px;font-family:'Space Mono',monospace;font-size:0.73em;
+  cursor:pointer;margin-top:6px;transition:all 0.15s;display:inline-block;
+}
+.btn-rp-save:hover{background:var(--cyan);color:#000;}
+.btn-rp-del{
+  background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.3);color:#ff4d6d;
+  padding:5px 13px;border-radius:6px;font-family:'Space Mono',monospace;font-size:0.73em;
+  cursor:pointer;margin-top:6px;margin-left:6px;transition:all 0.15s;display:inline-block;
+}
+.btn-rp-del:hover{background:rgba(255,77,109,0.18);}
+.rp-empty{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:0.82em;}
+.rp-empty-icon{font-size:2.5em;margin-bottom:10px;}
+.rp-loading{text-align:center;padding:20px;color:var(--text-muted);font-size:0.8em;}
 </style>
 </head>
 <body>
@@ -1067,6 +1243,12 @@ body::before{
 <div class="bg-orb bg-orb-2"></div>
 
 <!-- ════════════════ SIDEBAR ════════════════ -->
+<!-- ════ FLOATING SIGNALER BUTTON ════ -->
+<button class="signaler-fab" id="signalerFab" onclick="openReportModal()" title="Signaler un problème ou une idée">
+  <svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+  SIGNALER
+</button>
+
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sb-header">
@@ -1110,6 +1292,16 @@ body::before{
         <button class="new-conv-btn" id="newConvBtn">+ Nouvelle</button>
       </div>
       <div id="convList"><div class="conv-empty">Aucune conversation</div></div>
+    </div>
+
+    <!-- ── Section Admin (or/gold) — visible dev/creator uniquement ── -->
+    <div class="sb-nav-section nav-gold-section" id="navGoldSection">
+      <div class="sb-nav-label gold-label">⬥ Admin</div>
+      <div class="nav-item gold" data-view="reports">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Rapports
+        <span id="reportBadge" style="margin-left:auto;background:#ff4d6d;color:#fff;font-size:0.6em;font-family:'Orbitron',monospace;padding:1px 6px;border-radius:10px;display:none;"></span>
+      </div>
     </div>
   </div>
 
@@ -1394,6 +1586,37 @@ body::before{
         </button>
       </div>
     </div>
+
+    <!-- ══ VIEW: RAPPORTS (admin uniquement) ══ -->
+    <div class="view" id="viewReports">
+      <div class="view-header">
+        <div>
+          <div class="view-title" style="color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,0.4)">RAPPORTS</div>
+          <div class="view-sub">Signalements, bugs et suggestions utilisateurs</div>
+        </div>
+        <button class="btn btn-primary" style="font-size:0.73em;padding:6px 14px;letter-spacing:1px;" onclick="loadReports()">↻ Actualiser</button>
+      </div>
+      <div class="view-content">
+        <div class="rp-stats">
+          <div class="rp-stat"><div class="rp-stat-num c-all" id="rstatAll">—</div><div class="rp-stat-lbl">Total</div></div>
+          <div class="rp-stat"><div class="rp-stat-num c-pend" id="rstatPend">—</div><div class="rp-stat-lbl">En attente</div></div>
+          <div class="rp-stat"><div class="rp-stat-num c-prog" id="rstatProg">—</div><div class="rp-stat-lbl">En cours</div></div>
+          <div class="rp-stat"><div class="rp-stat-num c-done" id="rstatDone">—</div><div class="rp-stat-lbl">Résolus</div></div>
+        </div>
+        <div class="rp-filters">
+          <button class="rp-filter act" data-rfilter="all">Tous</button>
+          <button class="rp-filter" data-rfilter="bug-conversation">🐛 Bug conv.</button>
+          <button class="rp-filter" data-rfilter="bug-general">🔧 Bug général</button>
+          <button class="rp-filter" data-rfilter="feature">💡 Suggestions</button>
+          <button class="rp-filter" data-rfilter="autre">💬 Autre</button>
+          <button class="rp-filter" data-rfilter="pending">⏳ En attente</button>
+          <button class="rp-filter" data-rfilter="in-progress">🔄 En cours</button>
+          <button class="rp-filter" data-rfilter="resolved">✅ Résolus</button>
+          <button class="rp-filter" data-rfilter="rejected">🚫 Rejetés</button>
+        </div>
+        <div id="reportsList"><div class="rp-loading">Chargement des rapports...</div></div>
+      </div>
+    </div>
   </div>
 
 </div><!-- /.app-main -->
@@ -1434,7 +1657,75 @@ body::before{
 </div>
 
 <input type="file" id="fileInput" accept="image/*" style="display:none">
+<input type="file" id="reportScreenshotInput" accept="image/*" style="display:none">
 <div id="evaToast"></div>
+
+<!-- ════════════════ REPORT MODAL ════════════════ -->
+<div class="report-overlay" id="reportOverlay">
+  <div class="report-box" id="reportBox">
+    <div class="report-box-title">🚩 SIGNALER</div>
+    <div class="report-box-sub">Signalez un bug, une idée ou tout autre retour. Chaque rapport est précieux.</div>
+
+    <!-- Type de rapport -->
+    <div style="font-size:0.71em;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Type de rapport</div>
+    <div class="report-type-grid">
+      <div class="rtype-btn sel" data-rtype="bug-conversation">
+        <span class="rtype-icon">🐛</span>Bug dans la conversation
+      </div>
+      <div class="rtype-btn" data-rtype="bug-general">
+        <span class="rtype-icon">🔧</span>Bug général
+      </div>
+      <div class="rtype-btn" data-rtype="feature">
+        <span class="rtype-icon">💡</span>Suggestion / Feature
+      </div>
+      <div class="rtype-btn" data-rtype="autre">
+        <span class="rtype-icon">💬</span>Autre
+      </div>
+    </div>
+
+    <!-- Priorité (visible pour bugs) -->
+    <div id="rprioSection" style="margin-bottom:14px;">
+      <div style="font-size:0.71em;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Priorité</div>
+      <div class="rprio-row">
+        <button class="rprio-btn" data-rprio="low">🟢 Basse</button>
+        <button class="rprio-btn sm" data-rprio="medium">🟡 Normale</button>
+        <button class="rprio-btn" data-rprio="high">🔴 Haute</button>
+        <button class="rprio-btn" data-rprio="critical">🟣 Critique</button>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="rfield">
+      <label class="rlabel">Description *</label>
+      <textarea class="rtextarea" id="reportDesc" placeholder="Décrivez le problème ou l'idée en détail..."></textarea>
+    </div>
+
+    <!-- Extrait de conversation (pour bug-conversation uniquement) -->
+    <div class="rfield" id="rexcerptSection">
+      <label class="rlabel">Extrait de conversation <span style="font-size:0.85em;opacity:0.6">(auto-rempli, modifiable)</span></label>
+      <textarea class="rtextarea excerpt-ta" id="reportExcerpt" placeholder="Les derniers messages de la conversation..."></textarea>
+    </div>
+
+    <!-- Screenshot -->
+    <div class="rscreenshot-zone" id="rscreenshotZone" onclick="document.getElementById('reportScreenshotInput').click()">
+      <div id="rssPreview">
+        <div style="font-size:1.5em;margin-bottom:6px">📸</div>
+        <div class="rss-hint">Cliquer pour ajouter une capture d'écran (optionnel)</div>
+        <div class="rss-hint" style="opacity:0.5;font-size:0.9em;margin-top:3px">PNG, JPG, WEBP — max 2 Mo</div>
+      </div>
+    </div>
+
+    <div class="rsubmit-row">
+      <button class="btn-rcancel" onclick="closeReportModal()">Annuler</button>
+      <button class="btn-rsubmit" id="reportSubmitBtn" onclick="submitReport()">ENVOYER LE RAPPORT</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ SCREENSHOT LIGHTBOX ════════════════ -->
+<div id="ssLightbox" style="position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;cursor:zoom-out;" onclick="this.style.display='none'">
+  <img id="ssLightboxImg" style="max-width:90vw;max-height:90vh;border-radius:10px;object-fit:contain;" src="" alt="">
+</div>
 
 <!-- ════════════════ SCRIPTS ════════════════ -->
 <script src="js/core/firebase-config.js"></script>
@@ -1618,6 +1909,7 @@ async function loadProfile(uid) {
       if (S.profile.preferences) {
         S.config = Object.assign({}, S.profile.preferences, S.config);
       }
+      if (typeof setupReportsAccess === 'function') { setupReportsAccess(); updateReportBadge(); }
     } else {
       await createProfile(S.user);
     }
@@ -3342,6 +3634,393 @@ window.deleteEvent = deleteEvent;
 
 function cancelEventForm() { document.getElementById('eventFormCard').style.display = 'none'; }
 window.cancelEventForm = cancelEventForm;
+
+/* ═══════════════════════════════════════════════════
+   SYSTÈME DE RAPPORTS — COMPLET
+═══════════════════════════════════════════════════ */
+
+/* ── State ─────────────────────────────────── */
+var RS = {
+  selectedType: 'bug-conversation',
+  selectedPrio: 'medium',
+  screenshotB64: null,
+  allReports: [],
+  currentFilter: 'all'
+};
+
+/* ── Afficher section gold selon le rôle ──── */
+function setupReportsAccess() {
+  var role = (S.profile && S.profile.role) || 'user';
+  if (role === 'creator' || role === 'developer') {
+    var sec = document.getElementById('navGoldSection');
+    if (sec) sec.classList.add('visible');
+  }
+}
+
+/* ── setView override pour charger les rapports ─ */
+var _origSetView = window.setView;
+window.setView = function(name) {
+  _origSetView(name);
+  if (name === 'reports') loadReports();
+};
+
+/* ── Filtre de navigation rapports ──────────── */
+document.querySelectorAll('.rp-filter').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.rp-filter').forEach(function(b){ b.classList.remove('act'); });
+    this.classList.add('act');
+    RS.currentFilter = this.dataset.rfilter;
+    renderReports();
+  });
+});
+
+/* ════════════════════════════════════════════
+   MODAL SIGNALER — OUVERTURE / FERMETURE
+════════════════════════════════════════════ */
+function openReportModal() {
+  resetReportModal();
+  autoFillExcerpt();
+  document.getElementById('reportOverlay').classList.add('active');
+  document.getElementById('reportDesc').focus();
+}
+window.openReportModal = openReportModal;
+
+function closeReportModal() {
+  document.getElementById('reportOverlay').classList.remove('active');
+}
+window.closeReportModal = closeReportModal;
+
+function resetReportModal() {
+  RS.selectedType = 'bug-conversation';
+  RS.selectedPrio = 'medium';
+  RS.screenshotB64 = null;
+  document.querySelectorAll('.rtype-btn').forEach(function(b){ b.classList.remove('sel'); });
+  var def = document.querySelector('.rtype-btn[data-rtype="bug-conversation"]');
+  if (def) def.classList.add('sel');
+  document.querySelectorAll('.rprio-btn').forEach(function(b){ b.classList.remove('sl','sm','sh','sc'); });
+  var pm = document.querySelector('.rprio-btn[data-rprio="medium"]');
+  if (pm) pm.classList.add('sm');
+  document.getElementById('reportDesc').value = '';
+  document.getElementById('reportExcerpt').value = '';
+  document.getElementById('rssPreview').innerHTML = '<div style="font-size:1.5em;margin-bottom:6px">📸</div><div class="rss-hint">Cliquer pour ajouter une capture d\'écran (optionnel)</div><div class="rss-hint" style="opacity:0.5;font-size:0.9em;margin-top:3px">PNG, JPG, WEBP — max 2 Mo</div>';
+  document.getElementById('rscreenshotZone').classList.remove('has-img');
+  updateReportTypeUI();
+  document.getElementById('reportSubmitBtn').disabled = false;
+  document.getElementById('reportSubmitBtn').textContent = 'ENVOYER LE RAPPORT';
+}
+
+function autoFillExcerpt() {
+  var msgs = [];
+  document.querySelectorAll('#messagesList .msg-bubble').forEach(function(el) {
+    var isEva = el.closest('.msg-row') && el.closest('.msg-row').classList.contains('eva');
+    var who = isEva ? 'EVA' : 'Vous';
+    var content = el.innerText || el.textContent || '';
+    if (content.trim()) msgs.push(who + ' : ' + content.trim());
+  });
+  var last = msgs.slice(-10).join('\n');
+  document.getElementById('reportExcerpt').value = last;
+}
+
+function updateReportTypeUI() {
+  var isBug = RS.selectedType === 'bug-conversation' || RS.selectedType === 'bug-general';
+  var isConv = RS.selectedType === 'bug-conversation';
+  document.getElementById('rprioSection').style.display = isBug ? 'block' : 'none';
+  document.getElementById('rexcerptSection').style.display = isConv ? 'block' : 'none';
+}
+
+/* Type buttons */
+document.querySelectorAll('.rtype-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.rtype-btn').forEach(function(b){ b.classList.remove('sel'); });
+    this.classList.add('sel');
+    RS.selectedType = this.dataset.rtype;
+    if (RS.selectedType === 'bug-conversation') autoFillExcerpt();
+    else document.getElementById('reportExcerpt').value = '';
+    updateReportTypeUI();
+  });
+});
+
+/* Priority buttons */
+document.querySelectorAll('.rprio-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.rprio-btn').forEach(function(b){ b.classList.remove('sl','sm','sh','sc'); });
+    RS.selectedPrio = this.dataset.rprio;
+    var cls = {low:'sl',medium:'sm',high:'sh',critical:'sc'}[RS.selectedPrio];
+    this.classList.add(cls);
+  });
+});
+
+/* Screenshot upload */
+document.getElementById('reportScreenshotInput').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { toast('Capture trop lourde (max 2 Mo)', 'error'); return; }
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    RS.screenshotB64 = ev.target.result;
+    var zone = document.getElementById('rscreenshotZone');
+    zone.classList.add('has-img');
+    document.getElementById('rssPreview').innerHTML = '<img src="'+RS.screenshotB64+'" alt="screenshot" style="max-width:100%;max-height:110px;border-radius:6px;object-fit:contain;"><div class="rss-hint" style="margin-top:6px;font-size:0.8em;">Cliquez pour changer</div>';
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+/* Close overlay click */
+document.getElementById('reportOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeReportModal();
+});
+
+/* ── Soumission du rapport ──────────────────── */
+async function submitReport() {
+  var desc = (document.getElementById('reportDesc').value || '').trim();
+  if (!desc) { toast('Veuillez écrire une description', 'error'); document.getElementById('reportDesc').focus(); return; }
+  var btn = document.getElementById('reportSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'ENVOI EN COURS...';
+  try {
+    var profile = S.profile || {};
+    var excerpt = (document.getElementById('reportExcerpt').value || '').trim();
+    var reportData = {
+      userId: S.user ? S.user.uid : 'anonymous',
+      userName: profile.displayName || S.user && S.user.displayName || 'Utilisateur',
+      userEmail: S.user ? S.user.email : '',
+      userRole: profile.role || 'user',
+      type: RS.selectedType,
+      priority: (RS.selectedType === 'bug-conversation' || RS.selectedType === 'bug-general') ? RS.selectedPrio : 'low',
+      description: desc,
+      conversationExcerpt: RS.selectedType === 'bug-conversation' ? excerpt : '',
+      conversationId: S.selectedType === 'bug-conversation' ? (S.convId || '') : '',
+      screenshot: RS.screenshotB64 || null,
+      status: 'pending',
+      createdAt: window.timestamp(),
+      updatedAt: window.timestamp(),
+      adminNotes: '',
+      resolvedAt: null
+    };
+    await db.collection('reports').add(reportData);
+    closeReportModal();
+    toast('Rapport envoyé. Merci ! 🙏', 'success');
+    updateReportBadge();
+  } catch(err) {
+    console.error('submitReport:', err);
+    btn.disabled = false;
+    btn.textContent = 'ENVOYER LE RAPPORT';
+    toast('Erreur lors de l\'envoi', 'error');
+  }
+}
+window.submitReport = submitReport;
+
+/* ════════════════════════════════════════════
+   TABLEAU DE BORD RAPPORTS
+════════════════════════════════════════════ */
+async function loadReports() {
+  var list = document.getElementById('reportsList');
+  if (!list) return;
+  list.innerHTML = '<div class="rp-loading">⏳ Chargement des rapports...</div>';
+  try {
+    var snap = await db.collection('reports').orderBy('createdAt','desc').limit(200).get();
+    RS.allReports = [];
+    snap.forEach(function(d){ RS.allReports.push(Object.assign({id:d.id}, d.data())); });
+    updateReportStats();
+    renderReports();
+    updateReportBadge();
+  } catch(err) {
+    console.error('loadReports:', err);
+    list.innerHTML = '<div class="rp-empty"><div class="rp-empty-icon">⚠️</div>Erreur de chargement</div>';
+  }
+}
+window.loadReports = loadReports;
+
+function updateReportStats() {
+  var total = RS.allReports.length;
+  var pend = RS.allReports.filter(function(r){ return r.status === 'pending'; }).length;
+  var prog = RS.allReports.filter(function(r){ return r.status === 'in-progress'; }).length;
+  var done = RS.allReports.filter(function(r){ return r.status === 'resolved'; }).length;
+  document.getElementById('rstatAll').textContent = total;
+  document.getElementById('rstatPend').textContent = pend;
+  document.getElementById('rstatProg').textContent = prog;
+  document.getElementById('rstatDone').textContent = done;
+}
+
+async function updateReportBadge() {
+  try {
+    var role = (S.profile && S.profile.role) || 'user';
+    if (role !== 'creator' && role !== 'developer') return;
+    var snap = await db.collection('reports').where('status','==','pending').get();
+    var badge = document.getElementById('reportBadge');
+    if (!badge) return;
+    if (snap.size > 0) { badge.textContent = snap.size; badge.style.display = 'inline'; }
+    else badge.style.display = 'none';
+  } catch(e) {}
+}
+
+function getFilteredReports() {
+  var f = RS.currentFilter;
+  if (f === 'all') return RS.allReports;
+  if (f === 'pending' || f === 'in-progress' || f === 'resolved' || f === 'rejected') {
+    return RS.allReports.filter(function(r){ return r.status === f; });
+  }
+  return RS.allReports.filter(function(r){ return r.type === f; });
+}
+
+function renderReports() {
+  var list = document.getElementById('reportsList');
+  if (!list) return;
+  var filtered = getFilteredReports();
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="rp-empty"><div class="rp-empty-icon">📭</div>Aucun rapport pour ce filtre.</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(function(r){ return buildReportCard(r); }).join('');
+  list.querySelectorAll('.rp-card').forEach(function(card) {
+    card.addEventListener('click', function(e) {
+      if (e.target.closest('.rp-actions')) return;
+      this.classList.toggle('expanded');
+    });
+  });
+  list.querySelectorAll('.rp-status-select').forEach(function(sel) {
+    sel.addEventListener('change', function(e) {
+      e.stopPropagation();
+      var id = this.dataset.rid;
+      updateReportStatus(id, this.value, this);
+    });
+  });
+  list.querySelectorAll('.btn-rp-save').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var id = this.dataset.rid;
+      var notesEl = list.querySelector('.rp-admin-notes[data-rid="'+id+'"]');
+      if (notesEl) saveAdminNotes(id, notesEl.value, this);
+    });
+  });
+  list.querySelectorAll('.btn-rp-del').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var id = this.dataset.rid;
+      if (confirm('Supprimer ce rapport définitivement ?')) deleteReport(id);
+    });
+  });
+  list.querySelectorAll('.rp-ss-thumb').forEach(function(img) {
+    img.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var lb = document.getElementById('ssLightbox');
+      document.getElementById('ssLightboxImg').src = this.src;
+      lb.style.display = 'flex';
+    });
+  });
+}
+
+function buildReportCard(r) {
+  var typeLabels = {'bug-conversation':'🐛 Bug conv.','bug-general':'🔧 Bug général','feature':'💡 Suggestion','autre':'💬 Autre'};
+  var typeCls = {'bug-conversation':'bc','bug-general':'bg','feature':'ft','autre':'au'};
+  var statusLabels = {'pending':'⏳ En attente','in-progress':'🔄 En cours','resolved':'✅ Résolu','rejected':'🚫 Rejeté'};
+  var statusCls = {'pending':'sp','in-progress':'si','resolved':'sr','rejected':'sj'};
+  var prioCls = {'low':'pl','medium':'pm','high':'ph','critical':'pc'};
+  var prioLabels = {'low':'🟢 Basse','medium':'🟡 Normale','high':'🔴 Haute','critical':'🟣 Critique'};
+  var dt = r.createdAt ? (r.createdAt.toDate ? r.createdAt.toDate() : new Date(r.createdAt)) : new Date();
+  var dateStr = dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  var roleColors = {creator:'#ffd700',developer:'#00d4ff',creator_wife:'#ff69b4',user:'#aaa'};
+  var roleColor = roleColors[r.userRole] || '#aaa';
+  var desc = (r.description || '').substring(0, 80) + ((r.description||'').length > 80 ? '...' : '');
+  var statusOptions = ['pending','in-progress','resolved','rejected'].map(function(s){
+    return '<option value="'+s+'"'+(r.status===s?' selected':'')+'>'+statusLabels[s]+'</option>';
+  }).join('');
+  var ssHtml = r.screenshot ? '<div class="rp-detail-section"><div class="rp-detail-lbl">Capture d\'écran</div><img class="rp-ss-thumb" src="'+r.screenshot+'" alt="screenshot"></div>' : '';
+  var excerptHtml = r.conversationExcerpt ? '<div class="rp-detail-section"><div class="rp-detail-lbl">Extrait de conversation</div><div class="rp-excerpt-box">'+esc(r.conversationExcerpt)+'</div></div>' : '';
+  var hasPrio = r.type === 'bug-conversation' || r.type === 'bug-general';
+  var prioHtml = hasPrio && r.priority ? '<span class="pbadge '+prioCls[r.priority]+'">'+prioLabels[r.priority]+'</span>' : '';
+
+  return '<div class="rp-card" data-rid="'+r.id+'">' +
+    '<div class="rp-card-top">' +
+      '<span class="tbadge '+typeCls[r.type||'autre']+'">'+typeLabels[r.type||'autre']+'</span>' +
+      '<span class="sbadge '+statusCls[r.status||'pending']+'">'+statusLabels[r.status||'pending']+'</span>' +
+      (prioHtml) +
+      '<span class="rp-card-title">'+esc(desc)+'</span>' +
+    '</div>' +
+    '<div class="rp-card-meta">' +
+      '<div class="rp-user-dot" style="background:linear-gradient(135deg,'+roleColor+','+roleColor+'aa)">'+esc((r.userName||'?').charAt(0).toUpperCase())+'</div>' +
+      '<span style="color:'+roleColor+'">'+esc(r.userName||'Inconnu')+'</span>' +
+      '<span>'+esc(r.userEmail||'')+'</span>' +
+      '<span>•</span><span>'+dateStr+'</span>' +
+    '</div>' +
+    '<div class="rp-detail">' +
+      '<div class="rp-detail-section"><div class="rp-detail-lbl">Description complète</div><div class="rp-detail-text">'+esc(r.description||'')+'</div></div>' +
+      excerptHtml +
+      ssHtml +
+      '<div class="rp-actions">' +
+        '<span style="font-size:0.71em;color:var(--text-muted);">Statut :</span>' +
+        '<select class="rp-status-select" data-rid="'+r.id+'">'+statusOptions+'</select>' +
+      '</div>' +
+      '<div class="rp-detail-lbl" style="margin-top:10px;">Notes admin</div>' +
+      '<textarea class="rp-admin-notes" data-rid="'+r.id+'" placeholder="Notes internes, informations sur la résolution...">' + esc(r.adminNotes||'') + '</textarea>' +
+      '<button class="btn-rp-save" data-rid="'+r.id+'">💾 Sauvegarder</button>' +
+      '<button class="btn-rp-del" data-rid="'+r.id+'">🗑 Supprimer</button>' +
+    '</div>' +
+  '</div>';
+}
+
+async function updateReportStatus(id, newStatus, selectEl) {
+  try {
+    var now = firebase.firestore.FieldValue.serverTimestamp();
+    var upd = { status: newStatus, updatedAt: now };
+    if (newStatus === 'resolved') upd.resolvedAt = now;
+    await db.collection('reports').doc(id).update(upd);
+    var r = RS.allReports.find(function(x){ return x.id === id; });
+    if (r) { r.status = newStatus; if (newStatus === 'resolved') r.resolvedAt = new Date(); }
+    updateReportStats();
+    updateReportBadge();
+    toast('Statut mis à jour', 'success');
+  } catch(e) { toast('Erreur mise à jour', 'error'); }
+}
+
+async function saveAdminNotes(id, notes, btn) {
+  try {
+    await db.collection('reports').doc(id).update({ adminNotes: notes, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    var r = RS.allReports.find(function(x){ return x.id === id; });
+    if (r) r.adminNotes = notes;
+    var origTxt = btn.textContent;
+    btn.textContent = '✅ Sauvegardé';
+    setTimeout(function(){ btn.textContent = '💾 Sauvegarder'; }, 1800);
+  } catch(e) { toast('Erreur sauvegarde', 'error'); }
+}
+
+async function deleteReport(id) {
+  try {
+    await db.collection('reports').doc(id).delete();
+    RS.allReports = RS.allReports.filter(function(r){ return r.id !== id; });
+    updateReportStats();
+    renderReports();
+    updateReportBadge();
+    toast('Rapport supprimé', 'success');
+  } catch(e) { toast('Erreur suppression', 'error'); }
+}
+
+/* fallback: observer sur le badge texte pour détecter le chargement du profil */
+(function() {
+  var done = false;
+  var obs = new MutationObserver(function() {
+    if (done) return;
+    var role = (S.profile && S.profile.role) || 'user';
+    if (role === 'creator' || role === 'developer') {
+      done = true;
+      setupReportsAccess();
+      updateReportBadge();
+      obs.disconnect();
+    }
+  });
+  var badge = document.getElementById('userBadgeText');
+  if (badge) obs.observe(badge, { childList: true, subtree: true, characterData: true });
+})();
+
+/* ── Fermer la lightbox avec Escape ─────── */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var lb = document.getElementById('ssLightbox');
+    if (lb && lb.style.display === 'flex') { lb.style.display = 'none'; return; }
+    closeReportModal();
+  }
+});
 
 </script>
 
