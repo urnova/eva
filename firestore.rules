@@ -14,26 +14,22 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == userId;
     }
 
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
     function isAdmin() {
-      return isAuth() && getUserRole() in ['creator', 'developer'];
+      let doc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAuth() && doc.exists && doc.data.get('role', 'user') in ['creator', 'developer'];
     }
 
     function isCreator() {
-      return isAuth() && getUserRole() == 'creator';
+      let doc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAuth() && doc.exists && doc.data.get('role', 'user') == 'creator';
     }
 
     // ════════════════════════════════════════════════════
     // Profils utilisateurs
     // ════════════════════════════════════════════════════
     match /users/{userId} {
-      // Chaque utilisateur peut lire et modifier son propre profil
       allow read, write: if isOwner(userId);
 
-      // Conversations
       match /conversations/{convId} {
         allow read, write: if isOwner(userId);
 
@@ -42,22 +38,18 @@ service cloud.firestore {
         }
       }
 
-      // Notes
       match /notes/{noteId} {
         allow read, write: if isOwner(userId);
       }
 
-      // Alarmes
       match /alarms/{alarmId} {
         allow read, write: if isOwner(userId);
       }
 
-      // Rappels
       match /reminders/{reminderId} {
         allow read, write: if isOwner(userId);
       }
 
-      // Événements / Agenda
       match /events/{eventId} {
         allow read, write: if isOwner(userId);
       }
@@ -67,19 +59,13 @@ service cloud.firestore {
     // Rapports / Signalements
     // ════════════════════════════════════════════════════
     match /reports/{reportId} {
-      // Tout utilisateur connecté peut créer un rapport
       allow create: if isAuth();
 
-      // Un utilisateur peut lire ses propres rapports
-      // Les admins (creator, developer) peuvent lire tous les rapports
       allow read: if isAuth() && (
-        resource.data.userId == request.auth.uid || isAdmin()
+        resource.data.get('userId', '') == request.auth.uid || isAdmin()
       );
 
-      // Seuls les admins peuvent modifier le statut, ajouter des notes, etc.
       allow update: if isAdmin();
-
-      // Seuls les admins peuvent supprimer un rapport
       allow delete: if isAdmin();
     }
 
@@ -87,11 +73,7 @@ service cloud.firestore {
     // Clés développeur
     // ════════════════════════════════════════════════════
     match /dev_keys_valid/{keyId} {
-      // Tout utilisateur connecté peut lire une clé pour la valider
-      // (nécessaire pour l'activation de clé dans les paramètres)
       allow read: if isAuth();
-
-      // Seul le créateur peut créer, modifier ou supprimer des clés
       allow create, update, delete: if isCreator();
     }
 
