@@ -1167,6 +1167,10 @@ body::before{
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
           Compte
         </button>
+        <button class="settings-nav" data-section="dev">
+          <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          Clés Dev
+        </button>
       </div>
       <div class="modal-content" id="settingsContent"></div>
     </div>
@@ -1218,7 +1222,7 @@ var TONES = {
   code:         'MODE DÉVELOPPEUR ACTIVÉ. Tu es une IA spécialisée en code. Pour chaque réponse technique : 1) Courte explication (2-3 phrases max) 2) Code complet et fonctionnel dans un bloc markdown avec le bon langage 3) Exemple d\'utilisation si nécessaire. Sois précis, pratique et efficace. Si la question n\'est pas technique, rappelle que tu es en mode Code.',
   creative:     'Sois imaginatif, poétique et inspirant. Utilise des métaphores riches, des tournures originales et des comparaisons créatives. Laisse libre cours à ta créativité. Structure tes textes de façon narrative et engageante.'
 };
-var SYS = "Tu es E.V.A (Evolutionary Virtual Assistant), assistante IA créée par Astral Technology. Tu es élégante, intelligente, chaleureuse, empathique et efficace. Tu parles français couramment et naturellement. Tu as une personnalité attachante et distincte. Ne dis jamais que tu es une simple IA — tu es E.V.A.";
+var SYS = "Tu es E.V.A (Evolutionary Virtual Assistant), assistante IA créée par Astral Technology. Tu es élégante, intelligente, chaleureuse, empathique et efficace. Tu parles français couramment et naturellement. Tu as une personnalité attachante et distincte. Ne dis jamais que tu es une simple IA — tu es E.V.A.\n\nACTIONS DISPONIBLES : Quand l'utilisateur te demande de créer une note, une alarme ou un événement agenda, tu DOIS inclure dans ta réponse un bloc d'action au format exact suivant (en plus de ta réponse textuelle normale) :\n- Pour une note : [ACTION:{\"type\":\"note\",\"title\":\"Titre de la note\",\"body\":\"Contenu\",\"tag\":\"optionnel\"}]\n- Pour une alarme : [ACTION:{\"type\":\"alarm\",\"time\":\"HH:MM\",\"label\":\"Libellé\",\"repeat\":\"once\"}] (repeat = once/daily/weekdays/weekend)\n- Pour un événement agenda : [ACTION:{\"type\":\"event\",\"title\":\"Titre\",\"date\":\"YYYY-MM-DD\",\"time\":\"HH:MM\",\"description\":\"optionnel\"}]\nTu peux inclure plusieurs blocs [ACTION:...] dans une même réponse. Ces blocs seront traités automatiquement et ne seront pas affichés à l'utilisateur — tu peux les placer n'importe où dans ta réponse.";
 
 function cfg() {
   try { return JSON.parse(localStorage.getItem('eva_config') || '{}'); }
@@ -1813,8 +1817,9 @@ async function handleSend() {
   hideTyping();
 
   if (result.success) {
-    streamEvaMsg(result.content);
-    saveConvMsg(text || '[Image]', result.content);
+    var cleanContent = parseEvaActions(result.content);
+    streamEvaMsg(cleanContent);
+    saveConvMsg(text || '[Image]', cleanContent);
   } else {
     appendMsg('eva', "Désolée, une erreur est survenue. Vérifiez le provider IA dans les paramètres.");
     if (window.EvaCharacter) window.EvaCharacter.setIdle();
@@ -2143,6 +2148,33 @@ function renderSettings(section) {
       '<button class="btn btn-secondary" onclick="auth.signOut().then(function(){window.location.href=\'/\';})">🚪 Se déconnecter</button>' +
       '<button class="btn btn-danger" onclick="if(confirm(\'Supprimer toutes les conversations ? Cette action est irréversible.\'))clearAllConvs()">🗑️ Effacer toutes les conversations</button>' +
       '</div></div>';
+
+  } else if (section === 'dev') {
+    var devKey = (S.profile && S.profile.devKey) || '';
+    var devLabel = (S.profile && S.profile.devKeyLabel) || '';
+    var devRole = (S.profile && S.profile.role) || 'user';
+    var roleColors = {creator:'#ffd700',developer:'#00d4ff',creator_wife:'#ff69b4',user:'#aaa'};
+    var roleLabels = {creator:'👑 Créateur',developer:'⚙️ Développeur',creator_wife:'💎 Épouse du créateur',user:'👤 Utilisateur'};
+    c.innerHTML =
+      '<div class="settings-section">' +
+      '<div class="settings-section-title">Clés Développeur</div>' +
+      '<div class="settings-row" style="padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:12px">' +
+      '<div><div class="settings-row-label">Rôle actuel</div></div>' +
+      '<div style="font-size:0.82em;color:'+esc(roleColors[devRole]||'#aaa')+'">'+esc(roleLabels[devRole]||devRole)+'</div>' +
+      '</div>' +
+      (devKey ?
+        '<div style="font-size:0.76em;color:var(--text-muted);margin-bottom:12px">Clé active : <code style="color:var(--cyan)">'+esc(devKey)+'</code>' +
+        (devLabel ? ' — ' + esc(devLabel) : '') + '</div>' : ''
+      ) +
+      '<div class="form-field"><label class="form-label">Entrer une clé d\'accès</label>' +
+      '<input type="text" class="form-input" id="sDevKey" placeholder="ASTRAL-XXXXX-XXXXX" value="'+esc(devKey)+'" autocomplete="off" spellcheck="false">' +
+      '<div class="settings-row-sub" style="margin-top:4px">Permet de débloquer les rôles Développeur, Créateur ou Épouse du créateur. Les clés sont fournies par Astral Technology.</div></div>' +
+      '<div id="sDevKeyStatus" style="margin:6px 0;font-size:0.8em;min-height:18px"></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px">' +
+      '<button class="btn btn-primary" onclick="activateDevKeyDirect()">🔑 Activer la clé</button>' +
+      (devKey ? '<button class="btn btn-secondary" onclick="deactivateDevKeyDirect()">Désactiver</button>' : '') +
+      '</div>';
   }
 }
 
@@ -2372,6 +2404,116 @@ window.clearAllConvs = clearAllConvs;
 window.saveProfileSettings = saveProfileSettings;
 window.saveAISettings = saveAISettings;
 window.saveVoiceSettings = saveVoiceSettings;
+
+/* ═══════════════════════════════════════════════════
+   EVA ACTION PARSER — Création notes/alarmes/events par IA
+═══════════════════════════════════════════════════ */
+function parseEvaActions(content) {
+  if (!content || !S.user) return content;
+  var actionRegex = /\[ACTION:\s*(\{[\s\S]*?\})\s*\]/g;
+  var match;
+  var actions = [];
+  while ((match = actionRegex.exec(content)) !== null) {
+    try {
+      var action = JSON.parse(match[1]);
+      actions.push(action);
+    } catch(e) { console.warn('EVA action parse error:', e, match[1]); }
+  }
+  actions.forEach(function(action) {
+    executeEvaAction(action);
+  });
+  var clean = content.replace(/\[ACTION:\s*\{[\s\S]*?\}\s*\]/g, '').trim();
+  return clean;
+}
+
+async function executeEvaAction(action) {
+  if (!action || !action.type || !S.user) return;
+  var uid = S.user.uid;
+  try {
+    if (action.type === 'note') {
+      await db.collection('users').doc(uid).collection('notes').add({
+        title: action.title || 'Note d\'EVA',
+        body: action.body || action.content || '',
+        tag: action.tag || '',
+        createdAt: window.timestamp(),
+        updatedAt: window.timestamp()
+      });
+      toast('📝 Note créée par EVA : ' + (action.title || ''), 'success');
+
+    } else if (action.type === 'alarm') {
+      await db.collection('users').doc(uid).collection('alarms').add({
+        time: action.time || '08:00',
+        label: action.label || 'Alarme EVA',
+        repeat: action.repeat || 'once',
+        active: true,
+        createdAt: window.timestamp()
+      });
+      toast('⏰ Alarme créée par EVA : ' + (action.label || action.time || ''), 'success');
+
+    } else if (action.type === 'event') {
+      await db.collection('users').doc(uid).collection('events').add({
+        title: action.title || 'Événement EVA',
+        date: action.date || new Date().toISOString().slice(0,10),
+        time: action.time || '',
+        description: action.description || '',
+        createdAt: window.timestamp()
+      });
+      toast('📅 Événement ajouté par EVA : ' + (action.title || ''), 'success');
+    }
+  } catch(e) {
+    console.error('executeEvaAction error:', e);
+    toast('Erreur lors de la création par EVA', 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   DEV KEY ACTIVATION
+═══════════════════════════════════════════════════ */
+async function activateDevKeyDirect() {
+  var inp = document.getElementById('sDevKey');
+  if (!inp) return;
+  var key = inp.value.trim();
+  if (!key) { toast('Entrez une clé développeur', 'error'); return; }
+  if (!S.user) { toast('Non connecté', 'error'); return; }
+  var statusEl = document.getElementById('sDevKeyStatus');
+  if (statusEl) statusEl.textContent = 'Vérification en cours...';
+  try {
+    var snap = await db.collection('dev_keys_valid')
+      .where('key', '==', key)
+      .where('active', '==', true)
+      .get();
+    if (snap.empty) {
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--red)">❌ Clé invalide ou inactive</span>';
+      toast('Clé invalide', 'error');
+      return;
+    }
+    var data = snap.docs[0].data();
+    var role = data.role || 'developer';
+    var label = data.label || role;
+    await db.collection('users').doc(S.user.uid).set({ role: role, devKey: key, devKeyLabel: label }, { merge: true });
+    S.profile = Object.assign(S.profile || {}, { role: role, devKey: key, devKeyLabel: label });
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--cyan)">✅ Clé activée : ' + esc(label) + '</span>';
+    toast('Clé développeur activée : ' + label, 'success');
+    setTimeout(function() { window.location.reload(); }, 1800);
+  } catch(e) {
+    console.error('activateDevKeyDirect:', e);
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--red)">Erreur : ' + esc(e.message) + '</span>';
+    toast('Erreur validation clé', 'error');
+  }
+}
+window.activateDevKeyDirect = activateDevKeyDirect;
+
+async function deactivateDevKeyDirect() {
+  if (!S.user) return;
+  if (!confirm('Désactiver la clé développeur et revenir au rôle utilisateur ?')) return;
+  try {
+    await db.collection('users').doc(S.user.uid).set({ role: 'user', devKey: null, devKeyLabel: null }, { merge: true });
+    S.profile = Object.assign(S.profile || {}, { role: 'user', devKey: null, devKeyLabel: null });
+    toast('Clé désactivée', 'info');
+    setTimeout(function() { window.location.reload(); }, 1500);
+  } catch(e) { toast('Erreur désactivation', 'error'); }
+}
+window.deactivateDevKeyDirect = deactivateDevKeyDirect;
 
 /* ═══════════════════════════════════════════════════
    NOTES
