@@ -2,79 +2,27 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ════════════════════════════════════════════════════
-    // Fonctions utilitaires
-    // ════════════════════════════════════════════════════
-
-    function isAuth() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isAuth() && request.auth.uid == userId;
-    }
-
-    function isAdmin() {
-      let doc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return isAuth() && doc.exists && doc.data.get('role', 'user') in ['creator', 'developer'];
-    }
-
-    function isCreator() {
-      let doc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return isAuth() && doc.exists && doc.data.get('role', 'user') == 'creator';
-    }
-
-    // ════════════════════════════════════════════════════
-    // Profils utilisateurs
-    // ════════════════════════════════════════════════════
+    // Profils utilisateurs — chacun accède uniquement aux siennes
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if request.auth != null && request.auth.uid == userId;
 
-      match /conversations/{convId} {
-        allow read, write: if isOwner(userId);
-
-        match /messages/{msgId} {
-          allow read, write: if isOwner(userId);
-        }
-      }
-
-      match /notes/{noteId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /alarms/{alarmId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /reminders/{reminderId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /events/{eventId} {
-        allow read, write: if isOwner(userId);
+      match /{subcollection=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
 
-    // ════════════════════════════════════════════════════
-    // Rapports / Signalements
-    // ════════════════════════════════════════════════════
+    // Rapports — tout le monde peut créer, seuls creator/developer peuvent lire/modifier/supprimer
     match /reports/{reportId} {
-      allow create: if isAuth();
-
-      allow read: if isAuth() && (
-        resource.data.get('userId', '') == request.auth.uid || isAdmin()
-      );
-
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow create: if request.auth != null;
+      allow read, update, delete: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') in ['creator', 'developer'];
     }
 
-    // ════════════════════════════════════════════════════
-    // Clés développeur
-    // ════════════════════════════════════════════════════
+    // Clés développeur — tout le monde peut lire (validation), seul creator peut écrire
     match /dev_keys_valid/{keyId} {
-      allow read: if isAuth();
-      allow create, update, delete: if isCreator();
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'creator';
     }
 
   }
