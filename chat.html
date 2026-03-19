@@ -466,19 +466,22 @@ body::before{
 .tone-btn.active{background:var(--cyan);border-color:var(--cyan);color:#000;font-weight:700;}
 /* EVA status bar */
 .eva-status-bar{
-  display:none;align-items:center;gap:7px;
-  padding:5px 18px;
-  font-size:0.7em;color:var(--text-muted);
-  border-top:1px solid var(--border);
-  background:rgba(0,212,255,0.04);
+  display:none;align-items:center;justify-content:center;gap:7px;
+  padding:4px 16px;
+  font-size:0.68em;letter-spacing:0.08em;
+  color:var(--cyan);
+  background:rgba(0,212,255,0.07);
+  border-bottom:1px solid rgba(0,212,255,0.12);
   flex-shrink:0;
+  animation:fadeInDown 0.2s ease;
 }
+@keyframes fadeInDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 .eva-status-bar.visible{display:flex;}
 .eva-status-dot{
-  width:6px;height:6px;border-radius:50%;background:var(--cyan);
+  width:5px;height:5px;border-radius:50%;background:var(--cyan);
   animation:statusPulse 1s ease-in-out infinite;flex-shrink:0;
 }
-@keyframes statusPulse{0%,100%{opacity:0.4;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes statusPulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
 
 /* Input area */
 .input-area{
@@ -962,6 +965,12 @@ body::before{
       </div>
     </div>
 
+    <!-- EVA Status -->
+    <div class="eva-status-bar" id="evaStatusBar">
+      <div class="eva-status-dot"></div>
+      <span id="evaStatusText">EVA réfléchit...</span>
+    </div>
+
     <!-- View: Chat -->
     <div class="view active" id="viewChat">
       <div class="messages-area" id="messagesArea">
@@ -988,11 +997,6 @@ body::before{
         <button class="tone-btn" data-tone="friendly">Amical</button>
         <button class="tone-btn" data-tone="code">Code</button>
         <button class="tone-btn" data-tone="creative">Créatif</button>
-      </div>
-
-      <div class="eva-status-bar" id="evaStatusBar">
-        <div class="eva-status-dot"></div>
-        <span id="evaStatusText">EVA réfléchit...</span>
       </div>
 
       <div class="input-area">
@@ -1338,13 +1342,19 @@ function initAuth() {
     initChatSession();
     loadConvs();
     // Init wake word (stays off until user activates)
-    if (window.EVAWakeWord && window.EVASTS) {
+    if (window.EVAWakeWord) {
       window.EVAWakeWord.init({
         wakeWords: ['hey eva', 'eva', 'e.v.a', 'éva'],
         onDetected: function() {
-          toast('🎤 Wake Word détecté !');
-          var micBtn = document.getElementById('micBtn');
-          if (micBtn) micBtn.click();
+          if (S.busy) return;
+          if (window.EVASTS && window.EVASTS.getIsListening()) return;
+          window.EVAWakeWord.stop();
+          setEvaStatus('🎤 Parlez maintenant...');
+          setTimeout(function() {
+            setEvaStatus(null);
+            var micBtn = document.getElementById('micBtn');
+            if (micBtn) micBtn.click();
+          }, 700);
         }
       });
     }
