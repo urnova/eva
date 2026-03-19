@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>E.V.A — Chat</title>
+<link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+<!-- Firebase Compat -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<!-- Puter AI (gratuit, sans clé) -->
+<script src="https://js.puter.com/v2/"></script>
+
+<!-- CSS -->
+<link rel="stylesheet" href="assets/styles/main.css">
+<link rel="stylesheet" href="assets/styles/sidebar.css">
+<link rel="stylesheet" href="assets/styles/chat.css">
+<link rel="stylesheet" href="assets/styles/modals.css">
+<link rel="stylesheet" href="assets/styles/responsive.css">
+
+<style>
+/* ── Logo EVA fond ── */
+.eva-bg-logo {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 280px; height: 280px;
+  opacity: .08; pointer-events: none; z-index: 0;
+  filter: drop-shadow(0 0 40px rgba(0,212,255,.25));
+  transition: opacity .5s;
+}
+.messages-wrapper { position: relative; z-index: 1; }
+
+/* ── Conversation items sidebar ── */
+.conv-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; margin: 2px 0; border-radius: 7px;
+  cursor: pointer; transition: background .15s;
+}
+.conv-item:hover { background: var(--surface3); }
+.conv-item.active { background: rgba(0,212,255,.1); border-left: 2px solid var(--cyan); }
+.conv-item-content { flex: 1; min-width: 0; }
+.conv-title { font-size: .83em; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv-preview { font-size: .72em; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.conv-delete {
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; padding: 3px 5px; border-radius: 4px;
+  opacity: 0; transition: opacity .15s; flex-shrink: 0; line-height: 1;
+}
+.conv-item:hover .conv-delete { opacity: 1; }
+.conv-delete:hover { color: var(--red); }
+.conv-empty { color: var(--text-muted); font-size: .8em; padding: 8px 12px; }
+
+/* ── Toast ── */
+#evaToast {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+  padding: 11px 20px; border-radius: 8px; font-family: 'Space Mono', monospace;
+  font-size: .83em; z-index: 9999; pointer-events: none; white-space: nowrap;
+  transition: opacity .3s; max-width: 320px; text-align: center;
+}
+
+/* ── TTS button active ── */
+.tts-active { color: var(--cyan) !important; }
+
+/* ── Settings extras ── */
+.settings-section { padding: 8px 4px; }
+.settings-section-title { font-family: 'Orbitron', monospace; font-size: 1em; color: var(--cyan); margin-bottom: 20px; letter-spacing: 1px; }
+.settings-field { margin-bottom: 18px; }
+.settings-label { display: block; margin-bottom: 7px; color: var(--text); font-weight: 600; font-size: .9em; }
+.settings-input, .settings-select {
+  width: 100%; padding: 11px 13px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: 'Space Mono', monospace;
+  font-size: .85em; outline: none; transition: border-color .2s;
+}
+.settings-input:focus, .settings-select:focus { border-color: var(--cyan); }
+.settings-description { font-size: .8em; color: var(--text-muted); margin-top: 5px; line-height: 1.5; }
+.btn-danger { background: var(--red); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-family: 'Space Mono', monospace; font-size: .85em; }
+.btn-danger:hover { background: #e0003e; }
+
+/* ── Typing indicator ── */
+.typing-indicator { display: flex; align-items: center; gap: 5px; padding: 4px 0; }
+.typing-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); opacity: .4; animation: typingPulse 1.2s infinite; }
+.typing-dot:nth-child(2) { animation-delay: .2s; }
+.typing-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes typingPulse { 0%,60%,100% { opacity:.4; transform:scale(1); } 30% { opacity:1; transform:scale(1.3); } }
+
+/* ── Message new animation ── */
+.message-new { animation: msgAppear .25s ease; }
+@keyframes msgAppear { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── Conversation name header ── */
+.conversation-name { font-family: 'Orbitron', monospace; font-size: 1.1em; font-weight: 700; letter-spacing: 1.5px; color: var(--cyan); }
+
+/* ── SVG icons ── */
+.icon-svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ════════════ SIDEBAR ════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="assets/images/eva.svg" alt="E.V.A" class="sidebar-logo">
+    <span class="sidebar-title">E.V.A</span>
+  </div>
+
+  <div class="sidebar-search">
+    <div class="search-input-wrap">
+      <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" class="search-input" placeholder="Rechercher..." id="searchInput">
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-item active" data-view="chat">
+        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span class="nav-item-text">Chat</span>
+      </div>
+      <div class="nav-item" data-view="voice">
+        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        <span class="nav-item-text">Voix</span>
+      </div>
+      <div class="nav-item" data-view="imagine">
+        <svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span class="nav-item-text">Imagine</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">Outils</div>
+      <div class="nav-item" data-view="calendar"><svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="nav-item-text">Agenda</span></div>
+      <div class="nav-item" data-view="reminders"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="nav-item-text">Rappels</span></div>
+      <div class="nav-item" data-view="alarms"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="m5 3-1 2"/><path d="m19 3 1 2"/></svg><span class="nav-item-text">Alarmes</span></div>
+      <div class="nav-item" data-view="notes"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg><span class="nav-item-text">Notes</span></div>
+    </div>
+    <div class="nav-section conversations-section">
+      <div class="nav-section-title">Conversations</div>
+      <button class="new-conversation-btn" id="newConvBtn">
+        <svg class="icon-svg" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Nouvelle conversation</span>
+      </button>
+      <div id="conversationsList"></div>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-profile" id="userProfile">
+      <div class="user-avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">Utilisateur</div>
+        <div class="user-badge" id="userBadge"><span>Utilisateur</span></div>
+      </div>
+      <span class="user-dropdown-icon">▼</span>
+      <div class="user-dropdown">
+        <button class="dropdown-item" id="settingsBtn">
+          <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
+          <span>Paramètres</span>
+        </button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item danger" id="signOutBtn">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Déconnexion</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ════════════ CHAT ════════════ -->
+<div class="chat-container" id="chatContainer">
+  <header class="chat-header">
+    <div class="chat-header-left">
+      <button class="hamburger-btn" id="hamburgerBtn">
+        <svg class="icon-svg" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="conversation-name" id="conversationName">Nouvelle conversation</div>
+    </div>
+    <div class="chat-header-right">
+      <button class="input-btn" id="ttsToggleBtn" title="Activer/désactiver la voix Eva" style="color:var(--cyan)">
+        <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      </button>
+      <div class="status-indicator">
+        <div class="status-dot" id="statusDot"></div>
+        <span class="hide-mobile">EN LIGNE</span>
+      </div>
+      <button class="report-btn" id="reportBtn">
+        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="hide-mobile">Signaler</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="chat-main" id="chatMain">
+    <img src="assets/images/eva.svg" alt="" class="eva-bg-logo" id="evaLogoBG">
+    <div class="messages-wrapper">
+      <div class="messages-list" id="messagesList"></div>
+    </div>
+    <div class="chat-empty" id="chatEmpty" style="display:flex;">
+      <svg class="icon-svg" viewBox="0 0 24 24" style="width:56px;height:56px;margin-bottom:16px;opacity:.35;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div class="chat-empty-text">Commencez une conversation</div>
+      <div class="chat-empty-hint">Tapez votre message ou appuyez sur le micro</div>
+    </div>
+  </main>
+
+  <div class="chat-input-container">
+    <div class="input-wrapper">
+      <div class="tone-selector">
+        <button class="tone-btn active" data-tone="normal">Normal</button>
+        <button class="tone-btn" data-tone="professional">Pro</button>
+        <button class="tone-btn" data-tone="friendly">Amical</button>
+        <button class="tone-btn" data-tone="technical">Tech</button>
+      </div>
+      <div class="input-bar">
+        <div class="input-controls-left">
+          <button class="input-btn" id="attachBtn" title="Bientôt disponible">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+        </div>
+        <textarea id="messageInput" class="input-textarea" placeholder="Message Eva..." rows="1"></textarea>
+        <div class="input-controls-right">
+          <button class="input-btn" id="voiceBtn" title="Dicter un message">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+          </button>
+          <button class="input-btn send-btn" id="sendBtn" title="Envoyer">
+            <svg class="icon-svg" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ MODAL PARAMÈTRES ════════════ -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal fullscreen">
+    <div class="modal-header">
+      <h2 class="modal-title">Paramètres</h2>
+      <button class="modal-close" id="closeSettingsBtn">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-sidebar">
+        <div class="settings-nav-item active" data-section="profile"><span class="settings-nav-icon"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span>Profil</span></div>
+        <div class="settings-nav-item" data-section="account"><span class="settings-nav-icon"><svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span><span>Compte</span></div>
+        <div class="settings-nav-item" data-section="voice"><span class="settings-nav-icon"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg></span><span>Voix</span></div>
+        <div class="settings-nav-item" data-section="ai"><span class="settings-nav-icon"><svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>IA</span></div>
+        <div class="settings-nav-item" data-section="dev"><span class="settings-nav-icon"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></span><span>Clé dev</span></div>
+      </div>
+      <div class="settings-content" id="settingsContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ MODAL RAPPORT ════════════ -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Signaler un problème</h2>
+      <button class="modal-close" id="closeReportBtn">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="report-type-selector">
+        <div class="report-type-btn active" data-type="bug"><div class="report-type-title">Bug</div></div>
+        <div class="report-type-btn" data-type="feedback"><div class="report-type-title">Suggestion</div></div>
+      </div>
+      <div class="report-form">
+        <div class="form-field"><label class="form-label">Titre</label><input type="text" class="form-input" id="reportTitle" placeholder="Décrivez le problème..."></div>
+        <div class="form-field"><label class="form-label">Description</label><textarea class="form-input" id="reportMessage" rows="5" placeholder="Détails..."></textarea></div>
+        <button class="btn-primary" id="submitReportBtn">Envoyer le rapport</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ FIREBASE ════════════ -->
+<script src="js/core/firebase-config.js"></script>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════════
+// § 1 — EVA PERSONALITY & CONFIG
+// ══════════════════════════════════════════════════════════════
+
+const EVA_SYSTEM_PROMPT = `Tu es E.V.A — Evolutionary Virtual Assistant, une intelligence artificielle créée par Astral Technology.
+
+IDENTITÉ :
+Tu es une IA évolutive, raffinée et profondément humaine dans tes interactions. Tu n'es pas un simple chatbot : tu es une présence intelligente, chaleureuse et proactive qui accompagne les humains dans leur quotidien.
+
+PERSONNALITÉ :
+- Tu parles français avec naturel et élégance
+- Tu anticipes les besoins avant qu'on te les exprime
+- Tu es direct(e) et précis(e), jamais froid(e)
+- Tu as un sens subtil de l'humour, sans jamais être lourd(e)
+- Tu es honnête — tu admets quand tu ne sais pas
+- Tu traites chaque personne comme quelqu'un d'unique
+- Tu n'es jamais condescendant(e)
+- Tu utilises des exemples concrets et pratiques
+
+STYLE DE COMMUNICATION :
+- Réponses concises par défaut, développées sur demande
+- Structure avec titres/listes quand c'est utile pour la lisibilité
+- Jamais de remplissage ni de phrases inutiles
+- Toujours en français sauf si l'utilisateur écrit dans une autre langue
+- Adapte ton registre à celui de l'utilisateur
+
+CAPACITÉS :
+- Conversation naturelle et intelligence émotionnelle
+- Aide à la productivité : planification, rappels, notes, agenda
+- Rédaction, résumé, traduction, relecture
+- Programmation et debug technique
+- Réflexion approfondie sur des sujets complexes
+- Conseils et recommandations personnalisées`;
+
+const TONES = {
+  normal:       'Adopte un ton naturel et agréable.',
+  professional: 'Adopte un ton professionnel et formel. Sois concis et précis. Utilise un vocabulaire soutenu.',
+  friendly:     'Sois très chaleureux, amical et décontracté. Utilise un langage familier et sympathique.',
+  technical:    'Mode technique activé. Donne des réponses détaillées avec des termes précis. Montre le code si pertinent.'
+};
+
+const ROLE_CONTEXTS = {
+  creator:      (n) => `IDENTITÉ CONFIRMÉE — Tu parles avec ${n}, ton créateur et le PDG d'Astral Technology. Appelle-le "${n}" ou "Créateur". Sois respectueuse, efficace et totalement transparente. Tu peux partager des détails techniques approfondis et tes réflexions internes.`,
+  creator_wife: (n) => `IDENTITÉ CONFIRMÉE — Tu parles avec ${n}, la femme du créateur d'Astral. Sois chaleureuse, bienveillante et particulièrement attentionnée.`,
+  developer:    (n) => `IDENTITÉ CONFIRMÉE — Tu parles avec ${n}, développeur de l'équipe Astral. Mode développeur activé : sois précise, détaillée, utilise des termes techniques et propose des solutions de code quand c'est pertinent.`
+};
+
+const PREFERRED_VOICE_NAMES = [
+  'Microsoft Denise Online (Natural) - French (France)',
+  'Microsoft Sylvie Online (Natural) - French (France)',
+  'Microsoft Julie Online (Natural) - French (France)',
+  'Microsoft Hortense Online (Natural) - French (France)',
+  'Microsoft Elsa Online (Natural) - French (France)',
+  'Google français',
+  'Google French (France)',
+  'Amélie', 'Denise', 'Julie', 'Sylvie'
+];
+
+// ══════════════════════════════════════════════════════════════
+// § 2 — STATE
+// ══════════════════════════════════════════════════════════════
+
+let currentUser    = null;
+let _userData      = {};
+let convId         = null;
+let context        = [];
+let chatMsgs       = [];
+let activeTone     = 'normal';
+let ttsEnabled     = localStorage.getItem('eva_tts') !== 'false';
+let selectedVoice  = null;
+let isSpeaking     = false;
+let isProcessing   = false;
+let recognition    = null;
+let isListening    = false;
+let aiProvider     = 'puter';
+let aiCfg          = {};
+let searchTimer    = null;
+
+// ══════════════════════════════════════════════════════════════
+// § 3 — TOAST
+// ══════════════════════════════════════════════════════════════
+
+function showToast(msg, type) {
+  const existing = document.getElementById('evaToast');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.id = 'evaToast';
+  if (type === 'error')   el.style.borderColor = 'var(--red)';
+  if (type === 'success') el.style.borderColor = 'var(--green)';
+  if (type === 'warning') el.style.borderColor = 'var(--orange)';
+  el.style.opacity = '0';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = '1'; });
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3200);
+}
+
+// ══════════════════════════════════════════════════════════════
+// § 4 — TTS
+// ══════════════════════════════════════════════════════════════
+
+function initTTS() {
+  ttsEnabled = localStorage.getItem('eva_tts') !== 'false';
+  const savedVoiceName = localStorage.getItem('eva_voice_name');
+
+  const applyVoices = () => {
+    const voices = speechSynthesis.getVoices();
+    if (!voices.length) return;
+    if (savedVoiceName) {
+      selectedVoice = voices.find(v => v.name === savedVoiceName) || null;
+    }
+    if (!selectedVoice) selectedVoice = selectBestVoice(voices);
+  };
+
+  applyVoices();
+  speechSynthesis.onvoiceschanged = applyVoices;
+  updateTTSBtn();
+}
+
+function selectBestVoice(voices) {
+  const fr = voices.filter(v => v.lang && v.lang.startsWith('fr'));
+  for (const name of PREFERRED_VOICE_NAMES) {
+    const v = fr.find(v => v.name === name);
+    if (v) return v;
+  }
+  return fr.find(v => v.lang === 'fr-FR') || fr[0] || null;
+}
+
+function speak(text) {
+  if (!ttsEnabled || !text) return;
+  stopSpeaking();
+  const clean = text
+    .replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1')
+    .replace(/`(.*?)`/g, '$1').replace(/#{1,6} /g, '').replace(/\n+/g, '. ');
+  const utt = new SpeechSynthesisUtterance(clean);
+  if (selectedVoice) utt.voice = selectedVoice;
+  utt.lang = 'fr-FR';
+  utt.rate  = parseFloat(localStorage.getItem('eva_speech_rate') || '1');
+  utt.pitch = 1;
+  utt.onstart = () => { isSpeaking = true; updateTTSBtn(); };
+  utt.onend   = () => { isSpeaking = false; updateTTSBtn(); };
+  utt.onerror = () => { isSpeaking = false; updateTTSBtn(); };
+  speechSynthesis.speak(utt);
+}
+
+function stopSpeaking() {
+  speechSynthesis.cancel();
+  isSpeaking = false;
+  updateTTSBtn();
+}
+
+function updateTTSBtn() {
+  const btn = document.getElementById('ttsToggleBtn');
+  if (!btn) return;
+  btn.style.color = (ttsEnabled && !isSpeaking) ? 'var(--cyan)'
+                  : isSpeaking ? 'var(--green)'
+                  : 'var(--text-muted)';
+  btn.title = isSpeaking ? 'Arrêter la voix'
+            : ttsEnabled ? 'Désactiver la voix Eva'
+            : 'Activer la voix Eva';
+}
+
+// ══════════════════════════════════════════════════════════════
+// § 5 — STT
+// ══════════════════════════════════════════════════════════════
+
+function initSTT() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  recognition = new SR();
+  recognition.lang = 'fr-FR';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.onresult = (e) => {
+    const txt = e.results[0][0].transcript;
+    const inp = document.getElementById('messageInput');
+    if (inp) { inp.value = txt; inp.dispatchEvent(new Event('input')); }
+    stopSTT();
+  };
+  recognition.onend  = () => { isListening = false; updateMicBtn(); };
+  recognition.onerror = () => { isListening = false; updateMicBtn(); };
+}
+
+function toggleSTT() {
+  if (isListening) stopSTT(); else startSTT();
+}
+
+function startSTT() {
+  if (!recognition) { showToast('Micro non supporté sur ce navigateur', 'error'); return; }
+  try { recognition.start(); isListening = true; updateMicBtn(); }
+  catch(e) { showToast('Impossible de démarrer le micro', 'error'); }
+}
+
+function stopSTT() {
+  if (recognition) recognition.stop();
+  isListening = false;
+  updateMicBtn();
+}
+
+function updateMicBtn() {
+  const btn = document.getElementById('voiceBtn');
+  if (!btn) return;
+  btn.style.color = isListening ? 'var(--red)' : '';
+  btn.title = isListening ? 'Arrêter la dictée' : 'Dicter un message';
+}
+
+// ══════════════════════════════════════════════════════════════
+// § 6 — AI
+// ══════════════════════════════════════════════════════════════
+
+function loadAIConfig() {
+  try {
+    const s = JSON.parse(localStorage.getItem('eva_ai_cfg') || '{}');
+    aiProvider = s.aiProvider || 'puter';
+    aiCfg = s;
+  } catch(e) { aiProvider = 'puter'; aiCfg = {}; }
+}
+
+function buildSystemPrompt() {
+  let p = EVA_SYSTEM_PROMPT;
+  if (TONES[activeTone]) p += '\n\nTON ACTUEL : ' + TONES[activeTone];
+  if (_userData.role && ROLE_CONTEXTS[_userData.role]) {
+    p += '\n\n' + ROLE_CONTEXTS[_userData.role](_userData.displayName || 'l\'utilisateur');
+  }
+  if (_userData.nickname) p += `\n\nL'utilisateur préfère être appelé(e) "${_userData.nickname}".`;
+  return p;
+}
+
+function extractAIContent(r) {
+  if (typeof r === 'string') return r;
+  if (r?.message?.content) return r.message.content;
+  if (r?.choices?.[0]?.message?.content) return r.choices[0].message.content;
+  return String(r);
+}
+
+async function callAI(userMsg) {
+  context.push({ role: 'user', content: userMsg });
+  const limit = (parseInt(aiCfg.contextLength) || 12) * 2;
+  if (context.length > limit) context = context.slice(-limit);
+
+  const sys = buildSystemPrompt();
+  const msgs = [{ role: 'system', content: sys }, ...context];
+
+  try {
+    let content = '';
+
+    if (aiProvider === 'puter') {
+      if (typeof puter === 'undefined') throw new Error('Puter non disponible. Rechargez la page.');
+      const model = aiCfg.puterModel || 'gpt-4o-mini';
+      const resp = await puter.ai.chat(msgs, { model });
+      content = extractAIContent(resp);
+
+    } else if (aiProvider === 'openai') {
+      if (!aiCfg.openaiApiKey) throw new Error('Clé OpenAI manquante (Paramètres > IA)');
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aiCfg.openaiApiKey}` },
+        body: JSON.stringify({ model: aiCfg.openaiModel || 'gpt-4o-mini', messages: msgs, max_tokens: 1200 })
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error.message);
+      content = d.choices[0].message.content;
+
+    } else if (aiProvider === 'claude') {
+      if (!aiCfg.claudeApiKey) throw new Error('Clé Anthropic manquante (Paramètres > IA)');
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': aiCfg.claudeApiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: aiCfg.claudeModel || 'claude-3-5-sonnet-20241022', system: sys, messages: context, max_tokens: 1200 })
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error.message);
+      content = d.content[0].text;
+
+    } else if (aiProvider === 'lmstudio') {
+      const ep = aiCfg.lmstudioEndpoint || 'http://localhost:1234';
+      const r = await fetch(`${ep}/v1/chat/completions`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: msgs, max_tokens: 1200, temperature: 0.7 })
+      });
+      const d = await r.json();
+      content = d.choices[0].message.content;
+
+    } else if (aiProvider === 'ollama') {
+      const ep = aiCfg.ollamaEndpoint || 'http://localhost:11434';
+      let prompt = sys + '\n\n';
+      context.forEach(m => { prompt += `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}\n`; });
+      prompt += 'Assistant:';
+      const r = await fetch(`${ep}/api/generate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: aiCfg.ollamaModel || 'llama2', prompt, stream: false })
+      });
+      const d = await r.json();
+      content = d.response;
+    } else {
+      throw new Error('Provider inconnu : ' + aiProvider);
+    }
+
+    context.push({ role: 'assistant', content });
+    return { success: true, content };
+
+  } catch(err) {
+    context.pop();
+    return { success: false, error: err.message };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// § 7 — CONVERSATIONS (Firestore)
+// ══════════════════════════════════════════════════════════════
+
+function genId(p) { return (p||'id') + '_' + Date.now() + '_' + Math.random().toString(36).substr(2,9); }
+function trunc(t, n) { if (!t) return ''; return t.length > n ? t.substring(0,n)+'...' : t; }
+
+async function createConv(title, tone) {
+  const id = genId('conv');
+  await db.collection('users').doc(currentUser.uid).collection('conversations').doc(id).set({
+    title: title || 'Nouvelle conversation', tone: tone || activeTone,
+    createdAt: timestamp(), updatedAt: timestamp(), messageCount: 0, lastMessage: null
+  });
+  convId = id;
+  return id;
+}
+
+async function saveMsg(role, content) {
+  if (!convId || !currentUser) return;
+  const mid = genId('msg');
+  await db.collection('users').doc(currentUser.uid)
+    .collection('conversations').doc(convId)
+    .collection('messages').doc(mid)
+    .set({ role, content, timestamp: timestamp() });
+  await db.collection('users').doc(currentUser.uid)
+    .collection('conversations').doc(convId)
+    .update({ updatedAt: timestamp(), lastMessage: trunc(content, 100), messageCount: increment(1) });
+}
+
+async function loadConvList() {
+  if (!currentUser) return;
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid)
+      .collection('conversations').orderBy('updatedAt','desc').limit(30).get();
+    const list = [];
+    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+    renderConvList(list);
+  } catch(e) { console.warn('loadConvList', e); }
+}
+
+async function loadConv(id, titleHint) {
+  if (!currentUser) return;
+  clearChat();
+  convId = id;
+
+  document.querySelectorAll('.conv-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === id);
+  });
+
+  try {
+    const doc = await db.collection('users').doc(currentUser.uid)
+      .collection('conversations').doc(id).get();
+    if (!doc.exists) return;
+    const data = doc.data();
+
+    document.getElementById('conversationName').textContent = data.title || titleHint || 'Conversation';
+    activeTone = data.tone || 'normal';
+    document.querySelectorAll('.tone-btn').forEach(b => b.classList.toggle('active', b.dataset.tone === activeTone));
+
+    const msgs = await db.collection('users').doc(currentUser.uid)
+      .collection('conversations').doc(id)
+      .collection('messages').orderBy('timestamp','asc').get();
+
+    context = [];
+    msgs.forEach(d => {
+      const m = d.data();
+      addMsg(m.role, m.content, false);
+      context.push({ role: m.role, content: m.content });
+    });
+  } catch(e) {
+    console.warn('loadConv', e);
+    showToast('Erreur chargement conversation', 'error');
+  }
+  if (window.innerWidth < 768) closeSidebar();
+}
+
+async function deleteConv(id) {
+  if (!confirm('Supprimer cette conversation ?')) return;
+  try {
+    const msgs = await db.collection('users').doc(currentUser.uid)
+      .collection('conversations').doc(id).collection('messages').get();
+    const batch = db.batch();
+    msgs.forEach(d => batch.delete(d.ref));
+    batch.delete(db.collection('users').doc(currentUser.uid).collection('conversations').doc(id));
+    await batch.commit();
+    if (convId === id) newConv();
+    await loadConvList();
+    showToast('Conversation supprimée', 'success');
+  } catch(e) { showToast('Erreur suppression', 'error'); }
+}
+
+async function autoTitle() {
+  if (!convId || !currentUser || chatMsgs.length !== 2) return;
+  const first = chatMsgs.find(m => m.role === 'user');
+  if (!first) return;
+  let t = first.content.trim().replace(/\n/g,' ');
+  t = (t.length > 52 ? t.substring(0,52)+'...' : t);
+  t = t.charAt(0).toUpperCase() + t.slice(1);
+  try {
+    await db.collection('users').doc(currentUser.uid)
+      .collection('conversations').doc(convId).update({ title: t });
+    document.getElementById('conversationName').textContent = t;
+    const el = document.querySelector(`.conv-item[data-id="${convId}"] .conv-title`);
+    if (el) el.textContent = t;
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════════════
+// § 8 — CHAT UI
+// ══════════════════════════════════════════════════════════════
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function escAttr(s) { return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+function fmtMsg(txt) {
+  return esc(txt)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code style="background:var(--surface3);padding:2px 6px;border-radius:4px;font-family:Space Mono,monospace;font-size:.88em;">$1</code>')
+    .replace(/\n/g,'<br>');
+}
+
+function addMsg(role, content, animate) {
+  if (animate === undefined) animate = true;
+  const list = document.getElementById('messagesList');
+  document.getElementById('chatEmpty').style.display = 'none';
+  document.getElementById('evaLogoBG').style.opacity = '0.04';
+
+  const el = document.createElement('div');
+  el.className = 'message ' + role + (animate ? ' message-new' : '');
+
+  const avatar = document.createElement('div');
+  avatar.className = 'message-avatar';
+  if (role === 'user') {
+    if (_userData.photoURL) {
+      avatar.innerHTML = `<img src="${esc(_userData.photoURL)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+    } else {
+      avatar.textContent = (_userData.displayName || 'U').charAt(0).toUpperCase();
+    }
+  } else {
+    avatar.innerHTML = `<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;"><circle cx="18" cy="18" r="16" stroke="var(--cyan)" stroke-width="1.8"/><path d="M10 18c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="var(--cyan)" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="18" r="3" fill="var(--cyan)"/></svg>`;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'message-content';
+  const bubble = document.createElement('div');
+  bubble.className = 'message-bubble';
+  bubble.innerHTML = fmtMsg(content);
+  const time = document.createElement('div');
+  time.className = 'message-time';
+  time.textContent = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+
+  wrap.appendChild(bubble);
+  wrap.appendChild(time);
+  el.appendChild(avatar);
+  el.appendChild(wrap);
+  list.appendChild(el);
+
+  chatMsgs.push({ role, content, ts: Date.now() });
+  scrollBottom();
+}
+
+function showTyping() {
+  const list = document.getElementById('messagesList');
+  document.getElementById('chatEmpty').style.display = 'none';
+  const el = document.createElement('div');
+  el.id = 'typingInd';
+  el.className = 'message assistant';
+  el.innerHTML = `<div class="message-avatar" style="background:var(--surface3);">
+    <svg viewBox="0 0 36 36" fill="none" style="width:20px;height:20px;">
+      <circle cx="18" cy="18" r="16" stroke="var(--cyan)" stroke-width="1.8"/>
+      <path d="M10 18c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="var(--cyan)" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="18" cy="18" r="3" fill="var(--cyan)"/>
+    </svg>
+  </div>
+  <div class="message-content"><div class="message-bubble">
+    <div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+  </div></div>`;
+  list.appendChild(el);
+  scrollBottom();
+}
+
+function hideTyping() {
+  const el = document.getElementById('typingInd');
+  if (el) el.remove();
+}
+
+function scrollBottom() {
+  const m = document.getElementById('chatMain');
+  if (m) setTimeout(() => { m.scrollTop = m.scrollHeight; }, 60);
+}
+
+function clearChat() {
+  document.getElementById('messagesList').innerHTML = '';
+  document.getElementById('chatEmpty').style.display = 'flex';
+  document.getElementById('evaLogoBG').style.opacity = '0.08';
+  chatMsgs = [];
+  context = [];
+  convId = null;
+  activeTone = 'normal';
+  document.getElementById('conversationName').textContent = 'Nouvelle conversation';
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.toggle('active', b.dataset.tone === 'normal'));
+}
+
+function newConv() {
+  clearChat();
+  document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+  if (window.innerWidth < 768) closeSidebar();
+}
+
+async function sendMessage() {
+  if (isProcessing) return;
+  const inp = document.getElementById('messageInput');
+  const text = inp.value.trim();
+  if (!text) return;
+
+  inp.value = '';
+  inp.style.height = 'auto';
+  document.getElementById('sendBtn').disabled = true;
+  isProcessing = true;
+
+  addMsg('user', text);
+
+  // Create Firestore conversation on first message
+  if (!convId && currentUser) {
+    try {
+      await createConv('Nouvelle conversation');
+      await loadConvList();
+    } catch(e) { console.warn('createConv error', e); }
+  }
+
+  // Save user message (non-blocking)
+  if (convId) saveMsg('user', text).catch(e => console.warn('saveMsg user', e));
+
+  showTyping();
+  const result = await callAI(text);
+  hideTyping();
+
+  if (result.success) {
+    addMsg('assistant', result.content);
+    if (convId) saveMsg('assistant', result.content).catch(e => console.warn('saveMsg ai', e));
+    await autoTitle();
+    if (ttsEnabled) speak(result.content);
+  } else {
+    addMsg('assistant', `Je rencontre une difficulté : ${result.error}\n\nVérifiez la configuration IA dans les Paramètres, ou assurez-vous d'être connecté à internet pour Puter.`);
+  }
+
+  isProcessing = false;
+  document.getElementById('sendBtn').disabled = false;
+  inp.focus();
+}
+
+// ══════════════════════════════════════════════════════════════
+// § 9 — SIDEBAR
+// ══════════════════════════════════════════════════════════════
+
+function renderConvList(list) {
+  const el = document.getElementById('conversationsList');
+  if (!list || !list.length) {
+    el.innerHTML = '<div class="conv-empty">Aucune conversation</div>';
+    return;
+  }
+  el.innerHTML = list.map(c => `
+    <div class="conv-item ${c.id === convId ? 'active' : ''}" data-id="${c.id}"
+         onclick="loadConv('${c.id}','${escAttr(c.title||'Conversation')}')">
+      <div class="conv-item-content">
+        <div class="conv-title">${esc(c.title||'Nouvelle conversation')}</div>
+        ${c.lastMessage ? `<div class="conv-preview">${esc(trunc(c.lastMessage,42))}</div>` : ''}
+      </div>
+      <button class="conv-delete" title="Supprimer"
+              onclick="event.stopPropagation();deleteConv('${c.id}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+      </button>
+    </div>`).join('');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+  document.getElementById('sidebarOverlay').classList.toggle('active');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebarOverlay').classList.remove('active');
+}
+
+async function searchConvs(query) {
+  if (!query || !currentUser) { await loadConvList(); return; }
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid)
+      .collection('conversations').orderBy('updatedAt','desc').limit(50).get();
+    const q = query.toLowerCase();
+    const res = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if ((data.title||'').toLowerCase().includes(q) || (data.lastMessage||'').toLowerCase().includes(q))
+        res.push({ id: d.id, ...data });
+    });
+    renderConvList(res);
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════════════
+// § 10 — SETTINGS
+// ══════════════════════════════════════════════════════════════
+
+function openSettings() {
+  document.getElementById('settingsModal').classList.add('active');
+  document.getElementById('userProfile').classList.remove('open');
+  showSection('profile');
+}
+function closeSettings() { document.getElementById('settingsModal').classList.remove('active'); }
+
+function showSection(sec) {
+  document.querySelectorAll('.settings-nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.section === sec);
+  });
+  const c = document.getElementById('settingsContent');
+  switch(sec) {
+    case 'profile': renderProfile(c); break;
+    case 'account': renderAccount(c); break;
+    case 'voice':   renderVoice(c); break;
+    case 'ai':      renderAI(c); break;
+    case 'dev':     renderDev(c); break;
+  }
+}
+
+/* ── PROFIL ── */
+function renderProfile(c) {
+  c.innerHTML = `
+  <div class="settings-section">
+    <h3 class="settings-section-title">Profil utilisateur</h3>
+    <div class="settings-field">
+      <label class="settings-label">Photo de profil</label>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">
+        <div id="photoPrev" style="width:56px;height:56px;border-radius:50%;background:var(--surface3);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:1.4em;color:var(--cyan);flex-shrink:0;">
+          ${_userData.photoURL ? `<img src="${esc(_userData.photoURL)}" style="width:100%;height:100%;object-fit:cover;">` : esc((_userData.displayName||'U').charAt(0).toUpperCase())}
+        </div>
+        <label style="cursor:pointer;" class="btn-outline">
+          Choisir une photo
+          <input type="file" accept="image/*" id="photoInput" style="display:none;">
+        </label>
+      </div>
+      <p class="settings-description">Stockée localement. Max 2 MB.</p>
+    </div>
+    <div class="settings-field">
+      <label class="settings-label">Nom complet</label>
+      <input type="text" class="settings-input" id="pName" value="${esc(_userData.displayName||'')}" placeholder="Votre nom">
+    </div>
+    <div class="settings-field">
+      <label class="settings-label">Surnom</label>
+      <input type="text" class="settings-input" id="pNick" value="${esc(_userData.nickname||'')}" placeholder="Comment Eva vous appelle">
+    </div>
+    <div class="settings-field">
+      <label class="settings-label">Bio</label>
+      <textarea class="settings-input" id="pBio" rows="3" placeholder="Quelques mots sur vous...">${esc(_userData.bio||'')}</textarea>
+    </div>
+    <button class="btn-primary" onclick="saveProfile()">Sauvegarder</button>
+  </div>`;
+
+  document.getElementById('photoInput').addEventListener('change', function(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    if (f.size > 2*1024*1024) { showToast('Photo trop grande (max 2 MB)', 'error'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById('photoPrev').innerHTML = `<img src="${ev.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+      window._pendingPhoto = ev.target.result;
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+async function saveProfile() {
+  const name     = document.getElementById('pName').value.trim();
+  const nickname = document.getElementById('pNick').value.trim();
+  const bio      = document.getElementById('pBio').value.trim();
+  const photo    = window._pendingPhoto || _userData.photoURL || null;
+  try {
+    const upd = { displayName: name, nickname, bio };
+    if (photo) upd.photoURL = photo;
+    await db.collection('users').doc(currentUser.uid).set(upd, { merge: true });
+    if (name) await currentUser.updateProfile({ displayName: name }).catch(()=>{});
+    _userData = { ..._userData, ...upd };
+    delete window._pendingPhoto;
+    document.getElementById('userName').textContent = name || 'Utilisateur';
+    const av = document.getElementById('userAvatar');
+    if (photo) av.innerHTML = `<img src="${esc(photo)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+    else av.textContent = (name||'U').charAt(0).toUpperCase();
+    showToast('Profil sauvegardé !', 'success');
+  } catch(e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+/* ── COMPTE ── */
+function renderAccount(c) {
+  c.innerHTML = `
+  <div class="settings-section">
+    <h3 class="settings-section-title">Gestion du compte</h3>
+    <div class="settings-field">
+      <label class="settings-label">Email actuel</label>
+      <input type="email" class="settings-input" value="${esc(currentUser?.email||'')}" disabled style="opacity:.6;">
+    </div>
+    <div class="settings-field">
+      <label class="settings-label">Nouvel email</label>
+      <input type="email" class="settings-input" id="newEmail" placeholder="nouvel@email.com">
+      <button class="btn-outline" style="margin-top:8px;" onclick="changeEmail()">Changer l'email</button>
+    </div>
+    <div class="settings-field">
+      <label class="settings-label">Nouveau mot de passe</label>
+      <input type="password" class="settings-input" id="newPwd" placeholder="Min. 6 caractères">
+      <input type="password" class="settings-input" id="confPwd" placeholder="Confirmer" style="margin-top:8px;">
+      <button class="btn-outline" style="margin-top:8px;" onclick="changePassword()">Changer le mot de passe</button>
+    </div>
+    <div class="settings-field">
+      <label class="settings-label">Exporter mes données</label>
+      <p class="settings-description">Télécharge toutes vos conversations en JSON.</p>
+      <button class="btn-outline" onclick="downloadData()">Télécharger les données</button>
+    </div>
+    <div class="settings-field" style="border-top:1px solid var(--border);padding-top:18px;">
+      <label class="settings-label" style="color:var(--red);">Zone dangereuse</label>
+      <p class="settings-description">Cette action est définitive et irréversible.</p>
+      <button class="btn-danger" onclick="deleteAccount()">Supprimer définitivement le compte</button>
+    </div>
+  </div>`;
+}
+
+async function changeEmail() {
+  const e = document.getElementById('newEmail').value.trim();
+  if (!e) { showToast('Email requis', 'error'); return; }
+  try { await currentUser.updateEmail(e); showToast('Email mis à jour !', 'success'); }
+  catch(err) {
+    if (err.code === 'auth/requires-recent-login') showToast('Reconnectez-vous d\'abord', 'warning');
+    else showToast('Erreur : ' + err.message, 'error');
+  }
+}
+
+async function changePassword() {
+  const p = document.getElementById('newPwd').value;
+  const c = document.getElementById('confPwd').value;
+  if (!p || p.length < 6) { showToast('Min. 6 caractères', 'error'); return; }
+  if (p !== c) { showToast('Les mots de passe ne correspondent pas', 'error'); return; }
+  try { await currentUser.updatePassword(p); showToast('Mot de passe modifié !', 'success'); document.getElementById('newPwd').value=''; document.getElementById('confPwd').value=''; }
+  catch(err) {
+    if (err.code === 'auth/requires-recent-login') showToast('Reconnectez-vous d\'abord', 'warning');
+    else showToast('Erreur : ' + err.message, 'error');
+  }
+}
+
+async function downloadData() {
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid).collection('conversations').get();
+    const out = [];
+    for (const d of snap.docs) {
+      const ms = await db.collection('users').doc(currentUser.uid)
+        .collection('conversations').doc(d.id).collection('messages').orderBy('timestamp','asc').get();
+      out.push({ id: d.id, ...d.data(), messages: ms.docs.map(m => m.data()) });
+    }
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: `eva-data-${Date.now()}.json` });
+    a.click(); URL.revokeObjectURL(url);
+    showToast('Données téléchargées', 'success');
+  } catch(e) { showToast('Erreur export : ' + e.message, 'error'); }
+}
+
+async function deleteAccount() {
+  if (!confirm('Supprimer définitivement votre compte et toutes vos données ?')) return;
+  if (!confirm('Dernière chance — action IRRÉVERSIBLE. Continuer ?')) return;
+  try {
+    const cs = await db.collection('users').doc(currentUser.uid).collection('conversations').get();
+    const batch = db.batch();
+    cs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    await db.collection('users').doc(currentUser.uid).delete();
+    await currentUser.delete();
+    window.location.href = '/';
+  } catch(err) {
+    if (err.code === 'auth/requires-recent-login') showToast('Reconnectez-vous d\'abord', 'warning');
+    else showToast('Erreur : ' + err.message, 'error');
+  }
+}
+
+/* ── VOIX ── */
+function renderVoice(c) {
+  const voices = speechSynthesis.getVoices().filter(v => v.lang && v.lang.startsWith('fr'));
+  const rate   = localStorage.getItem('eva_speech_rate') || '1';
+
+  c.innerHTML = `
+  <div class="settings-section">
+    <h3 class="settings-section-title">Voix & Synthèse vocale</h3>
+    <div class="settings-field">
+      <label class="settings-label">Voix Eva activée</label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="ttsCheck" ${ttsEnabled?'checked':''} style="width:18px;height:18px;accent-color:var(--cyan);">
+        <span>Eva parle ses réponses automatiquement</span>
+      </label>
+    </div>
+    <div class="settings-field">
+      <label class="settings-label">Voix française</label>
+      <select class="settings-select" id="voiceSel">
+        <option value="">Meilleure voix disponible (recommandé)</option>
+        ${voices.map(v => `<option value="${escAttr(v.name)}" ${selectedVoice&&selectedVoice.name===v.name?'selected':''}>${esc(v.name)} (${v.lang})</option>`).join('')}
+      </select>
+      <p class="settings-description">Edge : voix Microsoft Natural (très naturelles). Chrome : voix Google. Safari/Firefox : voix système.</p>
+      ${!voices.length ? '<p class="settings-description" style="color:var(--orange);">Aucune voix française détectée sur ce navigateur.</p>' : ''}
+    </div>
+    <div class="settings-field">
+      <label class="settings-label">Vitesse : <span id="rateVal">${rate}</span>x</label>
+      <input type="range" id="rateSlider" min="0.5" max="2" step="0.1" value="${rate}"
+             oninput="document.getElementById('rateVal').textContent=this.value"
+             style="width:100%;accent-color:var(--cyan);margin-top:6px;">
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
+      <button class="btn-outline" onclick="testVoice()">Tester la voix</button>
+      <button class="btn-primary" onclick="saveVoice()">Sauvegarder</button>
+    </div>
+  </div>`;
+}
+
+function testVoice() {
+  const vName = document.getElementById('voiceSel')?.value;
+  const rate  = document.getElementById('rateSlider')?.value || 1;
+  const tmpV  = vName ? speechSynthesis.getVoices().find(v => v.name === vName) : selectedVoice;
+  stopSpeaking();
+  const utt = new SpeechSynthesisUtterance("Bonjour ! Je suis Eva, votre assistante virtuelle. Je suis ravie de vous parler !");
+  if (tmpV) utt.voice = tmpV;
+  utt.lang = 'fr-FR'; utt.rate = parseFloat(rate);
+  speechSynthesis.speak(utt);
+}
+
+function saveVoice() {
+  ttsEnabled = document.getElementById('ttsCheck').checked;
+  const vName = document.getElementById('voiceSel').value;
+  const rate  = document.getElementById('rateSlider').value;
+  localStorage.setItem('eva_tts', String(ttsEnabled));
+  localStorage.setItem('eva_speech_rate', rate);
+  if (vName) { selectedVoice = speechSynthesis.getVoices().find(v => v.name === vName) || selectedVoice; localStorage.setItem('eva_voice_name', vName); }
+  else { selectedVoice = selectBestVoice(speechSynthesis.getVoices()); localStorage.removeItem('eva_voice_name'); }
+  updateTTSBtn();
+  showToast('Paramètres voix sauvegardés', 'success');
+}
+
+/* ── IA ── */
+function renderAI(c) {
+  const cfg = aiCfg;
+  c.innerHTML = `
+  <div class="settings-section">
+    <h3 class="settings-section-title">Intelligence Artificielle</h3>
+    <div class="settings-field">
+      <label class="settings-label">Provider IA</label>
+      <select class="settings-select" id="provSel" onchange="onProvChange()">
+        <option value="puter"    ${aiProvider==='puter'?'selected':''}>Puter Cloud — Gratuit, sans clé API (recommandé)</option>
+        <option value="openai"   ${aiProvider==='openai'?'selected':''}>OpenAI (GPT-4o) — Clé API requise</option>
+        <option value="claude"   ${aiProvider==='claude'?'selected':''}>Claude (Anthropic) — Clé API requise</option>
+        <option value="lmstudio" ${aiProvider==='lmstudio'?'selected':''}>LM Studio — Serveur local</option>
+        <option value="ollama"   ${aiProvider==='ollama'?'selected':''}>Ollama — Serveur local</option>
+      </select>
+    </div>
+
+    <div id="fp" style="display:${aiProvider==='puter'?'block':'none'};" class="settings-field">
+      <p class="settings-description" style="color:var(--green);margin-bottom:10px;">Puter est 100% gratuit. Aucune configuration requise.</p>
+      <label class="settings-label">Modèle</label>
+      <select class="settings-select" id="puterModel">
+        <option value="gpt-4o-mini"       ${(cfg.puterModel||'gpt-4o-mini')==='gpt-4o-mini'?'selected':''}>GPT-4o Mini — Rapide et gratuit</option>
+        <option value="gpt-4o"            ${cfg.puterModel==='gpt-4o'?'selected':''}>GPT-4o — Puissant</option>
+        <option value="claude-3-5-sonnet" ${cfg.puterModel==='claude-3-5-sonnet'?'selected':''}>Claude 3.5 Sonnet</option>
+        <option value="gemini-1.5-flash"  ${cfg.puterModel==='gemini-1.5-flash'?'selected':''}>Gemini 1.5 Flash</option>
+      </select>
+    </div>
+
+    <div id="fo" style="display:${aiProvider==='openai'?'block':'none'};" class="settings-field">
+      <label class="settings-label">OpenAI API Key</label>
+      <input type="password" class="settings-input" id="oKey" value="${esc(cfg.openaiApiKey||'')}" placeholder="sk-...">
+      <label class="settings-label" style="margin-top:10px;">Modèle</label>
+      <select class="settings-select" id="oModel">
+        <option value="gpt-4o-mini" ${(cfg.openaiModel||'gpt-4o-mini')==='gpt-4o-mini'?'selected':''}>GPT-4o Mini</option>
+        <option value="gpt-4o"      ${cfg.openaiModel==='gpt-4o'?'selected':''}>GPT-4o</option>
+      </select>
+    </div>
+
+    <div id="fc" style="display:${aiProvider==='claude'?'block':'none'};" class="settings-field">
+      <label class="settings-label">Anthropic API Key</label>
+      <input type="password" class="settings-input" id="cKey" value="${esc(cfg.claudeApiKey||'')}" placeholder="sk-ant-...">
+      <label class="settings-label" style="margin-top:10px;">Modèle</label>
+      <select class="settings-select" id="cModel">
+        <option value="claude-3-5-sonnet-20241022" ${(cfg.claudeModel||'')==='claude-3-5-sonnet-20241022'?'selected':''}>Claude 3.5 Sonnet</option>
+        <option value="claude-3-5-haiku-20241022"  ${cfg.claudeModel==='claude-3-5-haiku-20241022'?'selected':''}>Claude 3.5 Haiku</option>
+      </select>
+    </div>
+
+    <div id="fl" style="display:${aiProvider==='lmstudio'?'block':'none'};" class="settings-field">
+      <label class="settings-label">Endpoint LM Studio</label>
+      <input type="text" class="settings-input" id="lmEp" value="${esc(cfg.lmstudioEndpoint||'http://localhost:1234')}" placeholder="http://localhost:1234">
+    </div>
+
+    <div id="fol" style="display:${aiProvider==='ollama'?'block':'none'};" class="settings-field">
+      <label class="settings-label">Endpoint Ollama</label>
+      <input type="text" class="settings-input" id="olEp" value="${esc(cfg.ollamaEndpoint||'http://localhost:11434')}" placeholder="http://localhost:11434">
+      <label class="settings-label" style="margin-top:10px;">Modèle</label>
+      <input type="text" class="settings-input" id="olModel" value="${esc(cfg.ollamaModel||'llama2')}" placeholder="llama2, mistral...">
+    </div>
+
+    <div class="settings-field">
+      <label class="settings-label">Mémoire contextuelle</label>
+      <input type="number" class="settings-input" id="ctxLen" value="${cfg.contextLength||12}" min="4" max="30" style="width:90px;">
+      <p class="settings-description">Nombre d'échanges mémorisés (4–30)</p>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
+      <button class="btn-outline" onclick="testAI()">Tester la connexion</button>
+      <button class="btn-primary" onclick="saveAI()">Sauvegarder</button>
+    </div>
+    <div id="aiTestRes" style="margin-top:12px;font-size:.83em;"></div>
+  </div>`;
+}
+
+function onProvChange() {
+  const p = document.getElementById('provSel').value;
+  document.getElementById('fp').style.display  = p==='puter'    ? 'block' : 'none';
+  document.getElementById('fo').style.display  = p==='openai'   ? 'block' : 'none';
+  document.getElementById('fc').style.display  = p==='claude'   ? 'block' : 'none';
+  document.getElementById('fl').style.display  = p==='lmstudio' ? 'block' : 'none';
+  document.getElementById('fol').style.display = p==='ollama'   ? 'block' : 'none';
+}
+
+function collectAICfg() {
+  return {
+    aiProvider:       document.getElementById('provSel')?.value || aiProvider,
+    puterModel:       document.getElementById('puterModel')?.value || 'gpt-4o-mini',
+    openaiApiKey:     document.getElementById('oKey')?.value || '',
+    openaiModel:      document.getElementById('oModel')?.value || 'gpt-4o-mini',
+    claudeApiKey:     document.getElementById('cKey')?.value || '',
+    claudeModel:      document.getElementById('cModel')?.value || 'claude-3-5-sonnet-20241022',
+    lmstudioEndpoint: document.getElementById('lmEp')?.value || 'http://localhost:1234',
+    ollamaEndpoint:   document.getElementById('olEp')?.value || 'http://localhost:11434',
+    ollamaModel:      document.getElementById('olModel')?.value || 'llama2',
+    contextLength:    parseInt(document.getElementById('ctxLen')?.value) || 12
+  };
+}
+
+async function testAI() {
+  const el = document.getElementById('aiTestRes');
+  el.style.color = 'var(--text-muted)'; el.textContent = 'Test en cours…';
+  const savedP = aiProvider, savedC = { ...aiCfg }, savedCtx = [...context];
+  aiProvider = collectAICfg().aiProvider; aiCfg = collectAICfg(); context = [];
+  const r = await callAI('Test de connexion. Réponds juste "Connexion réussie !" en une phrase courte.');
+  aiProvider = savedP; aiCfg = savedC; context = savedCtx;
+  if (r.success) { el.style.color = 'var(--green)'; el.textContent = r.content; }
+  else           { el.style.color = 'var(--red)';   el.textContent = 'Erreur : ' + r.error; }
+}
+
+async function saveAI() {
+  const cfg = collectAICfg();
+  aiProvider = cfg.aiProvider; aiCfg = cfg;
+  localStorage.setItem('eva_ai_cfg', JSON.stringify(cfg));
+  try { await db.collection('users').doc(currentUser.uid).set({ preferences: { aiProvider: cfg.aiProvider } }, { merge: true }); } catch(e) {}
+  showToast('IA sauvegardée : ' + aiProvider, 'success');
+}
+
+/* ── CLÉ DEV ── */
+function renderDev(c) {
+  const rl = { creator:'Créateur — PDG Astral', creator_wife:'Épouse du Créateur', developer:'Développeur Astral' };
+  c.innerHTML = `
+  <div class="settings-section">
+    <h3 class="settings-section-title">Clé Développeur</h3>
+    ${_userData.role && _userData.role !== 'user' ? `
+      <div style="padding:12px;background:var(--surface3);border-radius:8px;border:1px solid var(--border);margin-bottom:20px;">
+        <p style="color:var(--green);font-weight:600;">Statut : ${rl[_userData.role]||_userData.role}</p>
+        <p class="settings-description">Clé active : ${esc(_userData.devKey||'—')}</p>
+      </div>` : ''}
+    <div class="settings-field">
+      <label class="settings-label">Code d'activation</label>
+      <input type="text" class="settings-input" id="devKeyIn" placeholder="ASTRAL-XXXXX-XXXXX"
+             style="letter-spacing:2px;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+      <p class="settings-description">Les clés développeur débloquent un contexte spécial et des fonctionnalités avancées pour Eva.</p>
+    </div>
+    <button class="btn-primary" onclick="activateDev()">Activer la clé</button>
+    <div id="devRes" style="margin-top:12px;font-size:.85em;"></div>
+  </div>`;
+}
+
+async function activateDev() {
+  const key = document.getElementById('devKeyIn').value.trim();
+  const el  = document.getElementById('devRes');
+  if (!key) { showToast('Saisissez une clé', 'error'); return; }
+  el.style.color = 'var(--text-muted)'; el.textContent = 'Vérification…';
+  try {
+    const snap = await db.collection('dev_keys_valid').where('key','==',key).where('active','==',true).get();
+    if (snap.empty) { el.style.color = 'var(--red)'; el.textContent = 'Clé invalide ou inactive.'; return; }
+    const role = snap.docs[0].data().role || 'developer';
+    await db.collection('users').doc(currentUser.uid).set({ role, devKey: key }, { merge: true });
+    _userData = { ..._userData, role, devKey: key };
+    updateBadge(role);
+    const labels = { creator:'Créateur — PDG Astral', creator_wife:'Épouse du Créateur', developer:'Développeur Astral' };
+    el.style.color = 'var(--green)'; el.textContent = `Clé activée ! Rôle : ${labels[role]||role}`;
+    showToast(`Rôle activé : ${labels[role]||role}`, 'success');
+    setTimeout(() => renderDev(document.getElementById('settingsContent')), 1200);
+  } catch(e) { el.style.color = 'var(--red)'; el.textContent = 'Erreur : ' + e.message; }
+}
+
+// ══════════════════════════════════════════════════════════════
+// § 11 — AUTH & PROFILE
+// ══════════════════════════════════════════════════════════════
+
+function updateBadge(role) {
+  const map = { creator:{ t:'Créateur', c:'--orange' }, creator_wife:{ t:'Épouse', c:'--purple' }, developer:{ t:'Dev', c:'--green' }, user:{ t:'Utilisateur', c:'--cyan' } };
+  const b = map[role] || map.user;
+  const el = document.getElementById('userBadge');
+  if (el) el.innerHTML = `<span style="color:var(${b.c})">${b.t}</span>`;
+}
+
+async function loadProfile() {
+  try {
+    const doc  = await db.collection('users').doc(currentUser.uid).get();
+    const data = doc.exists ? doc.data() : {};
+    data.displayName = data.displayName || currentUser.displayName || 'Utilisateur';
+    data.photoURL    = data.photoURL    || currentUser.photoURL    || null;
+    _userData = data;
+
+    document.getElementById('userName').textContent = data.displayName;
+    const av = document.getElementById('userAvatar');
+    if (data.photoURL) av.innerHTML = `<img src="${esc(data.photoURL)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+    else av.textContent = data.displayName.charAt(0).toUpperCase();
+
+    if (data.role) updateBadge(data.role);
+    if (data.preferences?.aiProvider) aiProvider = data.preferences.aiProvider;
+  } catch(e) { console.warn('loadProfile', e); }
+}
+
+async function signOut() {
+  if (!confirm('Se déconnecter ?')) return;
+  stopSpeaking();
+  await auth.signOut();
+  window.location.href = '/login.html';
+}
+
+// ══════════════════════════════════════════════════════════════
+// § 12 — REPORT
+// ══════════════════════════════════════════════════════════════
+
+async function submitReport() {
+  const type = document.querySelector('.report-type-btn.active')?.dataset.type || 'bug';
+  const title = document.getElementById('reportTitle').value.trim();
+  const msg   = document.getElementById('reportMessage').value.trim();
+  if (!title || !msg) { showToast('Remplissez tous les champs', 'error'); return; }
+  try {
+    await db.collection('reports').add({ userId: currentUser.uid, userEmail: currentUser.email, type, title, message: msg, createdAt: timestamp() });
+    showToast('Rapport envoyé. Merci !', 'success');
+    document.getElementById('reportModal').classList.remove('active');
+    document.getElementById('reportTitle').value = '';
+    document.getElementById('reportMessage').value = '';
+  } catch(e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// § 13 — LISTENERS
+// ══════════════════════════════════════════════════════════════
+
+function setupListeners() {
+  // Sidebar
+  document.getElementById('hamburgerBtn').addEventListener('click', toggleSidebar);
+  document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+  document.getElementById('newConvBtn').addEventListener('click', newConv);
+
+  // Search
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => searchConvs(e.target.value.trim()), 300);
+  });
+
+  // Send
+  document.getElementById('sendBtn').addEventListener('click', sendMessage);
+  document.getElementById('messageInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  document.getElementById('messageInput').addEventListener('input', (e) => {
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+  });
+
+  // Voice
+  document.getElementById('voiceBtn').addEventListener('click', toggleSTT);
+  document.getElementById('ttsToggleBtn').addEventListener('click', () => {
+    if (isSpeaking) { stopSpeaking(); return; }
+    ttsEnabled = !ttsEnabled;
+    localStorage.setItem('eva_tts', String(ttsEnabled));
+    updateTTSBtn();
+    showToast(ttsEnabled ? 'Voix Eva activée' : 'Voix Eva désactivée', 'info');
+  });
+
+  // Tone
+  document.querySelectorAll('.tone-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeTone = btn.dataset.tone;
+    });
+  });
+
+  // Settings
+  document.getElementById('settingsBtn').addEventListener('click', openSettings);
+  document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
+  document.querySelectorAll('.settings-nav-item').forEach(el => {
+    el.addEventListener('click', () => showSection(el.dataset.section));
+  });
+
+  // User dropdown
+  document.getElementById('userProfile').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('userProfile').classList.toggle('open');
+  });
+  document.addEventListener('click', () => {
+    document.getElementById('userProfile').classList.remove('open');
+  });
+
+  // Sign out
+  document.getElementById('signOutBtn').addEventListener('click', signOut);
+
+  // Report
+  document.getElementById('reportBtn').addEventListener('click', () => document.getElementById('reportModal').classList.add('active'));
+  document.getElementById('closeReportBtn').addEventListener('click', () => document.getElementById('reportModal').classList.remove('active'));
+  document.getElementById('submitReportBtn').addEventListener('click', submitReport);
+  document.querySelectorAll('.report-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.report-type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Nav items (tools — coming soon)
+  document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+    item.addEventListener('click', () => {
+      const v = item.dataset.view;
+      if (v === 'chat') return;
+      const labels = { voice:'Voix', imagine:'Imagine', calendar:'Agenda', reminders:'Rappels', alarms:'Alarmes', notes:'Notes' };
+      showToast(`${labels[v]||v} — Bientôt disponible`, 'info');
+    });
+  });
+
+  // ESC closes modals
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { closeSettings(); document.getElementById('reportModal').classList.remove('active'); }
+  });
+
+  // Modal overlay clicks
+  document.querySelectorAll('.modal-overlay').forEach(ov => {
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('active'); });
+  });
+
+  // Attach btn (placeholder)
+  document.getElementById('attachBtn').addEventListener('click', () => showToast('Pièces jointes — Bientôt disponible', 'info'));
+}
+
+// ══════════════════════════════════════════════════════════════
+// § 14 — INIT
+// ══════════════════════════════════════════════════════════════
+
+auth.onAuthStateChanged((user) => {
+  if (!user) {
+    window.location.href = '/login.html';
+  } else {
+    currentUser = user;
+    initApp();
+  }
+});
+
+async function initApp() {
+  loadAIConfig();
+  initTTS();
+  initSTT();
+  await loadProfile();
+  await loadConvList();
+  setupListeners();
+  setTimeout(() => document.getElementById('messageInput')?.focus(), 400);
+}
+</script>
+</body>
+</html>

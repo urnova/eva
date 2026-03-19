@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configuration — E.V.A</title>
+<link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="assets/styles/main.css">
+<style>
+.onboarding-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  position: relative;
+  z-index: 1;
+}
+
+.onboarding-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-2xl);
+  max-width: 550px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+}
+
+.onboarding-header {
+  text-align: center;
+  margin-bottom: var(--spacing-2xl);
+}
+
+.onboarding-logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto var(--spacing-lg);
+  filter: drop-shadow(0 0 20px var(--cyan-glow));
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.onboarding-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: var(--cyan);
+  margin-bottom: var(--spacing-sm);
+}
+
+.onboarding-subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.progress-bar {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-2xl);
+}
+
+.progress-step {
+  flex: 1;
+  height: 4px;
+  background: var(--surface2);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-base);
+}
+
+.progress-step.active {
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan-glow);
+}
+
+.onboarding-step {
+  display: none;
+}
+
+.onboarding-step.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.form-field {
+  margin-bottom: var(--spacing-lg);
+}
+
+.form-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.form-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: var(--spacing-xs);
+}
+
+.form-input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.95rem;
+  width: 100%;
+  transition: all var(--transition-fast);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-dim);
+}
+
+.avatar-selector {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.avatar-preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: var(--cyan-dim);
+  border: 3px solid var(--cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--cyan);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  overflow: hidden;
+}
+
+.avatar-preview:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px var(--cyan-glow);
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-input {
+  display: none;
+}
+
+.onboarding-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-xl);
+}
+
+.btn-skip {
+  flex: 1;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-skip:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.btn-next {
+  flex: 2;
+}
+
+.voice-selector {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.voice-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  background: var(--surface3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.voice-option:hover {
+  border-color: var(--cyan);
+  background: var(--cyan-dim);
+}
+
+.voice-option.selected {
+  border-color: var(--cyan);
+  background: var(--cyan-dim);
+}
+
+.voice-info {
+  flex: 1;
+}
+
+.voice-name {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.voice-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.voice-test {
+  background: transparent;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.voice-test:hover {
+  background: var(--cyan);
+  color: var(--navy);
+}
+
+@media (max-width: 768px) {
+  .onboarding-card {
+    padding: var(--spacing-xl);
+  }
+  
+  .onboarding-title {
+    font-size: 1.3rem;
+  }
+  
+  .avatar-preview {
+    width: 100px;
+    height: 100px;
+    font-size: 2.5rem;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="onboarding-container">
+  <div class="onboarding-card">
+    <div class="onboarding-header">
+      <img src="assets/images/eva.svg" alt="E.V.A" class="onboarding-logo">
+      <h1 class="onboarding-title">Configuration</h1>
+      <p class="onboarding-subtitle">Personnalisez votre expérience Eva</p>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-step active" id="progress1"></div>
+      <div class="progress-step" id="progress2"></div>
+      <div class="progress-step" id="progress3"></div>
+    </div>
+
+    <!-- STEP 1: Profil -->
+    <div class="onboarding-step active" id="step1">
+      <div class="avatar-selector">
+        <div class="avatar-preview" id="avatarPreview" onclick="document.getElementById('avatarInput').click()">
+          <span id="avatarInitials">U</span>
+        </div>
+        <input type="file" id="avatarInput" class="avatar-input" accept="image/*" onchange="handleAvatarChange(event)">
+      </div>
+
+      <div class="form-field">
+        <label class="form-label" for="displayName">Nom complet</label>
+        <input type="text" id="displayName" class="form-input" placeholder="Jean Dupont" required>
+        <p class="form-hint">Comment vous appelez-vous ?</p>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label" for="nickname">Surnom</label>
+        <input type="text" id="nickname" class="form-input" placeholder="Jean">
+        <p class="form-hint">Comment Eva doit vous appeler</p>
+      </div>
+
+      <div class="onboarding-actions">
+        <button class="btn-skip" onclick="skipOnboarding()">Passer</button>
+        <button class="btn-next btn-primary" onclick="nextStep()">Suivant</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Voix -->
+    <div class="onboarding-step" id="step2">
+      <div class="form-field">
+        <label class="form-label">Voix d'Eva</label>
+        <p class="form-hint">Choisissez la voix de votre assistante</p>
+      </div>
+
+      <div class="voice-selector">
+        <div class="voice-option selected" data-voice="auto" onclick="selectVoice('auto')">
+          <div class="voice-info">
+            <div class="voice-name">🎯 Auto (Recommandé)</div>
+            <div class="voice-desc">Meilleure voix féminine française disponible</div>
+          </div>
+          <button class="voice-test" onclick="testVoice('auto', event)">🔊 Tester</button>
+        </div>
+      </div>
+
+      <div class="onboarding-actions">
+        <button class="btn-skip" onclick="prevStep()">Retour</button>
+        <button class="btn-next btn-primary" onclick="nextStep()">Suivant</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Terminé -->
+    <div class="onboarding-step" id="step3">
+      <div style="text-align: center; padding: var(--spacing-xl) 0;">
+        <div style="font-size: 4rem; margin-bottom: var(--spacing-lg);">🎉</div>
+        <h2 style="font-family: 'Orbitron', monospace; color: var(--cyan); margin-bottom: var(--spacing-md);">
+          Tout est prêt !
+        </h2>
+        <p style="color: var(--text-muted); margin-bottom: var(--spacing-xl);">
+          Votre profil a été configuré avec succès.<br>
+          Vous pouvez maintenant profiter pleinement d'Eva.
+        </p>
+        <button class="btn-primary" style="width: 100%;" onclick="finishOnboarding()">
+          Accéder à Eva
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Configuration Firebase
+firebase.initializeApp({
+  apiKey: "AIzaSyDrXk8X9Ow7CcOc0Sr-yv3mXvzatNxpj3o",
+  authDomain: "eva-assistant-a4fdf.firebaseapp.com",
+  projectId: "eva-assistant-a4fdf",
+  storageBucket: "eva-assistant-a4fdf.firebasestorage.app",
+  messagingSenderId: "594189556810",
+  appId: "1:594189556810:web:0d72c2110245af92099ab3"
+});
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let currentStep = 1;
+let selectedVoice = 'auto';
+let currentUser = null;
+
+// Vérifier auth
+auth.onAuthStateChanged((user) => {
+  if (!user) {
+    window.location.href = '/login';
+  } else {
+    currentUser = user;
+    loadUserData();
+  }
+});
+
+async function loadUserData() {
+  const doc = await db.collection('users').doc(currentUser.uid).get();
+  if (doc.exists) {
+    const data = doc.data();
+    document.getElementById('displayName').value = data.displayName || '';
+    document.getElementById('nickname').value = data.nickname || '';
+    updateAvatarPreview();
+  }
+}
+
+function updateAvatarPreview() {
+  const displayName = document.getElementById('displayName').value;
+  const initials = displayName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'U';
+  
+  document.getElementById('avatarInitials').textContent = initials;
+}
+
+function handleAvatarChange(event) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const preview = document.getElementById('avatarPreview');
+      preview.innerHTML = `<img src="${e.target.result}" alt="Avatar">`;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+document.getElementById('displayName').addEventListener('input', updateAvatarPreview);
+
+function nextStep() {
+  if (currentStep === 1) {
+    const displayName = document.getElementById('displayName').value.trim();
+    const nickname = document.getElementById('nickname').value.trim() || displayName.split(' ')[0];
+    
+    if (!displayName) {
+      alert('Veuillez entrer votre nom');
+      return;
+    }
+    
+    // Sauvegarder step 1
+    saveProfile({ displayName, nickname });
+  }
+  
+  if (currentStep < 3) {
+    document.getElementById(`step${currentStep}`).classList.remove('active');
+    document.getElementById(`progress${currentStep}`).classList.remove('active');
+    
+    currentStep++;
+    
+    document.getElementById(`step${currentStep}`).classList.add('active');
+    document.getElementById(`progress${currentStep}`).classList.add('active');
+  }
+}
+
+function prevStep() {
+  if (currentStep > 1) {
+    document.getElementById(`step${currentStep}`).classList.remove('active');
+    document.getElementById(`progress${currentStep}`).classList.remove('active');
+    
+    currentStep--;
+    
+    document.getElementById(`step${currentStep}`).classList.add('active');
+    document.getElementById(`progress${currentStep}`).classList.add('active');
+  }
+}
+
+function selectVoice(voice) {
+  selectedVoice = voice;
+  document.querySelectorAll('.voice-option').forEach(opt => {
+    opt.classList.remove('selected');
+  });
+  event.target.closest('.voice-option').classList.add('selected');
+}
+
+function testVoice(voice, event) {
+  event.stopPropagation();
+  const utterance = new SpeechSynthesisUtterance("Bonjour ! Je suis Eva, votre assistante virtuelle. Comment puis-je vous aider aujourd'hui ?");
+  utterance.lang = 'fr-FR';
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  speechSynthesis.speak(utterance);
+}
+
+async function saveProfile(data) {
+  try {
+    await db.collection('users').doc(currentUser.uid).set(data, { merge: true });
+  } catch (error) {
+    console.error('Error saving profile:', error);
+  }
+}
+
+async function finishOnboarding() {
+  try {
+    await db.collection('users').doc(currentUser.uid).set({
+      onboardingCompleted: true,
+      preferences: {
+        voiceProvider: 'native',
+        selectedVoice: selectedVoice,
+        voiceLang: 'fr-FR',
+        speechRate: 1.0
+      }
+    }, { merge: true });
+    
+    window.location.href = '/chat';
+  } catch (error) {
+    console.error('Error finishing onboarding:', error);
+    alert('Erreur lors de la finalisation');
+  }
+}
+
+function skipOnboarding() {
+  if (confirm('Êtes-vous sûr de vouloir passer cette étape ?')) {
+    window.location.href = '/chat';
+  }
+}
+</script>
+
+</body>
+</html>

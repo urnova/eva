@@ -1,0 +1,310 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                           EVA V3 - SCHÉMA ARCHITECTURE                        ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            🌐 PAGES HTML (4)                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+     index.html          login.html         onboarding.html        chat.html
+         │                   │                     │                    │
+         │                   │                     │                    │
+    Landing page      Authentification    Configuration profil    App principale
+    ┌──────────┐       ┌──────────┐         ┌──────────┐          ┌──────────┐
+    │   Hero   │       │  Google  │         │  Avatar  │          │ Sidebar  │
+    │   CTA    │       │  Email   │         │  Nom     │          │  Chat    │
+    │  Footer  │       │ Password │         │ Surnom   │          │ Modals   │
+    └──────────┘       └──────────┘         └──────────┘          └──────────┘
+         │                   │                     │                    │
+         └──────────────────►└─────────────────────┴────────────────────┘
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           📁 DOSSIER assets/                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    assets/
+       ├── images/
+       │    ├── eva.svg          ← Logo Eva (remplace l'orbe)
+       │    ├── logo.svg         ← Logo Astral Technology
+       │    └── favicon.svg      ← Icône navigateur
+       │
+       ├── styles/
+       │    ├── main.css         ← Variables + Reset + Globaux
+       │    ├── sidebar.css      ← Sidebar Grok-like
+       │    ├── chat.css         ← Zone messages + input
+       │    ├── modals.css       ← Paramètres, rapports, etc.
+       │    └── responsive.css   ← Mobile/Tablet/Desktop
+       │
+       └── sounds/
+            ├── notification.mp3 ← Son notification
+            └── alarm.mp3        ← Son alarme
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            📁 DOSSIER js/                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    js/
+       ├── core/                     🔧 MODULES ESSENTIELS
+       │    ├── firebase-config.js   ← Config Firebase
+       │    ├── auth.js              ← Authentification
+       │    ├── config.js            ← Configuration utilisateur
+       │    └── utils.js             ← Fonctions utilitaires
+       │
+       ├── ai/                       🤖 INTELLIGENCE ARTIFICIELLE
+       │    ├── providers.js         ← Qwen, Puter, OpenAI, Claude
+       │    ├── chat-handler.js      ← Envoi/réception messages
+       │    └── vision.js            ← Analyse d'images
+       │
+       ├── voice/                    🎤 VOIX
+       │    ├── tts.js               ← Text-to-Speech
+       │    ├── stt.js               ← Speech-to-Text
+       │    └── wake-word.js         ← Détection "Hey Eva"
+       │
+       ├── ui/                       🎨 INTERFACE UTILISATEUR
+       │    ├── sidebar.js           ← Gestion sidebar
+       │    ├── chat-ui.js           ← Affichage messages
+       │    ├── modals.js            ← Gestion modals
+       │    └── animations.js        ← Animations logo
+       │
+       ├── features/                 ⚡ FONCTIONNALITÉS
+       │    ├── conversations.js     ← Gestion conversations
+       │    ├── alarms.js            ← Alarmes
+       │    ├── reminders.js         ← Rappels
+       │    ├── calendar.js          ← Agenda
+       │    ├── notes.js             ← Notes
+       │    └── reports.js           ← Rapports bugs
+       │
+       ├── settings/                 ⚙️ PARAMÈTRES
+       │    ├── settings-ui.js       ← Interface paramètres
+       │    ├── profile.js           ← Profil utilisateur
+       │    └── dev-keys.js          ← Clés développeur
+       │
+       └── app.js                    🚀 POINT D'ENTRÉE
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         🔄 FLUX DE CHARGEMENT chat.html                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  1. Chargement HTML
+       │
+       ├── Charge CSS (main, sidebar, chat, modals, responsive)
+       │
+       └── Charge app.js (module principal)
+            │
+            ├── Importe core/* (Firebase, auth, config, utils)
+            │     └─► Vérifie authentification
+            │          └─► Si non connecté → Redirect login.html
+            │
+            ├── Importe ui/* (sidebar, chat-ui, modals, animations)
+            │     └─► Initialise interface
+            │
+            ├── Importe ai/* (providers, chat-handler, vision)
+            │     └─► Configure provider IA par défaut
+            │
+            ├── Importe voice/* (tts, stt, wake-word)
+            │     └─► Configure voix Microsoft Denise
+            │
+            ├── Importe features/* (conversations, alarms, etc.)
+            │     └─► Charge dernière conversation
+            │
+            └── Importe settings/* (settings-ui, profile, dev-keys)
+                  └─► Charge préférences utilisateur
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      📱 RESPONSIVE - 3 BREAKPOINTS                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  🖥️ DESKTOP (>1024px)
+  ┌──────────────────────────────────────┐
+  │ ┌────────┬─────────────────────────┐ │
+  │ │Sidebar │      Chat Zone          │ │
+  │ │260px   │                         │ │
+  │ │        │  ┌───────────────────┐  │ │
+  │ │        │  │   Logo Eva        │  │ │
+  │ │        │  │   (animé)         │  │ │
+  │ │        │  └───────────────────┘  │ │
+  │ │        │                         │ │
+  │ │        │  Messages               │ │
+  │ │        │                         │ │
+  │ │        │  ┌───────────────────┐  │ │
+  │ │        │  │  Input bar        │  │ │
+  │ └────────┴──┴───────────────────┴──┘ │
+  └──────────────────────────────────────┘
+
+
+  📱 TABLET (768-1024px)
+  ┌────────────────────────────────────┐
+  │ ┌──┬─────────────────────────────┐ │
+  │ │S │      Chat Zone              │ │
+  │ │i │                             │ │
+  │ │d │  Logo Eva (réduit)          │ │
+  │ │e │                             │ │
+  │ │b │  Messages                   │ │
+  │ │a │                             │ │
+  │ │r │  Input bar                  │ │
+  │ └──┴─────────────────────────────┘ │
+  └────────────────────────────────────┘
+    60px collapsed / 260px expanded
+
+
+  📱 MOBILE (<768px)
+  ┌────────────────────────────┐
+  │ ☰ Eva          [User] 🔔   │ ← Header sticky
+  ├────────────────────────────┤
+  │                            │
+  │     Logo Eva (petit)       │
+  │                            │
+  │      Messages              │
+  │                            │
+  │                            │
+  ├────────────────────────────┤
+  │      Input bar             │ ← Sticky bottom
+  └────────────────────────────┘
+
+  Sidebar en overlay (slide gauche)
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          🎨 SIDEBAR STRUCTURE                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────┐
+  │  🔍 Rechercher      │ ← Input search
+  ├─────────────────────┤
+  │  💬 Chat            │ ← Active par défaut
+  │  🎤 Voix            │
+  │  🖼️  Imagine        │
+  ├─────────────────────┤
+  │  📅 Agenda          │
+  │  📌 Rappels         │
+  │  ⏰ Alarmes         │
+  │  📝 Notes           │
+  ├─────────────────────┤
+  │  💬 Conversations   │
+  │  ➕ Nouvelle conv   │
+  │  • Chat 1           │
+  │  • Chat 2           │
+  │  • Chat 3           │
+  ├─────────────────────┤
+  │       (espace)      │
+  ├─────────────────────┤
+  │  👤 Jean Dupont     │ ← Profil en bas
+  │  👑 Créateur        │ ← Badge si dev key
+  └─────────────────────┘
+         │ Clic
+         ▼
+    ┌──────────────┐
+    │ ⚙️ Paramètres │
+    │ ❓ Aide       │
+    │ 🚪 Déconnexion│
+    └──────────────┘
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ⚙️ MODAL PARAMÈTRES (Style Grok)                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Fullscreen Modal
+  ┌──────────────────────────────────────────────────────────┐
+  │  Paramètres                                         [X]  │
+  ├──────────────────┬───────────────────────────────────────┤
+  │  Sections:       │                                       │
+  │                  │  👤 COMPTE                            │
+  │  👤 Compte       │  ┌─────────────────────────────────┐  │
+  │  🎨 Apparence    │  │ Photo de profil                 │  │
+  │  🤖 IA           │  │ [Avatar]  [Modifier]            │  │
+  │  🎤 Voix         │  │                                 │  │
+  │  🔑 Dev Keys     │  │ Nom: Jean Dupont                │  │
+  │  🔔 Notifications│  │ Surnom: Jean                    │  │
+  │  📊 Données      │  │ Email: jean@example.com         │  │
+  │  ❓ Aide         │  │                                 │  │
+  │                  │  └─────────────────────────────────┘  │
+  │                  │                                       │
+  └──────────────────┴───────────────────────────────────────┘
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       🔐 FIRESTORE STRUCTURE                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  /users/{uid}/
+    ├── displayName, email, photoURL
+    ├── nickname (surnom)
+    ├── role (user, creator, developer, etc.)
+    ├── preferences/
+    │    ├── aiProvider, qwenModel, visionModel
+    │    ├── voiceProvider, voiceLang, selectedVoice
+    │    ├── speechRate, speechPitch
+    │    └── wakeWord, wakeAutoStart
+    │
+    ├── conversations/{convId}/
+    │    ├── title, tone, createdAt
+    │    └── messages: [{role, content, timestamp}]
+    │
+    ├── alarms/{alarmId}/
+    │    └── time, label, days, enabled
+    │
+    ├── reminders/{reminderId}/
+    │    └── text, datetime, completed
+    │
+    ├── events/{eventId}/
+    │    └── title, startTime, endTime
+    │
+    └── notes/{noteId}/
+         └── title, content, tags
+
+  /dev_keys_valid/{keyId}/
+    └── role, label, active
+
+  /reports/{reportId}/
+    └── type, title, message, userId
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         🎯 ORDRE DE DÉVELOPPEMENT                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  PHASE 1: Structure & Auth (1-2h)
+    ✅ Créer structure dossiers
+    ✅ main.css, firebase-config.js, auth.js
+    ✅ index.html, login.html, onboarding.html
+
+  PHASE 2: Interface principale (2-3h)
+    ✅ sidebar.css, chat.css, modals.css, responsive.css
+    ✅ sidebar.js, chat-ui.js, modals.js, animations.js
+    ✅ chat.html (structure + chargement modules)
+
+  PHASE 3: IA & Voix (2h)
+    ✅ providers.js, chat-handler.js
+    ✅ tts.js, stt.js
+
+  PHASE 4: Features core (2h)
+    ✅ conversations.js, settings-ui.js, profile.js
+
+  PHASE 5: Features avancées (3-4h)
+    ✅ alarms.js, reminders.js, calendar.js, notes.js
+    ✅ reports.js, dev-keys.js
+
+  PHASE 6: Tests & Polish (1-2h)
+    ✅ Tests mobile
+    ✅ Tests responsive
+    ✅ Corrections bugs
+    ✅ Documentation
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                            🚀 C'EST PARTI !
+═══════════════════════════════════════════════════════════════════════════════

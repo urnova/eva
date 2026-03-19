@@ -1,0 +1,444 @@
+/* ═══════════════════════════════════════════════════════════
+   EVA V3 - RESPONSIVE.CSS
+   Media queries pour Mobile, Tablet, Desktop
+   ═══════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE (<768px)
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  
+  /* ═══ LAYOUT ═══ */
+  .chat-container {
+    margin-left: 0;
+  }
+  
+  /* ═══ HEADER CHAT ═══ */
+  .hamburger-btn {
+    display: flex;
+  }
+  
+  .chat-title {
+    font-size: 0.9rem;
+  }
+  
+  .report-btn span {
+    display: none; /* Icône seule */
+  }
+  
+  .status-indicator span {
+    display: none; /* Dot seul */
+  }
+  
+  /* ═══ LOGO EVA ═══ */
+  .eva-logo-container {
+    padding: var(--spacing-lg) 0;
+  }
+  
+  .eva-logo {
+    width: 80px;
+    height: 80px;
+  }
+  
+  /* ═══ MESSAGES ═══ */
+  .messages-wrapper {
+    padding: 0 var(--spacing-md) var(--spacing-md);
+  }
+  
+  .message-content {
+    max-width: 85%;
+  }
+  
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+  
+  .message-bubble {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.9rem;
+  }
+  
+  /* ═══ INPUT BAR ═══ */
+  .chat-input-container {
+    padding: var(--spacing-md);
+    padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom));
+  }
+  
+  .tone-selector {
+    gap: var(--spacing-xs);
+  }
+  
+  .tone-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.7rem;
+  }
+  
+  .input-bar {
+    padding: var(--spacing-xs);
+  }
+  
+  .input-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+  }
+  
+  .send-btn {
+    width: 42px;
+    height: 42px;
+  }
+  
+  .input-textarea {
+    font-size: 0.9rem;
+  }
+  
+  /* ═══ MODALS ═══ */
+  .modal {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+  
+  .modal.fullscreen .modal-body {
+    grid-template-columns: 1fr;
+  }
+  
+  .settings-sidebar {
+    display: none; /* Remplacé par des tabs */
+  }
+  
+  .settings-content {
+    padding: var(--spacing-lg);
+  }
+  
+  /* Tabs pour paramètres mobile */
+  .settings-tabs {
+    display: flex;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+    padding: 0 var(--spacing-md);
+    gap: var(--spacing-sm);
+  }
+  
+  .settings-tab {
+    padding: var(--spacing-md);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  .settings-tab.active {
+    color: var(--cyan);
+    border-bottom-color: var(--cyan);
+    font-weight: 700;
+  }
+  
+  .modal-header {
+    padding: var(--spacing-md);
+  }
+  
+  .modal-title {
+    font-size: 1.1rem;
+  }
+  
+  .modal-body {
+    padding: var(--spacing-md);
+  }
+  
+  .modal-footer {
+    padding: var(--spacing-md);
+    flex-direction: column-reverse;
+  }
+  
+  .modal-footer button {
+    width: 100%;
+  }
+  
+  /* ═══ REPORT FORM ═══ */
+  .report-type-selector {
+    grid-template-columns: 1fr;
+  }
+  
+  .report-type-btn {
+    padding: var(--spacing-lg);
+  }
+  
+  .report-type-icon {
+    font-size: 2rem;
+  }
+  
+  /* ═══ SCROLL TO BOTTOM ═══ */
+  .scroll-to-bottom {
+    bottom: 140px;
+    right: var(--spacing-md);
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+  
+  /* ═══ TOAST ═══ */
+  .toast {
+    bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom));
+    right: var(--spacing-md);
+    left: var(--spacing-md);
+    max-width: none;
+  }
+  
+  /* ═══ SAFE AREA (IPHONE NOTCH) ═══ */
+  .chat-header {
+    padding-top: calc(var(--spacing-md) + env(safe-area-inset-top));
+  }
+  
+  /* ═══ AMÉLIORATION TACTILE ═══ */
+  button {
+    min-height: 44px; /* Taille tactile recommandée iOS */
+    min-width: 44px;
+  }
+  
+  .nav-item,
+  .conversation-item,
+  .dropdown-item {
+    min-height: 44px;
+  }
+  
+  /* ═══ HIDE ON MOBILE ═══ */
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TABLET (769px - 1024px)
+   ═══════════════════════════════════════════════════════════ */
+@media (min-width: 769px) and (max-width: 1024px) {
+  
+  /* ═══ SIDEBAR COLLAPSED ═══ */
+  .sidebar.collapsed {
+    width: 60px;
+  }
+  
+  .chat-container.sidebar-collapsed {
+    margin-left: 60px;
+  }
+  
+  .sidebar.collapsed .sidebar-title,
+  .sidebar.collapsed .sidebar-search,
+  .sidebar.collapsed .nav-item-text,
+  .sidebar.collapsed .nav-section-title,
+  .sidebar.collapsed .user-name,
+  .sidebar.collapsed .user-badge,
+  .sidebar.collapsed .user-dropdown-icon,
+  .sidebar.collapsed .new-conversation-btn span {
+    display: none;
+  }
+  
+  .sidebar.collapsed .nav-item,
+  .sidebar.collapsed .conversation-item {
+    justify-content: center;
+    padding: var(--spacing-md);
+  }
+  
+  .sidebar.collapsed .nav-item-icon {
+    margin: 0;
+  }
+  
+  .sidebar.collapsed .user-profile {
+    justify-content: center;
+    padding: var(--spacing-sm);
+  }
+  
+  .sidebar.collapsed .user-avatar {
+    margin: 0;
+  }
+  
+  /* ═══ TOGGLE SIDEBAR BUTTON ═══ */
+  .sidebar-toggle {
+    position: fixed;
+    top: 50%;
+    left: 60px;
+    transform: translateY(-50%) translateX(-50%);
+    width: 32px;
+    height: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cyan);
+    cursor: pointer;
+    z-index: calc(var(--z-sidebar) + 1);
+    transition: all var(--transition-base);
+  }
+  
+  .sidebar-toggle:hover {
+    background: var(--cyan);
+    color: var(--navy);
+    box-shadow: 0 0 15px var(--cyan-glow);
+  }
+  
+  .sidebar.collapsed + .sidebar-toggle {
+    left: 260px;
+  }
+  
+  /* ═══ MESSAGES ═══ */
+  .messages-wrapper {
+    max-width: 800px;
+  }
+  
+  .eva-logo {
+    width: 100px;
+    height: 100px;
+  }
+  
+  /* ═══ MODALS ═══ */
+  .modal {
+    max-width: 700px;
+  }
+  
+  .modal.fullscreen .modal-body {
+    grid-template-columns: 200px 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DESKTOP LARGE (>1400px)
+   ═══════════════════════════════════════════════════════════ */
+@media (min-width: 1400px) {
+  
+  .messages-wrapper {
+    max-width: 1000px;
+  }
+  
+  .eva-logo {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .modal {
+    max-width: 800px;
+  }
+  
+  .modal.fullscreen .modal-body {
+    grid-template-columns: 280px 1fr;
+  }
+  
+  .settings-content {
+    padding: var(--spacing-2xl) 60px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LANDSCAPE MOBILE (hauteur < 500px)
+   ═══════════════════════════════════════════════════════════ */
+@media (max-height: 500px) and (orientation: landscape) {
+  
+  .eva-logo-container {
+    display: none;
+  }
+  
+  .chat-header {
+    min-height: 50px;
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+  
+  .chat-input-container {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+  
+  .tone-selector {
+    display: none;
+  }
+  
+  .input-bar {
+    padding: var(--spacing-xs);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PRINT (pour impressions)
+   ═══════════════════════════════════════════════════════════ */
+@media print {
+  
+  .sidebar,
+  .chat-header,
+  .chat-input-container,
+  .scroll-to-bottom,
+  .modal-overlay {
+    display: none !important;
+  }
+  
+  .chat-container {
+    margin-left: 0;
+  }
+  
+  .messages-wrapper {
+    max-width: none;
+    padding: 0;
+  }
+  
+  .message {
+    page-break-inside: avoid;
+  }
+  
+  body::before {
+    display: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UTILITAIRES RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
+
+/* Afficher uniquement sur mobile */
+.show-mobile {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .show-mobile {
+    display: block !important;
+  }
+  
+  .show-mobile.flex {
+    display: flex !important;
+  }
+}
+
+/* Afficher uniquement sur desktop */
+.show-desktop {
+  display: none !important;
+}
+
+@media (min-width: 769px) {
+  .show-desktop {
+    display: block !important;
+  }
+  
+  .show-desktop.flex {
+    display: flex !important;
+  }
+}
+
+/* Cacher sur mobile */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* Cacher sur desktop */
+@media (min-width: 769px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}

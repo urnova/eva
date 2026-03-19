@@ -1,0 +1,296 @@
+📁 EVA V3 - STRUCTURE DU PROJET
+═══════════════════════════════════════════════════════════
+
+📦 RACINE DU PROJET
+├── 📄 index.html                    # Landing page (page d'accueil)
+├── 📄 login.html                    # Authentification (Google + Email/Password)
+├── 📄 onboarding.html               # Configuration profil après 1ère connexion
+├── 📄 chat.html                     # App principale (charge les modules)
+├── 📄 _redirects                    # Routing Netlify
+├── 📄 netlify.toml                  # Config Netlify
+├── 📄 README.md                     # Documentation déploiement
+│
+├── 📁 assets/                       # Ressources statiques
+│   ├── 📁 images/
+│   │   ├── eva.svg                  # Logo Eva (animé)
+│   │   ├── logo.svg                 # Logo Astral Technology
+│   │   └── favicon.svg              # Icône navigateur
+│   │
+│   ├── 📁 styles/
+│   │   ├── main.css                 # Styles globaux (variables, reset)
+│   │   ├── sidebar.css              # Styles sidebar Grok-like
+│   │   ├── chat.css                 # Zone messages et input
+│   │   ├── modals.css               # Modals (paramètres, rapports, etc.)
+│   │   └── responsive.css           # Media queries mobile/tablet
+│   │
+│   └── 📁 sounds/
+│       ├── notification.mp3         # Son notification
+│       └── alarm.mp3                # Son alarme par défaut
+│
+├── 📁 js/                           # Scripts JavaScript modulaires
+│   ├── 📁 core/
+│   │   ├── firebase-config.js       # Config Firebase + init
+│   │   ├── auth.js                  # Gestion authentification
+│   │   ├── config.js                # Configuration utilisateur (DEFAULT_CFG)
+│   │   └── utils.js                 # Fonctions utilitaires (toast, formatDate, etc.)
+│   │
+│   ├── 📁 ai/
+│   │   ├── providers.js             # Gestion providers IA (Qwen, Puter, OpenAI, etc.)
+│   │   ├── chat-handler.js          # Envoi messages + réception réponses
+│   │   └── vision.js                # Analyse d'images (Moondream, GPT-4o)
+│   │
+│   ├── 📁 voice/
+│   │   ├── tts.js                   # Text-to-Speech (Microsoft Denise, Puter, etc.)
+│   │   ├── stt.js                   # Speech-to-Text (Web Speech API)
+│   │   └── wake-word.js             # Détection "Hey Eva"
+│   │
+│   ├── 📁 ui/
+│   │   ├── sidebar.js               # Gestion sidebar (toggle, navigation)
+│   │   ├── chat-ui.js               # Affichage messages, scroll auto
+│   │   ├── modals.js                # Ouverture/fermeture modals
+│   │   └── animations.js            # Animations logo Eva
+│   │
+│   ├── 📁 features/
+│   │   ├── conversations.js         # Gestion conversations Firestore
+│   │   ├── alarms.js                # Système alarmes
+│   │   ├── reminders.js             # Système rappels
+│   │   ├── calendar.js              # Agenda/événements
+│   │   ├── notes.js                 # Prises de notes
+│   │   └── reports.js               # Système de rapports bugs/feedback
+│   │
+│   ├── 📁 settings/
+│   │   ├── settings-ui.js           # Interface paramètres (modal Grok-like)
+│   │   ├── profile.js               # Gestion profil utilisateur
+│   │   └── dev-keys.js              # Activation clés développeur
+│   │
+│   └── app.js                       # Point d'entrée principal (init app)
+│
+└── 📁 docs/                         # Documentation technique
+    ├── DEPLOIEMENT.md               # Guide déploiement Netlify
+    ├── FIREBASE_SETUP.md            # Configuration Firebase
+    ├── DEV_KEYS_GUIDE.md            # Guide clés développeur
+    └── TROUBLESHOOTING.md           # Résolution problèmes courants
+
+
+═══════════════════════════════════════════════════════════
+🔥 FICHIERS PRINCIPAUX (HTML)
+═══════════════════════════════════════════════════════════
+
+📄 index.html
+  → Landing page moderne
+  → Header avec logo + CTA "Se connecter"
+  → Section hero avec présentation Eva
+  → Footer avec infos Astral Technology
+
+📄 login.html
+  → Authentification Google + Email/Password
+  → "Rester connecté" (persistence)
+  → Redirect vers onboarding.html si nouveau compte
+  → Redirect vers chat.html si compte existant
+
+📄 onboarding.html
+  → Configuration profil (nom, surnom, avatar)
+  → Choix préférences initiales (voix, langue)
+  → Redirect vers chat.html après configuration
+
+📄 chat.html
+  → Structure HTML minimale
+  → Charge TOUS les modules JS (via <script type="module">)
+  → Sidebar + Zone chat + Modals
+  → 100% responsive mobile
+
+
+═══════════════════════════════════════════════════════════
+🎨 STYLES CSS (MODULAIRES)
+═══════════════════════════════════════════════════════════
+
+📄 main.css
+  → Variables CSS (couleurs, espacements)
+  → Reset CSS
+  → Typographie (fonts Orbitron + Space Mono)
+  → Styles globaux (body, animations de base)
+
+📄 sidebar.css
+  → Sidebar Grok-like
+  → Sections (Chat, Voix, Imagine, Agenda, etc.)
+  → Liste conversations
+  → Profil utilisateur en bas
+
+📄 chat.css
+  → Zone messages (bulles user/assistant)
+  → Input bar (textarea + boutons)
+  → Logo Eva animé en haut
+
+📄 modals.css
+  → Modal paramètres (fullscreen, sections à gauche)
+  → Modal rapports (formulaire)
+  → Modal alarmes/rappels/notes/agenda
+
+📄 responsive.css
+  → Mobile (<768px) : Sidebar overlay + hamburger
+  → Tablet (768-1024px) : Sidebar rétractable
+  → Desktop (>1024px) : Sidebar fixe
+
+
+═══════════════════════════════════════════════════════════
+⚙️ SCRIPTS JAVASCRIPT (MODULAIRES)
+═══════════════════════════════════════════════════════════
+
+📁 core/
+  → Fonctions essentielles (Firebase, auth, config, utils)
+  → Chargés en PREMIER
+
+📁 ai/
+  → Gestion providers IA
+  → Envoi/réception messages
+  → Vision (analyse images)
+
+📁 voice/
+  → TTS (Text-to-Speech)
+  → STT (Speech-to-Text)
+  → Wake word detection
+
+📁 ui/
+  → Gestion interface (sidebar, chat, modals, animations)
+
+📁 features/
+  → Fonctionnalités métier (conversations, alarmes, rappels, etc.)
+
+📁 settings/
+  → Interface paramètres
+  → Gestion profil
+  → Activation dev keys
+
+📄 app.js
+  → Point d'entrée (init app)
+  → Charge les modules dans le bon ordre
+  → Gestion état global
+
+
+═══════════════════════════════════════════════════════════
+🔄 FLUX D'AUTHENTIFICATION
+═══════════════════════════════════════════════════════════
+
+1. index.html (landing)
+   └─> Clic "Se connecter"
+       └─> login.html
+
+2. login.html
+   └─> Connexion réussie
+       ├─> Nouveau compte
+       │   └─> onboarding.html
+       │       └─> Configuration profil
+       │           └─> chat.html
+       │
+       └─> Compte existant
+           └─> chat.html (direct)
+
+
+═══════════════════════════════════════════════════════════
+📱 RESPONSIVE MOBILE
+═══════════════════════════════════════════════════════════
+
+Mobile (<768px)
+  ├─ Sidebar en overlay (slide depuis la gauche)
+  ├─ Hamburger menu en haut à gauche
+  ├─ Logo Eva centré (taille réduite)
+  ├─ Input bar sticky en bas (safe-area pour notch)
+  └─ Boutons plus gros (44px minimum)
+
+Tablet (768-1024px)
+  ├─ Sidebar rétractable (60px collapsed)
+  ├─ Logo Eva visible
+  └─ Boutons normaux (38px)
+
+Desktop (>1024px)
+  ├─ Sidebar fixe 260px
+  ├─ Logo Eva pleine taille
+  └─ Boutons normaux (36px)
+
+
+═══════════════════════════════════════════════════════════
+🎯 AVANTAGES DE CETTE STRUCTURE
+═══════════════════════════════════════════════════════════
+
+✅ Maintenabilité
+   → Chaque fichier a UNE responsabilité
+   → Facile de trouver et modifier du code
+
+✅ Performance
+   → Chargement modulaire (import uniquement ce qui est nécessaire)
+   → Mise en cache optimisée (fichiers statiques séparés)
+
+✅ Collaboration
+   → Plusieurs devs peuvent travailler en parallèle
+   → Moins de conflits Git
+
+✅ Debugging
+   → Plus facile d'isoler les bugs
+   → Console indique le fichier exact de l'erreur
+
+✅ Scalabilité
+   → Facile d'ajouter de nouvelles fonctionnalités
+   → Juste créer un nouveau fichier dans le bon dossier
+
+
+═══════════════════════════════════════════════════════════
+📦 ORDRE DE CRÉATION DES FICHIERS
+═══════════════════════════════════════════════════════════
+
+PRIORITÉ 1 (Structure de base)
+  1. main.css
+  2. firebase-config.js
+  3. auth.js
+  4. utils.js
+  5. index.html
+  6. login.html
+  7. onboarding.html
+
+PRIORITÉ 2 (Interface principale)
+  8. sidebar.css
+  9. chat.css
+  10. modals.css
+  11. responsive.css
+  12. sidebar.js
+  13. chat-ui.js
+  14. modals.js
+  15. animations.js
+  16. chat.html
+
+PRIORITÉ 3 (Fonctionnalités IA)
+  17. config.js
+  18. providers.js
+  19. chat-handler.js
+  20. tts.js
+  21. stt.js
+
+PRIORITÉ 4 (Features)
+  22. conversations.js
+  23. settings-ui.js
+  24. profile.js
+  25. dev-keys.js
+  26. reports.js
+
+PRIORITÉ 5 (Features avancées)
+  27. alarms.js
+  28. reminders.js
+  29. calendar.js
+  30. notes.js
+  31. vision.js
+  32. wake-word.js
+
+PRIORITÉ 6 (Finitions)
+  33. app.js (point d'entrée)
+  34. Documentation (README, guides)
+
+
+═══════════════════════════════════════════════════════════
+🚀 POUR COMMENCER
+═══════════════════════════════════════════════════════════
+
+1. Crée la structure de dossiers dans ton projet
+2. Je vais générer les fichiers un par un dans le bon ordre
+3. Tu les copies dans ton projet au fur et à mesure
+4. On teste chaque module avant de passer au suivant
+
+Prêt à commencer ? 💪

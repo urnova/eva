@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E.V.A — Evolutionary Virtual Assistant</title>
+<link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<style>
+:root {
+  --cyan: #00d4ff;
+  --cyan-dim: rgba(0,212,255,0.12);
+  --cyan-glow: rgba(0,212,255,0.5);
+  --navy: #05080d;
+  --surface: #0c1220;
+  --text: #dce8f5;
+  --muted: #4a6080;
+  --orange: #ff9500;
+  --green: #00ff88;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Space Mono', monospace;
+  background: var(--navy);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Grid animé */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  animation: gridFloat 20s ease-in-out infinite;
+  z-index: 0;
+}
+
+@keyframes gridFloat {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-10px, -10px); }
+}
+
+/* Header */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(12, 18, 32, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0,212,255,0.2);
+  padding: 15px 30px;
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.header-logo img {
+  height: 35px;
+  filter: drop-shadow(0 0 8px var(--cyan-glow));
+}
+
+.header-logo-text {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.5em;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: var(--cyan);
+  text-shadow: 0 0 20px var(--cyan-glow);
+}
+
+.header-cta {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.header-btn {
+  padding: 10px 25px;
+  font-size: 0.9em;
+  font-weight: 700;
+  font-family: 'Space Mono', monospace;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: inline-block;
+  white-space: nowrap;
+  border: none;
+}
+
+.header-btn-primary {
+  background: linear-gradient(135deg, var(--cyan) 0%, #00b8e6 100%);
+  color: #000;
+}
+
+.header-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,212,255,0.4);
+}
+
+.header-btn-secondary {
+  background: transparent;
+  color: var(--cyan);
+  border: 2px solid var(--cyan);
+}
+
+.header-btn-secondary:hover {
+  background: rgba(0,212,255,0.1);
+}
+
+/* User profile header */
+.user-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.user-profile-header:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 0 15px rgba(0,212,255,0.3);
+}
+
+.user-avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--cyan), var(--green));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #000;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.user-badge {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: 12px;
+  padding: 10px;
+  min-width: 200px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px);
+  transition: all 0.3s;
+}
+
+.user-profile-header.open .user-dropdown {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background: var(--cyan-dim);
+  color: var(--cyan);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: rgba(0,212,255,0.2);
+  margin: 8px 0;
+}
+
+/* Main */
+main {
+  position: relative;
+  z-index: 1;
+  padding-top: 80px;
+}
+
+.landing {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+}
+
+/* Beta badge */
+.beta-badge {
+  background: var(--orange);
+  color: #000;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 0.75em;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 30px;
+  display: inline-block;
+  animation: fadeInUp 1s ease 0.2s forwards;
+  opacity: 0;
+}
+
+/* Logo */
+.logo-container {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.eva-title-img {
+  height: clamp(100px, 15vw, 150px);
+  width: auto;
+  margin-bottom: 20px;
+  opacity: 0;
+  filter: drop-shadow(0 0 30px rgba(0,212,255,0.8));
+  animation: imgGlow 3s ease-in-out infinite, fadeInUp 1s ease 0.4s forwards;
+}
+
+@keyframes imgGlow {
+  0%, 100% { filter: drop-shadow(0 0 30px rgba(0,212,255,0.8)); }
+  50% { filter: drop-shadow(0 0 50px rgba(0,212,255,1)); }
+}
+
+.eva-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(3em, 10vw, 6em);
+  font-weight: 900;
+  letter-spacing: 20px;
+  color: var(--cyan);
+  text-shadow: 0 0 40px var(--cyan-glow);
+  margin-bottom: 15px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 0.5s forwards;
+}
+
+.eva-subtitle {
+  font-size: clamp(0.9em, 2.5vw, 1.2em);
+  letter-spacing: 6px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 30px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 0.6s forwards;
+}
+
+.description {
+  max-width: 800px;
+  margin: 0 auto 40px;
+  line-height: 1.9;
+  color: var(--text);
+  text-align: center;
+  font-size: clamp(0.95em, 2vw, 1.1em);
+  opacity: 0;
+  animation: fadeInUp 1s ease 0.7s forwards;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Beta warning */
+.beta-warning {
+  max-width: 700px;
+  margin: 0 auto 60px;
+  padding: 25px 30px;
+  background: rgba(255, 149, 0, 0.1);
+  border: 1px solid rgba(255, 149, 0, 0.3);
+  border-radius: 12px;
+  font-size: 0.9em;
+  line-height: 1.8;
+  color: #ffb84d;
+  opacity: 0;
+  animation: fadeInUp 1s ease 0.8s forwards;
+}
+
+.beta-warning strong {
+  color: var(--orange);
+  font-weight: 700;
+}
+
+/* CTA Buttons */
+.cta-container {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 100px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 0.9s forwards;
+}
+
+.cta-btn {
+  padding: 18px 40px;
+  font-size: 1.1em;
+  font-weight: 700;
+  font-family: 'Space Mono', monospace;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: inline-block;
+  border: none;
+}
+
+.cta-btn-primary {
+  background: linear-gradient(135deg, var(--cyan) 0%, #00b8e6 100%);
+  color: #000;
+  box-shadow: 0 5px 25px rgba(0,212,255,0.3);
+}
+
+.cta-btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 35px rgba(0,212,255,0.5);
+}
+
+.cta-btn-secondary {
+  background: transparent;
+  color: var(--cyan);
+  border: 2px solid var(--cyan);
+}
+
+.cta-btn-secondary:hover {
+  background: var(--cyan-dim);
+}
+
+/* Features */
+.features-section {
+  max-width: 1200px;
+  margin: 0 auto 100px;
+  padding: 0 20px;
+}
+
+.section-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(2em, 5vw, 3em);
+  color: var(--cyan);
+  text-align: center;
+  margin-bottom: 20px;
+  letter-spacing: 8px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 1s forwards;
+}
+
+.section-subtitle {
+  text-align: center;
+  color: var(--muted);
+  font-size: clamp(0.9em, 2vw, 1.1em);
+  max-width: 600px;
+  margin: 0 auto 60px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 1.1s forwards;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+}
+
+.feature {
+  background: rgba(12, 18, 32, 0.6);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 15px;
+  padding: 35px 30px;
+  text-align: center;
+  transition: all 0.4s;
+  opacity: 0;
+  animation: fadeInUp 1s ease forwards;
+}
+
+.feature:nth-child(1) { animation-delay: 1.2s; }
+.feature:nth-child(2) { animation-delay: 1.3s; }
+.feature:nth-child(3) { animation-delay: 1.4s; }
+.feature:nth-child(4) { animation-delay: 1.5s; }
+.feature:nth-child(5) { animation-delay: 1.6s; }
+.feature:nth-child(6) { animation-delay: 1.7s; }
+
+.feature:hover {
+  transform: translateY(-8px);
+  border-color: var(--cyan);
+  box-shadow: 0 15px 40px rgba(0,212,255,0.3);
+  background: rgba(12, 18, 32, 0.9);
+}
+
+.feature-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 25px;
+}
+
+.feature-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: var(--cyan);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.feature-title {
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  color: var(--cyan);
+  margin-bottom: 15px;
+  font-size: 1.2em;
+  letter-spacing: 2px;
+}
+
+.feature-description {
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 0.95em;
+}
+
+/* Footer */
+footer {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 60px 30px 40px;
+  border-top: 1px solid rgba(0,212,255,0.2);
+  background: rgba(12, 18, 32, 0.5);
+}
+
+.footer-logo {
+  height: 40px;
+  margin-bottom: 20px;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 10px rgba(0,212,255,0.5));
+}
+
+.footer-text {
+  color: var(--muted);
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
+
+.footer-version {
+  color: var(--orange);
+  font-size: 0.8em;
+  letter-spacing: 1px;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 25px;
+  flex-wrap: wrap;
+}
+
+.footer-link {
+  color: var(--cyan);
+  text-decoration: none;
+  font-size: 0.85em;
+  transition: all 0.3s;
+}
+
+.footer-link:hover {
+  color: var(--green);
+  text-shadow: 0 0 10px var(--green);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header-logo-text {
+    font-size: 1.2em;
+    letter-spacing: 3px;
+  }
+  
+  .user-info {
+    display: none;
+  }
+  
+  .eva-title {
+    letter-spacing: 10px;
+  }
+  
+  .features {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-content">
+    <a href="/" class="header-logo">
+      <img src="assets/images/eva.svg" alt="E.V.A">
+      <span class="header-logo-text">E.V.A</span>
+    </a>
+    <div class="header-cta" id="headerCTA">
+      <a href="/login.html" class="header-btn header-btn-secondary">Connexion</a>
+      <a href="/login.html" class="header-btn header-btn-primary">Commencer</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="landing">
+    <span class="beta-badge">Web Bêta Preview</span>
+    
+    <div class="logo-container">
+      <img src="assets/images/eva.svg" alt="E.V.A" class="eva-title-img">
+      <h1 class="eva-title">E.V.A</h1>
+      <p class="eva-subtitle">Evolutionary Virtual Assistant</p>
+    </div>
+
+    <p class="description">
+      Votre assistant intelligent vocal et visuel, propulsé par l'intelligence artificielle.<br>
+      Discutez naturellement, créez du contenu, organisez votre vie — Eva est là 24/7.
+    </p>
+
+    <div class="beta-warning">
+      <strong>⚠️ Version Bêta :</strong> Cette version est en développement actif. 
+      Certaines fonctionnalités peuvent être instables. Vos retours sont précieux !
+    </div>
+
+    <div class="cta-container" id="ctaContainer">
+      <a href="/chat.html" class="cta-btn cta-btn-primary">Accéder à Eva</a>
+      <a href="/login.html" class="cta-btn cta-btn-secondary">Se connecter</a>
+    </div>
+  </section>
+
+  <section class="features-section">
+    <h2 class="section-title">Fonctionnalités</h2>
+    <p class="section-subtitle">
+      Un écosystème complet pour toutes vos tâches quotidiennes
+    </p>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <h3 class="feature-title">Chat Intelligent</h3>
+        <p class="feature-description">
+          Conversations naturelles avec 6 providers IA : Qwen, Puter, OpenAI, Claude, LM Studio et Ollama.
+        </p>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </div>
+        <h3 class="feature-title">Voix & Audio</h3>
+        <p class="feature-description">
+          Synthèse vocale naturelle (TTS) et reconnaissance vocale (STT) en temps réel pour une interaction fluide.
+        </p>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
+        <h3 class="feature-title">Vision IA</h3>
+        <p class="feature-description">
+          Analysez vos images avec GPT-4o pour obtenir des descriptions détaillées et des insights visuels.
+        </p>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <h3 class="feature-title">Alarmes & Rappels</h3>
+        <p class="feature-description">
+          Programmez des alarmes récurrentes et recevez des rappels intelligents avec notifications navigateur.
+        </p>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <h3 class="feature-title">Agenda Intégré</h3>
+        <p class="feature-description">
+          Gérez vos événements, rendez-vous et tâches avec un agenda intelligent synchronisé dans le cloud.
+        </p>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+        <h3 class="feature-title">Notes & Tags</h3>
+        <p class="feature-description">
+          Prenez des notes, organisez-les avec des tags personnalisés et retrouvez tout instantanément.
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <img src="assets/images/logo.svg" alt="Astral Technology" class="footer-logo">
+  <p class="footer-text">© 2026 Astral Technology — Tous droits réservés</p>
+  <p class="footer-version">E.V.A Version Web Bêta Preview</p>
+  <div class="footer-links">
+    <a href="/docs/DEPLOIEMENT.md" class="footer-link">Documentation</a>
+    <a href="/docs/TROUBLESHOOTING.md" class="footer-link">Support</a>
+    <a href="#" class="footer-link">Confidentialité</a>
+    <a href="#" class="footer-link">Conditions</a>
+  </div>
+</footer>
+
+<script src="js/core/firebase-config.js"></script>
+<script>
+// Check auth state
+auth.onAuthStateChanged(async (user) => {
+  const headerCTA = document.getElementById('headerCTA');
+  const ctaContainer = document.getElementById('ctaContainer');
+  
+  if (user) {
+    // Load profile
+    const doc = await db.collection('users').doc(user.uid).get();
+    const userData = doc.exists ? doc.data() : {};
+    
+    const displayName = userData.displayName || 'Utilisateur';
+    const role = userData.role || 'user';
+    const photoURL = userData.photoURL;
+    
+    const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    
+    const badges = {
+      creator: '👑 Créateur',
+      developer: '⚙️ Développeur',
+      creator_wife: '💎 Épouse',
+      user: '👤 Utilisateur'
+    };
+    
+    const badge = badges[role] || badges.user;
+    
+    headerCTA.innerHTML = `
+      <div class="user-profile-header" id="userProfileHeader">
+        <div class="user-avatar">
+          ${photoURL ? `<img src="${photoURL}" alt="Avatar">` : initials}
+        </div>
+        <div class="user-info">
+          <div class="user-name">${displayName}</div>
+          <div class="user-badge">${badge}</div>
+        </div>
+        <span style="color: var(--muted);">▼</span>
+        
+        <div class="user-dropdown">
+          <a href="/chat.html" class="dropdown-item">
+            💬 Accéder à Eva
+          </a>
+          <div class="dropdown-divider"></div>
+          <a href="/chat.html#settings" class="dropdown-item">
+            ⚙️ Paramètres
+          </a>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" onclick="signOut()">
+            🚪 Déconnexion
+          </button>
+        </div>
+      </div>
+    `;
+    
+    // Toggle dropdown
+    document.getElementById('userProfileHeader').addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.currentTarget.classList.toggle('open');
+    });
+    
+    document.addEventListener('click', () => {
+      document.getElementById('userProfileHeader')?.classList.remove('open');
+    });
+    
+    // Update CTA
+    ctaContainer.innerHTML = `
+      <a href="/chat.html" class="cta-btn cta-btn-primary">Accéder à Eva</a>
+    `;
+  }
+});
+
+async function signOut() {
+  await auth.signOut();
+  window.location.reload();
+}
+</script>
+
+</body>
+</html>

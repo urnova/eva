@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connexion — E.V.A</title>
+<link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="assets/styles/main.css">
+<style>
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  position: relative;
+  z-index: 1;
+}
+
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-2xl);
+  max-width: 450px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: var(--spacing-2xl);
+}
+
+.login-logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto var(--spacing-lg);
+  filter: drop-shadow(0 0 20px var(--cyan-glow));
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.login-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: var(--cyan);
+  text-shadow: 0 0 20px var(--cyan-glow);
+  margin-bottom: var(--spacing-sm);
+}
+
+.login-subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.login-tabs {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
+  background: var(--surface2);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-xs);
+}
+
+.login-tab {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.login-tab.active {
+  background: var(--cyan-dim);
+  color: var(--cyan);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.95rem;
+  transition: all var(--transition-fast);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-dim);
+}
+
+.form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.form-checkbox input {
+  width: auto;
+  accent-color: var(--cyan);
+}
+
+.error-message {
+  background: rgba(255, 77, 109, 0.1);
+  border: 1px solid var(--red);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  color: var(--red);
+  font-size: 0.85rem;
+  display: none;
+}
+
+.error-message.visible {
+  display: block;
+}
+
+.form-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin: var(--spacing-lg) 0;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.form-divider::before,
+.form-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  background: white;
+  color: #333;
+  border: none;
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.google-btn:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transform: translateY(-2px);
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--surface2);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .login-card {
+    padding: var(--spacing-xl);
+  }
+  
+  .login-title {
+    font-size: 1.4rem;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <img src="assets/images/eva.svg" alt="E.V.A" class="login-logo">
+      <h1 class="login-title">E.V.A</h1>
+      <p class="login-subtitle">Connectez-vous pour continuer</p>
+    </div>
+
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="switchTab('login')">Connexion</button>
+      <button class="login-tab" onclick="switchTab('signup')">Inscription</button>
+    </div>
+
+    <div class="error-message" id="errorMessage"></div>
+
+    <form class="login-form" id="loginForm" onsubmit="handleSubmit(event)">
+      <div class="form-field">
+        <label class="form-label" for="email">Email</label>
+        <input type="email" id="email" class="form-input" placeholder="votre@email.com" required>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label" for="password">Mot de passe</label>
+        <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+      </div>
+
+      <div class="form-checkbox">
+        <input type="checkbox" id="rememberMe">
+        <label for="rememberMe">Rester connecté</label>
+      </div>
+
+      <button type="submit" class="btn-primary" id="submitBtn">
+        <span id="submitText">Se connecter</span>
+      </button>
+    </form>
+
+    <div class="form-divider">ou</div>
+
+    <button class="google-btn" onclick="loginWithGoogle()">
+      <svg class="google-icon" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Continuer avec Google
+    </button>
+  </div>
+</div>
+
+<script>
+// Configuration Firebase
+firebase.initializeApp({
+  apiKey: "AIzaSyDrXk8X9Ow7CcOc0Sr-yv3mXvzatNxpj3o",
+  authDomain: "eva-assistant-a4fdf.firebaseapp.com",
+  projectId: "eva-assistant-a4fdf",
+  storageBucket: "eva-assistant-a4fdf.firebasestorage.app",
+  messagingSenderId: "594189556810",
+  appId: "1:594189556810:web:0d72c2110245af92099ab3"
+});
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let isSignupMode = false;
+
+function switchTab(mode) {
+  isSignupMode = (mode === 'signup');
+  const tabs = document.querySelectorAll('.login-tab');
+  tabs.forEach(tab => tab.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  const submitText = document.getElementById('submitText');
+  submitText.textContent = isSignupMode ? "Créer un compte" : "Se connecter";
+  
+  hideError();
+}
+
+function showError(message) {
+  const errorEl = document.getElementById('errorMessage');
+  errorEl.textContent = message;
+  errorEl.classList.add('visible');
+}
+
+function hideError() {
+  const errorEl = document.getElementById('errorMessage');
+  errorEl.classList.remove('visible');
+}
+
+function setLoading(loading) {
+  const submitBtn = document.getElementById('submitBtn');
+  const submitText = document.getElementById('submitText');
+  
+  if (loading) {
+    submitBtn.classList.add('loading');
+    submitText.innerHTML = '<span class="spinner"></span>';
+  } else {
+    submitBtn.classList.remove('loading');
+    submitText.textContent = isSignupMode ? "Créer un compte" : "Se connecter";
+  }
+}
+
+async function handleSubmit(e) {
+  e.preventDefault();
+  hideError();
+  setLoading(true);
+  
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const rememberMe = document.getElementById('rememberMe').checked;
+  
+  try {
+    let result;
+    if (isSignupMode) {
+      result = await auth.createUserWithEmailAndPassword(email, password);
+      await createUserProfile(result.user);
+      window.location.href = '/onboarding';
+    } else {
+      result = await auth.signInWithEmailAndPassword(email, password);
+      if (rememberMe) {
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      }
+      window.location.href = '/chat';
+    }
+  } catch (error) {
+    console.error('Auth error:', error);
+    let message = 'Une erreur est survenue';
+    
+    if (error.code === 'auth/email-already-in-use') {
+      message = 'Cet email est déjà utilisé';
+    } else if (error.code === 'auth/invalid-email') {
+      message = 'Email invalide';
+    } else if (error.code === 'auth/weak-password') {
+      message = 'Mot de passe trop faible (min 6 caractères)';
+    } else if (error.code === 'auth/user-not-found') {
+      message = 'Aucun compte trouvé avec cet email';
+    } else if (error.code === 'auth/wrong-password') {
+      message = 'Mot de passe incorrect';
+    }
+    
+    showError(message);
+    setLoading(false);
+  }
+}
+
+async function loginWithGoogle() {
+  hideError();
+  
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    
+    const result = await auth.signInWithPopup(provider);
+    const isNewUser = result.additionalUserInfo?.isNewUser;
+    
+    if (isNewUser) {
+      await createUserProfile(result.user);
+      window.location.href = '/onboarding';
+    } else {
+      window.location.href = '/chat';
+    }
+  } catch (error) {
+    console.error('Google login error:', error);
+    
+    let message = 'Erreur de connexion Google';
+    if (error.code === 'auth/popup-closed-by-user') {
+      message = 'Popup fermée. Réessayez.';
+    } else if (error.code === 'auth/popup-blocked') {
+      message = 'Popup bloquée. Autorisez les popups.';
+    }
+    
+    showError(message);
+  }
+}
+
+async function createUserProfile(user) {
+  try {
+    await db.collection('users').doc(user.uid).set({
+      email: user.email,
+      displayName: user.displayName || user.email.split('@')[0],
+      photoURL: user.photoURL || null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      role: 'user',
+      preferences: {
+        aiProvider: 'qwen',
+        voiceProvider: 'native',
+        voiceLang: 'fr-FR',
+        speechRate: 1.0
+      }
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error creating profile:', error);
+  }
+}
+
+// Rediriger si déjà connecté
+auth.onAuthStateChanged((user) => {
+  if (user && window.location.pathname === '/login') {
+    // Vérifier si le profil est configuré
+    db.collection('users').doc(user.uid).get().then((doc) => {
+      if (doc.exists && doc.data().nickname) {
+        window.location.href = '/chat';
+      }
+    });
+  }
+});
+</script>
+
+</body>
+</html>
