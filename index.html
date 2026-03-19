@@ -78,27 +78,32 @@ nav.scrolled{background:rgba(5,8,13,0.95);border-bottom-color:var(--border);}
 }
 .hero-badge{
   display:inline-flex;align-items:center;gap:8px;
-  padding:6px 16px;border-radius:20px;
-  background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);
-  font-size:0.72em;color:var(--cyan);letter-spacing:2px;text-transform:uppercase;
+  padding:6px 18px;border-radius:20px;
+  background:rgba(255,140,0,0.12);border:1px solid rgba(255,140,0,0.4);
+  font-size:0.72em;color:#ffaa44;letter-spacing:2px;text-transform:uppercase;
   margin-bottom:32px;
   animation:fadeUp 0.6s ease both;
 }
-.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:dotPulse 1.5s ease-in-out infinite;}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:#ff9900;animation:dotPulse 1.5s ease-in-out infinite;}
 @keyframes dotPulse{0%,100%{opacity:1}50%{opacity:0.4}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
 
-.hero-title{
-  font-family:'Orbitron',monospace;
-  font-size:clamp(2.5em,8vw,5.5em);
-  font-weight:900;line-height:1.1;
-  letter-spacing:2px;
-  background:linear-gradient(135deg,#fff 30%,var(--cyan) 60%,var(--purple));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;
+.hero-logo-img{
+  width:clamp(220px,45vw,380px);height:auto;
+  filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(165deg);
   margin-bottom:12px;
   animation:fadeUp 0.6s 0.1s ease both;
+  drop-shadow:0 0 40px rgba(0,212,255,0.4);
 }
+.beta-notice{
+  display:inline-flex;align-items:center;gap:8px;
+  margin-top:32px;margin-bottom:0;
+  padding:9px 20px;border-radius:10px;
+  background:rgba(255,140,0,0.08);border:1px solid rgba(255,140,0,0.25);
+  font-size:0.75em;color:#cc8800;letter-spacing:0.5px;
+  animation:fadeUp 0.6s 0.45s ease both;
+}
+.beta-notice-dot{width:5px;height:5px;border-radius:50%;background:#ff9900;flex-shrink:0;}
 .hero-subtitle{
   font-family:'Orbitron',monospace;font-size:clamp(1em,3vw,1.8em);
   color:var(--cyan);letter-spacing:4px;
@@ -311,9 +316,10 @@ footer{
   .preview-sidebar{display:none;}
   footer{flex-direction:column;text-align:center;gap:10px;}
   .hero{padding:120px 20px 60px;}
-  .hero-title{font-size:2.8em;}
+  .hero-logo-img{width:clamp(180px,60vw,280px);}
   .hero-subtitle{font-size:0.85em;}
   .hero-desc{font-size:0.82em;padding:0 8px;}
+  .beta-notice{font-size:0.7em;text-align:center;}
   .hero-actions{flex-direction:column;align-items:center;gap:10px;}
   .btn-hero-primary,.btn-hero-secondary{width:100%;max-width:280px;justify-content:center;text-align:center;}
   .features-grid{grid-template-columns:1fr;gap:14px;}
@@ -339,8 +345,8 @@ footer{
     <a href="#providers" class="nav-link">Providers IA</a>
   </div>
   <div class="nav-user" id="navUser">
-    <a href="/login.html" class="nav-user-btn">Connexion</a>
-    <a href="/login.html" class="nav-cta">Essayer gratuitement</a>
+    <a href="/login.html" target="_top" class="nav-user-btn">Connexion</a>
+    <a href="/login.html" target="_top" class="nav-cta">Essayer gratuitement</a>
   </div>
 </nav>
 
@@ -350,12 +356,11 @@ footer{
     <div class="hero-badge-dot"></div>
     Version Bêta — En développement actif
   </div>
-  <h1 class="hero-title">E.V.A</h1>
+  <img src="assets/images/eva.svg" alt="EVA" class="hero-logo-img">
   <p class="hero-subtitle">Evolutionary Virtual Assistant</p>
   <p class="hero-desc">Votre assistante IA personnelle nouvelle génération. Conversations intelligentes, organisation de votre vie, interface élégante et caractère unique.</p>
-  <p style="font-size:0.72em;color:var(--text-muted);margin-top:-8px;margin-bottom:0;opacity:0.7;">Version bêta — des améliorations continues sont en cours. Des bugs peuvent survenir.</p>
   <div class="hero-actions">
-    <a href="/login.html" class="btn-hero-primary" id="heroMainBtn">
+    <a href="/login.html" target="_top" class="btn-hero-primary" id="heroMainBtn">
       <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
       Commencer maintenant
     </a>
@@ -363,6 +368,10 @@ footer{
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
       Découvrir EVA
     </a>
+  </div>
+  <div class="beta-notice">
+    <div class="beta-notice-dot"></div>
+    Version bêta — des améliorations sont en cours. Des bugs peuvent survenir.
   </div>
   <div class="scroll-indicator">
     DÉCOUVRIR
@@ -470,11 +479,11 @@ footer{
     <h2 class="cta-title">Prête à vous rencontrer</h2>
     <p class="cta-desc">Rejoignez EVA dès maintenant. Aucune carte de crédit requise, commencez gratuitement avec Puter AI.</p>
     <div class="cta-actions">
-      <a href="/login.html" class="btn-hero-primary" id="ctaMainBtn">
+      <a href="/login.html" target="_top" class="btn-hero-primary" id="ctaMainBtn">
         <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         Commencer maintenant
       </a>
-      <a href="/login.html?tab=login" class="btn-hero-secondary">Me connecter</a>
+      <a href="/login.html?tab=login" target="_top" class="btn-hero-secondary">Me connecter</a>
     </div>
   </div>
 </div>
@@ -484,7 +493,7 @@ footer{
   <div class="footer-brand"><img src="assets/images/eva.svg" alt="EVA" style="height:28px;width:auto;filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(165deg);"></div>
   <div class="footer-copy">© 2025 Astral Technology — Evolutionary Virtual Assistant — Version Bêta</div>
   <div class="footer-links">
-    <a href="/login.html" class="footer-link">Connexion</a>
+    <a href="/login.html" target="_top" class="footer-link">Connexion</a>
   </div>
 </footer>
 
@@ -501,9 +510,9 @@ auth.onAuthStateChanged(function(user) {
   var heroBtn = document.getElementById('heroMainBtn');
   var ctaBtn = document.getElementById('ctaMainBtn');
   if (user) {
-    if (navUser) navUser.innerHTML = '<a href="/chat.html" class="nav-cta">Ouvrir EVA →</a>';
-    if (heroBtn) { heroBtn.textContent = 'Ouvrir EVA'; heroBtn.href = '/chat.html'; }
-    if (ctaBtn) { ctaBtn.textContent = 'Ouvrir EVA'; ctaBtn.href = '/chat.html'; }
+    if (navUser) navUser.innerHTML = '<a href="/chat.html" target="_top" class="nav-cta">Ouvrir EVA →</a>';
+    if (heroBtn) { heroBtn.textContent = 'Ouvrir EVA'; heroBtn.href = '/chat.html'; heroBtn.target = '_top'; }
+    if (ctaBtn) { ctaBtn.textContent = 'Ouvrir EVA'; ctaBtn.href = '/chat.html'; ctaBtn.target = '_top'; }
   }
 });
 </script>
