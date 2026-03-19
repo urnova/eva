@@ -50,13 +50,7 @@ nav{
 }
 nav.scrolled{background:rgba(5,8,13,0.95);border-bottom-color:var(--border);}
 .nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none;}
-.nav-brand-icon{
-  width:34px;height:34px;border-radius:9px;
-  background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.3);
-  display:flex;align-items:center;justify-content:center;
-}
-.nav-brand-icon svg{width:18px;height:18px;stroke:var(--cyan);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
-.nav-brand-text{font-family:'Orbitron',monospace;font-size:1.1em;font-weight:900;letter-spacing:4px;color:var(--cyan);}
+.nav-brand-logo{height:32px;width:auto;filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(165deg);}
 .nav-links{display:flex;align-items:center;gap:24px;}
 .nav-link{color:var(--text-muted);text-decoration:none;font-size:0.8em;transition:color 0.2s;}
 .nav-link:hover{color:var(--cyan);}
@@ -311,10 +305,22 @@ footer{
 
 /* Responsive */
 @media(max-width:768px){
-  nav{padding:14px 20px;}
+  nav{padding:12px 16px;}
   .nav-links .nav-link{display:none;}
+  .nav-cta{padding:7px 14px;font-size:0.75em;}
   .preview-sidebar{display:none;}
-  footer{flex-direction:column;text-align:center;}
+  footer{flex-direction:column;text-align:center;gap:10px;}
+  .hero{padding:120px 20px 60px;}
+  .hero-title{font-size:2.8em;}
+  .hero-subtitle{font-size:0.85em;}
+  .hero-desc{font-size:0.82em;padding:0 8px;}
+  .hero-actions{flex-direction:column;align-items:center;gap:10px;}
+  .btn-hero-primary,.btn-hero-secondary{width:100%;max-width:280px;justify-content:center;text-align:center;}
+  .features-grid{grid-template-columns:1fr;gap:14px;}
+  .providers-grid{grid-template-columns:1fr 1fr;}
+  .section{padding:60px 20px;}
+  .cta-section{padding:60px 20px;}
+  .preview-window{margin:0 16px;}
 }
 </style>
 </head>
@@ -326,10 +332,7 @@ footer{
 <!-- NAV -->
 <nav id="mainNav">
   <a href="/" class="nav-brand">
-    <div class="nav-brand-icon">
-      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><circle cx="12" cy="12" r="3"/></svg>
-    </div>
-    <span class="nav-brand-text">E.V.A</span>
+    <img src="assets/images/eva.svg" alt="EVA" class="nav-brand-logo">
   </a>
   <div class="nav-links">
     <a href="#features" class="nav-link">Fonctionnalités</a>
@@ -345,11 +348,12 @@ footer{
 <section class="hero">
   <div class="hero-badge">
     <div class="hero-badge-dot"></div>
-    Version 3.0 — En ligne
+    Version Bêta — En développement actif
   </div>
   <h1 class="hero-title">E.V.A</h1>
   <p class="hero-subtitle">Evolutionary Virtual Assistant</p>
   <p class="hero-desc">Votre assistante IA personnelle nouvelle génération. Conversations intelligentes, organisation de votre vie, interface élégante et caractère unique.</p>
+  <p style="font-size:0.72em;color:var(--text-muted);margin-top:-8px;margin-bottom:0;opacity:0.7;">Version bêta — des améliorations continues sont en cours. Des bugs peuvent survenir.</p>
   <div class="hero-actions">
     <a href="/login.html" class="btn-hero-primary" id="heroMainBtn">
       <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -477,8 +481,8 @@ footer{
 
 <!-- FOOTER -->
 <footer>
-  <div class="footer-brand">E.V.A</div>
-  <div class="footer-copy">© 2025 Astral Technology — Evolutionary Virtual Assistant V3</div>
+  <div class="footer-brand"><img src="assets/images/eva.svg" alt="EVA" style="height:28px;width:auto;filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(165deg);"></div>
+  <div class="footer-copy">© 2025 Astral Technology — Evolutionary Virtual Assistant — Version Bêta</div>
   <div class="footer-links">
     <a href="/login.html" class="footer-link">Connexion</a>
   </div>

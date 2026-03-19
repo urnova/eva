@@ -100,13 +100,8 @@ body::before{
   display:flex;align-items:center;gap:10px;
   flex-shrink:0;
 }
-.sb-logo-mark{
-  width:32px;height:32px;border-radius:8px;
-  background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.28);
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.sb-logo-mark svg{width:17px;height:17px;stroke:#00d4ff;fill:none;stroke-width:2;stroke-linecap:round;}
-.sb-brand{font-family:'Orbitron',monospace;font-size:1.05em;font-weight:900;letter-spacing:5px;color:var(--cyan);text-shadow:0 0 12px var(--cyan-glow);}
+.sb-logo-img{height:26px;width:auto;filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(165deg);}
+.sb-brand-beta{font-size:0.6em;color:var(--text-muted);letter-spacing:1px;opacity:0.7;margin-left:2px;}
 
 /* Search */
 .sb-search{padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
@@ -740,6 +735,33 @@ body::before{
   .app-main{margin-left:0;}
   .hamburger{display:flex!important;}
   .status-pill .status-text{display:none;}
+  /* Header */
+  .top-bar{padding:0 10px 0 8px;}
+  .top-bar-title{font-size:0.8em;letter-spacing:2px;}
+  .top-bar-right{gap:6px;}
+  /* Messages */
+  .msg-content{max-width:88%;}
+  .chat-welcome{padding:30px 16px;}
+  .welcome-sub{max-width:260px;}
+  .prompt-chips{gap:6px;}
+  .prompt-chip{font-size:0.71em;padding:6px 10px;}
+  /* Input area */
+  .input-outer{padding:8px 10px 10px;}
+  .input-wrap{padding:6px 8px 6px 10px;border-radius:16px;}
+  .input-box{font-size:0.88em;}
+  .tone-scroll{gap:5px;}
+  .tone-btn{font-size:0.65em;padding:3px 8px;}
+  /* Modals */
+  .modal-box{width:96vw;max-width:96vw;max-height:88vh;border-radius:14px;}
+  .modal-header{padding:14px 16px 10px;}
+  .modal-body{padding:14px 16px;}
+  .form-row{flex-direction:column;gap:6px;}
+  .form-row label{min-width:unset;}
+  /* Views: notes, alarms, calendar */
+  .view-header{padding:12px 14px 10px;}
+  .view-content{padding:0 12px 12px;}
+  .notes-grid{grid-template-columns:1fr;}
+  .alarm-item,.event-item{padding:10px 12px;}
 }
 
 /* ═══ Empty view state ═══ */
@@ -760,10 +782,8 @@ body::before{
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sb-header">
-    <div class="sb-logo-mark">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
-    </div>
-    <span class="sb-brand">E.V.A</span>
+    <img src="assets/images/eva.svg" alt="EVA" class="sb-logo-img">
+    <span class="sb-brand-beta">BÊTA</span>
   </div>
 
   <div class="sb-search">
@@ -862,9 +882,9 @@ body::before{
       <div class="messages-area" id="messagesArea">
         <div class="chat-welcome" id="chatWelcome">
           <div class="welcome-icon">
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <img src="assets/images/eva.svg" alt="EVA" style="width:64px;height:auto;filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(165deg);">
           </div>
-          <div class="welcome-title">E.V.A — PRÊTE</div>
+          <div class="welcome-title">PRÊTE</div>
           <div class="welcome-sub">Votre assistante virtuelle intelligente. Posez une question, créez une alarme, prenez une note...</div>
           <div class="prompt-chips">
             <div class="prompt-chip" data-prompt="Bonjour Eva ! Présente-toi en quelques mots.">👋 Présente-toi Eva</div>

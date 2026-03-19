@@ -168,8 +168,13 @@ body::before{
 @media(max-width:640px){
   .auth-wrap{grid-template-columns:1fr;}
   .auth-deco{display:none;}
-  .auth-form-side{padding:32px 24px;}
-  .auth-wrap{border-radius:18px;}
+  .auth-form-side{padding:28px 20px;}
+  .auth-wrap{border-radius:18px;margin:12px;}
+  .page{padding:16px 0;}
+  .auth-form-title{font-size:1em;}
+  .social-btn{padding:11px 16px;font-size:0.8em;}
+  .input-field{padding:10px 12px;font-size:0.9em;}
+  .submit-btn{padding:12px;font-size:0.82em;}
 }
 </style>
 </head>
@@ -183,10 +188,10 @@ body::before{
     <div class="auth-deco">
       <div class="deco-logo">
         <div class="deco-circle">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+          <img src="assets/images/eva.svg" alt="EVA" style="width:80px;height:auto;filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(165deg);">
         </div>
-        <div class="deco-title">E.V.A</div>
         <div class="deco-sub">Evolutionary Virtual Assistant</div>
+        <div style="font-size:0.65em;color:var(--text-muted);margin-top:4px;opacity:0.65;">Version Bêta</div>
       </div>
       <div class="deco-desc">Votre assistante IA personnelle, disponible 24h/24. Intelligente, élégante, toujours prête.</div>
       <div class="deco-features">

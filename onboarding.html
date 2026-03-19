@@ -52,16 +52,12 @@ body::before{
 
 .ob-header{text-align:center;margin-bottom:32px;}
 .ob-logo{
-  width:72px;height:72px;border-radius:50%;
-  background:radial-gradient(circle,rgba(0,212,255,0.18),rgba(0,212,255,0.04));
-  border:1px solid rgba(0,212,255,0.35);
   display:flex;align-items:center;justify-content:center;
   margin:0 auto 18px;
-  box-shadow:0 0 40px rgba(0,212,255,0.18);
   animation:logoFloat 3.5s ease-in-out infinite;
 }
 @keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-.ob-logo svg{width:32px;height:32px;stroke:var(--cyan);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.ob-logo img{width:120px;height:auto;filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(165deg);}
 .ob-title{font-family:'Orbitron',monospace;font-size:1.5em;font-weight:900;letter-spacing:3px;color:var(--cyan);margin-bottom:6px;}
 .ob-sub{font-size:0.82em;color:var(--text-muted);line-height:1.6;}
 
@@ -143,6 +139,16 @@ body::before{
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:10px}
+@media(max-width:560px){
+  .ob-card{padding:28px 20px;border-radius:16px;margin:10px;}
+  .ob-title{font-size:1.2em;letter-spacing:2px;}
+  .ob-logo img{width:90px;}
+  .step-title{font-size:1em;}
+  .form-label{font-size:0.78em;}
+  .form-input{padding:9px 12px;font-size:0.9em;}
+  .btn-next,.btn-prev{padding:11px;font-size:0.82em;}
+  .voice-options{grid-template-columns:1fr 1fr;}
+}
 </style>
 </head>
 <body>
@@ -154,10 +160,10 @@ body::before{
 
     <div class="ob-header">
       <div class="ob-logo">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+        <img src="assets/images/eva.svg" alt="EVA">
       </div>
       <div class="ob-title">CONFIGURATION</div>
-      <div class="ob-sub">Personnalisez votre expérience E.V.A</div>
+      <div class="ob-sub">Personnalisez votre expérience EVA</div>
     </div>
 
     <div class="ob-progress">
