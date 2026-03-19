@@ -57,7 +57,7 @@ body::before{
   animation:logoFloat 3.5s ease-in-out infinite;
 }
 @keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-.ob-logo img{width:120px;height:auto;filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(165deg);}
+.ob-logo img{width:120px;height:auto;}
 .ob-title{font-family:'Orbitron',monospace;font-size:1.5em;font-weight:900;letter-spacing:3px;color:var(--cyan);margin-bottom:6px;}
 .ob-sub{font-size:0.82em;color:var(--text-muted);line-height:1.6;}
 
@@ -170,6 +170,7 @@ body::before{
       <div class="ob-step active" id="step-bar-1"></div>
       <div class="ob-step" id="step-bar-2"></div>
       <div class="ob-step" id="step-bar-3"></div>
+      <div class="ob-step" id="step-bar-4"></div>
     </div>
 
     <!-- Step 1: Profil -->
@@ -221,8 +222,42 @@ body::before{
       </div>
     </div>
 
-    <!-- Step 3: Terminé -->
+    <!-- Step 3: IA & Puter -->
     <div class="ob-view" id="ob3">
+      <div class="field">
+        <label class="field-label">Provider IA</label>
+        <div class="field-hint" style="margin-bottom:10px">Choisissez comment E.V.A va communiquer.</div>
+        <div class="voice-opt selected" id="provPuter" onclick="selectProvider('puter',this)" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <div class="voice-opt-info">
+            <div class="voice-name">⚡ Puter Cloud (Recommandé)</div>
+            <div class="voice-desc">Gratuit · Aucune clé API · Connexion Puter requise</div>
+          </div>
+          <div id="puterAuthSection" style="width:100%">
+            <div id="obPuterStatus" style="font-size:0.74em;color:rgba(0,212,255,0.6);margin-bottom:6px">Vérification...</div>
+            <button id="obPuterBtn" class="voice-test-btn" onclick="obConnectPuter(event)" style="width:auto">🔗 Connexion Puter</button>
+          </div>
+        </div>
+        <div class="voice-opt" id="provOpenAI" onclick="selectProvider('openai',this)">
+          <div class="voice-opt-info">
+            <div class="voice-name">🧠 OpenAI GPT-4o</div>
+            <div class="voice-desc">Clé API OpenAI requise (sk-...)</div>
+          </div>
+        </div>
+        <div class="voice-opt" id="provClaude" onclick="selectProvider('claude',this)">
+          <div class="voice-opt-info">
+            <div class="voice-name">🤖 Claude (Anthropic)</div>
+            <div class="voice-desc">Clé API Anthropic requise</div>
+          </div>
+        </div>
+      </div>
+      <div class="ob-actions">
+        <button class="btn-skip" onclick="goStep(2)">← Retour</button>
+        <button class="btn-next" onclick="goStep(4)">SUIVANT →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Terminé -->
+    <div class="ob-view" id="ob4">
       <div class="finish-icon">🎉</div>
       <div class="finish-title">Tout est prêt !</div>
       <div class="finish-text">
@@ -237,10 +272,12 @@ body::before{
   </div>
 </div>
 
+<script src="https://js.puter.com/v2/"></script>
 <script src="js/core/firebase-config.js"></script>
 <script>
 var currentStep = 1;
 var selectedVoice = 'auto';
+var selectedProvider = 'puter';
 var currentUser = null;
 
 auth.onAuthStateChanged(function(user) {
@@ -288,11 +325,66 @@ function goStep(n) {
     var nick = document.getElementById('nickname').value.trim() || name.split(' ')[0];
     saveProfile({ displayName: name, nickname: nick });
   }
+  if (n === 3) {
+    // Load Puter status when entering provider step
+    setTimeout(checkObPuterStatus, 200);
+  }
   document.getElementById('ob'+currentStep).classList.remove('active');
   document.getElementById('step-bar-'+currentStep).classList.remove('active');
   currentStep = n;
   document.getElementById('ob'+currentStep).classList.add('active');
   document.getElementById('step-bar-'+currentStep).classList.add('active');
+}
+
+function selectProvider(prov, el) {
+  selectedProvider = prov;
+  document.querySelectorAll('.voice-opt[id^="prov"]').forEach(function(o){ o.classList.remove('selected'); });
+  el.classList.add('selected');
+}
+
+async function checkObPuterStatus() {
+  var statusEl = document.getElementById('obPuterStatus');
+  var btnEl = document.getElementById('obPuterBtn');
+  if (!statusEl) return;
+  if (!window.puter) {
+    statusEl.textContent = '⚠️ SDK Puter non chargé';
+    return;
+  }
+  try {
+    var user = await puter.auth.getUser();
+    if (user && user.username) {
+      statusEl.style.color = 'var(--green)';
+      statusEl.textContent = '✓ Connecté : ' + user.username;
+      if (btnEl) { btnEl.textContent = '🔌 Déconnecter'; btnEl.onclick = function(e){e.stopPropagation();obDisconnectPuter();}; }
+    } else {
+      statusEl.style.color = 'rgba(0,212,255,0.6)';
+      statusEl.textContent = 'Non connecté à Puter';
+      if (btnEl) btnEl.textContent = '🔗 Connexion Puter';
+    }
+  } catch(e) {
+    statusEl.textContent = 'Non connecté à Puter';
+  }
+}
+
+async function obConnectPuter(e) {
+  e.stopPropagation();
+  if (!window.puter) return;
+  try {
+    await puter.auth.signIn();
+    var user = await puter.auth.getUser();
+    if (user && user.username) {
+      if (currentUser) {
+        await db.collection('users').doc(currentUser.uid).set({puterUsername: user.username}, {merge:true});
+      }
+      checkObPuterStatus();
+    }
+  } catch(err) { console.error('Puter connect:', err); }
+}
+
+async function obDisconnectPuter() {
+  if (!window.puter) return;
+  try { await puter.auth.signOut(); } catch(e) {}
+  checkObPuterStatus();
 }
 
 function selectVoice(voice, el) {
@@ -329,7 +421,7 @@ async function finish() {
         selectedVoice: selectedVoice,
         voiceLang: 'fr-FR',
         speechRate: 1.0,
-        aiProvider: 'puter'
+        aiProvider: selectedProvider
       }
     }, { merge: true });
     window.location.href = '/chat.html';

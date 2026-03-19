@@ -100,7 +100,7 @@ body::before{
   display:flex;align-items:center;gap:10px;
   flex-shrink:0;
 }
-.sb-logo-img{height:26px;width:auto;filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(165deg);}
+.sb-logo-img{height:26px;width:auto;}
 .sb-brand-beta{font-size:0.6em;color:var(--text-muted);letter-spacing:1px;opacity:0.7;margin-left:2px;}
 
 /* Search */
@@ -312,6 +312,20 @@ body::before{
   padding:20px 18px;
   scroll-behavior:smooth;
   position:relative;
+}
+.messages-area::before{
+  content:'';
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:240px;height:240px;
+  background-image:url('assets/images/eva.svg');
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:contain;
+  opacity:0.035;
+  pointer-events:none;
+  z-index:0;
 }
 
 /* Welcome / empty state */
@@ -702,6 +716,31 @@ body::before{
 .settings-row-label{font-size:0.8em;color:var(--text);}
 .settings-row-sub{font-size:0.68em;color:var(--text-muted);margin-top:2px;}
 
+/* Export menu */
+.export-menu{
+  position:absolute;top:calc(100% + 6px);right:0;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;overflow:hidden;min-width:190px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.6);z-index:200;
+  display:none;
+}
+.export-menu.open{display:block;}
+.export-menu button{
+  display:flex;align-items:center;gap:8px;
+  width:100%;padding:10px 14px;background:none;border:none;
+  color:var(--text);font-family:'Space Mono',monospace;font-size:0.78em;
+  cursor:pointer;text-align:left;transition:background 0.15s;
+}
+.export-menu button:hover{background:var(--surface2);color:var(--cyan);}
+
+/* Puter connect block */
+.puter-connect-block{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:14px;margin-top:4px;
+}
+.puter-connected{color:var(--green);font-size:0.78em;font-weight:700;}
+.puter-disconnected{color:var(--text-muted);font-size:0.76em;}
+
 /* ═══════════════════════════════════════════
    TOAST
 ═══════════════════════════════════════════ */
@@ -869,6 +908,15 @@ body::before{
         <button class="hdr-btn" id="wakeWordBtn" title="Wake Word — Dites 'Hey Eva'">
           <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
         </button>
+        <div class="hdr-export-wrap" id="hdrExportWrap" style="position:relative;display:none;">
+          <button class="hdr-btn" id="exportBtn" title="Exporter la conversation" onclick="toggleExportMenu()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          <div class="export-menu" id="exportMenu">
+            <button onclick="exportCurrentConv('txt')">📄 Exporter en TXT</button>
+            <button onclick="exportCurrentConv('json')">🗂️ Exporter en JSON</button>
+          </div>
+        </div>
         <button class="hdr-btn tts-on" id="ttsBtn" title="Voix activée — cliquer pour désactiver">
           <svg id="ttsBtnIcon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
         </button>
@@ -884,7 +932,7 @@ body::before{
       <div class="messages-area" id="messagesArea">
         <div class="chat-welcome" id="chatWelcome">
           <div class="welcome-icon">
-            <img src="assets/images/eva.svg" alt="EVA" style="width:64px;height:auto;filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(165deg);">
+            <img src="assets/images/eva.svg" alt="EVA" style="width:52px;height:auto;opacity:0.65;">
           </div>
           <div class="welcome-title">PRÊTE</div>
           <div class="welcome-sub">Votre assistante virtuelle intelligente. Posez une question, créez une alarme, prenez une note...</div>
@@ -1569,6 +1617,8 @@ async function newConv() {
 
 async function loadConv(id) {
   S.convId = id;
+  var expWrap = document.getElementById('hdrExportWrap');
+  if (expWrap) expWrap.style.display = id ? '' : 'none';
   setView('chat');
   closeSidebar();
   try {
@@ -1609,6 +1659,8 @@ async function saveConvMsg(userMsg, evaMsg) {
       var title = userMsg.slice(0,52);
       ref = db.collection('users').doc(S.user.uid).collection('conversations').doc();
       S.convId = ref.id;
+      var expWrap = document.getElementById('hdrExportWrap');
+      if (expWrap) expWrap.style.display = '';
       var data = {title:title, lastMessage:evaMsg.slice(0,80), createdAt:window.timestamp(), updatedAt:window.timestamp()};
       await ref.set(data);
       S.convs.unshift(Object.assign({id:ref.id},data));
@@ -1994,6 +2046,10 @@ function renderSettings(section) {
       '<input type="text" class="form-input" id="sOllamaURL" placeholder="http://localhost:11434" value="'+esc(cfg.ollamaUrl||'http://localhost:11434')+'"><label class="form-label" style="margin-top:8px">Modèle Ollama</label>' +
       '<input type="text" class="form-input" id="sOllamaModel" placeholder="ex: llama3, mistral..." value="'+esc(cfg.ollamaModel||'')+'"></div>' +
 
+      '<div id="puterConnectField" style="'+(cur==='puter'?'':'display:none')+'">'+
+      '<div class="puter-connect-block" id="puterConnectBlock"><div id="puterConnectStatus" style="font-size:0.78em;color:var(--text-muted);margin-bottom:10px">Vérification du statut Puter...</div>' +
+      '<div id="puterConnectButtons"></div></div></div>' +
+
       '<div class="form-field"><label class="form-label">Longueur du contexte (messages mémorisés)</label>' +
       '<input type="range" min="4" max="40" step="2" id="sContextLen" value="'+(cfg.contextLength||10)+'" style="width:100%;accent-color:var(--cyan)">' +
       '<span id="sContextLenVal" style="font-size:0.75em;color:var(--cyan)">'+(cfg.contextLength||10)+' messages</span></div>' +
@@ -2011,12 +2067,16 @@ function renderSettings(section) {
           var f = document.getElementById('apiKeyField'+x);
           if (f) f.style.display = 'none';
         });
+        var puterF = document.getElementById('puterConnectField');
+        if (puterF) puterF.style.display = v === 'puter' ? '' : 'none';
         var show = {openai:'OpenAI',claude:'Claude',lmstudio:'LMStudio',ollama:'Ollama'}[v];
         if (show) { var f = document.getElementById('apiKeyField'+show); if(f) f.style.display = ''; }
       });
       var sl = document.getElementById('sContextLen');
       var sv = document.getElementById('sContextLenVal');
       if (sl && sv) sl.addEventListener('input', function(){ sv.textContent = this.value + ' messages'; });
+      // Load Puter status
+      if (cur === 'puter') refreshPuterStatusUI();
     }, 50);
 
   } else if (section === 'voice') {
@@ -2054,18 +2114,35 @@ function renderSettings(section) {
     }, 50);
 
   } else if (section === 'account') {
+    var isGoogleUser = S.user && S.user.providerData && S.user.providerData.some(function(p){return p.providerId==='google.com';});
     c.innerHTML =
       '<div class="settings-section">' +
       '<div class="settings-section-title">Mon Compte</div>' +
-      '<div class="settings-row"><div class="settings-row-label">Email</div><div style="font-size:0.78em;color:var(--text-muted)">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
-      '<div class="settings-row"><div class="settings-row-label">UID</div><div style="font-size:0.65em;color:var(--text-dim);word-break:break-all">'+esc((S.user&&S.user.uid)||'—')+'</div></div>' +
+      '<div class="settings-row"><div class="settings-row-label">Email actuel</div><div style="font-size:0.78em;color:var(--text-muted)">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
       '<div class="settings-row"><div class="settings-row-label">Rôle</div><div style="color:var(--cyan)">'+esc(p.role||'user')+'</div></div>' +
-      '<div class="settings-row"><div class="settings-row-label">Membre depuis</div><div style="font-size:0.78em;color:var(--text-muted)">'+(p.createdAt && p.createdAt.toDate ? p.createdAt.toDate().toLocaleDateString('fr-FR') : '—')+'</div></div>' +
+      '<div class="settings-row"><div class="settings-row-label">Connexion</div><div style="font-size:0.76em;color:var(--text-muted)">'+(isGoogleUser?'🔵 Google':'📧 Email/Mot de passe')+'</div></div>' +
       '</div>' +
-      '<div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">' +
+      (isGoogleUser ? '' :
+        '<div class="settings-section">' +
+        '<div class="settings-section-title">Changer l\'adresse email</div>' +
+        '<div class="form-field"><label class="form-label">Nouvel email</label><input type="email" class="form-input" id="sNewEmail" placeholder="nouveau@email.com"></div>' +
+        '<div class="form-field"><label class="form-label">Mot de passe actuel (confirmation)</label><input type="password" class="form-input" id="sEmailPassword" placeholder="••••••••"></div>' +
+        '<button class="btn btn-secondary" onclick="changeEmail()" style="margin-top:4px">Mettre à jour l\'email</button>' +
+        '</div>' +
+        '<div class="settings-section">' +
+        '<div class="settings-section-title">Changer le mot de passe</div>' +
+        '<div class="form-field"><label class="form-label">Mot de passe actuel</label><input type="password" class="form-input" id="sCurPassword" placeholder="••••••••"></div>' +
+        '<div class="form-field"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="sNewPassword" placeholder="Minimum 6 caractères"></div>' +
+        '<div class="form-field"><label class="form-label">Confirmer le nouveau mot de passe</label><input type="password" class="form-input" id="sConfPassword" placeholder="Idem ci-dessus"></div>' +
+        '<button class="btn btn-secondary" onclick="changePassword()" style="margin-top:4px">Mettre à jour le mot de passe</button>' +
+        '</div>'
+      ) +
+      '<div class="settings-section">' +
+      '<div class="settings-section-title">Danger zone</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
       '<button class="btn btn-secondary" onclick="auth.signOut().then(function(){window.location.href=\'/\';})">🚪 Se déconnecter</button>' +
       '<button class="btn btn-danger" onclick="if(confirm(\'Supprimer toutes les conversations ? Cette action est irréversible.\'))clearAllConvs()">🗑️ Effacer toutes les conversations</button>' +
-      '</div>';
+      '</div></div>';
   }
 }
 
@@ -2126,6 +2203,147 @@ function saveVoiceSettings() {
   toast('Paramètres audio mis à jour ✓','success');
 }
 window.saveVoiceSettings = saveVoiceSettings;
+
+/* ══════════════════ EXPORT CONVERSATIONS ══════════════════ */
+function toggleExportMenu() {
+  var m = document.getElementById('exportMenu');
+  if (m) m.classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('hdrExportWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    var m = document.getElementById('exportMenu');
+    if (m) m.classList.remove('open');
+  }
+});
+
+async function exportCurrentConv(fmt) {
+  document.getElementById('exportMenu').classList.remove('open');
+  if (!S.convId || !S.user) { toast('Aucune conversation active','error'); return; }
+  try {
+    var convRef = db.collection('users').doc(S.user.uid).collection('conversations').doc(S.convId);
+    var convDoc = await convRef.get();
+    var msgsSnap = await convRef.collection('messages').orderBy('createdAt').get();
+    var msgs = msgsSnap.docs.map(function(d){ return d.data(); });
+    var convData = convDoc.data() || {};
+    var title = (convData.title || 'Conversation').replace(/[^a-zA-Z0-9\u00C0-\u024F\s_-]/g,'').trim();
+    var date = new Date().toLocaleDateString('fr-FR').replace(/\//g,'-');
+    var filename = 'EVA_' + title.slice(0,30) + '_' + date;
+    var content, type, ext;
+    if (fmt === 'json') {
+      content = JSON.stringify({ conversation: convData, messages: msgs }, null, 2);
+      type = 'application/json'; ext = '.json';
+    } else {
+      content = '=== CONVERSATION E.V.A ===\n';
+      content += 'Titre : ' + (convData.title || 'Sans titre') + '\n';
+      content += 'Exportée le : ' + new Date().toLocaleString('fr-FR') + '\n';
+      content += '═'.repeat(50) + '\n\n';
+      msgs.forEach(function(m) {
+        var who = m.role === 'user' ? 'Vous' : 'EVA';
+        var ts = m.createdAt && m.createdAt.toDate ? m.createdAt.toDate().toLocaleTimeString('fr-FR') : '';
+        content += '[' + ts + '] ' + who + ' :\n' + (m.content || '') + '\n\n';
+      });
+      type = 'text/plain'; ext = '.txt';
+    }
+    var blob = new Blob([content], {type: type});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename + ext;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast('Conversation exportée ✓', 'success');
+  } catch(e) { console.error(e); toast('Erreur export','error'); }
+}
+
+/* ══════════════════ PUTER AUTH ══════════════════ */
+async function getPuterStatus() {
+  if (!window.puter) return null;
+  try { return await puter.auth.getUser(); } catch(e) { return null; }
+}
+async function connectPuter() {
+  if (!window.puter) { toast('Puter non disponible','error'); return; }
+  try {
+    await puter.auth.signIn();
+    var user = await puter.auth.getUser();
+    if (user && user.username) {
+      S.config.puterUsername = user.username;
+      saveCfg();
+      if (S.user) {
+        await db.collection('users').doc(S.user.uid).set({puterUsername: user.username}, {merge:true});
+      }
+      toast('Puter connecté : ' + user.username, 'success');
+      renderSettings('ai');
+    }
+  } catch(e) { console.error(e); toast('Connexion Puter annulée','error'); }
+}
+async function refreshPuterStatusUI() {
+  var statusEl = document.getElementById('puterConnectStatus');
+  var btnsEl = document.getElementById('puterConnectButtons');
+  if (!statusEl || !btnsEl) return;
+  statusEl.textContent = 'Vérification...';
+  var user = await getPuterStatus();
+  if (user && user.username) {
+    statusEl.innerHTML = '<span class="puter-connected">✓ Connecté en tant que <strong>'+esc(user.username)+'</strong></span>';
+    btnsEl.innerHTML = '<button class="btn btn-secondary" style="margin-top:6px;font-size:0.78em" onclick="disconnectPuter()">🔌 Déconnecter Puter</button>';
+  } else {
+    statusEl.innerHTML = '<span class="puter-disconnected">⚠️ Non connecté à Puter. La connexion est requise pour utiliser ce provider.</span>';
+    btnsEl.innerHTML = '<button class="btn btn-primary" style="margin-top:6px;font-size:0.78em" onclick="connectPuter()">🔗 Se connecter à Puter</button>';
+  }
+}
+
+async function disconnectPuter() {
+  if (!window.puter) return;
+  try {
+    await puter.auth.signOut();
+    S.config.puterUsername = null;
+    saveCfg();
+    if (S.user) {
+      await db.collection('users').doc(S.user.uid).set({puterUsername: null}, {merge:true});
+    }
+    toast('Puter déconnecté','info');
+    renderSettings('ai');
+  } catch(e) {}
+}
+
+/* ══════════════════ ACCOUNT — CHANGE EMAIL / PASSWORD ══════════════════ */
+async function changeEmail() {
+  var newEmail = (document.getElementById('sNewEmail') || {}).value.trim();
+  var pass = (document.getElementById('sEmailPassword') || {}).value;
+  if (!newEmail || !pass) { toast('Renseignez l\'email et votre mot de passe','error'); return; }
+  if (!auth.currentUser) return;
+  try {
+    var cred = firebase.auth.EmailAuthProvider.credential(auth.currentUser.email, pass);
+    await auth.currentUser.reauthenticateWithCredential(cred);
+    await auth.currentUser.updateEmail(newEmail);
+    toast('Email mis à jour ✓','success');
+    document.getElementById('sNewEmail').value = '';
+    document.getElementById('sEmailPassword').value = '';
+  } catch(e) {
+    var msg = e.code === 'auth/wrong-password' ? 'Mot de passe incorrect' : (e.code === 'auth/email-already-in-use' ? 'Email déjà utilisé' : 'Erreur : ' + e.message);
+    toast(msg,'error');
+  }
+}
+async function changePassword() {
+  var curPass = (document.getElementById('sCurPassword') || {}).value;
+  var newPass = (document.getElementById('sNewPassword') || {}).value;
+  var confPass = (document.getElementById('sConfPassword') || {}).value;
+  if (!curPass || !newPass) { toast('Renseignez les champs requis','error'); return; }
+  if (newPass !== confPass) { toast('Les mots de passe ne correspondent pas','error'); return; }
+  if (newPass.length < 6) { toast('Minimum 6 caractères','error'); return; }
+  if (!auth.currentUser) return;
+  try {
+    var cred = firebase.auth.EmailAuthProvider.credential(auth.currentUser.email, curPass);
+    await auth.currentUser.reauthenticateWithCredential(cred);
+    await auth.currentUser.updatePassword(newPass);
+    toast('Mot de passe mis à jour ✓','success');
+    document.getElementById('sCurPassword').value = '';
+    document.getElementById('sNewPassword').value = '';
+    document.getElementById('sConfPassword').value = '';
+  } catch(e) {
+    var msg = e.code === 'auth/wrong-password' ? 'Mot de passe actuel incorrect' : 'Erreur : ' + e.message;
+    toast(msg,'error');
+  }
+}
 
 function testVoice() {
   if (window.EVATTS) {
