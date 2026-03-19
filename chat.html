@@ -670,6 +670,13 @@ body::before{
   transition:border-color var(--trans);
 }
 .alarm-item:hover{border-color:rgba(0,212,255,0.28);}
+.alarm-plus5-btn{
+  background:none;border:1px solid var(--border);border-radius:7px;
+  color:var(--text-muted);font-size:0.68em;font-family:'Orbitron',monospace;
+  font-weight:700;letter-spacing:1px;padding:4px 7px;cursor:pointer;
+  white-space:nowrap;transition:all 0.15s;flex-shrink:0;
+}
+.alarm-plus5-btn:hover{border-color:var(--cyan);color:var(--cyan);}
 .alarm-time-display{
   font-family:'Orbitron',monospace;font-size:1.4em;font-weight:700;
   color:var(--cyan);letter-spacing:2px;min-width:80px;
@@ -3659,6 +3666,7 @@ function renderAlarms(alarms) {
         '<div class="alarm-label">'+esc(a.label||'Alarme')+'</div>' +
         '<div class="alarm-detail">'+(repeatLabels[a.repeat]||'Une fois')+'</div>' +
       '</div>' +
+      '<button class="alarm-plus5-btn" onclick="addFiveMinutesToAlarm(\''+a.id+'\',\''+esc(a.time||'00:00')+'\')">+5 min</button>' +
       '<label class="alarm-toggle">' +
         '<input type="checkbox"'+(a.active?' checked':'')+' onchange="toggleAlarm(\''+a.id+'\',this.checked)">' +
         '<span class="alarm-slider"></span>' +
@@ -3703,6 +3711,20 @@ async function deleteAlarm(id) {
   } catch(e) { toast('Erreur','error'); }
 }
 window.deleteAlarm = deleteAlarm;
+
+async function addFiveMinutesToAlarm(id, currentTime) {
+  if (!S.user) return;
+  var parts = (currentTime || '00:00').split(':');
+  var d = new Date();
+  d.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10) + 5, 0, 0);
+  var newTime = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  try {
+    await db.collection('users').doc(S.user.uid).collection('alarms').doc(id).update({ time: newTime });
+    toast('Alarme décalée à ' + newTime, 'success');
+    loadAlarms();
+  } catch(e) { toast('Erreur','error'); }
+}
+window.addFiveMinutesToAlarm = addFiveMinutesToAlarm;
 
 function cancelAlarmForm() { document.getElementById('alarmFormCard').style.display = 'none'; }
 window.cancelAlarmForm = cancelAlarmForm;
