@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ════════════════════════════════════════════════════
+    // Fonctions utilitaires
+    // ════════════════════════════════════════════════════
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      let doc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAuth() && doc.exists && doc.data.get('role', 'user') in ['creator', 'developer'];
+    }
+
+    function isCreator() {
+      let doc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAuth() && doc.exists && doc.data.get('role', 'user') == 'creator';
+    }
+
+    // ════════════════════════════════════════════════════
+    // Profils utilisateurs
+    // ════════════════════════════════════════════════════
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /conversations/{convId} {
+        allow read, write: if isOwner(userId);
+
+        match /messages/{msgId} {
+          allow read, write: if isOwner(userId);
+        }
+      }
+
+      match /notes/{noteId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /alarms/{alarmId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /reminders/{reminderId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /events/{eventId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // ════════════════════════════════════════════════════
+    // Rapports / Signalements
+    // ════════════════════════════════════════════════════
+    match /reports/{reportId} {
+      allow create: if isAuth();
+
+      allow read: if isAuth() && (
+        resource.data.get('userId', '') == request.auth.uid || isAdmin()
+      );
+
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ════════════════════════════════════════════════════
+    // Clés développeur
+    // ════════════════════════════════════════════════════
+    match /dev_keys_valid/{keyId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isCreator();
+    }
+
+  }
+}
