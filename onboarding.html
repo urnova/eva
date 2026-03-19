@@ -147,10 +147,55 @@ body::before{
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:10px}
-@media(max-width:560px){
-  .ob-card{padding:28px 20px;border-radius:16px;margin:10px;}
+/* ── TV / Very large screens (≥1800px) ── */
+@media(min-width:1800px){
+  .ob-card{max-width:640px;padding:56px;}
+  .ob-title{font-size:1.8em;letter-spacing:5px;}
+  .ob-logo img{width:150px;}
+  .ob-sub{font-size:0.9em;}
+  .field-input{padding:13px 16px;font-size:0.9em;}
+  .btn-next,.btn-skip{padding:15px;font-size:0.88em;}
+  .voice-opt{padding:14px 18px;}
+  .ava-preview{width:120px;height:120px;font-size:2.8em;}
+}
+
+/* ── Tablet (640px – 1023px) ── */
+@media(min-width:560px) and (max-width:1023px){
+  .ob-card{max-width:480px;padding:36px 36px;}
+  .ob-title{font-size:1.4em;}
+  .ob-logo img{width:110px;}
+}
+
+/* ── Mobile (≤559px) ── */
+@media(max-width:559px){
+  .page{padding:14px;align-items:flex-start;padding-top:clamp(16px,6vh,48px);}
+  .ob-card{padding:26px 18px;border-radius:18px;margin:0;}
   .ob-title{font-size:1.2em;letter-spacing:2px;}
-  .ob-logo img{width:90px;}
+  .ob-logo img{width:88px;}
+  .ob-sub{font-size:0.78em;}
+  .ob-progress{margin-bottom:22px;}
+  .field-input{padding:10px 12px;font-size:0.84em;}
+  .field-label{font-size:0.73em;}
+  .voice-opt{padding:10px 12px;}
+  .voice-name{font-size:0.82em;}
+  .voice-desc{font-size:0.69em;}
+  .voice-test-btn{padding:4px 10px;font-size:0.72em;}
+  .btn-next{padding:12px;font-size:0.8em;letter-spacing:1.5px;}
+  .btn-skip{padding:12px;font-size:0.8em;}
+  .ob-actions{margin-top:18px;gap:8px;}
+  .ava-preview{width:88px;height:88px;font-size:2em;}
+  .finish-icon{font-size:3em;}
+  .finish-title{font-size:1.1em;}
+  .finish-text{font-size:0.79em;}
+  .pass-info-box{padding:10px 12px;font-size:0.75em;}
+}
+
+/* ── Small mobile (≤380px) ── */
+@media(max-width:380px){
+  .ob-card{padding:22px 14px;}
+  .ob-title{font-size:1.05em;}
+  .ob-logo img{width:76px;}
+  .btn-next,.btn-skip{padding:11px;font-size:0.76em;}
 }
 </style>
 </head>
