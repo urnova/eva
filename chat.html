@@ -175,14 +175,27 @@ body::before{
 .conv-body{flex:1;min-width:0;}
 .conv-title{font-size:0.76em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .conv-preview{font-size:0.66em;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
-.conv-del{
+.conv-del,.conv-edit{
   background:none;border:none;color:var(--text-muted);
-  cursor:pointer;padding:2px 4px;border-radius:4px;
-  opacity:0;transition:opacity 0.15s;flex-shrink:0;font-size:0.9em;
+  cursor:pointer;padding:3px 5px;border-radius:4px;
+  opacity:0;transition:opacity 0.15s;flex-shrink:0;font-size:0.82em;
+  display:flex;align-items:center;justify-content:center;
 }
-.conv-item:hover .conv-del{opacity:1;}
+.conv-edit svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.conv-item:hover .conv-del,.conv-item:hover .conv-edit{opacity:1;}
 .conv-del:hover{color:var(--red);}
+.conv-edit:hover{color:var(--cyan);}
+/* Touch devices — toujours visible */
+@media(hover:none){
+  .conv-del,.conv-edit{opacity:1;}
+}
 .conv-empty{font-size:0.73em;color:var(--text-dim);padding:10px;text-align:center;}
+/* Inline rename input */
+.conv-rename-input{
+  flex:1;background:transparent;border:none;border-bottom:1px solid var(--cyan);
+  color:var(--text);font-family:'Space Mono',monospace;font-size:0.76em;
+  outline:none;padding:1px 3px;min-width:0;
+}
 
 /* Sidebar footer - user */
 .sb-footer{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;}
@@ -243,6 +256,7 @@ body::before{
   margin-left:var(--sidebar-w);
   display:flex;
   height:100vh;
+  height:100dvh;
   position:relative;z-index:1;
   overflow:hidden;
 }
@@ -877,16 +891,27 @@ body::before{
   .sidebar-overlay.active{opacity:1;pointer-events:all;}
 
   /* Main layout */
-  .app-main{margin-left:0;}
-  .hamburger{display:flex!important;}
+  .app-main{margin-left:0;height:100dvh;}
+  .hamburger{display:flex!important;align-items:center;justify-content:center;width:38px;height:38px;flex-shrink:0;}
 
   /* Header */
-  .chat-header{padding:0 10px 0 8px;}
+  .chat-header{
+    padding:0 8px 0 6px;
+    height:auto;
+    min-height:var(--header-h);
+  }
+  .header-left{gap:6px;min-width:0;flex:1;}
   #evaHdrText{display:none;}
-  .conv-title-header{font-size:0.82em;max-width:160px;}
+  .conv-title-header{font-size:0.84em;max-width:none;flex:1;}
   .hdr-btn span{display:none;}
-  .hdr-btn{padding:6px;}
-  .eva-hdr-status{padding:4px 8px;}
+  .hdr-btn{padding:7px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;}
+  /* Status indicator: just the dot, no pill on mobile */
+  .eva-hdr-status{
+    background:none;border:none;padding:0 4px;gap:0;
+    border-radius:0;
+  }
+  .eva-hdr-dot{width:8px;height:8px;}
+  .header-right{gap:2px;flex-shrink:0;}
 
   /* Safe area header */
   .chat-header{
@@ -1812,17 +1837,21 @@ function renderConvs(filter) {
     return '<div class="conv-item'+(act?' active':'')+'" data-id="'+c.id+'">' +
       '<div class="conv-icon"><svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>' +
       '<div class="conv-body"><div class="conv-title">'+esc(c.title||'Conversation')+'</div><div class="conv-preview">'+esc(c.lastMessage||'')+'</div></div>' +
-      '<button class="conv-del" data-id="'+c.id+'">✕</button>' +
+      '<button class="conv-edit" data-id="'+c.id+'" title="Renommer"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>' +
+      '<button class="conv-del" data-id="'+c.id+'" title="Supprimer">✕</button>' +
     '</div>';
   }).join('');
   list.querySelectorAll('.conv-item').forEach(function(el) {
     el.addEventListener('click', function(e) {
-      if (e.target.classList.contains('conv-del')) return;
+      if (e.target.closest('.conv-del') || e.target.closest('.conv-edit')) return;
       loadConv(this.dataset.id);
     });
   });
   list.querySelectorAll('.conv-del').forEach(function(btn) {
     btn.addEventListener('click', function(e) { e.stopPropagation(); delConv(this.dataset.id); });
+  });
+  list.querySelectorAll('.conv-edit').forEach(function(btn) {
+    btn.addEventListener('click', function(e) { e.stopPropagation(); renameConv(this.dataset.id); });
   });
 }
 
@@ -1875,6 +1904,45 @@ async function delConv(id) {
     renderConvs();
   } catch(e) { toast('Erreur suppression','error'); }
 }
+
+function renameConv(id) {
+  var item = document.querySelector('.conv-item[data-id="'+id+'"]');
+  if (!item) return;
+  var titleEl = item.querySelector('.conv-title');
+  var current = titleEl ? titleEl.textContent : 'Conversation';
+  var inp = document.createElement('input');
+  inp.className = 'conv-rename-input';
+  inp.value = current;
+  inp.maxLength = 80;
+  if (titleEl) {
+    titleEl.replaceWith(inp);
+  }
+  inp.focus();
+  inp.select();
+  var done = false;
+  async function save() {
+    if (done) return;
+    done = true;
+    var newTitle = inp.value.trim() || current;
+    var newTitleEl = document.createElement('div');
+    newTitleEl.className = 'conv-title';
+    newTitleEl.textContent = newTitle;
+    inp.replaceWith(newTitleEl);
+    if (newTitle === current) return;
+    var conv = S.convs.find(function(c){return c.id===id;});
+    if (conv) conv.title = newTitle;
+    if (S.convId === id) document.getElementById('convTitleHeader').textContent = newTitle;
+    try {
+      await db.collection('users').doc(S.user.uid).collection('conversations').doc(id).update({title:newTitle});
+    } catch(e) { toast('Erreur renommage','error'); }
+  }
+  inp.addEventListener('blur', save);
+  inp.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
+    if (e.key === 'Escape') { inp.value = current; inp.blur(); }
+  });
+}
+window.renameConv = renameConv;
 
 async function saveConvMsg(userMsg, evaMsg) {
   if (!S.user) return;
