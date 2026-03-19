@@ -1072,19 +1072,6 @@ body::before{
 .nav-item.gold.active svg{filter:drop-shadow(0 0 4px rgba(255,215,0,0.6));}
 .sb-nav-label.gold-label{color:#ffd700;opacity:0.6;}
 
-/* Floating signaler button */
-.signaler-fab{
-  position:fixed;bottom:96px;right:20px;z-index:800;
-  background:linear-gradient(135deg,#ff4d6d 0%,#ff7043 100%);
-  border:none;border-radius:50px;padding:9px 16px;
-  color:#fff;font-family:'Orbitron',monospace;font-size:0.65em;
-  font-weight:700;letter-spacing:1.5px;cursor:pointer;
-  display:flex;align-items:center;gap:7px;
-  box-shadow:0 4px 20px rgba(255,77,109,0.45);
-  transition:all 0.2s;
-}
-.signaler-fab:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,77,109,0.55);}
-.signaler-fab svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
 
 /* Report submit modal */
 .report-overlay{
@@ -1243,12 +1230,6 @@ body::before{
 <div class="bg-orb bg-orb-2"></div>
 
 <!-- ════════════════ SIDEBAR ════════════════ -->
-<!-- ════ FLOATING SIGNALER BUTTON ════ -->
-<button class="signaler-fab" id="signalerFab" onclick="openReportModal()" title="Signaler un problème ou une idée">
-  <svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-  SIGNALER
-</button>
-
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sb-header">
@@ -1319,6 +1300,10 @@ body::before{
         <button class="menu-item" id="settingsMenuBtn">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
           Paramètres
+        </button>
+        <button class="menu-item" onclick="openReportModal()" style="color:var(--text-muted);">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+          Signaler un problème
         </button>
         <div class="menu-divider"></div>
         <button class="menu-item danger" id="signOutBtn">
@@ -1936,9 +1921,10 @@ function renderUserUI(p) {
   var el = document.getElementById('userNameText');
   if (el) el.textContent = name;
   var badge = document.getElementById('userBadgeText');
-  var roles = { creator:'👑 Créateur', developer:'⚙️ Développeur', creator_wife:'💎 Épouse', user:'👤 Utilisateur' };
+  var roles = { creator:'👑 Créateur', developer:'⚙️ Développeur', creator_wife:'💎 Épouse', user:'👤 Utilisateur',
+    createur:'👑 Créateur', créateur:'👑 Créateur', développeur:'⚙️ Développeur', developpeur:'⚙️ Développeur' };
   if (badge) {
-    var roleKey = (p.role||'user').toLowerCase();
+    var roleKey = (p.role||'user').toLowerCase().trim();
     badge.textContent = roles[roleKey] || p.devKeyLabel || p.role || '👤 Utilisateur';
   }
   var ava = document.getElementById('userAvatar');
@@ -3649,9 +3635,19 @@ var RS = {
 };
 
 /* ── Afficher section gold selon le rôle ──── */
+function isAdminRole() {
+  var role = ((S.profile && S.profile.role) || 'user').toLowerCase().trim();
+  var label = ((S.profile && S.profile.devKeyLabel) || '').toLowerCase();
+  return role === 'creator' || role === 'developer' ||
+    role.indexOf('creator') !== -1 || role.indexOf('createur') !== -1 ||
+    role.indexOf('créateur') !== -1 || role.indexOf('developer') !== -1 ||
+    role.indexOf('développeur') !== -1 ||
+    label.indexOf('créateur') !== -1 || label.indexOf('createur') !== -1 ||
+    label.indexOf('creator') !== -1 || label.indexOf('developer') !== -1 ||
+    label.indexOf('développeur') !== -1;
+}
 function setupReportsAccess() {
-  var role = (S.profile && S.profile.role) || 'user';
-  if (role === 'creator' || role === 'developer') {
+  if (isAdminRole()) {
     var sec = document.getElementById('navGoldSection');
     if (sec) sec.classList.add('visible');
   }
@@ -4001,8 +3997,7 @@ async function deleteReport(id) {
   var done = false;
   var obs = new MutationObserver(function() {
     if (done) return;
-    var role = (S.profile && S.profile.role) || 'user';
-    if (role === 'creator' || role === 'developer') {
+    if (isAdminRole()) {
       done = true;
       setupReportsAccess();
       updateReportBadge();
