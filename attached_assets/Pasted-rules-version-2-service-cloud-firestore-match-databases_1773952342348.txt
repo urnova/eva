@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['creator', 'developer', 'creator_wife'];
+    }
+
+    // Chaque utilisateur accède uniquement à ses propres données
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Conversations + sous-collection messages
+      match /conversations/{convId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        match /messages/{msgId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+
+      // Alarmes
+      match /alarms/{alarmId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Notes
+      match /notes/{noteId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Événements agenda
+      match /events/{eventId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Rappels
+      match /reminders/{reminderId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Clés développeur : lecture seule pour les authentifiés
+    match /dev_keys_valid/{keyId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    
+    // Rapports
+match /reports/{reportId} {
+  // Tout utilisateur connecté peut soumettre un rapport
+  allow create: if request.auth != null;
+
+  // Lecture d'un rapport individuel : l'auteur ou un admin
+  allow get: if request.auth != null && (
+    resource.data.userId == request.auth.uid ||
+    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['creator', 'developer']
+  );
+
+  // Liste complète (tableau de bord) : admins uniquement
+  allow list: if request.auth != null &&
+    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['creator', 'developer'];
+
+  // Mise à jour du statut et suppression : admins uniquement
+  allow update, delete: if request.auth != null &&
+    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['creator', 'developer'];
+}
+
+      // Seul l'admin peut modifier le statut, ajouter des notes, supprimer
+      allow update, delete: if isAdmin();
+    }
+  }
+}
