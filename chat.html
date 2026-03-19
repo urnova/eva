@@ -2594,7 +2594,13 @@ async function handleSend() {
   }
   if (window._userBio) userCtx += '\nNote personnelle : ' + window._userBio;
 
-  var sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + toneInstruction;
+  // Injection date/heure courante — EVA connaît ainsi l'heure pour créer alarmes/rappels
+  var _now = new Date();
+  var _dateStr = _now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  var _timeStr = _now.getHours().toString().padStart(2,'0') + ':' + _now.getMinutes().toString().padStart(2,'0');
+  var _dateCtx = '\n\n[ DONNÉES TEMPS RÉEL INJECTÉES PAR LE SYSTÈME ]\nDate : ' + _dateStr + '\nHeure actuelle : ' + _timeStr + '\nTimezone : ' + Intl.DateTimeFormat().resolvedOptions().timeZone + '\n(Utilise ces informations pour calculer les heures d\'alarmes et de rappels demandées.)';
+
+  var sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
 
   var msgContent = text;
   if (img) {
