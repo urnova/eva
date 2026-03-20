@@ -1836,8 +1836,8 @@ var S = {
   messages: [],
   convs: [],
   tone: 'normal',
-  ttsOn: true,
-  wakeWordOn: false,
+  ttsOn: cfg().ttsOn !== false,
+  wakeWordOn: !!cfg().wakeWordOn,
   evaOpen: true,
   busy: false,
   image: null,
@@ -2007,6 +2007,12 @@ async function loadProfile(uid) {
       renderUserUI(S.profile);
       if (S.profile.preferences) {
         S.config = Object.assign({}, S.profile.preferences, S.config);
+        /* Sync runtime state from merged config */
+        if (S.config.ttsOn !== undefined) S.ttsOn = S.config.ttsOn !== false;
+        if (S.config.wakeWordOn !== undefined) S.wakeWordOn = !!S.config.wakeWordOn;
+        if (window.updateTtsBtn) window.updateTtsBtn();
+        var wwBtn = document.getElementById('wakeWordBtn');
+        if (wwBtn) wwBtn.classList.toggle('active', S.wakeWordOn);
       }
       if (typeof setupReportsAccess === 'function') { setupReportsAccess(); updateReportBadge(); }
     } else {
@@ -2084,26 +2090,35 @@ function setupUI() {
     document.getElementById('sendBtn').disabled = !this.value.trim() && !S.image;
   });
 
-  // TTS — activé par défaut
+  // TTS — état chargé depuis localStorage
   var ttsBtn = document.getElementById('ttsBtn');
-  function updateTtsBtn() {
+  window.updateTtsBtn = function() {
+    if (!ttsBtn) return;
     ttsBtn.classList.toggle('tts-on', S.ttsOn);
     ttsBtn.title = S.ttsOn ? 'Voix activée — cliquer pour désactiver' : 'Voix désactivée — cliquer pour activer';
     document.getElementById('ttsBtnIcon').innerHTML = S.ttsOn
       ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>'
       : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
-  }
-  updateTtsBtn();
+  };
+  window.updateTtsBtn();
   ttsBtn.addEventListener('click', function() {
     S.ttsOn = !S.ttsOn;
-    updateTtsBtn();
+    S.config.ttsOn = S.ttsOn;
+    saveCfg();
+    window.updateTtsBtn();
     toast(S.ttsOn ? '🔊 Voix activée' : '🔇 Voix désactivée');
   });
 
-  // WAKE WORD
+  // WAKE WORD — état chargé depuis localStorage
   var wakeWordBtn = document.getElementById('wakeWordBtn');
+  wakeWordBtn.classList.toggle('active', S.wakeWordOn);
+  if (S.wakeWordOn && window.EVAWakeWord) {
+    setTimeout(function(){ window.EVAWakeWord.start(); }, 1000);
+  }
   wakeWordBtn.addEventListener('click', function() {
     S.wakeWordOn = !S.wakeWordOn;
+    S.config.wakeWordOn = S.wakeWordOn;
+    saveCfg();
     this.classList.toggle('active', S.wakeWordOn);
     if (S.wakeWordOn) {
       if (window.EVAWakeWord) window.EVAWakeWord.start();
@@ -3149,32 +3164,33 @@ function renderTTSProvOpts(provider) {
 window.renderTTSProvOpts = renderTTSProvOpts;
 
 function saveVoiceSettings() {
+  // TTS on/off
   S.ttsOn = document.getElementById('sTTS').checked;
+  S.config.ttsOn = S.ttsOn;
+  // Speed
   S.config.speechRate = parseFloat(document.getElementById('sSpeechRate').value);
   // TTS provider
   var provSel = document.getElementById('sTTSProvider');
   if (provSel) S.config.voiceProvider = provSel.value;
-  // Sub-options
+  // Sub-options (only read if element exists)
   var k;
-  k = document.getElementById('sTTSLang');           if(k) S.config.voiceLang = k.value;
-  k = document.getElementById('sPuterVoice');        if(k) S.config.puterVoice = k.value;
-  k = document.getElementById('sElevenLabsKey');     if(k && k.value.trim()) S.config.elevenLabsApiKey = k.value.trim();
-  k = document.getElementById('sElevenLabsVoiceId'); if(k && k.value.trim()) S.config.elevenLabsVoiceId = k.value.trim();
-  k = document.getElementById('sOpenAITTSKey');      if(k && k.value.trim()) S.config.openAITTSApiKey = k.value.trim();
-  k = document.getElementById('sOpenAITTSVoice');    if(k) S.config.openAITTSVoice = k.value;
+  k = document.getElementById('sTTSLang');       if(k) S.config.voiceLang = k.value;
+  k = document.getElementById('sPuterVoice');    if(k) S.config.puterVoice = k.value;
+  k = document.getElementById('sElevenLabsKey'); if(k && k.value.trim()) S.config.elevenLabsApiKey = k.value.trim();
+  k = document.getElementById('sOpenAITTSKey');  if(k && k.value.trim()) S.config.openAITTSApiKey = k.value.trim();
+  k = document.getElementById('sOpenAITTSVoice'); if(k) S.config.openAITTSVoice = k.value;
   // Wake word
   var ww = document.getElementById('sWakeWord');
   if (ww) {
     var wwOn = ww.checked;
-    if (wwOn !== S.wakeWordOn) {
-      S.wakeWordOn = wwOn;
-      document.getElementById('wakeWordBtn').classList.toggle('active', S.wakeWordOn);
-      if (S.wakeWordOn) { if(window.EVAWakeWord) window.EVAWakeWord.start(); }
-      else { if(window.EVAWakeWord) window.EVAWakeWord.stop(); }
-    }
+    S.wakeWordOn = wwOn;
+    S.config.wakeWordOn = wwOn;
+    document.getElementById('wakeWordBtn').classList.toggle('active', wwOn);
+    if (wwOn) { if(window.EVAWakeWord) window.EVAWakeWord.start(); }
+    else { if(window.EVAWakeWord) window.EVAWakeWord.stop(); }
   }
-  if (typeof updateTtsBtn === 'function') updateTtsBtn();
   saveCfg();
+  if (window.updateTtsBtn) window.updateTtsBtn();
   toast('Paramètres audio mis à jour ✓','success');
 }
 window.saveVoiceSettings = saveVoiceSettings;

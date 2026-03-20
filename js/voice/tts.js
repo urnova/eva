@@ -4,6 +4,12 @@
 var currentAudio = null;
 var isMuted      = false;
 
+/* ─── Toast helper (uses EVA's toast if available) ──────── */
+function showToast(msg, type) {
+  if (window.showEvaToast) window.showEvaToast(msg, type || 'error');
+  else console.warn('[TTS]', msg);
+}
+
 /* ═══════════════════════════════════════════════════════════
    INIT — preload voices list
    ═══════════════════════════════════════════════════════════ */
@@ -61,13 +67,14 @@ function speakWebSpeech(text, config) {
    ═══════════════════════════════════════════════════════════ */
 async function speakWithPuter(text, config) {
   config = config || {};
-  if (typeof puter === 'undefined') throw new Error('Puter non chargé');
+  if (typeof puter === 'undefined' || !puter.auth) throw new Error('Puter non chargé');
   setEvaSpeaking(true);
   try {
     var voice = config.puterVoice || 'nova';
     var audio = await puter.ai.txt2speech(text, { provider: 'openai', model: 'tts-1', voice: voice });
     var blob  = audio instanceof Blob ? audio : new Blob([audio], { type: 'audio/mpeg' });
     var url   = URL.createObjectURL(blob);
+    stopCurrentAudio();
     currentAudio = new Audio(url);
     currentAudio.onended = function() { setEvaSpeaking(false); URL.revokeObjectURL(url); };
     currentAudio.onerror = function() { setEvaSpeaking(false); URL.revokeObjectURL(url); };
@@ -85,7 +92,7 @@ async function speakWithElevenLabs(text, config) {
   config = config || {};
   var apiKey  = config.elevenLabsApiKey;
   var voiceId = 'KlhBpbVDwS268VcGauo'; // Voix EVA (fixe)
-  if (!apiKey) throw new Error('Clé API ElevenLabs manquante');
+  if (!apiKey) throw new Error('Clé API ElevenLabs manquante — configurez-la dans Paramètres › Voix');
 
   var resp = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId, {
     method: 'POST',
@@ -102,8 +109,8 @@ async function speakWithElevenLabs(text, config) {
   });
 
   if (!resp.ok) {
-    var msg = await resp.text().catch(function(){ return resp.status; });
-    throw new Error('ElevenLabs HTTP ' + resp.status + ': ' + msg);
+    var msg = await resp.text().catch(function(){ return ''; });
+    throw new Error('ElevenLabs HTTP ' + resp.status + (msg ? ' — ' + msg.slice(0,80) : ''));
   }
 
   var blob = await resp.blob();
@@ -125,7 +132,7 @@ async function speakWithOpenAI(text, config) {
   config = config || {};
   var apiKey = config.openAITTSApiKey || config.openaiApiKey;
   var voice  = config.openAITTSVoice || 'nova';
-  if (!apiKey) throw new Error('Clé API OpenAI manquante');
+  if (!apiKey) throw new Error('Clé API OpenAI manquante — configurez-la dans Paramètres › Voix');
 
   var resp = await fetch('https://api.openai.com/v1/audio/speech', {
     method: 'POST',
@@ -137,8 +144,8 @@ async function speakWithOpenAI(text, config) {
   });
 
   if (!resp.ok) {
-    var msg = await resp.text().catch(function(){ return resp.status; });
-    throw new Error('OpenAI TTS HTTP ' + resp.status + ': ' + msg);
+    var msg = await resp.text().catch(function(){ return ''; });
+    throw new Error('OpenAI TTS HTTP ' + resp.status + (msg ? ' — ' + msg.slice(0,80) : ''));
   }
 
   var blob = await resp.blob();
@@ -172,8 +179,21 @@ async function speakText(text, config) {
       await speakWebSpeech(text, config);
     }
   } catch(e) {
-    console.warn('[TTS] ' + provider + ' a échoué — repli navigateur:', e.message);
-    try { await speakWebSpeech(text, config); } catch(e2) {}
+    var isConfigError = e.message && (
+      e.message.includes('manquante') ||
+      e.message.includes('non chargé') ||
+      e.message.includes('HTTP 401') ||
+      e.message.includes('HTTP 403')
+    );
+
+    if (isConfigError) {
+      /* Provider explicitement configuré mais non opérationnel → toast clair, pas de fallback silencieux */
+      showToast('⚠ Voix ' + provider + ' : ' + e.message, 'error');
+    } else {
+      /* Erreur réseau/temporaire → repli silencieux sur le navigateur */
+      console.warn('[TTS] ' + provider + ' a échoué — repli navigateur:', e.message);
+      try { await speakWebSpeech(text, config); } catch(e2) {}
+    }
   }
 }
 
