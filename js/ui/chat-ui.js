@@ -327,7 +327,7 @@ export function streamMessageContent(role, content, options = {}) {
     let wordIndex = 0;
     let accumulated = '';
     const msPerTick = options.msPerWord || 16;
-    const chunkSize = options.chunkSize || 6;
+    const chunkSize = options.chunkSize || 20;
 
     function revealNext() {
       if (wordIndex >= words.length) {
