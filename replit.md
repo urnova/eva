@@ -7,7 +7,8 @@ An AI-powered intelligent virtual assistant web app with a Grok-like chat interf
 - **Frontend:** Vanilla HTML5, CSS3, ES6+ JavaScript modules (no build step)
 - **Backend/Database:** Firebase (Auth + Firestore)
 - **AI Providers:** WebLLM (Qwen 3), LM Studio, Ollama, Puter, OpenAI (GPT-4o), Claude
-- **Voice:** Web Speech API, Puter TTS
+- **Voice (TTS):** MMS-TTS Français (Meta/HuggingFace via transformers.js, `Xenova/mms-tts-fra`, ~50 MB, cached) → Puter TTS → Web Speech API (fallback chain)
+- **Voice (STT):** Web Speech API
 - **Runtime:** Node.js 20 (for serving static files via `serve`)
 
 ## Project Structure
@@ -85,3 +86,22 @@ An AI-powered intelligent virtual assistant web app with a Grok-like chat interf
   - `setIdle()`, `setTalking()`, `setListening()`, `setThinking()`, `setHappy()` — trigger motions
 - Mouse tracking: model head follows cursor via parameter injection
 - Loading spinner shown while model downloads from CDN (~3-5 seconds)
+
+## TTS Architecture
+- **Primary:** `js/voice/kokoro-tts.js` — loads `Xenova/mms-tts-fra` (Meta MMS-TTS French) via `@huggingface/transformers@3` dynamically imported from jsDelivr CDN. Generates audio as Float32Array via ONNX WASM; plays via Web Audio API. ~50 MB, downloaded once and cached.
+- **Fallback 1:** Puter TTS (`puter.ai.txt2speech`) — used only if `config.voiceProvider === 'puter'`
+- **Fallback 2:** Web Speech API (`SpeechSynthesisUtterance`) — always available as last resort
+- Orchestrated in `js/voice/tts.js` — `window.EVATTS` (speakText, stopTTS, etc.)
+- Settings panel (chat.html): shows "🇫🇷 MMS-TTS (Meta · natif)" as the current engine (non-editable), speech rate slider (applies to Web Speech API fallback), TTS on/off toggle, wake word toggle
+
+## Eva Character Animation
+- **Idle:** Live2D motions drive everything — no param overrides
+- **Thinking:** Slow head tilt oscillation (upper-left) + raised brow
+- **Talking:** Head movement + syllable-based lip sync (`ParamMouthOpenY` 0–0.98)
+- **Listening:** Static attentive pose
+- Natural blinking every 3–7 seconds; states managed in `js/eva-character.js`
+
+## Architecture Notes
+- `chat.html` is monolithic (~4540 lines) — all chat logic is inline; `js/ui/chat-ui.js` and `js/app.js` are NOT imported by chat.html
+- `js/settings/settings-ui.js` is a module used by the module-based app system only — NOT by chat.html
+- Settings in chat.html use `S` (global state object) and `saveCfg()`/`loadCfg()` (localStorage)

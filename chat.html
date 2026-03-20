@@ -2936,14 +2936,9 @@ function renderSettings(section) {
       '<input type="range" min="0.5" max="2" step="0.1" id="sSpeechRate" value="'+(cfg.speechRate||1.0)+'" style="flex:1;accent-color:var(--cyan)">' +
       '<span id="sSpeechRateVal" style="font-size:0.78em;color:var(--cyan);min-width:30px">'+(cfg.speechRate||1.0)+'x</span>' +
       '</div></div>' +
-      '<div class="form-field"><label class="form-label">Langue de synthèse vocale</label>' +
-      '<select class="form-select" id="sVoiceLang">' +
-      '<option value="fr-FR"'+((cfg.voiceLang||'fr-FR')==='fr-FR'?' selected':'')+'>🇫🇷 Français (France)</option>' +
-      '<option value="fr-BE"'+((cfg.voiceLang)==='fr-BE'?' selected':'')+'>🇧🇪 Français (Belgique)</option>' +
-      '<option value="fr-CA"'+((cfg.voiceLang)==='fr-CA'?' selected':'')+'>🇨🇦 Français (Canada)</option>' +
-      '<option value="en-US"'+((cfg.voiceLang)==='en-US'?' selected':'')+'>🇺🇸 English (US)</option>' +
-      '<option value="en-GB"'+((cfg.voiceLang)==='en-GB'?' selected':'')+'>🇬🇧 English (UK)</option>' +
-      '</select></div>' +
+      '<div class="settings-row" style="padding:10px 0;border-bottom:1px solid var(--border)">' +
+      '<div><div class="settings-row-label">Moteur vocal</div><div class="settings-row-sub">Modèle utilisé pour la synthèse vocale</div></div>' +
+      '<span style="font-size:0.76em;color:var(--cyan);letter-spacing:0.5px;font-family:\'Space Mono\',monospace">🇫🇷 MMS-TTS (Meta · natif)</span></div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
       '<button class="btn btn-secondary" onclick="testVoice()">🔊 Tester la voix</button>' +
