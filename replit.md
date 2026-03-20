@@ -7,7 +7,7 @@ An AI-powered intelligent virtual assistant web app with a Grok-like chat interf
 - **Frontend:** Vanilla HTML5, CSS3, ES6+ JavaScript modules (no build step)
 - **Backend/Database:** Firebase (Auth + Firestore)
 - **AI Providers:** WebLLM (Qwen 3), LM Studio, Ollama, Puter, OpenAI (GPT-4o), Claude
-- **Voice (TTS):** MMS-TTS Français (Meta/HuggingFace via transformers.js, `Xenova/mms-tts-fra`, ~50 MB, cached) → Puter TTS → Web Speech API (fallback chain)
+- **Voice (TTS):** Web Speech API natif (voix française du navigateur/OS) → Puter TTS (si voiceProvider=puter)
 - **Voice (STT):** Web Speech API
 - **Runtime:** Node.js 20 (for serving static files via `serve`)
 
@@ -88,11 +88,11 @@ An AI-powered intelligent virtual assistant web app with a Grok-like chat interf
 - Loading spinner shown while model downloads from CDN (~3-5 seconds)
 
 ## TTS Architecture
-- **Primary:** `js/voice/kokoro-tts.js` — loads `Xenova/mms-tts-fra` (Meta MMS-TTS French) via `@huggingface/transformers@3` dynamically imported from jsDelivr CDN. Generates audio as Float32Array via ONNX WASM; plays via Web Audio API. ~50 MB, downloaded once and cached.
-- **Fallback 1:** Puter TTS (`puter.ai.txt2speech`) — used only if `config.voiceProvider === 'puter'`
-- **Fallback 2:** Web Speech API (`SpeechSynthesisUtterance`) — always available as last resort
+- **Primary:** Web Speech API (`SpeechSynthesisUtterance`) — always available, uses best available French voice (Microsoft Denise, Amélie, Google français…)
+- **Override:** Puter TTS (`puter.ai.txt2speech`) — only if `config.voiceProvider === 'puter'`
+- `js/voice/kokoro-tts.js` — stub vide (désactivé, ne définit pas `window.KokoroVoice`)
 - Orchestrated in `js/voice/tts.js` — `window.EVATTS` (speakText, stopTTS, etc.)
-- Settings panel (chat.html): shows "🇫🇷 MMS-TTS (Meta · natif)" as the current engine (non-editable), speech rate slider (applies to Web Speech API fallback), TTS on/off toggle, wake word toggle
+- Settings panel (chat.html): shows "🇫🇷 Web Speech API (natif)", speech rate slider, TTS on/off toggle, wake word toggle
 
 ## Eva Character Animation
 - **Idle:** Live2D motions drive everything — no param overrides
