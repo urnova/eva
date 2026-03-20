@@ -1419,9 +1419,12 @@ body::before{
             <button onclick="exportCurrentConv('json')">🗂️ Exporter en JSON</button>
           </div>
         </div>
-        <button class="hdr-btn tts-on" id="ttsBtn" title="Voix activée — cliquer pour désactiver">
-          <svg id="ttsBtnIcon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-        </button>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+          <button class="hdr-btn tts-on" id="ttsBtn" title="Voix activée — cliquer pour désactiver">
+            <svg id="ttsBtnIcon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          </button>
+          <span id="ttsProviderBadge" style="font-size:0.48em;color:var(--text-muted);line-height:1;pointer-events:none;user-select:none;">🎙 Nav.</span>
+        </div>
         <button class="eva-toggle-btn" id="evaToggleBtn">
           <svg viewBox="0 0 24 24" width="12" height="12" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           EVA
@@ -2011,6 +2014,7 @@ async function loadProfile(uid) {
         if (S.config.ttsOn !== undefined) S.ttsOn = S.config.ttsOn !== false;
         if (S.config.wakeWordOn !== undefined) S.wakeWordOn = !!S.config.wakeWordOn;
         if (window.updateTtsBtn) window.updateTtsBtn();
+        if (window.updateProviderBadge) window.updateProviderBadge();
         var wwBtn = document.getElementById('wakeWordBtn');
         if (wwBtn) wwBtn.classList.toggle('active', S.wakeWordOn);
       }
@@ -2101,6 +2105,7 @@ function setupUI() {
       : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
   };
   window.updateTtsBtn();
+  if (window.updateProviderBadge) window.updateProviderBadge();
   ttsBtn.addEventListener('click', function() {
     S.ttsOn = !S.ttsOn;
     S.config.ttsOn = S.ttsOn;
@@ -2938,9 +2943,12 @@ function renderSettings(section) {
 
   } else if (section === 'voice') {
     var curTTSProv = cfg.voiceProvider || 'native';
+    var provLabels = {native:'🎙 Navigateur (Web Speech)',puter:'☁️ Puter TTS',elevenlabs:'⚡ ElevenLabs',openai:'🤖 OpenAI TTS'};
+    var curProvLabel = provLabels[curTTSProv] || curTTSProv;
     c.innerHTML =
       '<div class="settings-section">' +
       '<div class="settings-section-title">Voix & Audio</div>' +
+      '<div style="font-size:0.72em;color:var(--cyan);padding:4px 0 10px;letter-spacing:0.03em;">Provider actif : <strong>'+curProvLabel+'</strong></div>' +
       '<div class="settings-row" style="padding:10px 0;border-bottom:1px solid var(--border)">' +
       '<div><div class="settings-row-label">Synthèse vocale</div><div class="settings-row-sub">EVA vous répond à voix haute</div></div>' +
       '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sTTS"'+(S.ttsOn?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label></div>' +
@@ -3121,6 +3129,10 @@ function renderTTSProvOpts(provider) {
   var el = document.getElementById('sTTSProvOpts');
   if (!el) return;
   var c = S.config;
+
+  var keyInputStyle = 'font-family:monospace;font-size:0.78em;letter-spacing:0.05em;';
+  var hintStyle = 'font-size:0.67em;color:var(--text-muted);margin-top:3px;line-height:1.4;';
+
   if (provider === 'native') {
     el.innerHTML =
       '<div class="form-field"><label class="form-label">Langue</label>' +
@@ -3131,32 +3143,40 @@ function renderTTSProvOpts(provider) {
       '<option value="en-US"'+(c.voiceLang==='en-US'?' selected':'')+'>🇺🇸 English (US)</option>' +
       '<option value="en-GB"'+(c.voiceLang==='en-GB'?' selected':'')+'>🇬🇧 English (UK)</option>' +
       '</select></div>';
+
   } else if (provider === 'puter') {
     el.innerHTML =
-      '<div style="font-size:0.71em;color:var(--text-muted);padding:6px 0 10px;line-height:1.5">' +
-      'ℹ️ Requiert Puter connecté. Voix de haute qualité via OpenAI TTS.</div>' +
+      '<div style="'+hintStyle+'padding:6px 0 10px;">ℹ️ Requiert Puter connecté. Voix de haute qualité via OpenAI TTS.</div>' +
       '<div class="form-field"><label class="form-label">Voix</label>' +
       '<select class="form-select" id="sPuterVoice">' +
       ['nova','alloy','shimmer','echo','onyx','fable'].map(function(v){
         return '<option value="'+v+'"'+(c.puterVoice===v?' selected':'')+'>'+v+'</option>';
       }).join('') +
       '</select></div>';
+
   } else if (provider === 'elevenlabs') {
+    /* IMPORTANT: type="text" pas "password" — les champs password peuvent être vidés par le navigateur avant lecture */
+    var maskedKey = c.elevenLabsApiKey ? c.elevenLabsApiKey : '';
     el.innerHTML =
-      '<div class="form-field"><label class="form-label">Clé API ElevenLabs</label>' +
-      '<input type="password" class="form-input" id="sElevenLabsKey" value="'+esc(c.elevenLabsApiKey||'')+'" placeholder="sk_...">' +
-      '<div style="font-size:0.67em;color:var(--text-muted);margin-top:3px">Disponible sur <em>elevenlabs.io</em> — voix d\'EVA préconfigurée.</div></div>';
+      '<div class="form-field">' +
+      '<label class="form-label">Clé API ElevenLabs <span style="color:var(--cyan);font-size:0.8em">'+(maskedKey?'✓ configurée':'✗ manquante')+'</span></label>' +
+      '<input type="text" class="form-input" id="sElevenLabsKey" style="'+keyInputStyle+'" value="'+esc(maskedKey)+'" placeholder="sk_... (votre clé ElevenLabs)" autocomplete="off" spellcheck="false">' +
+      '<div style="'+hintStyle+'">Disponible sur <em>elevenlabs.io</em> → Profil → API Keys — Voix d\'EVA préconfigurée.</div></div>';
+
   } else if (provider === 'openai') {
+    var oaiKey = c.openAITTSApiKey || c.openaiApiKey || '';
     el.innerHTML =
-      '<div class="form-field"><label class="form-label">Clé API OpenAI</label>' +
-      '<input type="password" class="form-input" id="sOpenAITTSKey" value="'+esc(c.openAITTSApiKey||c.openaiApiKey||'')+'" placeholder="sk-...">' +
-      '<div style="font-size:0.67em;color:var(--text-muted);margin-top:3px">Même clé que votre provider IA si OpenAI</div></div>' +
+      '<div class="form-field">' +
+      '<label class="form-label">Clé API OpenAI <span style="color:var(--cyan);font-size:0.8em">'+(oaiKey?'✓ configurée':'✗ manquante')+'</span></label>' +
+      '<input type="text" class="form-input" id="sOpenAITTSKey" style="'+keyInputStyle+'" value="'+esc(oaiKey)+'" placeholder="sk-... (votre clé OpenAI)" autocomplete="off" spellcheck="false">' +
+      '<div style="'+hintStyle+'">Même clé que votre provider IA si vous utilisez OpenAI.</div></div>' +
       '<div class="form-field"><label class="form-label">Voix</label>' +
       '<select class="form-select" id="sOpenAITTSVoice">' +
       ['nova','alloy','shimmer','echo','onyx','fable'].map(function(v){
         return '<option value="'+v+'"'+((c.openAITTSVoice||'nova')===v?' selected':'')+'>'+v+'</option>';
       }).join('') +
       '</select></div>';
+
   } else {
     el.innerHTML = '';
   }
@@ -3164,36 +3184,85 @@ function renderTTSProvOpts(provider) {
 window.renderTTSProvOpts = renderTTSProvOpts;
 
 function saveVoiceSettings() {
-  // TTS on/off
-  S.ttsOn = document.getElementById('sTTS').checked;
-  S.config.ttsOn = S.ttsOn;
-  // Speed
-  S.config.speechRate = parseFloat(document.getElementById('sSpeechRate').value);
-  // TTS provider
+  /* TTS on/off */
+  var ttsCb = document.getElementById('sTTS');
+  if (ttsCb) { S.ttsOn = ttsCb.checked; S.config.ttsOn = S.ttsOn; }
+
+  /* Vitesse */
+  var srEl = document.getElementById('sSpeechRate');
+  if (srEl) S.config.speechRate = parseFloat(srEl.value) || 1.0;
+
+  /* Provider — lecture directe du select */
   var provSel = document.getElementById('sTTSProvider');
-  if (provSel) S.config.voiceProvider = provSel.value;
-  // Sub-options (only read if element exists)
+  if (provSel) {
+    S.config.voiceProvider = provSel.value;
+    console.log('[VOICE] saveVoiceSettings — provider sélectionné:', provSel.value);
+  } else {
+    console.warn('[VOICE] saveVoiceSettings — #sTTSProvider introuvable');
+  }
+
+  /* Sous-options — lire systématiquement (sans condition sur valeur vide) */
   var k;
-  k = document.getElementById('sTTSLang');       if(k) S.config.voiceLang = k.value;
-  k = document.getElementById('sPuterVoice');    if(k) S.config.puterVoice = k.value;
-  k = document.getElementById('sElevenLabsKey'); if(k && k.value.trim()) S.config.elevenLabsApiKey = k.value.trim();
-  k = document.getElementById('sOpenAITTSKey');  if(k && k.value.trim()) S.config.openAITTSApiKey = k.value.trim();
-  k = document.getElementById('sOpenAITTSVoice'); if(k) S.config.openAITTSVoice = k.value;
-  // Wake word
+  k = document.getElementById('sTTSLang');
+  if (k) S.config.voiceLang = k.value;
+
+  k = document.getElementById('sPuterVoice');
+  if (k) S.config.puterVoice = k.value;
+
+  /* Clé ElevenLabs — lire sans condition ; vide = effacer la clé */
+  k = document.getElementById('sElevenLabsKey');
+  if (k) {
+    var elKey = k.value.trim();
+    S.config.elevenLabsApiKey = elKey;
+    console.log('[VOICE] elevenLabsApiKey:', elKey ? '✓ présente ('+elKey.length+' car.)' : '✗ vide');
+  }
+
+  /* Clé OpenAI TTS */
+  k = document.getElementById('sOpenAITTSKey');
+  if (k) {
+    var oaiKey = k.value.trim();
+    if (oaiKey) S.config.openAITTSApiKey = oaiKey;
+  }
+
+  k = document.getElementById('sOpenAITTSVoice');
+  if (k) S.config.openAITTSVoice = k.value;
+
+  /* Wake word */
   var ww = document.getElementById('sWakeWord');
   if (ww) {
-    var wwOn = ww.checked;
-    S.wakeWordOn = wwOn;
-    S.config.wakeWordOn = wwOn;
-    document.getElementById('wakeWordBtn').classList.toggle('active', wwOn);
-    if (wwOn) { if(window.EVAWakeWord) window.EVAWakeWord.start(); }
-    else { if(window.EVAWakeWord) window.EVAWakeWord.stop(); }
+    S.wakeWordOn = ww.checked;
+    S.config.wakeWordOn = S.wakeWordOn;
+    var wwBtn = document.getElementById('wakeWordBtn');
+    if (wwBtn) wwBtn.classList.toggle('active', S.wakeWordOn);
+    if (S.wakeWordOn) { if (window.EVAWakeWord) window.EVAWakeWord.start(); }
+    else              { if (window.EVAWakeWord) window.EVAWakeWord.stop();  }
   }
+
+  /* Sauvegarde */
   saveCfg();
   if (window.updateTtsBtn) window.updateTtsBtn();
-  toast('Paramètres audio mis à jour ✓','success');
+
+  /* Mise à jour du badge provider dans l'UI */
+  updateProviderBadge();
+
+  var provLabel = {'native':'Navigateur','puter':'Puter','elevenlabs':'ElevenLabs','openai':'OpenAI TTS'}[S.config.voiceProvider||'native'] || S.config.voiceProvider;
+  toast('Paramètres audio sauvegardés — provider : ' + provLabel, 'success');
+
+  /* Re-render les options pour afficher l'état mis à jour des clés */
+  if (provSel) setTimeout(function(){ renderTTSProvOpts(provSel.value); }, 100);
 }
 window.saveVoiceSettings = saveVoiceSettings;
+
+/* Badge compact sous le bouton TTS indiquant le provider actif */
+function updateProviderBadge() {
+  var badge = document.getElementById('ttsProviderBadge');
+  if (!badge) return;
+  var prov = S.config.voiceProvider || 'native';
+  var labels = { native:'🎙 Nav.', puter:'☁️ Puter', elevenlabs:'⚡ 11labs', openai:'🤖 OpenAI' };
+  badge.textContent = labels[prov] || prov;
+  badge.style.color = prov === 'native' ? 'var(--text-muted)' : 'var(--cyan)';
+}
+window.updateProviderBadge = updateProviderBadge;
 
 /* ══════════════════ EXPORT CONVERSATIONS ══════════════════ */
 function toggleExportMenu() {
@@ -3375,19 +3444,20 @@ async function changePassword() {
 
 function testVoice() {
   if (!window.EVATTS) return;
-  var rate    = parseFloat(document.getElementById('sSpeechRate').value) || 1;
+  var rate    = parseFloat((document.getElementById('sSpeechRate')||{}).value) || 1;
   var provSel = document.getElementById('sTTSProvider');
   var testCfg = Object.assign({}, S.config, {
     voiceProvider: provSel ? provSel.value : (S.config.voiceProvider || 'native'),
     speechRate: rate
   });
+  /* Lire les champs de la section ouverte */
   var k;
-  k = document.getElementById('sTTSLang');           if(k) testCfg.voiceLang = k.value;
-  k = document.getElementById('sPuterVoice');        if(k) testCfg.puterVoice = k.value;
-  k = document.getElementById('sElevenLabsKey');     if(k && k.value.trim()) testCfg.elevenLabsApiKey = k.value.trim();
-  k = document.getElementById('sElevenLabsVoiceId'); if(k && k.value.trim()) testCfg.elevenLabsVoiceId = k.value.trim();
-  k = document.getElementById('sOpenAITTSKey');      if(k && k.value.trim()) testCfg.openAITTSApiKey = k.value.trim();
-  k = document.getElementById('sOpenAITTSVoice');    if(k) testCfg.openAITTSVoice = k.value;
+  k = document.getElementById('sTTSLang');       if(k) testCfg.voiceLang = k.value;
+  k = document.getElementById('sPuterVoice');    if(k) testCfg.puterVoice = k.value;
+  k = document.getElementById('sElevenLabsKey'); if(k) testCfg.elevenLabsApiKey = k.value.trim();
+  k = document.getElementById('sOpenAITTSKey');  if(k) testCfg.openAITTSApiKey  = k.value.trim();
+  k = document.getElementById('sOpenAITTSVoice'); if(k) testCfg.openAITTSVoice = k.value;
+  console.log('[testVoice] provider:', testCfg.voiceProvider, '| elevenKey:', testCfg.elevenLabsApiKey ? '✓' : '✗');
   window.EVATTS.speakText("Bonjour ! Je suis E.V.A, votre assistante virtuelle. Ravie de vous parler !", testCfg);
 }
 window.testVoice = testVoice;

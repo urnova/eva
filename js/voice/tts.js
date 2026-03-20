@@ -4,7 +4,7 @@
 var currentAudio = null;
 var isMuted      = false;
 
-/* ─── Toast helper (uses EVA's toast if available) ──────── */
+/* ─── Toast helper ──────────────────────────────────────── */
 function showToast(msg, type) {
   if (window.showEvaToast) window.showEvaToast(msg, type || 'error');
   else console.warn('[TTS]', msg);
@@ -22,7 +22,7 @@ function initVoices() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   1. WEB SPEECH API — primary / navigateur natif
+   1. WEB SPEECH API
    ═══════════════════════════════════════════════════════════ */
 function getBestFrenchVoice() {
   if (typeof speechSynthesis === 'undefined') return null;
@@ -90,9 +90,9 @@ async function speakWithPuter(text, config) {
    ═══════════════════════════════════════════════════════════ */
 async function speakWithElevenLabs(text, config) {
   config = config || {};
-  var apiKey  = config.elevenLabsApiKey;
+  var apiKey  = (config.elevenLabsApiKey || '').trim();
   var voiceId = 'KlhBpbVDwS268VcGauo'; // Voix EVA (fixe)
-  if (!apiKey) throw new Error('Clé API ElevenLabs manquante — configurez-la dans Paramètres › Voix');
+  if (!apiKey) throw new Error('Clé API ElevenLabs manquante');
 
   var resp = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId, {
     method: 'POST',
@@ -110,7 +110,7 @@ async function speakWithElevenLabs(text, config) {
 
   if (!resp.ok) {
     var msg = await resp.text().catch(function(){ return ''; });
-    throw new Error('ElevenLabs HTTP ' + resp.status + (msg ? ' — ' + msg.slice(0,80) : ''));
+    throw new Error('ElevenLabs HTTP ' + resp.status + (msg ? ' — ' + msg.slice(0, 80) : ''));
   }
 
   var blob = await resp.blob();
@@ -120,8 +120,8 @@ async function speakWithElevenLabs(text, config) {
   setEvaSpeaking(true);
   return new Promise(function(resolve, reject) {
     currentAudio.onended = function() { setEvaSpeaking(false); URL.revokeObjectURL(url); resolve(); };
-    currentAudio.onerror = function(e) { setEvaSpeaking(false); URL.revokeObjectURL(url); reject(e); };
-    currentAudio.play().catch(reject);
+    currentAudio.onerror = function(e) { setEvaSpeaking(false); URL.revokeObjectURL(url); reject(new Error('Lecture audio échouée')); };
+    currentAudio.play().catch(function(e) { setEvaSpeaking(false); reject(e); });
   });
 }
 
@@ -130,9 +130,9 @@ async function speakWithElevenLabs(text, config) {
    ═══════════════════════════════════════════════════════════ */
 async function speakWithOpenAI(text, config) {
   config = config || {};
-  var apiKey = config.openAITTSApiKey || config.openaiApiKey;
+  var apiKey = (config.openAITTSApiKey || config.openaiApiKey || '').trim();
   var voice  = config.openAITTSVoice || 'nova';
-  if (!apiKey) throw new Error('Clé API OpenAI manquante — configurez-la dans Paramètres › Voix');
+  if (!apiKey) throw new Error('Clé API OpenAI manquante');
 
   var resp = await fetch('https://api.openai.com/v1/audio/speech', {
     method: 'POST',
@@ -145,7 +145,7 @@ async function speakWithOpenAI(text, config) {
 
   if (!resp.ok) {
     var msg = await resp.text().catch(function(){ return ''; });
-    throw new Error('OpenAI TTS HTTP ' + resp.status + (msg ? ' — ' + msg.slice(0,80) : ''));
+    throw new Error('OpenAI TTS HTTP ' + resp.status + (msg ? ' — ' + msg.slice(0, 80) : ''));
   }
 
   var blob = await resp.blob();
@@ -155,8 +155,8 @@ async function speakWithOpenAI(text, config) {
   setEvaSpeaking(true);
   return new Promise(function(resolve, reject) {
     currentAudio.onended = function() { setEvaSpeaking(false); URL.revokeObjectURL(url); resolve(); };
-    currentAudio.onerror = function(e) { setEvaSpeaking(false); URL.revokeObjectURL(url); reject(e); };
-    currentAudio.play().catch(reject);
+    currentAudio.onerror = function(e) { setEvaSpeaking(false); URL.revokeObjectURL(url); reject(new Error('Lecture audio échouée')); };
+    currentAudio.play().catch(function(e) { setEvaSpeaking(false); reject(e); });
   });
 }
 
@@ -166,7 +166,12 @@ async function speakWithOpenAI(text, config) {
 async function speakText(text, config) {
   config = config || {};
   if (isMuted) return;
-  var provider = config.voiceProvider || 'native';
+  if (!text || !text.trim()) return;
+  var provider = (config.voiceProvider || 'native').toLowerCase();
+
+  console.log('[TTS] speakText — provider:', provider,
+    '| elevenLabsKey:', config.elevenLabsApiKey ? '✓ présente' : '✗ absente',
+    '| openAIKey:', (config.openAITTSApiKey || config.openaiApiKey) ? '✓ présente' : '✗ absente');
 
   try {
     if (provider === 'puter') {
@@ -179,19 +184,15 @@ async function speakText(text, config) {
       await speakWebSpeech(text, config);
     }
   } catch(e) {
-    var isConfigError = e.message && (
-      e.message.includes('manquante') ||
-      e.message.includes('non chargé') ||
-      e.message.includes('HTTP 401') ||
-      e.message.includes('HTTP 403')
-    );
+    var errMsg = e && e.message ? e.message : 'Erreur inconnue';
+    console.error('[TTS]', provider, 'a échoué :', errMsg);
 
-    if (isConfigError) {
-      /* Provider explicitement configuré mais non opérationnel → toast clair, pas de fallback silencieux */
-      showToast('⚠ Voix ' + provider + ' : ' + e.message, 'error');
+    if (provider === 'native') {
+      /* Voix navigateur — erreur silencieuse (rien à faire) */
     } else {
-      /* Erreur réseau/temporaire → repli silencieux sur le navigateur */
-      console.warn('[TTS] ' + provider + ' a échoué — repli navigateur:', e.message);
+      /* Provider externe — toujours notifier l'utilisateur */
+      showToast('⚠ ' + provider + ' : ' + errMsg + ' — voix navigateur utilisée', 'error');
+      /* Repli navigateur (toujours notifié, jamais silencieux) */
       try { await speakWebSpeech(text, config); } catch(e2) {}
     }
   }
