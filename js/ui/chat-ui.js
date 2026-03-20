@@ -326,8 +326,12 @@ export function streamMessageContent(role, content, options = {}) {
     const words = content.split(' ');
     let wordIndex = 0;
     let accumulated = '';
-    const msPerTick = options.msPerWord || 16;
-    const chunkSize = options.chunkSize || 20;
+
+    // Dynamic speed: always finish in ~6 seconds regardless of response length
+    const TICK_MS    = 14;
+    const TARGET_MS  = 6000;
+    const totalTicks = TARGET_MS / TICK_MS;                              // ~428 ticks
+    const chunkSize  = Math.max(2, Math.ceil(words.length / totalTicks)); // min 2 words/tick
 
     function revealNext() {
       if (wordIndex >= words.length) {
@@ -350,7 +354,7 @@ export function streamMessageContent(role, content, options = {}) {
         if (isNearBottom) scrollToBottom();
       }
 
-      setTimeout(revealNext, msPerTick);
+      setTimeout(revealNext, TICK_MS);
     }
 
     revealNext();

@@ -2673,57 +2673,35 @@ function streamEvaMsg(content) {
   var bubble = div.querySelector('.msg-bubble');
   var plain = content.replace(/[#*`_>\[\]]/g, '').replace(/<[^>]*>/g, '');
 
+  // Lancer le TTS immédiatement si activé (indépendant du streaming texte)
   if (S.ttsOn && window.EVATTS) {
-    /* ── Mode TTS : streaming synchronisé avec la parole ─── */
-    // Vitesse TTS française : ~15 chars/sec à rate 1.0
-    var rate = (S.config && S.config.speechRate) || 1.0;
-    var msPerChar = Math.round(62 / rate); // ~16 chars/sec → ajuste selon le rate
-
     setEvaStatus('EVA PARLE...', 'speaking');
-
-    // Lancer le TTS
     window.EVATTS.speakText(plain.slice(0, 700), S.config);
-
-    // Streaming calé sur la même vitesse que la voix
-    var i = 0;
-    var streamed = '';
-    var streamTimer = setInterval(function() {
-      if (i >= content.length) {
-        clearInterval(streamTimer);
-        bubble.innerHTML = mdToHtml(content);
-        scrollDown();
-        return;
-      }
-      // Avancer de 1 char à la fois pour rester en sync avec la voix
-      streamed += content[i++];
-      bubble.textContent = streamed;
-      scrollDown();
-    }, msPerChar);
-
   } else {
-    /* ── Mode sans TTS : streaming rapide classique ─────── */
     if (window.EvaCharacter) window.EvaCharacter.setHappy();
     setEvaStatus('EVA ÉCRIT...', 'writing');
+  }
 
-    var i = 0;
-    var streamed = '';
-    var speed = Math.max(1, Math.floor(content.length / 120));
+  // Streaming texte rapide : toujours ~6 secondes max, indépendant de la voix
+  var i = 0;
+  var streamed = '';
+  var TARGET_FRAMES = 360; // ~6s à 60fps
+  var charsPerFrame = Math.max(2, Math.ceil(content.length / TARGET_FRAMES));
 
-    function tick() {
-      if (i >= content.length) {
-        bubble.innerHTML = mdToHtml(content);
-        scrollDown();
-        setEvaStatus(null);
-        return;
-      }
-      var end = Math.min(i + speed, content.length);
-      while (i < end) { streamed += content[i++]; }
-      bubble.textContent = streamed;
+  function tick() {
+    if (i >= content.length) {
+      bubble.innerHTML = mdToHtml(content);
       scrollDown();
-      requestAnimationFrame(tick);
+      if (!S.ttsOn) setEvaStatus(null);
+      return;
     }
+    var end = Math.min(i + charsPerFrame, content.length);
+    while (i < end) { streamed += content[i++]; }
+    bubble.textContent = streamed;
+    scrollDown();
     requestAnimationFrame(tick);
   }
+  requestAnimationFrame(tick);
 }
 
 async function analyzeImage(base64Data, prompt) {
