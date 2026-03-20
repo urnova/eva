@@ -86,12 +86,13 @@ async function loadVRM() {
   var container = document.getElementById('vrmContainer');
   if (!container) return;
 
-  /* Dynamic ESM imports — bare specifiers resolved by importmap in chat.html */
+  /* Dynamic ESM imports via esm.sh — handles all internal bare specifiers automatically.
+     ?deps=three@0.158.0 ensures three-vrm shares the same THREE instance as the main import. */
   var THREE, GLTFLoader, VRMLoaderPlugin, VRMUtils;
   try {
-    var mod3      = await import('three');
-    var modGLTF   = await import('three/examples/jsm/loaders/GLTFLoader.js');
-    var modVRM    = await import('@pixiv/three-vrm');
+    var mod3    = await import('https://esm.sh/three@0.158.0');
+    var modGLTF = await import('https://esm.sh/three@0.158.0/examples/jsm/loaders/GLTFLoader.js');
+    var modVRM  = await import('https://esm.sh/@pixiv/three-vrm@2?deps=three@0.158.0');
     THREE           = mod3;
     GLTFLoader      = modGLTF.GLTFLoader;
     VRMLoaderPlugin = modVRM.VRMLoaderPlugin;
