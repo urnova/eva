@@ -19,6 +19,8 @@ const MIME = {
   '.woff': 'font/woff',
   '.woff2':'font/woff2',
   '.ttf':  'font/ttf',
+  '.glb':  'model/gltf-binary',
+  '.vrm':  'model/gltf-binary',
 };
 
 const PAGE_ROUTES = {

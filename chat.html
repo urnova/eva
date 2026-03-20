@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>E.V.A — Assistant</title>
+<!-- Import map for Three.js + three-vrm (used by eva-character.js via dynamic import) -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.min.js",
+    "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/",
+    "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.4/lib/three-vrm.module.min.js"
+  }
+}
+</script>
 <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -1821,9 +1831,6 @@ body::before{
 <script src="js/voice/kokoro-tts.js"></script>
 <script src="js/voice/stt.js"></script>
 <script src="js/voice/wake-word.js"></script>
-<script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pixi.js@6/dist/browser/pixi.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
 <script src="js/eva-character.js"></script>
 
 <script>
