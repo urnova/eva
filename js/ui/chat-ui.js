@@ -326,7 +326,8 @@ export function streamMessageContent(role, content, options = {}) {
     const words = content.split(' ');
     let wordIndex = 0;
     let accumulated = '';
-    const msPerWord = options.msPerWord || 18;
+    const msPerTick = options.msPerWord || 16;
+    const chunkSize = options.chunkSize || 6;
 
     function revealNext() {
       if (wordIndex >= words.length) {
@@ -336,7 +337,6 @@ export function streamMessageContent(role, content, options = {}) {
         return;
       }
 
-      const chunkSize = wordIndex < 10 ? 1 : 2;
       for (let i = 0; i < chunkSize && wordIndex < words.length; i++) {
         accumulated += (accumulated ? ' ' : '') + words[wordIndex];
         wordIndex++;
@@ -350,7 +350,7 @@ export function streamMessageContent(role, content, options = {}) {
         if (isNearBottom) scrollToBottom();
       }
 
-      setTimeout(revealNext, msPerWord);
+      setTimeout(revealNext, msPerTick);
     }
 
     revealNext();
