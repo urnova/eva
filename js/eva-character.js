@@ -135,8 +135,8 @@ async function loadVRM() {
 
   /* Camera — bust framing : roughly from chest to top of head */
   camera = new THREE.PerspectiveCamera(30, W / H, 0.1, 20);
-  camera.position.set(0, 1.12, 1.4);
-  camera.lookAt(new THREE.Vector3(0, 0.95, 0));
+  camera.position.set(0, 1.0, 2.4);
+  camera.lookAt(new THREE.Vector3(0, 0.85, 0));
 
   /* Lighting */
   var ambLight = new THREE.AmbientLight(0xffffff, 1.1);
