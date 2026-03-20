@@ -3130,10 +3130,7 @@ function renderTTSProvOpts(provider) {
     el.innerHTML =
       '<div class="form-field"><label class="form-label">Clé API ElevenLabs</label>' +
       '<input type="password" class="form-input" id="sElevenLabsKey" value="'+esc(c.elevenLabsApiKey||'')+'" placeholder="sk_...">' +
-      '<div style="font-size:0.67em;color:var(--text-muted);margin-top:3px">Disponible sur <em>elevenlabs.io</em></div></div>' +
-      '<div class="form-field"><label class="form-label">Voice ID</label>' +
-      '<input type="text" class="form-input" id="sElevenLabsVoiceId" value="'+esc(c.elevenLabsVoiceId||'')+'" placeholder="pNInz6obpgDQGcFmaJgB">' +
-      '<div style="font-size:0.67em;color:var(--text-muted);margin-top:3px">Trouvez des voix sur elevenlabs.io/voice-library — modèle <em>eleven_multilingual_v2</em></div></div>';
+      '<div style="font-size:0.67em;color:var(--text-muted);margin-top:3px">Disponible sur <em>elevenlabs.io</em> — voix d\'EVA préconfigurée.</div></div>';
   } else if (provider === 'openai') {
     el.innerHTML =
       '<div class="form-field"><label class="form-label">Clé API OpenAI</label>' +

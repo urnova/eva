@@ -84,7 +84,7 @@ async function speakWithPuter(text, config) {
 async function speakWithElevenLabs(text, config) {
   config = config || {};
   var apiKey  = config.elevenLabsApiKey;
-  var voiceId = config.elevenLabsVoiceId || 'pNInz6obpgDQGcFmaJgB'; // Adam — clair et naturel
+  var voiceId = 'KlhBpbVDwS268VcGauo'; // Voix EVA (fixe)
   if (!apiKey) throw new Error('Clé API ElevenLabs manquante');
 
   var resp = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId, {
