@@ -88,11 +88,16 @@ An AI-powered intelligent virtual assistant web app with a Grok-like chat interf
 - Loading spinner shown while model downloads from CDN (~3-5 seconds)
 
 ## TTS Architecture
-- **Primary:** Web Speech API (`SpeechSynthesisUtterance`) — always available, uses best available French voice (Microsoft Denise, Amélie, Google français…)
-- **Override:** Puter TTS (`puter.ai.txt2speech`) — only if `config.voiceProvider === 'puter'`
+- **native:** Web Speech API (`SpeechSynthesisUtterance`) — défaut, voix française du navigateur/OS
+- **puter:** Puter TTS (`puter.ai.txt2speech`) — requiert Puter connecté
+- **elevenlabs:** ElevenLabs REST API (`eleven_multilingual_v2`, needs `config.elevenLabsApiKey` + `config.elevenLabsVoiceId`)
+- **openai:** OpenAI TTS (`tts-1`, needs `config.openAITTSApiKey` + `config.openAITTSVoice`)
+- Dispatch centralisé dans `speakText()` via `config.voiceProvider`; repli auto sur Web Speech API si provider échoue
 - `js/voice/kokoro-tts.js` — stub vide (désactivé, ne définit pas `window.KokoroVoice`)
 - Orchestrated in `js/voice/tts.js` — `window.EVATTS` (speakText, stopTTS, etc.)
-- Settings panel (chat.html): shows "🇫🇷 Web Speech API (natif)", speech rate slider, TTS on/off toggle, wake word toggle
+- Settings panel (chat.html): provider selector (Navigateur / Puter / ElevenLabs / OpenAI TTS) with contextual sub-options per provider (lang, voice, API keys); speech rate slider; TTS on/off toggle; wake word toggle
+- Onboarding step 3: voice selector + TTS provider dropdown (saves `voiceProvider` to Firestore preferences)
+- `testVoice()` uses the currently selected provider in the settings panel
 
 ## Eva Character Animation
 - **Idle:** Live2D motions drive everything — no param overrides

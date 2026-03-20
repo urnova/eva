@@ -308,7 +308,7 @@ body::before{
     <div class="ob-view" id="ob3">
       <div class="step-label">Étape 3 — Voix</div>
       <div class="field">
-        <label class="field-label">Choisissez la voix d'E.V.A</label>
+        <label class="field-label">Voix du navigateur</label>
       </div>
       <div class="voice-opt selected" id="voiceAuto" onclick="selectVoice('auto',this)">
         <div class="voice-opt-info">
@@ -323,6 +323,18 @@ body::before{
           <div class="voice-desc">Voix française naturelle du navigateur</div>
         </div>
         <button class="voice-test-btn" onclick="testVoice('fr-fr',event)">▶ Tester</button>
+      </div>
+      <div class="field" style="margin-top:20px">
+        <label class="field-label">Service de synthèse vocale</label>
+        <select id="obTTSProvider" style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:0.85em;font-family:'Space Mono',monospace;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;" onchange="obOnTTSProvChange(this.value)">
+          <option value="native">🎙 Navigateur (défaut — gratuit)</option>
+          <option value="puter">☁️ Puter TTS (requiert Puter)</option>
+          <option value="elevenlabs">⚡ ElevenLabs (clé API)</option>
+          <option value="openai">🤖 OpenAI TTS (clé API)</option>
+        </select>
+        <div id="obTTSProvInfo" style="font-size:0.7em;color:var(--text-muted);margin-top:6px;line-height:1.5">
+          Voix native du navigateur — aucune configuration requise.
+        </div>
       </div>
       <div class="ob-actions">
         <button class="btn-skip" onclick="goStep(isGoogleOnlyUser ? 2 : 1)">← Retour</button>
@@ -455,8 +467,9 @@ body::before{
 <script src="js/core/firebase-config.js"></script>
 <script>
 var currentStep = 1;
-var selectedVoice = 'auto';
-var selectedProvider = 'puter';
+var selectedVoice       = 'auto';
+var selectedProvider    = 'puter';
+var selectedTTSProvider = 'native';
 var currentUser = null;
 var isGoogleOnlyUser = false;
 
@@ -703,6 +716,19 @@ function selectVoice(voice, el) {
   el.classList.add('selected');
 }
 
+function obOnTTSProvChange(value) {
+  selectedTTSProvider = value;
+  var info = document.getElementById('obTTSProvInfo');
+  if (!info) return;
+  var msgs = {
+    native:      'Voix native du navigateur — aucune configuration requise.',
+    puter:       'Requiert Puter connecté (étape suivante). Voix de haute qualité via OpenAI TTS.',
+    elevenlabs:  'Configurez votre clé API ElevenLabs dans Paramètres > Voix après la connexion.',
+    openai:      'Configurez votre clé API OpenAI dans Paramètres > Voix après la connexion.'
+  };
+  info.textContent = msgs[value] || '';
+}
+
 function testVoice(voice, event) {
   event.stopPropagation();
   if (typeof speechSynthesis === 'undefined') return;
@@ -739,7 +765,7 @@ async function finish() {
         date: new Date().toISOString()
       },
       preferences: {
-        voiceProvider: 'native',
+        voiceProvider: selectedTTSProvider,
         selectedVoice: selectedVoice,
         voiceLang: 'fr-FR',
         speechRate: 1.0,

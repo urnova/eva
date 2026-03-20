@@ -2922,6 +2922,7 @@ function renderSettings(section) {
     }, 50);
 
   } else if (section === 'voice') {
+    var curTTSProv = cfg.voiceProvider || 'native';
     c.innerHTML =
       '<div class="settings-section">' +
       '<div class="settings-section-title">Voix & Audio</div>' +
@@ -2936,9 +2937,14 @@ function renderSettings(section) {
       '<input type="range" min="0.5" max="2" step="0.1" id="sSpeechRate" value="'+(cfg.speechRate||1.0)+'" style="flex:1;accent-color:var(--cyan)">' +
       '<span id="sSpeechRateVal" style="font-size:0.78em;color:var(--cyan);min-width:30px">'+(cfg.speechRate||1.0)+'x</span>' +
       '</div></div>' +
-      '<div class="settings-row" style="padding:10px 0;border-bottom:1px solid var(--border)">' +
-      '<div><div class="settings-row-label">Moteur vocal</div><div class="settings-row-sub">Modèle utilisé pour la synthèse vocale</div></div>' +
-      '<span style="font-size:0.76em;color:var(--cyan);letter-spacing:0.5px;font-family:\'Space Mono\',monospace">🇫🇷 Web Speech API (natif)</span></div>' +
+      '<div class="form-field"><label class="form-label">Service de voix</label>' +
+      '<select class="form-select" id="sTTSProvider">' +
+      '<option value="native"'+(curTTSProv==='native'?' selected':'')+'>🎙 Navigateur (Web Speech API)</option>' +
+      '<option value="puter"'+(curTTSProv==='puter'?' selected':'')+'>☁️ Puter TTS</option>' +
+      '<option value="elevenlabs"'+(curTTSProv==='elevenlabs'?' selected':'')+'>⚡ ElevenLabs</option>' +
+      '<option value="openai"'+(curTTSProv==='openai'?' selected':'')+'>🤖 OpenAI TTS</option>' +
+      '</select></div>' +
+      '<div id="sTTSProvOpts"></div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
       '<button class="btn btn-secondary" onclick="testVoice()">🔊 Tester la voix</button>' +
@@ -2948,6 +2954,11 @@ function renderSettings(section) {
       var sl = document.getElementById('sSpeechRate');
       var sv = document.getElementById('sSpeechRateVal');
       if (sl && sv) sl.addEventListener('input', function(){ sv.textContent = parseFloat(this.value).toFixed(1) + 'x'; });
+      var provSel = document.getElementById('sTTSProvider');
+      if (provSel) {
+        renderTTSProvOpts(provSel.value);
+        provSel.addEventListener('change', function(){ renderTTSProvOpts(this.value); });
+      }
     }, 50);
 
   } else if (section === 'account') {
@@ -3090,10 +3101,71 @@ async function saveAISettings() {
   closeSettings();
 }
 
+/* ─── Render TTS provider sub-options ─────────────────────── */
+function renderTTSProvOpts(provider) {
+  var el = document.getElementById('sTTSProvOpts');
+  if (!el) return;
+  var c = S.config;
+  if (provider === 'native') {
+    el.innerHTML =
+      '<div class="form-field"><label class="form-label">Langue</label>' +
+      '<select class="form-select" id="sTTSLang">' +
+      '<option value="fr-FR"'+((c.voiceLang||'fr-FR')==='fr-FR'?' selected':'')+'>🇫🇷 Français (France)</option>' +
+      '<option value="fr-BE"'+(c.voiceLang==='fr-BE'?' selected':'')+'>🇧🇪 Français (Belgique)</option>' +
+      '<option value="fr-CA"'+(c.voiceLang==='fr-CA'?' selected':'')+'>🇨🇦 Français (Canada)</option>' +
+      '<option value="en-US"'+(c.voiceLang==='en-US'?' selected':'')+'>🇺🇸 English (US)</option>' +
+      '<option value="en-GB"'+(c.voiceLang==='en-GB'?' selected':'')+'>🇬🇧 English (UK)</option>' +
+      '</select></div>';
+  } else if (provider === 'puter') {
+    el.innerHTML =
+      '<div style="font-size:0.71em;color:var(--text-muted);padding:6px 0 10px;line-height:1.5">' +
+      'ℹ️ Requiert Puter connecté. Voix de haute qualité via OpenAI TTS.</div>' +
+      '<div class="form-field"><label class="form-label">Voix</label>' +
+      '<select class="form-select" id="sPuterVoice">' +
+      ['nova','alloy','shimmer','echo','onyx','fable'].map(function(v){
+        return '<option value="'+v+'"'+(c.puterVoice===v?' selected':'')+'>'+v+'</option>';
+      }).join('') +
+      '</select></div>';
+  } else if (provider === 'elevenlabs') {
+    el.innerHTML =
+      '<div class="form-field"><label class="form-label">Clé API ElevenLabs</label>' +
+      '<input type="password" class="form-input" id="sElevenLabsKey" value="'+esc(c.elevenLabsApiKey||'')+'" placeholder="sk_...">' +
+      '<div style="font-size:0.67em;color:var(--text-muted);margin-top:3px">Disponible sur <em>elevenlabs.io</em></div></div>' +
+      '<div class="form-field"><label class="form-label">Voice ID</label>' +
+      '<input type="text" class="form-input" id="sElevenLabsVoiceId" value="'+esc(c.elevenLabsVoiceId||'')+'" placeholder="pNInz6obpgDQGcFmaJgB">' +
+      '<div style="font-size:0.67em;color:var(--text-muted);margin-top:3px">Trouvez des voix sur elevenlabs.io/voice-library — modèle <em>eleven_multilingual_v2</em></div></div>';
+  } else if (provider === 'openai') {
+    el.innerHTML =
+      '<div class="form-field"><label class="form-label">Clé API OpenAI</label>' +
+      '<input type="password" class="form-input" id="sOpenAITTSKey" value="'+esc(c.openAITTSApiKey||c.openaiApiKey||'')+'" placeholder="sk-...">' +
+      '<div style="font-size:0.67em;color:var(--text-muted);margin-top:3px">Même clé que votre provider IA si OpenAI</div></div>' +
+      '<div class="form-field"><label class="form-label">Voix</label>' +
+      '<select class="form-select" id="sOpenAITTSVoice">' +
+      ['nova','alloy','shimmer','echo','onyx','fable'].map(function(v){
+        return '<option value="'+v+'"'+((c.openAITTSVoice||'nova')===v?' selected':'')+'>'+v+'</option>';
+      }).join('') +
+      '</select></div>';
+  } else {
+    el.innerHTML = '';
+  }
+}
+window.renderTTSProvOpts = renderTTSProvOpts;
+
 function saveVoiceSettings() {
   S.ttsOn = document.getElementById('sTTS').checked;
   S.config.speechRate = parseFloat(document.getElementById('sSpeechRate').value);
-  var vl = document.getElementById('sVoiceLang'); if(vl) S.config.voiceLang = vl.value;
+  // TTS provider
+  var provSel = document.getElementById('sTTSProvider');
+  if (provSel) S.config.voiceProvider = provSel.value;
+  // Sub-options
+  var k;
+  k = document.getElementById('sTTSLang');           if(k) S.config.voiceLang = k.value;
+  k = document.getElementById('sPuterVoice');        if(k) S.config.puterVoice = k.value;
+  k = document.getElementById('sElevenLabsKey');     if(k && k.value.trim()) S.config.elevenLabsApiKey = k.value.trim();
+  k = document.getElementById('sElevenLabsVoiceId'); if(k && k.value.trim()) S.config.elevenLabsVoiceId = k.value.trim();
+  k = document.getElementById('sOpenAITTSKey');      if(k && k.value.trim()) S.config.openAITTSApiKey = k.value.trim();
+  k = document.getElementById('sOpenAITTSVoice');    if(k) S.config.openAITTSVoice = k.value;
+  // Wake word
   var ww = document.getElementById('sWakeWord');
   if (ww) {
     var wwOn = ww.checked;
@@ -3289,10 +3361,21 @@ async function changePassword() {
 }
 
 function testVoice() {
-  if (window.EVATTS) {
-    var rate = parseFloat(document.getElementById('sSpeechRate').value)||1;
-    window.EVATTS.speak("Bonjour ! Je suis E.V.A, votre assistante virtuelle. Ravie de vous parler !", {voiceLang:'fr-FR', speechRate:rate});
-  }
+  if (!window.EVATTS) return;
+  var rate    = parseFloat(document.getElementById('sSpeechRate').value) || 1;
+  var provSel = document.getElementById('sTTSProvider');
+  var testCfg = Object.assign({}, S.config, {
+    voiceProvider: provSel ? provSel.value : (S.config.voiceProvider || 'native'),
+    speechRate: rate
+  });
+  var k;
+  k = document.getElementById('sTTSLang');           if(k) testCfg.voiceLang = k.value;
+  k = document.getElementById('sPuterVoice');        if(k) testCfg.puterVoice = k.value;
+  k = document.getElementById('sElevenLabsKey');     if(k && k.value.trim()) testCfg.elevenLabsApiKey = k.value.trim();
+  k = document.getElementById('sElevenLabsVoiceId'); if(k && k.value.trim()) testCfg.elevenLabsVoiceId = k.value.trim();
+  k = document.getElementById('sOpenAITTSKey');      if(k && k.value.trim()) testCfg.openAITTSApiKey = k.value.trim();
+  k = document.getElementById('sOpenAITTSVoice');    if(k) testCfg.openAITTSVoice = k.value;
+  window.EVATTS.speakText("Bonjour ! Je suis E.V.A, votre assistante virtuelle. Ravie de vous parler !", testCfg);
 }
 window.testVoice = testVoice;
 
