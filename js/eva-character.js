@@ -86,13 +86,15 @@ async function loadVRM() {
   var container = document.getElementById('vrmContainer');
   if (!container) return;
 
-  /* Dynamic ESM imports via esm.sh — handles all internal bare specifiers automatically.
-     ?deps=three@0.158.0 ensures three-vrm shares the same THREE instance as the main import. */
+  /* Dynamic ESM imports — bare specifiers resolved by local importmap in chat.html.
+     All files served from /js/lib/ (no CDN cold-start). */
   var THREE, GLTFLoader, VRMLoaderPlugin, VRMUtils;
   try {
-    var mod3    = await import('https://esm.sh/three@0.158.0');
-    var modGLTF = await import('https://esm.sh/three@0.158.0/examples/jsm/loaders/GLTFLoader.js');
-    var modVRM  = await import('https://esm.sh/@pixiv/three-vrm@2?deps=three@0.158.0');
+    var [mod3, modGLTF, modVRM] = await Promise.all([
+      import('three'),
+      import('three/examples/jsm/loaders/GLTFLoader.js'),
+      import('@pixiv/three-vrm')
+    ]);
     THREE           = mod3;
     GLTFLoader      = modGLTF.GLTFLoader;
     VRMLoaderPlugin = modVRM.VRMLoaderPlugin;
@@ -133,10 +135,10 @@ async function loadVRM() {
   /* Scene */
   scene = new THREE.Scene();
 
-  /* Camera — bust framing : roughly from chest to top of head */
-  camera = new THREE.PerspectiveCamera(30, W / H, 0.1, 20);
-  camera.position.set(0, 1.0, 2.4);
-  camera.lookAt(new THREE.Vector3(0, 0.85, 0));
+  /* Camera — full body framing with breathing room */
+  camera = new THREE.PerspectiveCamera(35, W / H, 0.1, 20);
+  camera.position.set(0, 0.9, 3.8);
+  camera.lookAt(new THREE.Vector3(0, 0.75, 0));
 
   /* Lighting */
   var ambLight = new THREE.AmbientLight(0xffffff, 1.1);

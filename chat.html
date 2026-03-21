@@ -4,7 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>E.V.A — Assistant</title>
-<!-- No importmap needed: eva-character.js uses esm.sh full URLs with shared deps -->
+<!-- Local importmap: Three.js libs served from /js/lib/ (no CDN cold-start) -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "/js/lib/three.module.min.js",
+    "three/examples/jsm/loaders/GLTFLoader.js": "/js/lib/GLTFLoader.js",
+    "three/examples/jsm/utils/BufferGeometryUtils.js": "/js/lib/BufferGeometryUtils.js",
+    "@pixiv/three-vrm": "/js/lib/three-vrm.module.js"
+  }
+}
+</script>
 <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>

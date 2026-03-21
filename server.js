@@ -69,6 +69,20 @@ const server = http.createServer(function(req, res) {
 
   const filePath = path.join(ROOT, url);
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    /* Cache immutable lib files for 1 year; everything else no-cache */
+    if (url.startsWith('/js/lib/') || url.startsWith('/models/')) {
+      const ext = path.extname(filePath).toLowerCase();
+      const mime = MIME[ext] || 'application/octet-stream';
+      fs.readFile(filePath, function(err, data) {
+        if (err) { res.writeHead(404); res.end('Not Found'); return; }
+        res.writeHead(200, {
+          'Content-Type': mime,
+          'Cache-Control': 'public, max-age=31536000, immutable'
+        });
+        res.end(data);
+      });
+      return;
+    }
     serveFile(res, filePath);
     return;
   }
