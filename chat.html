@@ -2795,26 +2795,11 @@ async function handleSend() {
   var _activeProv = (S.config && S.config.aiProvider) || 'puter';
   var sysPrompt;
 
+  sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
+
   if (_activeProv === 'qwen') {
-    /* Prompt ultra-simplifié pour les petits modèles Qwen (0.5B / 1.5B) */
-    var _qwenNick = (S.profile && (S.profile.nickname || S.profile.displayName)) ? (S.profile.nickname || S.profile.displayName).split(' ')[0] : null;
-    sysPrompt =
-      'Tu t\'appelles EVA. Tu es une assistante IA créée par Astral Technologie.\n' +
-      'RÈGLES STRICTES :\n' +
-      '- Tu es EVA. Tu parles en tant qu\'EVA. Tu N\'ES PAS l\'utilisateur.\n' +
-      '- NE commence JAMAIS ta réponse par "Bonjour Eva" ou "Eva" — tu ES Eva, pas l\'interlocuteur.\n' +
-      '- Tu réponds ' + (_qwenNick ? 'à ' + _qwenNick : 'à l\'utilisateur') + ' qui te parle.\n' +
-      '- Réponds en français, sois naturelle, bienveillante et concise.\n' +
-      '- Tu es un assistant conversationnel. Tu ne génères pas de code informatique.\n' +
-      '- Date : ' + _dateStr + ' — Heure : ' + _timeStr + '.\n' +
-      'ACTIONS : Si l\'utilisateur te demande de créer une note, une alarme, un rappel ou un événement agenda, inclus dans ta réponse un bloc au format exact :\n' +
-      '- Note : [ACTION:{"type":"note","title":"Titre","body":"Contenu"}]\n' +
-      '- Alarme : [ACTION:{"type":"alarm","time":"HH:MM","label":"Libellé","repeat":"once"}]\n' +
-      '- Rappel : [ACTION:{"type":"reminder","text":"Texte","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
-      '- Agenda : [ACTION:{"type":"event","title":"Titre","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
-      'Place le bloc [ACTION:...] à la fin de ta réponse, après ton texte normal.';
-  } else {
-    sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
+    /* Rappel de rôle pour Qwen 1.5B — évite la confusion utilisateur/assistant */
+    sysPrompt += '\n\n[RAPPEL ABSOLU] Tu es EVA, l\'assistante IA. Tu NE DIS JAMAIS "Bonjour Eva" car tu ES Eva. Tu ne répètes jamais le prénom Eva en début de réponse. Tu réponds à l\'utilisateur, pas à toi-même.';
   }
 
   var msgContent = text;
