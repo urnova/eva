@@ -4734,28 +4734,9 @@ async function initFCM() {
       var data  = payload.data || {};
       var title = data.title || 'E.V.A';
       var body  = data.body  || '';
-      var type  = data.type  || 'general';
 
-      /* Afficher une vraie notification système (visible même quand l'onglet est actif) */
-      if (Notification.permission === 'granted') {
-        try {
-          var swContainer = navigator.serviceWorker;
-          swContainer.ready.then(function(reg) {
-            reg.showNotification(title, {
-              body:    body,
-              icon:    '/assets/images/favicon.svg',
-              badge:   '/assets/images/favicon.svg',
-              tag:     data.tag || ('eva-' + type + '-' + Date.now()),
-              requireInteraction: type === 'alarm',
-              vibrate: type === 'alarm' ? [200, 100, 200] : [100],
-              data:    data
-            });
-          }).catch(function() {
-            /* Fallback si service worker non prêt */
-            new Notification(title, { body: body, icon: '/assets/images/favicon.svg' });
-          });
-        } catch(e) {}
-      }
+      /* Notification système directe — la plus fiable en foreground */
+      _showDirectNotif(title, body, data);
 
       /* Toast in-app en plus */
       toast('🔔 ' + title + (body ? ' — ' + body : ''), 'info');
@@ -4840,9 +4821,16 @@ async function testNotification() {
     toast('Activez d\'abord les notifications', 'error');
     return;
   }
-  toast('🧪 Envoi de la notification de test…', 'info');
 
-  /* Si FCM token disponible → push réel via le serveur (fonctionne même site fermé) */
+  /* 1. Notification directe immédiate — toujours fiable quand la page est ouverte */
+  _showDirectNotif(
+    '🧪 Test — E.V.A',
+    'Notification directe reçue ! Le push FCM arrive en parallèle.',
+    { tag: 'eva-test-direct-' + Date.now() }
+  );
+  toast('🧪 Test en cours — notification directe + push FCM…', 'info');
+
+  /* 2. Push FCM via le serveur — teste la livraison quand le site est fermé */
   if (_fcmToken && S.user) {
     try {
       var res = await fetch('/api/test-notification', {
@@ -4852,30 +4840,42 @@ async function testNotification() {
       });
       var data = await res.json();
       if (data.ok) {
-        toast('✅ Push Firebase envoyé — regardez vos notifications !', 'success');
+        toast('✅ Push FCM envoyé — si le site est fermé, la notif apparaîtra quand même', 'success');
       } else {
-        throw new Error(data.error || 'Échec serveur');
+        toast('⚠️ Push FCM échoué : ' + (data.error || 'erreur inconnue'), 'error');
       }
     } catch(e) {
-      /* Fallback : notification locale */
-      _testLocalNotif();
+      toast('⚠️ Serveur injoignable : ' + e.message, 'error');
     }
-  } else {
-    /* Pas de token FCM → notification locale du navigateur */
-    _testLocalNotif();
   }
 }
 window.testNotification = testNotification;
 
-function _testLocalNotif() {
+/* Affiche une notification système directe (new Notification) sans service worker.
+   La méthode la plus fiable en foreground — fonctionne sur Chrome, Edge, Firefox. */
+function _showDirectNotif(title, body, data) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try {
-    var n = new Notification('🧪 Test — E.V.A', {
-      body:  'Les notifications fonctionnent correctement sur cet appareil !',
+    var opts = {
+      body:  body || '',
       icon:  '/assets/images/favicon.svg',
       badge: '/assets/images/favicon.svg',
-      tag:   'eva-test-' + Date.now()
-    });
-    n.onclick = function() { n.close(); };
+      tag:   (data && data.tag) ? data.tag : ('eva-notif-' + Date.now())
+    };
+    var n = new Notification(title || 'E.V.A', opts);
+    n.onclick = function() { n.close(); window.focus(); };
+  } catch(e) {
+    console.warn('[FCM] showDirectNotif error:', e);
+  }
+}
+
+function _testLocalNotif() {
+  try {
+    _showDirectNotif(
+      '🧪 Test — E.V.A',
+      'Les notifications fonctionnent correctement sur cet appareil !',
+      { tag: 'eva-test-' + Date.now() }
+    );
     toast('✅ Notification locale envoyée', 'success');
   } catch(e) {
     toast('Erreur : ' + e.message, 'error');
