@@ -511,6 +511,16 @@ body::before{
 }
 .tone-btn:hover{border-color:var(--border-h);color:var(--text);background:var(--surface3);}
 .tone-btn.active{background:var(--cyan);border-color:var(--cyan);color:#000;font-weight:700;}
+/* Conv model selector */
+.conv-model-wrap{margin-left:auto;display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.conv-model-lbl{font-size:0.59em;color:var(--text-dim);white-space:nowrap;text-transform:uppercase;letter-spacing:0.05em;}
+.conv-model-sel{
+  background:transparent;border:1px solid var(--border);color:var(--cyan);
+  font-size:0.62em;border-radius:12px;padding:3px 8px;cursor:pointer;
+  font-family:'Space Mono',monospace;max-width:130px;outline:none;
+  transition:border-color var(--trans);
+}
+.conv-model-sel:hover,.conv-model-sel:focus{border-color:var(--cyan);}
 /* Input area */
 .input-area{
   padding:10px 18px 16px;flex-shrink:0;
@@ -989,8 +999,9 @@ body::before{
     padding:7px 10px 6px;gap:5px;
     padding-bottom:calc(7px + env(safe-area-inset-bottom));
   }
-  .tone-bar-label{display:none;}
+  .tone-bar-label,.conv-model-lbl{display:none;}
   .tone-btn{font-size:0.63em;padding:4px 9px;}
+  .conv-model-sel{font-size:0.58em;max-width:90px;padding:2px 5px;}
 
   /* Input area */
   .input-area{
@@ -1451,7 +1462,6 @@ body::before{
           <button class="hdr-btn tts-on" id="ttsBtn" title="Voix activée — cliquer pour désactiver">
             <svg id="ttsBtnIcon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
           </button>
-          <span id="ttsProviderBadge" style="font-size:0.48em;color:var(--text-muted);line-height:1;pointer-events:none;user-select:none;">🎙 Nav.</span>
         </div>
         <button class="eva-toggle-btn" id="evaToggleBtn">
           <svg viewBox="0 0 24 24" width="12" height="12" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -1486,6 +1496,10 @@ body::before{
         <button class="tone-btn" data-tone="friendly">Amical</button>
         <button class="tone-btn" data-tone="code">Code</button>
         <button class="tone-btn" data-tone="creative">Créatif</button>
+        <div class="conv-model-wrap" id="convModelWrap">
+          <span class="conv-model-lbl">Modèle</span>
+          <select id="convModelSelect" class="conv-model-sel" title="Modèle IA pour cette conversation" onchange="changeConvModel(this.value)"></select>
+        </div>
       </div>
 
       <div class="input-area">
@@ -1874,7 +1888,8 @@ var S = {
   config: cfg(),
   calYear: new Date().getFullYear(),
   calMonth: new Date().getMonth(),
-  editingNoteId: null
+  editingNoteId: null,
+  conv: {}
 };
 
 /* ── Timestamp Firestore ──────────────────────────────────── */
@@ -2095,13 +2110,88 @@ function initChatSession() {
     window.EVAChatHandler.initChatHandler(Object.assign({aiProvider:prov}, S.config));
   }
   updateProviderLabel(prov);
+  updateModelSelectUI();
 }
 
 function updateProviderLabel(p) {
-  var labels = {puter:'Puter (Gratuit)',qwen:'Qwen 3 (Local)',openai:'OpenAI GPT',claude:'Claude',lmstudio:'LM Studio',ollama:'Ollama'};
+  var labels = {puter:'Puter (Gratuit)',qwen:'Qwen Local',openai:'OpenAI GPT',claude:'Claude',lmstudio:'LM Studio',ollama:'Ollama'};
   var el = document.getElementById('providerName');
   if (el) el.textContent = labels[p] || p;
 }
+
+/* ═══════════════════════════════════════════════════
+   GESTION MODÈLE PAR CONVERSATION
+═══════════════════════════════════════════════════ */
+var CONV_MODELS = {
+  puter: [
+    { id:'gpt-4o-mini', label:'GPT-4o Mini — Rapide' },
+    { id:'gpt-4o', label:'GPT-4o — Expert' },
+    { id:'claude-3-5-sonnet', label:'Claude 3.5 Sonnet' }
+  ],
+  openai: [
+    { id:'gpt-4o-mini', label:'GPT-4o Mini — Rapide' },
+    { id:'gpt-4o', label:'GPT-4o — Expert' },
+    { id:'gpt-4-turbo', label:'GPT-4 Turbo' },
+    { id:'gpt-3.5-turbo', label:'GPT-3.5 — Économique' }
+  ],
+  claude: [
+    { id:'claude-3-5-haiku-20241022', label:'Haiku — Rapide' },
+    { id:'claude-3-5-sonnet-20241022', label:'Sonnet — Expert' },
+    { id:'claude-3-opus-20240229', label:'Opus — Ultra' }
+  ],
+  qwen: [
+    { id:'Qwen2-0.5B-Instruct-q4f16_1-MLC', label:'Qwen2 0.5B — Ultra-Rapide' },
+    { id:'Qwen2-1.5B-Instruct-q4f16_1-MLC', label:'Qwen2 1.5B — Rapide' }
+  ]
+};
+
+function getActiveProvider() {
+  return (S.conv && S.conv.provider) ? S.conv.provider : (S.config.aiProvider || 'puter');
+}
+
+function getActiveModel() {
+  if (S.conv && S.conv.model) return S.conv.model;
+  var prov = getActiveProvider();
+  var mk = {puter:'puterModel',openai:'openaiModel',claude:'claudeModel',qwen:'qwenModel'}[prov];
+  var fromCfg = mk && S.config[mk];
+  var models = CONV_MODELS[prov];
+  return fromCfg || (models && models[0] && models[0].id) || '';
+}
+
+function updateModelSelectUI() {
+  var wrap = document.getElementById('convModelWrap');
+  var sel = document.getElementById('convModelSelect');
+  if (!sel) return;
+  var prov = getActiveProvider();
+  var models = CONV_MODELS[prov];
+  if (!models || models.length === 0) {
+    if (wrap) wrap.style.display = 'none';
+    return;
+  }
+  if (wrap) wrap.style.display = '';
+  var cur = getActiveModel();
+  sel.innerHTML = models.map(function(m) {
+    return '<option value="'+m.id+'"'+(m.id===cur?' selected':'')+'>'+m.label+'</option>';
+  }).join('');
+}
+
+function changeConvModel(modelId) {
+  if (!S.conv) S.conv = {};
+  S.conv.model = modelId;
+  var prov = getActiveProvider();
+  var mk = {puter:'puterModel',openai:'openaiModel',claude:'claudeModel',qwen:'qwenModel'}[prov];
+  if (mk) S.config[mk] = modelId;
+  if (window.EVAChatHandler) {
+    window.EVAChatHandler.initChatHandler(Object.assign({aiProvider:prov},S.config));
+  }
+  if (S.convId && S.user) {
+    db.collection('users').doc(S.user.uid).collection('conversations').doc(S.convId)
+      .update({ aiProvider: prov, aiModel: modelId }).catch(function(e){ console.warn('[CONV] model save:',e); });
+    var c = S.convs.find(function(x){return x.id===S.convId;});
+    if (c) { c.aiProvider = prov; c.aiModel = modelId; }
+  }
+}
+window.changeConvModel = changeConvModel;
 
 /* ═══════════════════════════════════════════════════
    UI SETUP
@@ -2363,7 +2453,7 @@ function renderConvs(filter) {
 function filterConvs(q) { renderConvs(q); }
 
 async function newConv() {
-  S.convId = null; S.messages = [];
+  S.convId = null; S.messages = []; S.conv = {};
   if (window.EVAChatHandler) window.EVAChatHandler.clearContext();
   document.getElementById('messagesList').innerHTML = '';
   document.getElementById('chatWelcome').style.display = '';
@@ -2372,6 +2462,7 @@ async function newConv() {
   setView('chat');
   closeSidebar();
   if (window.EvaCharacter) window.EvaCharacter.setIdle();
+  updateModelSelectUI();
 }
 
 async function loadConv(id) {
@@ -2383,6 +2474,20 @@ async function loadConv(id) {
   try {
     var conv = S.convs.find(function(c){return c.id===id;});
     if (conv) document.getElementById('convTitleHeader').textContent = conv.title || 'Conversation';
+    /* Restaurer provider/modèle de cette conversation */
+    S.conv = {};
+    if (conv && conv.aiProvider) S.conv.provider = conv.aiProvider;
+    if (conv && conv.aiModel) S.conv.model = conv.aiModel;
+    if (S.conv.provider || S.conv.model) {
+      var restProv = S.conv.provider || S.config.aiProvider;
+      var mk = {puter:'puterModel',openai:'openaiModel',claude:'claudeModel',qwen:'qwenModel'}[restProv];
+      if (mk && S.conv.model) S.config[mk] = S.conv.model;
+      if (window.EVAChatHandler) {
+        window.EVAChatHandler.initChatHandler(Object.assign({aiProvider:restProv},S.config));
+      }
+      updateProviderLabel(restProv);
+    }
+    updateModelSelectUI();
     var snap = await db.collection('users').doc(S.user.uid)
       .collection('conversations').doc(id)
       .collection('messages').orderBy('timestamp','asc').limit(100).get();
@@ -2459,7 +2564,7 @@ async function saveConvMsg(userMsg, evaMsg) {
       S.convId = ref.id;
       var expWrap = document.getElementById('hdrExportWrap');
       if (expWrap) expWrap.style.display = '';
-      var data = {title:title, lastMessage:evaMsg.slice(0,80), createdAt:window.timestamp(), updatedAt:window.timestamp()};
+      var data = {title:title, lastMessage:evaMsg.slice(0,80), createdAt:window.timestamp(), updatedAt:window.timestamp(), aiProvider:getActiveProvider(), aiModel:getActiveModel()};
       await ref.set(data);
       S.convs.unshift(Object.assign({id:ref.id},data));
       document.getElementById('convTitleHeader').textContent = title;
@@ -2899,24 +3004,36 @@ function renderSettings(section) {
       '<div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveProfileSettings()">Sauvegarder le profil</button></div>';
 
   } else if (section === 'ai') {
-    var opts = ['puter','openai','claude','lmstudio','ollama'];
     var cur = cfg.aiProvider || 'puter';
-    var provLabels = {puter:'Puter Cloud (Gratuit — recommandé)',openai:'OpenAI GPT-4o',claude:'Claude 3.5 (Anthropic)',lmstudio:'LM Studio (Local)',ollama:'Ollama (Local)'};
-    var provDescs = {
-      puter:'Accès gratuit via Puter.com. Aucune clé API requise. Parfait pour commencer.',
-      openai:'Nécessite une clé API OpenAI. Accès à GPT-4o, modèle le plus puissant.',
-      claude:'Nécessite une clé API Anthropic. Excellent pour le raisonnement et l\'écriture.',
-      lmstudio:'Modèle local via LM Studio. Nécessite LM Studio installé sur votre machine.',
-      ollama:'Modèle local via Ollama. Complètement privé, fonctionne sans internet.'
+    var provDefs = {
+      puter:    { label:'☁️ Puter Cloud', tag:'GRATUIT', desc:'Accès gratuit via Puter.com. Aucune clé API requise. Modèles GPT-4o, Claude 3.5.', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'},{id:'claude-3-5-sonnet',label:'Claude 3.5 Sonnet'}], modelKey:'puterModel' },
+      openai:   { label:'🤖 OpenAI',      tag:'API',     desc:'GPT-4o, GPT-4 Turbo. Nécessite une clé API OpenAI.', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'},{id:'gpt-4-turbo',label:'GPT-4 Turbo — Puissant'},{id:'gpt-3.5-turbo',label:'GPT-3.5 Turbo — Économique'}], modelKey:'openaiModel' },
+      claude:   { label:'🧠 Claude',      tag:'API',     desc:'Claude 3.5 Sonnet, Haiku et Opus d\'Anthropic. Excellent pour le raisonnement.', models:[{id:'claude-3-5-haiku-20241022',label:'Haiku — Rapide'},{id:'claude-3-5-sonnet-20241022',label:'Sonnet — Expert'},{id:'claude-3-opus-20240229',label:'Opus — Ultra'}], modelKey:'claudeModel' },
+      qwen:     { label:'🖥️ Qwen Local',  tag:'LOCAL',   desc:'Modèle Qwen 3 local, gratuit et privé. Fonctionne sans internet ni compte.', models:[{id:'Qwen2-0.5B-Instruct-q4f16_1-MLC',label:'Qwen2 0.5B — Ultra-Rapide'},{id:'Qwen2-1.5B-Instruct-q4f16_1-MLC',label:'Qwen2 1.5B — Rapide'}], modelKey:'qwenModel' },
+      lmstudio: { label:'💻 LM Studio',  tag:'LOCAL',   desc:'Serveur local via LM Studio. Nécessite LM Studio installé sur votre machine.', models:[], modelKey:'customModel' },
+      ollama:   { label:'🦙 Ollama',      tag:'LOCAL',   desc:'Serveur local Ollama. Complètement privé, fonctionne sans internet.', models:[], modelKey:'ollamaModel' }
     };
+    var curDef = provDefs[cur] || provDefs.puter;
+    var curModel = cfg[curDef.modelKey] || (curDef.models[0] && curDef.models[0].id) || '';
+    var allProvs = ['puter','openai','claude','qwen','lmstudio','ollama'];
+
+    function buildModelOpts(provKey, selModel) {
+      var def = provDefs[provKey]; if (!def || !def.models.length) return '';
+      return def.models.map(function(m){ return '<option value="'+m.id+'"'+(m.id===selModel?' selected':'')+'>'+m.label+'</option>'; }).join('');
+    }
+
     c.innerHTML =
       '<div class="settings-section">' +
       '<div class="settings-section-title">Intelligence Artificielle</div>' +
-      '<div class="form-field"><label class="form-label">Provider actif</label>' +
-      '<select class="form-select" id="sProvider">'+opts.map(function(o){
-        return '<option value="'+o+'"'+(o===cur?' selected':'')+'>'+provLabels[o]+'</option>';
-      }).join('')+'</select>' +
-      '<div id="sProviderDesc" style="font-size:0.7em;color:var(--text-muted);margin-top:6px">'+esc(provDescs[cur]||'')+'</div></div>' +
+      '<div class="form-field"><label class="form-label">Fournisseur IA</label>' +
+      '<select class="form-select" id="sProvider">' +
+      allProvs.map(function(o){ var d=provDefs[o]; return '<option value="'+o+'"'+(o===cur?' selected':'')+'>'+d.label+' ('+d.tag+')'+'</option>'; }).join('') +
+      '</select>' +
+      '<div id="sProviderDesc" style="font-size:0.7em;color:var(--text-muted);margin-top:6px;line-height:1.5">'+esc(curDef.desc)+'</div></div>' +
+
+      '<div class="form-field" id="sModelField" style="'+(curDef.models.length?'':'display:none')+'"><label class="form-label">Modèle par défaut</label>' +
+      '<select class="form-select" id="sModel">'+buildModelOpts(cur,curModel)+'</select>' +
+      '<div style="font-size:0.68em;color:var(--text-muted);margin-top:4px">Ce modèle est utilisé par défaut. Il peut être changé par conversation dans la barre de chat.</div></div>' +
 
       '<div class="form-field" id="apiKeyFieldOpenAI" style="'+(cur==='openai'?'':'display:none')+'">' +
       '<label class="form-label">Clé API OpenAI</label>' +
@@ -2939,33 +3056,41 @@ function renderSettings(section) {
       '<div class="puter-connect-block" id="puterConnectBlock"><div id="puterConnectStatus" style="font-size:0.78em;color:var(--text-muted);margin-bottom:10px">Vérification du statut Puter...</div>' +
       '<div id="puterConnectButtons"></div></div></div>' +
 
-      '<div class="form-field"><label class="form-label">Longueur du contexte (messages mémorisés)</label>' +
-      '<input type="range" min="4" max="40" step="2" id="sContextLen" value="'+(cfg.contextLength||10)+'" style="width:100%;accent-color:var(--cyan)">' +
-      '<span id="sContextLenVal" style="font-size:0.75em;color:var(--cyan)">'+(cfg.contextLength||10)+' messages</span></div>' +
+      '<div class="form-field"><label class="form-label">Contexte mémorisé (messages)</label>' +
+      '<div style="display:flex;align-items:center;gap:10px"><input type="range" min="4" max="40" step="2" id="sContextLen" value="'+(cfg.contextLength||10)+'" style="flex:1;accent-color:var(--cyan)">' +
+      '<span id="sContextLenVal" style="font-size:0.75em;color:var(--cyan);min-width:30px">'+(cfg.contextLength||10)+'</span></div></div>' +
       '</div>' +
-      '<div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveAISettings()">Appliquer et recharger</button></div>';
+      '<div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveAISettings()">Appliquer</button></div>';
 
-    // Events
     setTimeout(function() {
-      var sel = document.getElementById('sProvider');
+      var provSel = document.getElementById('sProvider');
       var desc = document.getElementById('sProviderDesc');
-      if (sel) sel.addEventListener('change', function() {
-        var v = this.value;
-        if (desc) desc.textContent = provDescs[v] || '';
-        ['OpenAI','Claude','LMStudio','Ollama'].forEach(function(x){
-          var f = document.getElementById('apiKeyField'+x);
-          if (f) f.style.display = 'none';
-        });
-        var puterF = document.getElementById('puterConnectField');
-        if (puterF) puterF.style.display = v === 'puter' ? '' : 'none';
-        var show = {openai:'OpenAI',claude:'Claude',lmstudio:'LMStudio',ollama:'Ollama'}[v];
-        if (show) { var f = document.getElementById('apiKeyField'+show); if(f) f.style.display = ''; }
-      });
+      var modelField = document.getElementById('sModelField');
+      var modelSel = document.getElementById('sModel');
       var sl = document.getElementById('sContextLen');
       var sv = document.getElementById('sContextLenVal');
-      if (sl && sv) sl.addEventListener('input', function(){ sv.textContent = this.value + ' messages'; });
-      // Load Puter status
-      if (cur === 'puter') refreshPuterStatusUI();
+      if (sl && sv) sl.addEventListener('input', function(){ sv.textContent = this.value; });
+      if (provSel) provSel.addEventListener('change', function() {
+        var v = this.value;
+        var def = provDefs[v] || {};
+        if (desc) desc.textContent = def.desc || '';
+        ['OpenAI','Claude','LMStudio','Ollama'].forEach(function(x){
+          var f = document.getElementById('apiKeyField'+x); if(f) f.style.display='none';
+        });
+        var puterF = document.getElementById('puterConnectField');
+        if (puterF) puterF.style.display = v==='puter' ? '' : 'none';
+        var show = {openai:'OpenAI',claude:'Claude',lmstudio:'LMStudio',ollama:'Ollama'}[v];
+        if (show) { var f=document.getElementById('apiKeyField'+show); if(f) f.style.display=''; }
+        if (def.models && def.models.length) {
+          var selModel = cfg[def.modelKey] || (def.models[0] && def.models[0].id) || '';
+          if (modelSel) modelSel.innerHTML = def.models.map(function(m){ return '<option value="'+m.id+'"'+(m.id===selModel?' selected':'')+'>'+m.label+'</option>'; }).join('');
+          if (modelField) modelField.style.display = '';
+        } else {
+          if (modelField) modelField.style.display = 'none';
+        }
+        if (v==='puter') refreshPuterStatusUI();
+      });
+      if (cur==='puter') refreshPuterStatusUI();
     }, 50);
 
   } else if (section === 'voice') {
@@ -3136,6 +3261,12 @@ async function saveAISettings() {
   var prov = document.getElementById('sProvider').value;
   S.config.aiProvider = prov;
   var k;
+  /* Modèle sélectionné pour ce provider */
+  var modelSel = document.getElementById('sModel');
+  if (modelSel && modelSel.value) {
+    var mk = {puter:'puterModel',openai:'openaiModel',claude:'claudeModel',qwen:'qwenModel'}[prov];
+    if (mk) S.config[mk] = modelSel.value;
+  }
   k = document.getElementById('sApiKeyOpenAI'); if(k) S.config.openaiApiKey = k.value.trim();
   k = document.getElementById('sApiKeyClaude'); if(k) S.config.claudeApiKey = k.value.trim();
   k = document.getElementById('sLMStudioURL'); if(k && k.value.trim()) S.config.lmstudioUrl = k.value.trim();
@@ -3143,11 +3274,14 @@ async function saveAISettings() {
   k = document.getElementById('sOllamaModel'); if(k && k.value.trim()) S.config.ollamaModel = k.value.trim();
   k = document.getElementById('sContextLen'); if(k) S.config.contextLength = parseInt(k.value);
   saveCfg();
+  /* Réinitialiser le conv state pour que la nouvelle conv utilise le nouveau provider */
+  if (!S.convId) S.conv = {};
   if (window.EVAChatHandler) {
     await window.EVAChatHandler.initChatHandler(Object.assign({aiProvider:prov},S.config));
   }
   updateProviderLabel(prov);
-  toast('Provider IA mis à jour ✓','success');
+  updateModelSelectUI();
+  toast('IA mise à jour — ' + prov + ' ✓', 'success');
   closeSettings();
 }
 
@@ -3293,14 +3427,7 @@ function saveVoiceSettings() {
 window.saveVoiceSettings = saveVoiceSettings;
 
 /* Badge compact sous le bouton TTS indiquant le provider actif */
-function updateProviderBadge() {
-  var badge = document.getElementById('ttsProviderBadge');
-  if (!badge) return;
-  var prov = S.config.voiceProvider || 'native';
-  var labels = { native:'🎙 Nav.', puter:'☁️ Puter', elevenlabs:'⚡ 11labs', openai:'🤖 OpenAI' };
-  badge.textContent = labels[prov] || prov;
-  badge.style.color = prov === 'native' ? 'var(--text-muted)' : 'var(--cyan)';
-}
+function updateProviderBadge() { /* badge supprimé */ }
 window.updateProviderBadge = updateProviderBadge;
 
 /* ══════════════════ EXPORT CONVERSATIONS ══════════════════ */
