@@ -2793,12 +2793,23 @@ async function handleSend() {
   var _timeStr = _now.getHours().toString().padStart(2,'0') + ':' + _now.getMinutes().toString().padStart(2,'0');
   var _dateCtx = '\n\n[ DONNÉES TEMPS RÉEL INJECTÉES PAR LE SYSTÈME ]\nDate : ' + _dateStr + '\nHeure actuelle : ' + _timeStr + '\nTimezone : ' + Intl.DateTimeFormat().resolvedOptions().timeZone + '\n(Utilise ces informations pour calculer les heures d\'alarmes et de rappels demandées.)';
 
-  var sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
-
-  /* Renforcement rôle pour modèles locaux légers (Qwen) */
   var _activeProv = (S.config && S.config.aiProvider) || 'puter';
+  var sysPrompt;
+
   if (_activeProv === 'qwen') {
-    sysPrompt += '\n\n[RAPPEL CRITIQUE — modèle local Qwen] Tu es EVA, l\'IA. L\'utilisateur est la personne qui te parle. Ne joue jamais le rôle de l\'utilisateur. Ce modèle est un assistant conversationnel uniquement — ne génère pas de code. Reste dans ton rôle d\'Eva à tout moment.';
+    /* Prompt ultra-simplifié pour les petits modèles Qwen (0.5B / 1.5B) */
+    var _qwenNick = (S.profile && (S.profile.nickname || S.profile.displayName)) ? (S.profile.nickname || S.profile.displayName).split(' ')[0] : null;
+    sysPrompt =
+      'Tu t\'appelles EVA. Tu es une assistante IA créée par Astral Technologie.\n' +
+      'RÈGLES STRICTES :\n' +
+      '- Tu es EVA. Tu parles en tant qu\'EVA. Tu N\'ES PAS l\'utilisateur.\n' +
+      '- NE commence JAMAIS ta réponse par "Bonjour Eva" ou "Eva" — tu ES Eva, pas l\'interlocuteur.\n' +
+      '- Tu réponds ' + (_qwenNick ? 'à ' + _qwenNick : 'à l\'utilisateur') + ' qui te parle.\n' +
+      '- Réponds en français, sois naturelle, bienveillante et concise.\n' +
+      '- Tu es un assistant conversationnel. Tu ne génères pas de code informatique.\n' +
+      '- Date : ' + _dateStr + ' — Heure : ' + _timeStr + '.';
+  } else {
+    sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
   }
 
   var msgContent = text;
