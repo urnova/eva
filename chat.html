@@ -3628,6 +3628,7 @@ function renderSettings(section) {
         '<button class="btn btn-secondary" onclick="deactivateNotifications()" style="flex:1">🔕 Désactiver</button>' +
         (hasFcmToken ? '' : '<button class="btn btn-primary" onclick="activateNotifications()" style="flex:1">🔁 Re-enregistrer</button>') +
         '</div>' +
+        '<button class="btn btn-primary" onclick="testNotification()" style="margin-top:8px;width:100%;background:rgba(0,212,255,0.12);border-color:var(--cyan)">🧪 Tester une notification</button>' +
         '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px">' +
         (hasFcmToken ? '🛡️ Push Firebase actif — alertes garanties même hors-ligne.' : '⚠ Push non enregistré. Cliquez sur Re-enregistrer.') +
         '</div>'
@@ -4794,6 +4795,53 @@ function deactivateNotifications() {
   toast('Pour désactiver, cliquez sur 🔒 dans la barre d\'adresse et bloquez les notifications', 'info');
 }
 window.deactivateNotifications = deactivateNotifications;
+
+async function testNotification() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') {
+    toast('Activez d\'abord les notifications', 'error');
+    return;
+  }
+  toast('🧪 Envoi de la notification de test…', 'info');
+
+  /* Si FCM token disponible → push réel via le serveur (fonctionne même site fermé) */
+  if (_fcmToken && S.user) {
+    try {
+      var res = await fetch('/api/test-notification', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ userId: S.user.uid })
+      });
+      var data = await res.json();
+      if (data.ok) {
+        toast('✅ Push Firebase envoyé — regardez vos notifications !', 'success');
+      } else {
+        throw new Error(data.error || 'Échec serveur');
+      }
+    } catch(e) {
+      /* Fallback : notification locale */
+      _testLocalNotif();
+    }
+  } else {
+    /* Pas de token FCM → notification locale du navigateur */
+    _testLocalNotif();
+  }
+}
+window.testNotification = testNotification;
+
+function _testLocalNotif() {
+  try {
+    var n = new Notification('🧪 Test — E.V.A', {
+      body:  'Les notifications fonctionnent correctement sur cet appareil !',
+      icon:  '/assets/images/favicon.svg',
+      badge: '/assets/images/favicon.svg',
+      tag:   'eva-test-' + Date.now()
+    });
+    n.onclick = function() { n.close(); };
+    toast('✅ Notification locale envoyée', 'success');
+  } catch(e) {
+    toast('Erreur : ' + e.message, 'error');
+  }
+}
 
 /* ═══════════════════════════════════════════════════
    REMINDERS — RAPPELS

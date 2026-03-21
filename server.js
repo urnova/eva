@@ -270,6 +270,32 @@ const server = http.createServer(async function(req, res) {
     return;
   }
 
+  /* ─── API: test notification ─── */
+  if (url === '/api/test-notification' && method === 'POST') {
+    try {
+      var body = JSON.parse(await readBody(req));
+      var userId = body.userId;
+      if (!userId || !db) { json(res, { ok: false, error: 'userId requis' }, 400); return; }
+
+      var uDoc = await db.collection('users').doc(userId).get();
+      var token = uDoc.exists ? uDoc.data().fcmToken : null;
+      if (!token) { json(res, { ok: false, error: 'Token FCM introuvable pour cet utilisateur' }, 404); return; }
+
+      await sendFCM(token, {
+        title:  '🧪 Test — E.V.A',
+        body:   'Les notifications push fonctionnent correctement ! Vous recevrez vos alarmes et rappels même quand le site est fermé.',
+        type:   'test',
+        tag:    'eva-test-' + Date.now(),
+        userId: userId
+      });
+      json(res, { ok: true });
+    } catch(e) {
+      console.error('[API] test-notification error:', e.message);
+      json(res, { ok: false, error: e.message }, 500);
+    }
+    return;
+  }
+
   /* ─── API: snooze alarm (10 min) ─── */
   if (url === '/api/snooze-alarm' && method === 'POST') {
     try {
