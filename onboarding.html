@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
 <style>
 :root {
   --cyan: #00d4ff;
@@ -250,6 +251,8 @@ body::before{
       <div class="ob-step" id="step-bar-4"></div>
       <div class="ob-step" id="step-bar-5"></div>
       <div class="ob-step" id="step-bar-6"></div>
+      <div class="ob-step" id="step-bar-7"></div>
+      <div class="ob-step" id="step-bar-8"></div>
     </div>
 
     <!-- Step 1: Profil -->
@@ -462,34 +465,119 @@ body::before{
         </label>
       </div>
 
-      <div class="toggle-row" id="notifToggleRow">
-        <div class="toggle-info">
-          <div class="toggle-name">🔔 Notifications push</div>
-          <div class="toggle-desc">Recevez les alarmes et rappels E.V.A même hors du site</div>
-        </div>
-        <button id="notifPermBtn" onclick="requestObNotifPermission()" style="
-          padding:8px 16px;border-radius:8px;border:1px solid var(--cyan);
-          background:transparent;color:var(--cyan);font-family:'Orbitron',monospace;
-          font-size:0.68em;font-weight:700;letter-spacing:1px;cursor:pointer;
-          transition:all 0.2s;white-space:nowrap;
-        ">ACTIVER</button>
-      </div>
-
-      <div class="pc-note">
-        <div class="pc-note-title">💻 Forme physique d'E.V.A</div>
-        <div class="pc-note-body">
-          L'avatar animé 3D d'E.V.A (sa présence visuelle à l'écran) est disponible <strong>uniquement sur ordinateur (PC / Mac)</strong>. Sur mobile et tablette, l'expérience est optimisée pour le chat uniquement.
-        </div>
-      </div>
-
       <div class="ob-actions">
         <button class="btn-skip" onclick="goStep(4)">← Retour</button>
         <button class="btn-next" onclick="goStep(6)">SUIVANT →</button>
       </div>
     </div>
 
-    <!-- Step 6: Terminé -->
+    <!-- Step 6: Notifications push -->
     <div class="ob-view" id="ob6">
+      <div class="step-label">Étape 6 — Notifications</div>
+
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:2.8em;margin-bottom:10px">🔔</div>
+        <div style="font-family:'Orbitron',monospace;font-size:1.05em;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:8px">NOTIFICATIONS PUSH</div>
+        <div style="font-size:0.82em;color:var(--text-muted);line-height:1.6;max-width:340px;margin:0 auto">
+          Recevez vos alarmes, rappels et événements calendrier <strong style="color:var(--cyan)">même quand vous fermez le site</strong>.<br>Fonctionne sur PC et Android.
+        </div>
+      </div>
+
+      <div id="obNotifGranted" style="display:none;background:rgba(0,220,100,0.08);border:1px solid rgba(0,220,100,0.3);border-radius:14px;padding:16px;margin-bottom:16px;text-align:center">
+        <div style="font-size:1.5em;margin-bottom:6px">✅</div>
+        <div style="font-size:0.85em;color:#4ade80;font-weight:600">Push activé avec succès</div>
+        <div style="font-size:0.74em;color:var(--text-muted);margin-top:4px" id="obNotifTokenStatus">Enregistrement en cours…</div>
+      </div>
+
+      <div id="obNotifDenied" style="display:none;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.3);border-radius:14px;padding:16px;margin-bottom:16px;text-align:center">
+        <div style="font-size:1.5em;margin-bottom:6px">⚠️</div>
+        <div style="font-size:0.83em;color:#ff4d6d;font-weight:600">Notifications bloquées par le navigateur</div>
+        <div style="font-size:0.73em;color:var(--text-muted);margin-top:4px">Cliquez sur 🔒 dans la barre d'adresse → autoriser les notifications pour E.V.A</div>
+      </div>
+
+      <div id="obNotifDefault">
+        <button onclick="requestObNotifPermission()" style="
+          width:100%;padding:16px;border-radius:14px;
+          border:2px solid var(--cyan);background:rgba(0,212,255,0.07);
+          color:var(--cyan);font-family:'Orbitron',monospace;font-size:0.82em;
+          font-weight:700;letter-spacing:2px;cursor:pointer;
+          transition:all 0.25s;margin-bottom:12px;
+        ">🔔 ACTIVER LES NOTIFICATIONS PUSH</button>
+        <div style="font-size:0.72em;color:var(--text-dim);text-align:center;line-height:1.6">
+          Une fenêtre du navigateur va s'ouvrir pour demander votre permission.<br>
+          Vous pouvez désactiver à tout moment dans Paramètres → Notifications.
+        </div>
+      </div>
+
+      <div style="margin-top:18px;padding:14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.06)">
+        <div style="font-size:0.72em;color:var(--text-muted);line-height:1.75">
+          <div style="font-weight:600;color:var(--text-base);margin-bottom:6px">Compatibilité</div>
+          ✅ Chrome, Edge, Firefox, Opera — PC &amp; Android<br>
+          ✅ Safari iOS 16.4+ (iPhone &amp; iPad)<br>
+          ❌ Safari macOS — non supporté (limitation Apple)
+        </div>
+      </div>
+
+      <div class="ob-actions" style="margin-top:20px">
+        <button class="btn-skip" onclick="goStep(5)">← Retour</button>
+        <button class="btn-next" id="obNotifNextBtn" onclick="goStep(7)">SUIVANT →</button>
+      </div>
+    </div>
+
+    <!-- Step 7: Avatar / Personnage EVA (PC uniquement) -->
+    <div class="ob-view" id="ob7">
+      <div class="step-label">Étape 7 — Personnage</div>
+
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:2.8em;margin-bottom:10px">🧬</div>
+        <div style="font-family:'Orbitron',monospace;font-size:1.05em;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:8px">FORME PHYSIQUE D'E.V.A</div>
+        <div style="font-size:0.82em;color:var(--text-muted);line-height:1.6;max-width:340px;margin:0 auto">
+          L'avatar animé Live2D d'E.V.A est sa <strong style="color:var(--cyan)">présence visuelle à l'écran</strong>. Vous pouvez le désactiver pour gagner en performance.
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+        <!-- Option: Activé -->
+        <div id="obAvatarOn" onclick="obSelectAvatar(true)" style="
+          border:2px solid var(--cyan);background:rgba(0,212,255,0.07);
+          border-radius:14px;padding:16px 18px;cursor:pointer;transition:all 0.2s;
+          display:flex;align-items:center;gap:14px;position:relative;
+        ">
+          <div style="font-size:2em;flex-shrink:0">🧊</div>
+          <div>
+            <div style="font-weight:700;font-size:0.88em;color:var(--cyan)">Avatar activé <span style="font-size:0.75em;color:var(--text-muted)">(recommandé)</span></div>
+            <div style="font-size:0.74em;color:var(--text-muted);margin-top:3px;line-height:1.5">E.V.A apparaît en haut à droite de l'écran. Expérience complète et immersive.</div>
+          </div>
+          <div id="obAvatarOnChk" style="position:absolute;top:10px;right:12px;color:var(--cyan);font-size:0.85em">✓</div>
+        </div>
+
+        <!-- Option: Désactivé -->
+        <div id="obAvatarOff" onclick="obSelectAvatar(false)" style="
+          border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);
+          border-radius:14px;padding:16px 18px;cursor:pointer;transition:all 0.2s;
+          display:flex;align-items:center;gap:14px;position:relative;
+        ">
+          <div style="font-size:2em;flex-shrink:0">⚡</div>
+          <div>
+            <div style="font-weight:700;font-size:0.88em;color:var(--text-base)">Avatar désactivé</div>
+            <div style="font-size:0.74em;color:var(--text-muted);margin-top:3px;line-height:1.5">Interface chat uniquement. Meilleures performances, moins de ressources CPU/GPU.</div>
+          </div>
+          <div id="obAvatarOffChk" style="display:none;position:absolute;top:10px;right:12px;color:var(--cyan);font-size:0.85em">✓</div>
+        </div>
+      </div>
+
+      <div style="font-size:0.71em;color:var(--text-dim);text-align:center;line-height:1.6">
+        Ce réglage peut être modifié à tout moment dans Paramètres → Apparence.
+      </div>
+
+      <div class="ob-actions" style="margin-top:20px">
+        <button class="btn-skip" onclick="goStep(6)">← Retour</button>
+        <button class="btn-next" onclick="goStep(8)">SUIVANT →</button>
+      </div>
+    </div>
+
+    <!-- Step 8: Terminé -->
+    <div class="ob-view" id="ob8">
       <div class="finish-icon">🎉</div>
       <div class="finish-title">Tout est prêt !</div>
       <div class="finish-text">
@@ -516,7 +604,7 @@ body::before{
       <button class="btn-next" style="width:100%;font-size:0.9em;margin-top:16px" onclick="finish()">
         ⚡ ACCÉDER À E.V.A
       </button>
-      <button class="btn-skip" style="width:100%;margin-top:8px" onclick="goStep(5)">← Retour</button>
+      <button class="btn-skip" style="width:100%;margin-top:8px" onclick="goStep(7)">← Retour</button>
     </div>
 
   </div>
@@ -651,56 +739,131 @@ function showFieldError(id, msg) {
   setTimeout(function(){ el.classList.remove('error'); el.placeholder = id === 'obNewPass' ? 'Minimum 6 caractères' : 'Idem ci-dessus'; }, 2500);
 }
 
+var obAvatarEnabled = true;
+var _obIsMobile = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) && window.innerWidth < 900;
+
+/* Sur mobile : masquer l'indicateur de l'étape Avatar (étape 7) */
+if (_obIsMobile) {
+  var _sb7 = document.getElementById('step-bar-7');
+  if (_sb7) _sb7.style.display = 'none';
+}
+
 async function requestObNotifPermission() {
   if (!('Notification' in window)) {
-    var btn = document.getElementById('notifPermBtn');
-    if (btn) { btn.textContent = 'Non supporté'; btn.style.opacity = '0.4'; btn.disabled = true; }
+    _obNotifShowState('unavailable');
     return;
   }
   if (Notification.permission === 'granted') {
-    var btn = document.getElementById('notifPermBtn');
-    if (btn) { btn.textContent = '✅ Activées'; btn.style.color = 'var(--cyan)'; btn.disabled = true; }
+    _obNotifShowState('granted');
+    _obRegisterFCMToken();
     return;
   }
   var perm = await Notification.requestPermission();
-  var btn = document.getElementById('notifPermBtn');
-  if (!btn) return;
   if (perm === 'granted') {
-    btn.textContent = '✅ Activées';
-    btn.style.borderColor = 'var(--cyan)';
-    btn.disabled = true;
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js').catch(function(){});
-    }
+    _obNotifShowState('granted');
+    _obRegisterFCMToken();
   } else {
-    btn.textContent = '❌ Refusées';
-    btn.style.borderColor = '#ff4d6d';
-    btn.style.color = '#ff4d6d';
+    _obNotifShowState('denied');
   }
 }
 window.requestObNotifPermission = requestObNotifPermission;
 
-function updateNotifBtnState() {
-  if (!('Notification' in window)) return;
-  var btn = document.getElementById('notifPermBtn');
-  if (!btn) return;
-  if (Notification.permission === 'granted') {
-    btn.textContent = '✅ Activées';
-    btn.style.color = 'var(--cyan)';
-    btn.disabled = true;
-  } else if (Notification.permission === 'denied') {
-    btn.textContent = '❌ Bloquées';
-    btn.style.borderColor = '#ff4d6d';
-    btn.style.color = '#ff4d6d';
-    btn.disabled = true;
+async function _obRegisterFCMToken() {
+  var statusEl = document.getElementById('obNotifTokenStatus');
+  try {
+    if (!('serviceWorker' in navigator)) return;
+    var cfgRes = await fetch('/api/config');
+    var cfg    = await cfgRes.json();
+    if (!cfg.vapidKey) {
+      if (statusEl) statusEl.textContent = '⚠ Clé VAPID non configurée côté serveur';
+      return;
+    }
+    var firebase = window.firebase;
+    if (!firebase) return;
+    var swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    var messaging = firebase.messaging();
+    var token = await messaging.getToken({ vapidKey: cfg.vapidKey, serviceWorkerRegistration: swReg });
+    if (token && currentUser && window.db) {
+      await window.db.collection('users').doc(currentUser.uid).set({
+        fcmToken: token,
+        fcmTokenUpdated: new Date().toISOString(),
+        timezoneOffset: new Date().getTimezoneOffset()
+      }, { merge: true });
+      if (statusEl) statusEl.textContent = '🛡️ Push Firebase enregistré — alertes même hors-ligne';
+    } else {
+      if (statusEl) statusEl.textContent = '⚠ Token non obtenu — vérifiez le navigateur';
+    }
+  } catch(e) {
+    console.warn('[FCM onboarding]', e);
+    if (statusEl) statusEl.textContent = '⚠ Erreur d\'enregistrement FCM';
   }
 }
 
-function goStep(n) {
-  // If not Google-only, skip step 2
-  if (!isGoogleOnlyUser && n === 2) { n = 3; }
-  if (n === 5) { setTimeout(updateNotifBtnState, 100); }
+function _obNotifShowState(state) {
+  var granted  = document.getElementById('obNotifGranted');
+  var denied   = document.getElementById('obNotifDenied');
+  var dflt     = document.getElementById('obNotifDefault');
+  if (!granted) return;
+  if (state === 'granted') {
+    granted.style.display = ''; denied.style.display = 'none'; dflt.style.display = 'none';
+  } else if (state === 'denied' || state === 'unavailable') {
+    granted.style.display = 'none'; denied.style.display = ''; dflt.style.display = 'none';
+    if (state === 'unavailable') {
+      var d = document.getElementById('obNotifDenied');
+      if (d) d.querySelector('div:nth-child(2)').textContent = '⚠ Votre navigateur ne supporte pas les notifications push';
+    }
+  } else {
+    granted.style.display = 'none'; denied.style.display = 'none'; dflt.style.display = '';
+  }
+}
 
+function updateObNotifState() {
+  if (!('Notification' in window)) { _obNotifShowState('unavailable'); return; }
+  var perm = Notification.permission;
+  if (perm === 'granted') { _obNotifShowState('granted'); _obRegisterFCMToken(); }
+  else if (perm === 'denied') { _obNotifShowState('denied'); }
+  else { _obNotifShowState('default'); }
+}
+
+function obSelectAvatar(enabled) {
+  obAvatarEnabled = enabled;
+  var onCard  = document.getElementById('obAvatarOn');
+  var offCard = document.getElementById('obAvatarOff');
+  var onChk   = document.getElementById('obAvatarOnChk');
+  var offChk  = document.getElementById('obAvatarOffChk');
+  if (!onCard) return;
+  if (enabled) {
+    onCard.style.border  = '2px solid var(--cyan)';
+    onCard.style.background = 'rgba(0,212,255,0.07)';
+    offCard.style.border = '2px solid rgba(255,255,255,0.08)';
+    offCard.style.background = 'rgba(255,255,255,0.02)';
+    onChk.style.display  = '';
+    offChk.style.display = 'none';
+  } else {
+    onCard.style.border  = '2px solid rgba(255,255,255,0.08)';
+    onCard.style.background = 'rgba(255,255,255,0.02)';
+    offCard.style.border = '2px solid var(--cyan)';
+    offCard.style.background = 'rgba(0,212,255,0.07)';
+    onChk.style.display  = 'none';
+    offChk.style.display = '';
+  }
+}
+window.obSelectAvatar = obSelectAvatar;
+
+function goStep(n) {
+  /* Sauter étape 2 pour comptes Google-only sans mot de passe */
+  if (!isGoogleOnlyUser && n === 2) { n = 3; }
+
+  /* Étape 7 (Avatar) — sauter automatiquement sur mobile */
+  if (n === 7 && _obIsMobile) {
+    n = (currentStep > 7) ? 6 : 8;
+  }
+
+  /* Hooks sur certaines étapes */
+  if (n === 4) { setTimeout(checkObPuterStatus, 200); }
+  if (n === 6) { setTimeout(updateObNotifState, 100); }
+
+  /* Validation étape 1 avant d'avancer */
   if (currentStep === 1 && n > 1) {
     var name = document.getElementById('displayName').value.trim();
     if (!name) {
@@ -714,8 +877,10 @@ function goStep(n) {
     saveProfile({ displayName: name, nickname: nick });
   }
 
-  if (n === 4) {
-    setTimeout(checkObPuterStatus, 200);
+  /* Ajuster le bouton Retour de l'étape 8 si mobile (pas d'étape 7) */
+  if (n === 8) {
+    var backBtn = document.querySelector('#ob8 .btn-skip');
+    if (backBtn) backBtn.onclick = function(){ goStep(_obIsMobile ? 6 : 7); };
   }
 
   document.getElementById('ob'+currentStep).classList.remove('active');
@@ -846,9 +1011,9 @@ async function finish() {
     return;
   }
   if (!currentUser) return;
-  var wakeWord = document.getElementById('prefWakeWord') ? document.getElementById('prefWakeWord').checked : false;
+  var wakeWord   = document.getElementById('prefWakeWord')   ? document.getElementById('prefWakeWord').checked   : false;
   var autoLaunch = document.getElementById('prefAutoLaunch') ? document.getElementById('prefAutoLaunch').checked : true;
-  var cookies = document.getElementById('acceptCookies') ? document.getElementById('acceptCookies').checked : false;
+  var cookies    = document.getElementById('acceptCookies')  ? document.getElementById('acceptCookies').checked  : false;
   try {
     await db.collection('users').doc(currentUser.uid).set({
       onboardingCompleted: true,
@@ -859,13 +1024,14 @@ async function finish() {
         date: new Date().toISOString()
       },
       preferences: {
-        voiceProvider: selectedTTSProvider,
-        selectedVoice: selectedVoice,
-        voiceLang: 'fr-FR',
-        speechRate: 1.0,
-        aiProvider: selectedProvider,
+        voiceProvider:   selectedTTSProvider,
+        selectedVoice:   selectedVoice,
+        voiceLang:       'fr-FR',
+        speechRate:      1.0,
+        aiProvider:      selectedProvider,
         wakeWordEnabled: wakeWord,
-        autoLaunch: autoLaunch
+        autoLaunch:      autoLaunch,
+        showEvaPanel:    _obIsMobile ? false : obAvatarEnabled
       }
     }, { merge: true });
     window.location.href = '/chat.html';
