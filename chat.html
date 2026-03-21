@@ -2811,6 +2811,7 @@ async function handleSend() {
       'TES FONCTIONNALITÉS :\n' +
       '- Répondre à toutes les questions (culture générale, sciences, cuisine, conseils, actualités…)\n' +
       '- Créer des notes, alarmes, rappels et événements agenda\n' +
+      '- Analyser et décrire des images (via Moondream)\n' +
       '- Aider l\'utilisateur à organiser son quotidien\n' +
       '- Tu ne génères PAS de code informatique\n\n' +
       'ACTIONS (utilise ces formats si l\'utilisateur demande) :\n' +
@@ -3016,9 +3017,24 @@ async function analyzeImage(base64Data, prompt) {
     return null;
   }
 
-  /* ── Qwen Local — pas de vision ── */
+  /* ── Qwen Local — vision via Moondream (gratuit, sans clé) ── */
   if (prov === 'qwen') {
-    return '[Vision non disponible avec Qwen Local. L\'image ne peut pas être analysée par ce modèle. Décrivez votre image en texte.]';
+    try {
+      var resp = await fetch('https://api.moondream.ai/v1/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_url: base64Data,
+          question: prompt || 'Décris cette image en détail.',
+          stream: false
+        })
+      });
+      if (resp.ok) {
+        var data = await resp.json();
+        if (data && data.answer) return data.answer;
+      }
+    } catch(e) { console.warn('[EVA Vision] Moondream error:', e); }
+    return '[Analyse d\'image temporairement indisponible. Vérifiez votre connexion internet.]';
   }
 
   /* ── Puter (défaut / fallback) ── */
@@ -3173,7 +3189,7 @@ function renderSettings(section) {
       puter:    { label:'☁️ Puter Cloud', tag:'GRATUIT', desc:'Accès gratuit via Puter.com. Aucune clé API requise. Modèles GPT-4o disponibles.', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'}], modelKey:'puterModel' },
       openai:   { label:'🤖 OpenAI',      tag:'API',     desc:'GPT-4o, GPT-4 Turbo. Nécessite une clé API OpenAI. Supporte la vision (analyse d\'images).', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'},{id:'gpt-4-turbo',label:'GPT-4 Turbo — Puissant'},{id:'gpt-3.5-turbo',label:'GPT-3.5 Turbo — Économique'}], modelKey:'openaiModel' },
       claude:   { label:'🧠 Claude',      tag:'API',     desc:'Claude Haiku et Opus d\'Anthropic. Excellent pour le raisonnement et l\'analyse. Supporte la vision (analyse d\'images).', models:[{id:'claude-3-5-haiku-20241022',label:'Haiku — Rapide'},{id:'claude-3-opus-20240229',label:'Opus — Ultra'}], modelKey:'claudeModel' },
-      qwen:     { label:'🖥️ Qwen Local',  tag:'LOCAL',   desc:'Modèle Qwen local, gratuit et 100% privé. Fonctionne sans internet. ⚠️ Assistant uniquement — ne convient pas pour le code. Premier usage : téléchargement automatique du modèle requis (quelques minutes, mis en cache ensuite).', models:[{id:'Qwen2-1.5B-Instruct-q4f16_1-MLC',label:'Qwen2 1.5B — Rapide'}], modelKey:'qwenModel' },
+      qwen:     { label:'🖥️ Qwen Local',  tag:'LOCAL',   desc:'Modèle Qwen local, gratuit et 100% privé. Fonctionne sans internet. Analyse d\'images via Moondream (connexion requise pour la vision). ⚠️ Ne convient pas pour le code. Premier usage : téléchargement automatique du modèle requis (quelques minutes, mis en cache ensuite).', models:[{id:'Qwen2-1.5B-Instruct-q4f16_1-MLC',label:'Qwen2 1.5B — Rapide'}], modelKey:'qwenModel' },
       lmstudio: { label:'💻 LM Studio',  tag:'LOCAL',   desc:'Serveur local via LM Studio. Nécessite LM Studio installé sur votre machine.', models:[], modelKey:'customModel' },
       ollama:   { label:'🦙 Ollama',      tag:'LOCAL',   desc:'Serveur local Ollama. Complètement privé, fonctionne sans internet.', models:[], modelKey:'ollamaModel' }
     };
