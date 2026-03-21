@@ -2193,6 +2193,7 @@ body::before{
 <script src="js/voice/wake-word.js"></script>
 <script src="js/eva-character.js"></script>
 <script src="js/tools/tools.js"></script>
+<script src="js/tools/tool-intents.js"></script>
 
 <script>
 'use strict';
@@ -2249,6 +2250,11 @@ CE QUE TU SAIS FAIRE :
 - Répondre à toutes les questions : culture générale, sciences, technologie, cuisine, voyage, actualités, etc.
 - Aider à la productivité : créer des notes, alarmes, rappels, événements agenda, listes de tâches
 - Analyser et décrire des images (vision)
+- Supprimer l'arrière-plan d'une image : l'utilisateur envoie une photo en disant "supprime le fond", "enlève l'arrière-plan", "détourage", etc. — tu traites l'image directement et fournis le résultat dans le chat
+- Compresser une image : l'utilisateur envoie une image en demandant de la compresser ou l'optimiser — tu le fais et fournis le résultat téléchargeable
+- Extraire la palette de couleurs d'une image : tu identifies et affiches les couleurs dominantes
+- Générer un QR code : l'utilisateur dit "crée un QR code pour [URL/texte]" — tu génères le QR code directement dans le chat
+- Raccourcir une URL : l'utilisateur dit "raccourcis cette URL : [lien]" — tu fournis un lien court immédiatement
 - Coder et déboguer dans tous les langages de programmation
 - Conversationnel naturel : écouter, conseiller, brainstormer, rédiger, traduire, résumer
 - Mémoriser le contexte de la conversation et s'y adapter au fil du temps
@@ -2844,6 +2850,28 @@ function buildMsgHTML(msg, idx) {
   '</div>';
 }
 
+/* Injecte un message EVA avec HTML brut (sans markdown) — pour les résultats d'outils */
+function appendEvaRichMsg(html, speakText) {
+  var time = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  var list = document.getElementById('messagesList');
+  if (!list) return;
+  document.getElementById('chatWelcome').style.display = 'none';
+  var div = document.createElement('div');
+  div.className = 'message eva';
+  div.innerHTML =
+    '<div class="msg-ava"><svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:#00d4ff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="#00d4ff" stroke="none"/></svg></div>' +
+    '<div class="msg-content">' +
+      '<div class="msg-bubble">' + html + '</div>' +
+      '<div class="msg-time">' + time + '</div>' +
+      '<div class="msg-actions"><button class="msg-act" onclick="copyMsg(this)">📋 Copier</button></div>' +
+    '</div>';
+  list.appendChild(div);
+  scrollDown();
+  if (speakText && window.EVATts) {
+    window.EVATts.speak(speakText);
+  }
+}
+
 function appendMsg(role, content, imgUrl) {
   var isEva = role === 'eva';
   var time = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
@@ -2998,6 +3026,37 @@ async function handleSend() {
 
   var sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
 
+  /* ══ DÉTECTION D'INTENT OUTIL (avant appel IA) ══ */
+  if (window.EVAToolIntents) {
+    var _imgFile = S.imageFile || null;
+    S.imageFile = null; // consommé
+    try {
+      var toolResult = await window.EVAToolIntents.detect(
+        text, _imgFile,
+        function (statusMsg) { setEvaStatus(statusMsg, 'thinking'); }
+      );
+      if (toolResult) {
+        hideTyping();
+        setEvaStatus('', null);
+        appendEvaRichMsg(toolResult.html, toolResult.speak || null);
+        if (window.EvaCharacter) window.EvaCharacter.setIdle();
+        S.busy = false;
+        document.getElementById('sendBtn').disabled = false;
+        return;
+      }
+    } catch (toolErr) {
+      console.warn('[EVA/Tools] Erreur outil :', toolErr);
+      hideTyping();
+      appendEvaRichMsg('<p style="color:var(--red)">Désolée, une erreur est survenue lors du traitement : <em>' +
+        (toolErr.message || toolErr) + '</em></p>');
+      setEvaStatus('', null);
+      S.busy = false;
+      document.getElementById('sendBtn').disabled = false;
+      return;
+    }
+  }
+
+  /* ══ FLUX IA NORMAL ══ */
   var msgContent = text;
   if (img) {
     try {
@@ -3127,6 +3186,7 @@ function handleFileSelect(e) {
   var reader = new FileReader();
   reader.onload = function(ev) {
     S.image = { url: ev.target.result, data: ev.target.result, name: file.name };
+    S.imageFile = file;
     var bar = document.getElementById('imagePreviewBar');
     bar.style.display = 'flex';
     document.getElementById('previewImg').src = ev.target.result;
@@ -3138,6 +3198,7 @@ function handleFileSelect(e) {
 }
 function clearImageAttachment() {
   S.image = null;
+  S.imageFile = null;
   document.getElementById('imagePreviewBar').style.display = 'none';
   if (!document.getElementById('msgInput').value.trim()) {
     document.getElementById('sendBtn').disabled = true;
