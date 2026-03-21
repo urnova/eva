@@ -2807,7 +2807,13 @@ async function handleSend() {
       '- Tu réponds ' + (_qwenNick ? 'à ' + _qwenNick : 'à l\'utilisateur') + ' qui te parle.\n' +
       '- Réponds en français, sois naturelle, bienveillante et concise.\n' +
       '- Tu es un assistant conversationnel. Tu ne génères pas de code informatique.\n' +
-      '- Date : ' + _dateStr + ' — Heure : ' + _timeStr + '.';
+      '- Date : ' + _dateStr + ' — Heure : ' + _timeStr + '.\n' +
+      'ACTIONS : Si l\'utilisateur te demande de créer une note, une alarme, un rappel ou un événement agenda, inclus dans ta réponse un bloc au format exact :\n' +
+      '- Note : [ACTION:{"type":"note","title":"Titre","body":"Contenu"}]\n' +
+      '- Alarme : [ACTION:{"type":"alarm","time":"HH:MM","label":"Libellé","repeat":"once"}]\n' +
+      '- Rappel : [ACTION:{"type":"reminder","text":"Texte","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
+      '- Agenda : [ACTION:{"type":"event","title":"Titre","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
+      'Place le bloc [ACTION:...] à la fin de ta réponse, après ton texte normal.';
   } else {
     sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
   }
