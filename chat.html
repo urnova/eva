@@ -4729,12 +4729,35 @@ async function initFCM() {
       await _fcmRegisterToken(swReg, vapidKey);
     }
 
-    /* Messages quand l'app est au premier plan */
+    /* Messages quand l'app est au premier plan (data-only) */
     _fcmMessaging.onMessage(function(payload) {
-      var data = payload.data || {};
-      var notif = payload.notification || {};
-      var title = notif.title || data.title || 'E.V.A';
-      var body  = notif.body  || data.body  || '';
+      var data  = payload.data || {};
+      var title = data.title || 'E.V.A';
+      var body  = data.body  || '';
+      var type  = data.type  || 'general';
+
+      /* Afficher une vraie notification système (visible même quand l'onglet est actif) */
+      if (Notification.permission === 'granted') {
+        try {
+          var swContainer = navigator.serviceWorker;
+          swContainer.ready.then(function(reg) {
+            reg.showNotification(title, {
+              body:    body,
+              icon:    '/assets/images/favicon.svg',
+              badge:   '/assets/images/favicon.svg',
+              tag:     data.tag || ('eva-' + type + '-' + Date.now()),
+              requireInteraction: type === 'alarm',
+              vibrate: type === 'alarm' ? [200, 100, 200] : [100],
+              data:    data
+            });
+          }).catch(function() {
+            /* Fallback si service worker non prêt */
+            new Notification(title, { body: body, icon: '/assets/images/favicon.svg' });
+          });
+        } catch(e) {}
+      }
+
+      /* Toast in-app en plus */
       toast('🔔 ' + title + (body ? ' — ' + body : ''), 'info');
     });
 

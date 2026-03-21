@@ -150,27 +150,18 @@ async function sendFCMMulticast(tokens, uid, data) {
   var strData = {};
   for (var k in data) strData[k] = String(data[k]);
 
+  /* Messages DATA-ONLY — pas de champ "notification" côté serveur.
+     Cela force le SDK client/SW à toujours gérer l'affichage manuellement
+     (évite la suppression silencieuse par Chrome en premier plan). */
   var multicastMsg = {
     tokens: tokens,
-    notification: {
-      title: data.title,
-      body:  data.body
-    },
     data: strData,
     webpush: {
-      notification: {
-        icon:  '/assets/images/favicon.svg',
-        badge: '/assets/images/favicon.svg',
-        tag:   data.tag || 'eva-notif',
-        requireInteraction: data.type === 'alarm'
-      }
+      headers: { Urgency: 'high' }
     },
     android: {
       priority: 'high',
-      notification: {
-        icon: 'ic_notification',
-        channelId: 'eva_' + (data.type || 'general')
-      }
+      data: strData
     }
   };
 
