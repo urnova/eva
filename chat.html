@@ -1174,6 +1174,47 @@ body::before{
 .nav-item.gold.active svg{filter:drop-shadow(0 0 4px rgba(255,215,0,0.6));}
 .sb-nav-label.gold-label{color:#ffd700;opacity:0.6;}
 
+/* ══════════════════════════════════════════════
+   OUTILS & À PROPOS
+══════════════════════════════════════════════ */
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;padding:4px 0}
+.tool-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px 16px;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;gap:9px}
+.tool-card:hover{background:var(--surface3);border-color:var(--cyan);box-shadow:0 0 18px rgba(0,212,255,0.09);transform:translateY(-2px)}
+.tool-card-icon{width:40px;height:40px;border-radius:10px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.18);display:flex;align-items:center;justify-content:center;font-size:1.35em}
+.tool-card-name{font-family:'Orbitron',monospace;font-size:0.72em;letter-spacing:1px;color:var(--text);font-weight:700}
+.tool-card-desc{font-size:0.72em;color:var(--text-muted);line-height:1.55}
+.tool-card-badge{font-size:0.59em;background:rgba(0,212,255,0.1);color:var(--cyan);border:1px solid rgba(0,212,255,0.22);border-radius:4px;padding:1px 7px;align-self:flex-start;letter-spacing:.5px}
+/* Tool slide-in panel */
+.tool-panel{display:none;position:fixed;top:0;right:0;width:min(540px,100vw);height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:900;flex-direction:column;box-shadow:-12px 0 48px rgba(0,0,0,0.5)}
+.tool-panel.open{display:flex}
+.tool-panel-hdr{display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.tool-panel-icon{font-size:1.4em}
+.tool-panel-title{font-family:'Orbitron',monospace;font-size:0.82em;letter-spacing:2px;flex:1}
+.tool-panel-close{cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:1em;color:var(--text-muted);transition:all 0.15s}
+.tool-panel-close:hover{background:var(--surface3);color:var(--cyan);border-color:var(--cyan)}
+.tool-panel-body{flex:1;overflow-y:auto;padding:22px 20px}
+.drop-zone{border:2px dashed var(--border);border-radius:12px;padding:36px 20px;text-align:center;cursor:pointer;transition:all 0.2s;color:var(--text-muted);font-size:0.8em}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--cyan);background:rgba(0,212,255,0.04);color:var(--cyan)}
+.drop-zone-icon{font-size:2.2em;margin-bottom:8px}
+.tool-result{margin-top:16px}
+.tool-status{margin-top:14px;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:0.78em;color:var(--text-muted);display:flex;align-items:center;gap:10px}
+.tool-spin{width:16px;height:16px;border:2px solid rgba(0,212,255,0.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tool-section-label{font-size:0.68em;color:var(--text-muted);letter-spacing:1.5px;margin-bottom:6px;text-transform:uppercase}
+/* About modal */
+.about-modal{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.78);align-items:center;justify-content:center}
+.about-modal.open{display:flex}
+.about-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:min(760px,96vw);max-height:88vh;overflow-y:auto;padding:36px 32px;box-shadow:0 0 80px rgba(0,212,255,0.1)}
+.about-hero{text-align:center;margin-bottom:30px}
+.about-hero-title{font-family:'Orbitron',monospace;font-size:2em;letter-spacing:4px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+.about-hero-sub{color:var(--text-muted);font-size:0.88em;max-width:520px;margin:0 auto;line-height:1.7}
+.about-section-title{font-family:'Orbitron',monospace;font-size:0.72em;letter-spacing:2px;color:var(--cyan);margin:24px 0 12px}
+.about-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.about-feat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.about-feat-icon{font-size:1.3em}
+.about-feat-name{font-family:'Orbitron',monospace;font-size:0.68em;letter-spacing:1px;color:var(--cyan)}
+.about-feat-desc{font-size:0.73em;color:var(--text-muted);line-height:1.55}
+.about-footer{text-align:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--border);color:var(--text-muted);font-size:0.76em}
 
 /* Report submit modal */
 .report-overlay{
@@ -1362,6 +1403,14 @@ body::before{
       <div class="nav-item" data-view="calendar">
         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Agenda
+      </div>
+      <div class="nav-item" data-view="tools">
+        <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        Outils
+      </div>
+      <div class="nav-item" onclick="openAbout();event.stopPropagation()">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        À propos
       </div>
     </div>
 
@@ -1684,6 +1733,297 @@ body::before{
       </div>
     </div>
 
+    <!-- ══ VIEW: OUTILS ══ -->
+    <div class="view" id="viewTools">
+      <div class="view-header">
+        <div>
+          <div class="view-title">OUTILS</div>
+          <div class="view-sub">8 outils gratuits — 100 % client-side, aucune clé API requise</div>
+        </div>
+      </div>
+      <div class="view-content">
+        <div class="tools-grid">
+
+          <!-- 1 — Suppression de fond -->
+          <div class="tool-card" onclick="openTool('bg')">
+            <div class="tool-card-icon">🖼️</div>
+            <div class="tool-card-name">Supprimer le fond</div>
+            <div class="tool-card-desc">Efface automatiquement l'arrière-plan de n'importe quelle photo grâce à l'IA embarquée.</div>
+            <div class="tool-card-badge">IA WASM • Gratuit</div>
+          </div>
+
+          <!-- 2 — PDF -->
+          <div class="tool-card" onclick="openTool('pdf')">
+            <div class="tool-card-icon">📄</div>
+            <div class="tool-card-name">Créer un PDF</div>
+            <div class="tool-card-desc">Génère un PDF mis en forme à partir d'un titre et de votre contenu texte.</div>
+            <div class="tool-card-badge">jsPDF • Gratuit</div>
+          </div>
+
+          <!-- 3 — Excel -->
+          <div class="tool-card" onclick="openTool('excel')">
+            <div class="tool-card-icon">📊</div>
+            <div class="tool-card-name">Excel / CSV → XLSX</div>
+            <div class="tool-card-desc">Convertit du texte CSV en fichier Excel (.xlsx) téléchargeable instantanément.</div>
+            <div class="tool-card-badge">SheetJS • Gratuit</div>
+          </div>
+
+          <!-- 4 — QR Code -->
+          <div class="tool-card" onclick="openTool('qr')">
+            <div class="tool-card-icon">🔲</div>
+            <div class="tool-card-name">Générateur QR</div>
+            <div class="tool-card-desc">Crée un QR code personnalisable (couleurs, taille) depuis une URL ou du texte.</div>
+            <div class="tool-card-badge">qrcode.js • Gratuit</div>
+          </div>
+
+          <!-- 5 — Compresser image -->
+          <div class="tool-card" onclick="openTool('imgc')">
+            <div class="tool-card-icon">🗜️</div>
+            <div class="tool-card-name">Compresser image</div>
+            <div class="tool-card-desc">Réduit le poids d'une image JPEG/PNG sans quitter le navigateur.</div>
+            <div class="tool-card-badge">Canvas API • Gratuit</div>
+          </div>
+
+          <!-- 6 — Convertisseur unités -->
+          <div class="tool-card" onclick="openTool('conv')">
+            <div class="tool-card-icon">🔄</div>
+            <div class="tool-card-name">Convertisseur</div>
+            <div class="tool-card-desc">Longueur, masse, température, surface, volume, vitesse — toutes les unités.</div>
+            <div class="tool-card-badge">JS pur • Gratuit</div>
+          </div>
+
+          <!-- 7 — Extracteur couleurs -->
+          <div class="tool-card" onclick="openTool('color')">
+            <div class="tool-card-icon">🎨</div>
+            <div class="tool-card-name">Palette de couleurs</div>
+            <div class="tool-card-desc">Extrait les couleurs dominantes d'une image et copie les codes HEX.</div>
+            <div class="tool-card-badge">Canvas API • Gratuit</div>
+          </div>
+
+          <!-- 8 — Raccourcir URL -->
+          <div class="tool-card" onclick="openTool('short')">
+            <div class="tool-card-icon">✂️</div>
+            <div class="tool-card-name">Raccourcir URL</div>
+            <div class="tool-card-desc">Génère un lien court via TinyURL, aucun compte requis.</div>
+            <div class="tool-card-badge">TinyURL • Gratuit</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TOOL PANELS (slide-in from right) ══ -->
+
+    <!-- Panel: Suppression de fond -->
+    <div class="tool-panel" id="tp-bg">
+      <div class="tool-panel-hdr">
+        <span class="tool-panel-icon">🖼️</span>
+        <span class="tool-panel-title">SUPPRESSION DE FOND</span>
+        <span class="tool-panel-close" onclick="closeToolPanel('bg')">✕</span>
+      </div>
+      <div class="tool-panel-body">
+        <p style="font-size:0.78em;color:var(--text-muted);margin-bottom:16px">L'IA fonctionne entièrement dans votre navigateur. Le premier chargement télécharge ~90 Mo de modèle (mis en cache ensuite).</p>
+        <div class="drop-zone" id="bgDrop">
+          <div class="drop-zone-icon">📁</div>
+          <div>Glissez une image ici ou <strong style="color:var(--cyan)">cliquez pour choisir</strong></div>
+          <div style="margin-top:6px;font-size:0.72em">PNG, JPG, WEBP acceptés</div>
+        </div>
+        <input type="file" id="bgInput" accept="image/*" style="display:none">
+        <div class="tool-status" id="bgStatus" style="display:none"></div>
+        <div class="tool-result" id="bgResult"></div>
+      </div>
+    </div>
+
+    <!-- Panel: PDF -->
+    <div class="tool-panel" id="tp-pdf">
+      <div class="tool-panel-hdr">
+        <span class="tool-panel-icon">📄</span>
+        <span class="tool-panel-title">CRÉER UN PDF</span>
+        <span class="tool-panel-close" onclick="closeToolPanel('pdf')">✕</span>
+      </div>
+      <div class="tool-panel-body">
+        <div class="form-field" style="margin-bottom:12px">
+          <label class="form-label">Titre du document</label>
+          <input class="form-input" id="pdfTitle" placeholder="Mon document…">
+        </div>
+        <div class="form-field" style="margin-bottom:12px">
+          <label class="form-label">Auteur</label>
+          <input class="form-input" id="pdfAuthor" placeholder="Nom de l'auteur…">
+        </div>
+        <div class="form-field" style="margin-bottom:16px">
+          <label class="form-label">Contenu</label>
+          <textarea class="form-input" id="pdfContent" rows="10" placeholder="Saisissez ou collez votre texte ici…" style="resize:vertical;min-height:180px;line-height:1.6"></textarea>
+        </div>
+        <button class="btn btn-primary" id="pdfGenBtn" onclick="generatePDF()" style="width:100%">⬇ Générer le PDF</button>
+      </div>
+    </div>
+
+    <!-- Panel: Excel -->
+    <div class="tool-panel" id="tp-excel">
+      <div class="tool-panel-hdr">
+        <span class="tool-panel-icon">📊</span>
+        <span class="tool-panel-title">EXCEL / CSV → XLSX</span>
+        <span class="tool-panel-close" onclick="closeToolPanel('excel')">✕</span>
+      </div>
+      <div class="tool-panel-body">
+        <div class="form-field" style="margin-bottom:12px">
+          <label class="form-label">Nom de la feuille</label>
+          <input class="form-input" id="excelName" placeholder="Feuille1">
+        </div>
+        <div class="form-field" style="margin-bottom:12px">
+          <label class="form-label">Séparateur CSV</label>
+          <select class="form-select" id="excelSep">
+            <option value=",">, (virgule)</option>
+            <option value=";">; (point-virgule)</option>
+            <option value="&#9;">⇥ (tabulation)</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin-bottom:16px">
+          <label class="form-label">Données CSV</label>
+          <textarea class="form-input" id="excelData" rows="12" placeholder="Nom,Prénom,Email&#10;Dupont,Marie,marie@example.com&#10;Martin,Paul,paul@example.com" style="resize:vertical;min-height:200px;font-family:monospace;font-size:0.8em"></textarea>
+        </div>
+        <button class="btn btn-primary" id="excelGenBtn" onclick="generateExcel()" style="width:100%">⬇ Télécharger Excel</button>
+      </div>
+    </div>
+
+    <!-- Panel: QR Code -->
+    <div class="tool-panel" id="tp-qr">
+      <div class="tool-panel-hdr">
+        <span class="tool-panel-icon">🔲</span>
+        <span class="tool-panel-title">GÉNÉRATEUR QR CODE</span>
+        <span class="tool-panel-close" onclick="closeToolPanel('qr')">✕</span>
+      </div>
+      <div class="tool-panel-body">
+        <div class="form-field" style="margin-bottom:12px">
+          <label class="form-label">URL ou texte</label>
+          <input class="form-input" id="qrInput" placeholder="https://exemple.com ou texte libre…">
+        </div>
+        <div class="form-row" style="margin-bottom:12px">
+          <div class="form-field">
+            <label class="form-label">Taille (px)</label>
+            <input class="form-input" type="number" id="qrSize" value="256" min="128" max="512" step="64">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Couleur du code</label>
+            <input type="color" id="qrFg" value="#00d4ff" style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Fond</label>
+            <input type="color" id="qrBg" value="#060b12" style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="generateQR()" style="width:100%;margin-bottom:16px">▶ Générer</button>
+        <div id="qrPreview" style="display:flex;justify-content:center;margin-bottom:12px"></div>
+        <div id="qrActions" style="display:none;gap:10px">
+          <button class="btn btn-primary" id="qrDlBtn" style="width:100%">⬇ Télécharger PNG</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Compresser image -->
+    <div class="tool-panel" id="tp-imgc">
+      <div class="tool-panel-hdr">
+        <span class="tool-panel-icon">🗜️</span>
+        <span class="tool-panel-title">COMPRESSER IMAGE</span>
+        <span class="tool-panel-close" onclick="closeToolPanel('imgc')">✕</span>
+      </div>
+      <div class="tool-panel-body">
+        <div class="drop-zone" id="imgcDrop">
+          <div class="drop-zone-icon">🖼️</div>
+          <div>Glissez une image ou <strong style="color:var(--cyan)">cliquez pour choisir</strong></div>
+        </div>
+        <input type="file" id="imgcInput" accept="image/*" style="display:none">
+        <div id="imgcOrigInfo" style="font-size:0.75em;color:var(--text-muted);margin-top:8px"></div>
+        <div id="imgcControls" style="display:none;margin-top:16px">
+          <div class="form-field" style="margin-bottom:12px">
+            <label class="form-label">Qualité : <span id="imgcQualityVal">85%</span></label>
+            <input type="range" id="imgcQuality" min="10" max="100" value="85" style="width:100%;accent-color:var(--cyan)">
+          </div>
+          <div class="form-field" style="margin-bottom:16px">
+            <label class="form-label">Largeur max (0 = conserver)</label>
+            <input type="number" class="form-input" id="imgcMaxW" value="0" min="0" placeholder="ex: 1920">
+          </div>
+          <button class="btn btn-primary" onclick="compressImage()" style="width:100%">🗜️ Compresser</button>
+        </div>
+        <div class="tool-result" id="imgcResult" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Panel: Convertisseur d'unités -->
+    <div class="tool-panel" id="tp-conv">
+      <div class="tool-panel-hdr">
+        <span class="tool-panel-icon">🔄</span>
+        <span class="tool-panel-title">CONVERTISSEUR D'UNITÉS</span>
+        <span class="tool-panel-close" onclick="closeToolPanel('conv')">✕</span>
+      </div>
+      <div class="tool-panel-body">
+        <div class="form-field" style="margin-bottom:14px">
+          <label class="form-label">Catégorie</label>
+          <select class="form-select" id="convCat" onchange="updateUnitSelects()">
+            <option value="length">📏 Longueur</option>
+            <option value="weight">⚖️ Masse</option>
+            <option value="temp">🌡️ Température</option>
+            <option value="area">⬜ Surface</option>
+            <option value="volume">🧪 Volume</option>
+            <option value="speed">💨 Vitesse</option>
+          </select>
+        </div>
+        <div class="form-row" style="align-items:center;gap:10px;margin-bottom:14px">
+          <div class="form-field" style="flex:1">
+            <label class="form-label">Valeur</label>
+            <input type="number" class="form-input" id="convInput" placeholder="0" oninput="convertUnits()">
+          </div>
+          <div class="form-field" style="flex:1">
+            <label class="form-label">De</label>
+            <select class="form-select" id="convFrom" onchange="convertUnits()"></select>
+          </div>
+          <div style="padding-top:22px;font-size:1.2em;color:var(--cyan)">→</div>
+          <div class="form-field" style="flex:1">
+            <label class="form-label">Vers</label>
+            <select class="form-select" id="convTo" onchange="convertUnits()"></select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Résultat</label>
+          <input type="text" class="form-input" id="convOutput" readonly style="font-size:1.1em;font-weight:700;color:var(--cyan);letter-spacing:1px">
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Extracteur de couleurs -->
+    <div class="tool-panel" id="tp-color">
+      <div class="tool-panel-hdr">
+        <span class="tool-panel-icon">🎨</span>
+        <span class="tool-panel-title">PALETTE DE COULEURS</span>
+        <span class="tool-panel-close" onclick="closeToolPanel('color')">✕</span>
+      </div>
+      <div class="tool-panel-body">
+        <div class="drop-zone" id="colorDrop">
+          <div class="drop-zone-icon">🖼️</div>
+          <div>Glissez une image ou <strong style="color:var(--cyan)">cliquez</strong> pour extraire les couleurs</div>
+        </div>
+        <input type="file" id="colorInput" accept="image/*" style="display:none">
+        <div class="tool-result" id="colorResult" style="display:none;margin-top:16px"></div>
+      </div>
+    </div>
+
+    <!-- Panel: Raccourcir URL -->
+    <div class="tool-panel" id="tp-short">
+      <div class="tool-panel-hdr">
+        <span class="tool-panel-icon">✂️</span>
+        <span class="tool-panel-title">RACCOURCIR UNE URL</span>
+        <span class="tool-panel-close" onclick="closeToolPanel('short')">✕</span>
+      </div>
+      <div class="tool-panel-body">
+        <div class="form-field" style="margin-bottom:16px">
+          <label class="form-label">URL longue</label>
+          <input class="form-input" id="shortenInput" placeholder="https://exemple.com/tres/long/chemin…" onkeydown="if(event.key==='Enter')shortenURL()">
+        </div>
+        <button class="btn btn-primary" id="shortenBtn" onclick="shortenURL()" style="width:100%;margin-bottom:16px">✂️ Raccourcir</button>
+        <div id="shortenOutput" style="display:none"></div>
+      </div>
+    </div>
+
     <!-- ══ VIEW: RAPPORTS (admin uniquement) ══ -->
     <div class="view" id="viewReports">
       <div class="view-header">
@@ -1852,6 +2192,7 @@ body::before{
 <script src="js/voice/stt.js"></script>
 <script src="js/voice/wake-word.js"></script>
 <script src="js/eva-character.js"></script>
+<script src="js/tools/tools.js"></script>
 
 <script>
 'use strict';
@@ -4731,6 +5072,121 @@ document.addEventListener('keydown', function(e) {
     <div class="alarm-box-btns">
       <button class="alarm-btn-stop" onclick="alarmStop()">⛔ ARRÊTER</button>
       <button class="alarm-btn-snooze" onclick="alarmSnooze()">💤 +5 MIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ À PROPOS D'EVA ══ -->
+<div class="about-modal" id="aboutModal">
+  <div class="about-box">
+    <div class="about-hero">
+      <div class="about-hero-title">E.V.A</div>
+      <div style="font-family:'Orbitron',monospace;font-size:0.72em;letter-spacing:3px;color:var(--text-muted);margin-bottom:14px">EVOLUTIONARY VIRTUAL ASSISTANT</div>
+      <div class="about-hero-sub">EVA est une assistante personnelle de nouvelle génération, dotée d'un personnage 3D expressif, d'une intelligence artificielle multi-fournisseurs et d'une suite d'outils intégrée. Tout fonctionne dans votre navigateur — vos données restent chez vous.</div>
+    </div>
+
+    <div class="about-section-title">⚡ INTELLIGENCE ARTIFICIELLE</div>
+    <div class="about-grid">
+      <div class="about-feat">
+        <div class="about-feat-icon">🤖</div>
+        <div class="about-feat-name">Multi-fournisseurs</div>
+        <div class="about-feat-desc">Compatible OpenAI, Anthropic Claude, Google Gemini, Mistral, Grok et Puter AI. Changez de fournisseur en un clic.</div>
+      </div>
+      <div class="about-feat">
+        <div class="about-feat-icon">💬</div>
+        <div class="about-feat-name">Chat avancé</div>
+        <div class="about-feat-desc">Streaming en temps réel, mémoire de contexte, plusieurs tonalités (professionnel, décontracté, humour, expert…).</div>
+      </div>
+      <div class="about-feat">
+        <div class="about-feat-icon">🔍</div>
+        <div class="about-feat-name">Recherche web</div>
+        <div class="about-feat-desc">EVA peut effectuer des recherches sur internet et synthétiser les résultats directement dans la conversation.</div>
+      </div>
+      <div class="about-feat">
+        <div class="about-feat-icon">👁️</div>
+        <div class="about-feat-name">Vision IA</div>
+        <div class="about-feat-desc">Analysez des images, des screenshots ou des photos en les joignant directement dans le chat.</div>
+      </div>
+    </div>
+
+    <div class="about-section-title">🎙️ VOIX & AUDIO</div>
+    <div class="about-grid">
+      <div class="about-feat">
+        <div class="about-feat-icon">🔊</div>
+        <div class="about-feat-name">ElevenLabs TTS</div>
+        <div class="about-feat-desc">Synthèse vocale ultra-réaliste avec voix personnalisée. Saisissez votre clé API et Voice ID dans les paramètres.</div>
+      </div>
+      <div class="about-feat">
+        <div class="about-feat-icon">🗣️</div>
+        <div class="about-feat-name">OpenAI & Web Speech</div>
+        <div class="about-feat-desc">Plusieurs moteurs TTS au choix : OpenAI TTS, Puter Voice, ou la synthèse vocale native du navigateur.</div>
+      </div>
+      <div class="about-feat">
+        <div class="about-feat-icon">🎤</div>
+        <div class="about-feat-name">Reconnaissance vocale</div>
+        <div class="about-feat-desc">Parlez directement à EVA grâce à la reconnaissance vocale intégrée. Activez le mode mains-libres pour dicter.</div>
+      </div>
+      <div class="about-feat">
+        <div class="about-feat-icon">📡</div>
+        <div class="about-feat-name">Mot de réveil</div>
+        <div class="about-feat-desc">Configurez un mot-clé (ex. "EVA") pour activer l'écoute sans toucher le clavier.</div>
+      </div>
+    </div>
+
+    <div class="about-section-title">🧑‍💻 PERSONNAGE 3D</div>
+    <div class="about-grid">
+      <div class="about-feat">
+        <div class="about-feat-icon">🧬</div>
+        <div class="about-feat-name">Personnage VRM</div>
+        <div class="about-feat-desc">Avatar 3D animé en temps réel avec Three.js + VRM. Expressions faciales, mouvements de lèvres et animations de corps.</div>
+      </div>
+      <div class="about-feat">
+        <div class="about-feat-icon">✨</div>
+        <div class="about-feat-name">Animations dynamiques</div>
+        <div class="about-feat-desc">Plusieurs états : inactif, parole, écoute. Transitions fluides, balancement naturel et regard expressif.</div>
+      </div>
+    </div>
+
+    <div class="about-section-title">📅 PRODUCTIVITÉ</div>
+    <div class="about-grid">
+      <div class="about-feat">
+        <div class="about-feat-icon">📝</div>
+        <div class="about-feat-name">Notes</div>
+        <div class="about-feat-desc">Prenez des notes synchronisées via Firebase. Organisez, recherchez et modifiez vos contenus à tout moment.</div>
+      </div>
+      <div class="about-feat">
+        <div class="about-feat-icon">⏰</div>
+        <div class="about-feat-name">Alarmes</div>
+        <div class="about-feat-desc">Créez des alarmes avec répétition (quotidien, jours ouvrés, week-end). Snooze et son personnalisé.</div>
+      </div>
+      <div class="about-feat">
+        <div class="about-feat-icon">🔔</div>
+        <div class="about-feat-name">Rappels</div>
+        <div class="about-feat-desc">Rappels datés synchronisés avec votre compte. Notifications intelligentes dans le navigateur.</div>
+      </div>
+      <div class="about-feat">
+        <div class="about-feat-icon">📆</div>
+        <div class="about-feat-name">Agenda</div>
+        <div class="about-feat-desc">Gestion complète d'événements avec titre, date, heure et description. Vue calendrier et liste.</div>
+      </div>
+    </div>
+
+    <div class="about-section-title">🛠️ OUTILS INTÉGRÉS</div>
+    <div class="about-grid">
+      <div class="about-feat"><div class="about-feat-icon">🖼️</div><div class="about-feat-name">Suppression de fond IA</div><div class="about-feat-desc">Modèle ONNX embarqué, aucune API requise.</div></div>
+      <div class="about-feat"><div class="about-feat-icon">📄</div><div class="about-feat-name">Générateur PDF</div><div class="about-feat-desc">Mise en forme professionnelle, téléchargement instantané.</div></div>
+      <div class="about-feat"><div class="about-feat-icon">📊</div><div class="about-feat-name">Export Excel</div><div class="about-feat-desc">CSV → XLSX en un clic avec SheetJS.</div></div>
+      <div class="about-feat"><div class="about-feat-icon">🔲</div><div class="about-feat-name">QR Code</div><div class="about-feat-desc">Couleurs personnalisées, export PNG HD.</div></div>
+      <div class="about-feat"><div class="about-feat-icon">🗜️</div><div class="about-feat-name">Compression image</div><div class="about-feat-desc">Qualité ajustable, redimensionnement optionnel.</div></div>
+      <div class="about-feat"><div class="about-feat-icon">🔄</div><div class="about-feat-name">Convertisseur d'unités</div><div class="about-feat-desc">6 catégories : longueur, masse, temp., surface, volume, vitesse.</div></div>
+      <div class="about-feat"><div class="about-feat-icon">🎨</div><div class="about-feat-name">Palette de couleurs</div><div class="about-feat-desc">Extraction des dominantes HEX depuis n'importe quelle image.</div></div>
+      <div class="about-feat"><div class="about-feat-icon">✂️</div><div class="about-feat-name">Raccourcisseur d'URL</div><div class="about-feat-desc">Liens courts via TinyURL, sans compte requis.</div></div>
+    </div>
+
+    <div class="about-footer">
+      <div style="font-family:'Orbitron',monospace;letter-spacing:2px;margin-bottom:6px">E.V.A — V3</div>
+      <div>Assistante virtuelle évolutive • Interface française • Propulsée par l'IA</div>
+      <div style="margin-top:10px"><button class="btn btn-secondary" onclick="closeAbout()" style="padding:8px 24px">Fermer</button></div>
     </div>
   </div>
 </div>

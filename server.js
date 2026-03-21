@@ -87,6 +87,32 @@ const server = http.createServer(function(req, res) {
     return;
   }
 
+  /* ── URL shortener proxy (avoid CORS) ── */
+  if (url === '/api/shorten') {
+    var qs = req.url.split('?')[1] || '';
+    var params = new URLSearchParams(qs);
+    var longUrl = params.get('url');
+    if (!longUrl) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Missing url parameter' }));
+      return;
+    }
+    var https = require('https');
+    var target = 'https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl);
+    https.get(target, function (r) {
+      var body = '';
+      r.on('data', function (c) { body += c; });
+      r.on('end', function () {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ short: body.trim() }));
+      });
+    }).on('error', function (e) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
   res.end('<h1>404 — Page non trouvée</h1>');
 });
