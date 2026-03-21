@@ -3184,11 +3184,16 @@ function renderTTSProvOpts(provider) {
   } else if (provider === 'elevenlabs') {
     /* IMPORTANT: type="text" pas "password" — les champs password peuvent être vidés par le navigateur avant lecture */
     var maskedKey = c.elevenLabsApiKey ? c.elevenLabsApiKey : '';
+    var savedVoiceId = c.elevenLabsVoiceId || '';
     el.innerHTML =
       '<div class="form-field">' +
       '<label class="form-label">Clé API ElevenLabs <span style="color:var(--cyan);font-size:0.8em">'+(maskedKey?'✓ configurée':'✗ manquante')+'</span></label>' +
       '<input type="text" class="form-input" id="sElevenLabsKey" style="'+keyInputStyle+'" value="'+esc(maskedKey)+'" placeholder="sk_... (votre clé ElevenLabs)" autocomplete="off" spellcheck="false">' +
-      '<div style="'+hintStyle+'">Disponible sur <em>elevenlabs.io</em> → Profil → API Keys — Voix d\'EVA préconfigurée.</div></div>';
+      '<div style="'+hintStyle+'">Disponible sur <em>elevenlabs.io</em> → Profil → API Keys</div></div>' +
+      '<div class="form-field">' +
+      '<label class="form-label">ID de voix <span style="color:var(--text-muted);font-size:0.8em">optionnel</span></label>' +
+      '<input type="text" class="form-input" id="sElevenLabsVoiceId" style="'+keyInputStyle+'" value="'+esc(savedVoiceId)+'" placeholder="ex: 21m00Tcm4TlvDq8ikWAM  (laisser vide = voix Rachel par défaut)" autocomplete="off" spellcheck="false">' +
+      '<div style="'+hintStyle+'">Sur <em>elevenlabs.io</em> → Mes Voix → cliquer sur ta voix → l\'ID est dans l\'URL ou dans l\'onglet ID</div></div>';
 
   } else if (provider === 'openai') {
     var oaiKey = c.openAITTSApiKey || c.openaiApiKey || '';
@@ -3242,6 +3247,13 @@ function saveVoiceSettings() {
     var elKey = k.value.trim();
     S.config.elevenLabsApiKey = elKey;
     console.log('[VOICE] elevenLabsApiKey:', elKey ? '✓ présente ('+elKey.length+' car.)' : '✗ vide');
+  }
+  /* Voice ID ElevenLabs */
+  k = document.getElementById('sElevenLabsVoiceId');
+  if (k) {
+    var elVoiceId = k.value.trim();
+    S.config.elevenLabsVoiceId = elVoiceId;
+    console.log('[VOICE] elevenLabsVoiceId:', elVoiceId || '(défaut Rachel)');
   }
 
   /* Clé OpenAI TTS */
