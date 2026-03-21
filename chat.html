@@ -3406,43 +3406,117 @@ function renderSettings(section) {
     var curTTSProv = cfg.voiceProvider || 'native';
     var provLabels = {native:'🎙 Navigateur (Web Speech)',puter:'☁️ Puter TTS',elevenlabs:'⚡ ElevenLabs',openai:'🤖 OpenAI TTS'};
     var curProvLabel = provLabels[curTTSProv] || curTTSProv;
+    function ttsCardSt(key) {
+      var a = key === curTTSProv;
+      return 'cursor:pointer;border-radius:14px;padding:16px 12px;border:2px solid '+(a?'var(--cyan)':'rgba(255,255,255,0.08)')+';background:'+(a?'rgba(0,220,220,0.07)':'rgba(255,255,255,0.02)')+';transition:all 0.2s;text-align:center;position:relative;';
+    }
+    function ttsTag(color, lbl) {
+      return '<span style="font-size:0.53em;font-weight:700;letter-spacing:0.06em;background:'+color+';color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:8px;right:8px;">'+lbl+'</span>';
+    }
+    function ttsChk(key) {
+      return curTTSProv===key?'<div class="tts-chk" style="position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;">✓</div>':'';
+    }
+
     c.innerHTML =
       '<div class="settings-section">' +
       '<div class="settings-section-title">Voix & Audio</div>' +
-      '<div style="font-size:0.72em;color:var(--cyan);padding:4px 0 10px;letter-spacing:0.03em;">Provider actif : <strong>'+curProvLabel+'</strong></div>' +
+
+      /* Toggles */
       '<div class="settings-row" style="padding:10px 0;border-bottom:1px solid var(--border)">' +
-      '<div><div class="settings-row-label">Synthèse vocale</div><div class="settings-row-sub">EVA vous répond à voix haute</div></div>' +
-      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sTTS"'+(S.ttsOn?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label></div>' +
+        '<div><div class="settings-row-label">Synthèse vocale</div><div class="settings-row-sub">EVA vous répond à voix haute</div></div>' +
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sTTS"'+(S.ttsOn?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label>' +
+      '</div>' +
       '<div class="settings-row" style="padding:10px 0;border-bottom:1px solid var(--border)">' +
-      '<div><div class="settings-row-label">Wake Word</div><div class="settings-row-sub">Activation par "Hey Eva"</div></div>' +
-      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sWakeWord"'+(S.wakeWordOn?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label></div>' +
+        '<div><div class="settings-row-label">Wake Word</div><div class="settings-row-sub">Activation par "Hey Eva"</div></div>' +
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sWakeWord"'+(S.wakeWordOn?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label>' +
+      '</div>' +
+
+      /* Vitesse */
       '<div class="form-field"><label class="form-label">Vitesse de parole</label>' +
-      '<div style="display:flex;align-items:center;gap:10px">' +
-      '<input type="range" min="0.5" max="2" step="0.1" id="sSpeechRate" value="'+(cfg.speechRate||1.0)+'" style="flex:1;accent-color:var(--cyan)">' +
-      '<span id="sSpeechRateVal" style="font-size:0.78em;color:var(--cyan);min-width:30px">'+(cfg.speechRate||1.0)+'x</span>' +
-      '</div></div>' +
-      '<div class="form-field"><label class="form-label">Service de voix</label>' +
-      '<select class="form-select" id="sTTSProvider">' +
-      '<option value="native"'+(curTTSProv==='native'?' selected':'')+'>🎙 Navigateur (Web Speech API)</option>' +
-      '<option value="puter"'+(curTTSProv==='puter'?' selected':'')+'>☁️ Puter TTS</option>' +
-      '<option value="elevenlabs"'+(curTTSProv==='elevenlabs'?' selected':'')+'>⚡ ElevenLabs</option>' +
-      '<option value="openai"'+(curTTSProv==='openai'?' selected':'')+'>🤖 OpenAI TTS</option>' +
-      '</select></div>' +
+        '<div style="display:flex;align-items:center;gap:10px">' +
+          '<input type="range" min="0.5" max="2" step="0.1" id="sSpeechRate" value="'+(cfg.speechRate||1.0)+'" style="flex:1;accent-color:var(--cyan)">' +
+          '<span id="sSpeechRateVal" style="font-size:0.78em;color:var(--cyan);min-width:30px">'+(cfg.speechRate||1.0)+'x</span>' +
+        '</div>' +
+      '</div>' +
+
+      /* Hidden select pour saveVoiceSettings() */
+      '<input type="hidden" id="sTTSProvider" value="'+curTTSProv+'">' +
+
+      /* === SERVICE DE VOIX — RECOMMANDÉS === */
+      '<div style="font-size:0.65em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">⭐ Recommandés</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">' +
+
+        /* Navigateur */
+        '<div id="ttscard-native" style="'+ttsCardSt('native')+'" onclick="window._selectTTS(\'native\')">' +
+          ttsChk('native') + ttsTag('#06b6d4','GRATUIT') +
+          '<div style="font-size:1.5em;margin-bottom:5px;">🎙️</div>' +
+          '<div style="font-weight:700;font-size:0.82em;margin-bottom:3px;">Navigateur</div>' +
+          '<div style="font-size:0.66em;color:var(--text-muted);line-height:1.4;">Web Speech API<br>Aucune configuration</div>' +
+        '</div>' +
+
+        /* Puter TTS */
+        '<div id="ttscard-puter" style="'+ttsCardSt('puter')+'" onclick="window._selectTTS(\'puter\')">' +
+          ttsChk('puter') + ttsTag('#06b6d4','GRATUIT') +
+          '<div style="font-size:1.5em;margin-bottom:5px;">☁️</div>' +
+          '<div style="font-weight:700;font-size:0.82em;margin-bottom:3px;">Puter TTS</div>' +
+          '<div style="font-size:0.66em;color:var(--text-muted);line-height:1.4;">Via Puter Cloud<br>Voix OpenAI qualité</div>' +
+        '</div>' +
+      '</div>' +
+
+      /* === AUTRES SERVICES === */
+      '<div style="font-size:0.65em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">Autres services</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">' +
+
+        /* ElevenLabs */
+        '<div id="ttscard-elevenlabs" style="'+ttsCardSt('elevenlabs')+'" onclick="window._selectTTS(\'elevenlabs\')">' +
+          ttsChk('elevenlabs') + ttsTag('#10b981','PAYANT') +
+          '<div style="font-size:1.3em;margin-bottom:4px;">⚡</div>' +
+          '<div style="font-weight:700;font-size:0.78em;margin-bottom:2px;">ElevenLabs</div>' +
+          '<div style="font-size:0.63em;color:var(--text-muted);">Voix ultra-réaliste<br>Clé API requise</div>' +
+        '</div>' +
+
+        /* OpenAI TTS */
+        '<div id="ttscard-openai" style="'+ttsCardSt('openai')+'" onclick="window._selectTTS(\'openai\')">' +
+          ttsChk('openai') + ttsTag('#10b981','PAYANT') +
+          '<div style="font-size:1.3em;margin-bottom:4px;">🤖</div>' +
+          '<div style="font-weight:700;font-size:0.78em;margin-bottom:2px;">OpenAI TTS</div>' +
+          '<div style="font-size:0.63em;color:var(--text-muted);">Voix GPT<br>Clé API requise</div>' +
+        '</div>' +
+      '</div>' +
+
+      /* Options dynamiques du provider sélectionné */
       '<div id="sTTSProvOpts"></div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-      '<button class="btn btn-secondary" onclick="testVoice()">🔊 Tester la voix</button>' +
-      '<button class="btn btn-primary" onclick="saveVoiceSettings()">Sauvegarder</button></div>';
+        '<button class="btn btn-secondary" onclick="testVoice()">🔊 Tester la voix</button>' +
+        '<button class="btn btn-primary" onclick="saveVoiceSettings()">Sauvegarder</button>' +
+      '</div>';
 
     setTimeout(function() {
       var sl = document.getElementById('sSpeechRate');
       var sv = document.getElementById('sSpeechRateVal');
       if (sl && sv) sl.addEventListener('input', function(){ sv.textContent = parseFloat(this.value).toFixed(1) + 'x'; });
-      var provSel = document.getElementById('sTTSProvider');
-      if (provSel) {
-        renderTTSProvOpts(provSel.value);
-        provSel.addEventListener('change', function(){ renderTTSProvOpts(this.value); });
-      }
+
+      window._selectTTS = function(v) {
+        var hi = document.getElementById('sTTSProvider'); if(hi) hi.value = v;
+        ['native','puter','elevenlabs','openai'].forEach(function(k) {
+          var card = document.getElementById('ttscard-'+k);
+          if (!card) return;
+          var active = k === v;
+          card.style.border = '2px solid '+(active?'var(--cyan)':'rgba(255,255,255,0.08)');
+          card.style.background = active?'rgba(0,220,220,0.07)':'rgba(255,255,255,0.02)';
+          var existing = card.querySelector('.tts-chk');
+          if (active && !existing) {
+            var chk = document.createElement('div');
+            chk.className = 'tts-chk';
+            chk.style.cssText = 'position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;';
+            chk.textContent = '✓'; card.appendChild(chk);
+          } else if (!active && existing) { existing.remove(); }
+        });
+        renderTTSProvOpts(v);
+      };
+
+      renderTTSProvOpts(curTTSProv);
     }, 50);
 
   } else if (section === 'account') {

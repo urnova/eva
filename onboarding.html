@@ -325,14 +325,44 @@ body::before{
         <button class="voice-test-btn" onclick="testVoice('fr-fr',event)">▶ Tester</button>
       </div>
       <div class="field" style="margin-top:20px">
-        <label class="field-label">Service de synthèse vocale</label>
-        <select id="obTTSProvider" style="width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:0.85em;font-family:'Space Mono',monospace;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;" onchange="obOnTTSProvChange(this.value)">
-          <option value="native">🎙 Navigateur (défaut — gratuit)</option>
-          <option value="puter">☁️ Puter TTS (requiert Puter)</option>
-          <option value="elevenlabs">⚡ ElevenLabs (clé API)</option>
-          <option value="openai">🤖 OpenAI TTS (clé API)</option>
-        </select>
-        <div id="obTTSProvInfo" style="font-size:0.7em;color:var(--text-muted);margin-top:6px;line-height:1.5">
+        <label class="field-label" style="margin-bottom:10px;display:block;">Service de synthèse vocale</label>
+
+        <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">⭐ Recommandés</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div id="obttsc-native" onclick="obSelectTTS('native')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid var(--cyan);background:rgba(0,212,255,0.07);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.52em;font-weight:700;background:#06b6d4;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">GRATUIT</span>
+            <div id="obc-native" style="position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">✓</div>
+            <div style="font-size:1.3em;margin-bottom:4px;">🎙️</div>
+            <div style="font-weight:700;font-size:0.76em;margin-bottom:2px;">Navigateur</div>
+            <div style="font-size:0.63em;color:var(--text-muted);">Web Speech<br>Sans config</div>
+          </div>
+          <div id="obttsc-puter" onclick="obSelectTTS('puter')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.52em;font-weight:700;background:#06b6d4;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">GRATUIT</span>
+            <div id="obc-puter" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">✓</div>
+            <div style="font-size:1.3em;margin-bottom:4px;">☁️</div>
+            <div style="font-weight:700;font-size:0.76em;margin-bottom:2px;">Puter TTS</div>
+            <div style="font-size:0.63em;color:var(--text-muted);">Voix OpenAI<br>Requiert Puter</div>
+          </div>
+        </div>
+
+        <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Autres services</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div id="obttsc-elevenlabs" onclick="obSelectTTS('elevenlabs')" style="cursor:pointer;border-radius:12px;padding:12px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.5em;font-weight:700;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
+            <div id="obc-elevenlabs" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">✓</div>
+            <div style="font-size:1.2em;margin-bottom:3px;">⚡</div>
+            <div style="font-weight:700;font-size:0.73em;margin-bottom:2px;">ElevenLabs</div>
+            <div style="font-size:0.61em;color:var(--text-muted);">Ultra-réaliste<br>Clé API</div>
+          </div>
+          <div id="obttsc-openai" onclick="obSelectTTS('openai')" style="cursor:pointer;border-radius:12px;padding:12px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.5em;font-weight:700;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
+            <div id="obc-openai" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">✓</div>
+            <div style="font-size:1.2em;margin-bottom:3px;">🤖</div>
+            <div style="font-weight:700;font-size:0.73em;margin-bottom:2px;">OpenAI TTS</div>
+            <div style="font-size:0.61em;color:var(--text-muted);">Voix GPT<br>Clé API</div>
+          </div>
+        </div>
+        <div id="obTTSProvInfo" style="font-size:0.7em;color:var(--text-muted);margin-top:4px;line-height:1.5">
           Voix native du navigateur — aucune configuration requise.
         </div>
       </div>
@@ -769,6 +799,28 @@ function obOnTTSProvChange(value) {
     openai:      'Configurez votre clé API OpenAI dans Paramètres > Voix après la connexion.'
   };
   info.textContent = msgs[value] || '';
+}
+
+function obSelectTTS(v) {
+  selectedTTSProvider = v;
+  var keys = ['native','puter','elevenlabs','openai'];
+  var msgs = {
+    native:     'Voix native du navigateur — aucune configuration requise.',
+    puter:      'Requiert Puter connecté (étape suivante). Voix de haute qualité via OpenAI TTS.',
+    elevenlabs: 'Configurez votre clé API ElevenLabs dans Paramètres > Voix après la connexion.',
+    openai:     'Configurez votre clé API OpenAI dans Paramètres > Voix après la connexion.'
+  };
+  keys.forEach(function(k) {
+    var card = document.getElementById('obttsc-'+k);
+    var chk  = document.getElementById('obc-'+k);
+    if (!card) return;
+    var active = k === v;
+    card.style.border      = '2px solid '+(active?'var(--cyan)':'rgba(255,255,255,0.08)');
+    card.style.background  = active?'rgba(0,212,255,0.07)':'rgba(255,255,255,0.02)';
+    if (chk) chk.style.display = active?'':'none';
+  });
+  var info = document.getElementById('obTTSProvInfo');
+  if (info) info.textContent = msgs[v] || '';
 }
 
 function testVoice(voice, event) {
