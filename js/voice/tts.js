@@ -91,8 +91,9 @@ async function speakWithPuter(text, config) {
 async function speakWithElevenLabs(text, config) {
   config = config || {};
   var apiKey  = (config.elevenLabsApiKey || '').trim();
-  var voiceId = 'KlhBpbVDwS268VcGauo'; // Voix EVA (fixe)
-  if (!apiKey) throw new Error('Clé API ElevenLabs manquante');
+  /* Use configured voice ID, or fallback to Rachel (premade, available on all accounts) */
+  var voiceId = (config.elevenLabsVoiceId || '').trim() || '21m00Tcm4TlvDq8ikWAM';
+  if (!apiKey) throw new Error('Clé API ElevenLabs manquante — ajoutez-la dans les paramètres Voix');
 
   var resp = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId, {
     method: 'POST',
@@ -109,8 +110,11 @@ async function speakWithElevenLabs(text, config) {
   });
 
   if (!resp.ok) {
-    var msg = await resp.text().catch(function(){ return ''; });
-    throw new Error('ElevenLabs HTTP ' + resp.status + (msg ? ' — ' + msg.slice(0, 80) : ''));
+    var errBody = await resp.text().catch(function(){ return ''; });
+    if (resp.status === 401) throw new Error('Clé API ElevenLabs invalide ou expirée');
+    if (resp.status === 404) throw new Error('Voice ID introuvable — vérifiez l\'ID de voix dans Paramètres → Voix');
+    if (resp.status === 422) throw new Error('Texte invalide ou paramètres incorrects');
+    throw new Error('ElevenLabs erreur ' + resp.status + (errBody ? ' : ' + errBody.slice(0, 100) : ''));
   }
 
   var blob = await resp.blob();
