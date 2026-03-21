@@ -49,9 +49,16 @@ async function checkAndNotify() {
     for (var uDoc of usersSnap.docs) {
       var uid      = uDoc.id;
       var uData    = uDoc.data();
-      var token    = uData.fcmToken;
       var tzOffset = typeof uData.timezoneOffset === 'number' ? uData.timezoneOffset : 0;
-      if (!token) continue;
+
+      /* Récupérer tous les tokens (multi-appareils) avec compat ancien format */
+      var tokens = [];
+      if (Array.isArray(uData.fcmTokens) && uData.fcmTokens.length) {
+        tokens = uData.fcmTokens.filter(Boolean);
+      } else if (uData.fcmToken) {
+        tokens = [uData.fcmToken];
+      }
+      if (!tokens.length) continue;
 
       /* Heure locale de l'utilisateur */
       var localNow = new Date(now.getTime() - tzOffset * 60000);
@@ -69,7 +76,7 @@ async function checkAndNotify() {
           if (alarm.repeat === 'once' && lastDate) continue;
           if (lastDate === today) continue;
 
-          await sendFCM(token, {
+          await sendFCMMulticast(tokens, uid, {
             title: '⏰ Alarme — ' + (alarm.label || hhmm),
             body:  alarm.label || ('Il est ' + hhmm),
             type:  'alarm',
@@ -96,7 +103,7 @@ async function checkAndNotify() {
           var remDate = rem.datetime.toDate ? rem.datetime.toDate() : new Date(rem.datetime);
           if (remDate > now) continue;
 
-          await sendFCM(token, {
+          await sendFCMMulticast(tokens, uid, {
             title: '📝 Rappel',
             body:  rem.text || 'Rappel E.V.A',
             type:  'reminder',
@@ -119,7 +126,7 @@ async function checkAndNotify() {
           var evStart = ev.start.toDate ? ev.start.toDate() : new Date(ev.start);
           if (evStart > in15 || evStart < now) continue;
 
-          await sendFCM(token, {
+          await sendFCMMulticast(tokens, uid, {
             title: '📅 ' + (ev.title || 'Événement'),
             body:  'Dans 15 minutes' + (ev.location ? ' — ' + ev.location : ''),
             type:  'calendar',
@@ -137,12 +144,14 @@ async function checkAndNotify() {
   }
 }
 
-async function sendFCM(token, data) {
-  if (!admin) return;
+/* Envoyer à TOUS les appareils d'un utilisateur en parallèle (multicast) */
+async function sendFCMMulticast(tokens, uid, data) {
+  if (!admin || !tokens || !tokens.length) return;
   var strData = {};
   for (var k in data) strData[k] = String(data[k]);
-  var message = {
-    token: token,
+
+  var multicastMsg = {
+    tokens: tokens,
     notification: {
       title: data.title,
       body:  data.body
@@ -164,19 +173,37 @@ async function sendFCM(token, data) {
       }
     }
   };
+
   try {
-    await admin.messaging().send(message);
-    console.log('[FCM] Envoyé (' + data.type + ') →', token.slice(0,20) + '…');
-  } catch(e) {
-    if (e.code === 'messaging/registration-token-not-registered') {
-      console.warn('[FCM] Token invalide pour user', data.userId, '— suppression');
-      if (db && data.userId) {
-        await db.collection('users').doc(data.userId).update({ fcmToken: null }).catch(function(){});
+    var result = await admin.messaging().sendEachForMulticast(multicastMsg);
+    console.log('[FCM] Multicast (' + data.type + ') →', result.successCount + '/' + tokens.length + ' appareils');
+
+    /* Supprimer les tokens invalides de Firestore */
+    var staleTokens = [];
+    result.responses.forEach(function(resp, idx) {
+      if (!resp.success) {
+        var code = resp.error && resp.error.code;
+        if (code === 'messaging/registration-token-not-registered' ||
+            code === 'messaging/invalid-registration-token') {
+          staleTokens.push(tokens[idx]);
+        }
       }
-    } else {
-      console.error('[FCM] sendFCM error:', e.message);
+    });
+    if (staleTokens.length && uid && db) {
+      var arrayRemove = admin.firestore.FieldValue.arrayRemove;
+      await db.collection('users').doc(uid).update({
+        fcmTokens: arrayRemove.apply(null, staleTokens)
+      }).catch(function(){});
+      console.log('[FCM] ' + staleTokens.length + ' token(s) expiré(s) supprimé(s) pour', uid);
     }
+  } catch(e) {
+    console.error('[FCM] sendFCMMulticast error:', e.message);
   }
+}
+
+/* Alias pour appels unitaires (test-notification) */
+async function sendFCM(token, uid, data) {
+  return sendFCMMulticast([token], uid, data);
 }
 
 if (fcmOk) {
@@ -277,13 +304,19 @@ const server = http.createServer(async function(req, res) {
       var userId = body.userId;
       if (!userId || !db) { json(res, { ok: false, error: 'userId requis' }, 400); return; }
 
-      var uDoc = await db.collection('users').doc(userId).get();
-      var token = uDoc.exists ? uDoc.data().fcmToken : null;
-      if (!token) { json(res, { ok: false, error: 'Token FCM introuvable pour cet utilisateur' }, 404); return; }
+      var uDoc   = await db.collection('users').doc(userId).get();
+      var uData  = uDoc.exists ? uDoc.data() : {};
+      var tokens = [];
+      if (Array.isArray(uData.fcmTokens) && uData.fcmTokens.length) {
+        tokens = uData.fcmTokens.filter(Boolean);
+      } else if (uData.fcmToken) {
+        tokens = [uData.fcmToken];
+      }
+      if (!tokens.length) { json(res, { ok: false, error: 'Token FCM introuvable — activez les notifications sur au moins un appareil' }, 404); return; }
 
-      await sendFCM(token, {
+      await sendFCMMulticast(tokens, userId, {
         title:  '🧪 Test — E.V.A',
-        body:   'Les notifications push fonctionnent correctement ! Vous recevrez vos alarmes et rappels même quand le site est fermé.',
+        body:   'Les notifications push fonctionnent sur ' + tokens.length + ' appareil' + (tokens.length > 1 ? 's' : '') + ' ! Vos alarmes et rappels arriveront même quand le site est fermé.',
         type:   'test',
         tag:    'eva-test-' + Date.now(),
         userId: userId

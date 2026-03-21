@@ -785,9 +785,9 @@ async function _obRegisterFCMToken() {
     var token = await messaging.getToken({ vapidKey: cfg.vapidKey, serviceWorkerRegistration: swReg });
     if (token && currentUser && window.db) {
       await window.db.collection('users').doc(currentUser.uid).set({
-        fcmToken: token,
+        fcmTokens:       firebase.firestore.FieldValue.arrayUnion(token),
         fcmTokenUpdated: new Date().toISOString(),
-        timezoneOffset: new Date().getTimezoneOffset()
+        timezoneOffset:  new Date().getTimezoneOffset()
       }, { merge: true });
       if (statusEl) statusEl.textContent = '🛡️ Push Firebase enregistré — alertes même hors-ligne';
     } else {

@@ -3607,7 +3607,10 @@ function renderSettings(section) {
     var permLabel = {granted:'✅ Autorisées', denied:'❌ Bloquées', default:'⏳ Non configurées', unavailable:'⚠ Non supporté'}[notifPerm] || notifPerm;
     var permColor = {granted:'var(--cyan)', denied:'#ff4d6d', default:'var(--text-muted)', unavailable:'var(--text-dim)'}[notifPerm] || 'var(--text-muted)';
     var hasFcmToken = !!_fcmToken;
-    var fcmStatus = notifPerm === 'granted' && hasFcmToken ? '✅ Push actif (hors-ligne)' : notifPerm === 'granted' ? '🔄 Navigateur seulement' : '—';
+    var fcmDeviceCount = (S.profile && Array.isArray(S.profile.fcmTokens)) ? S.profile.fcmTokens.filter(Boolean).length : (hasFcmToken ? 1 : 0);
+    var fcmStatus = notifPerm === 'granted' && hasFcmToken
+      ? '✅ Push actif' + (fcmDeviceCount > 1 ? ' — ' + fcmDeviceCount + ' appareils' : '')
+      : notifPerm === 'granted' ? '🔄 Navigateur seulement' : '—';
     var fcmColor  = notifPerm === 'granted' && hasFcmToken ? 'var(--cyan)' : notifPerm === 'granted' ? 'var(--text-muted)' : 'var(--text-dim)';
     c.innerHTML =
       '<div class="settings-section">' +
@@ -4746,15 +4749,15 @@ async function _fcmRegisterToken(swReg, vapidKey) {
     var token = await _fcmMessaging.getToken({ vapidKey: vapidKey, serviceWorkerRegistration: swReg });
     if (!token) return;
     _fcmToken = token;
-    /* Sauvegarder le token dans Firestore */
+    /* Ajouter le token à l'array multi-appareils (arrayUnion = pas de doublon) */
     if (S.user && db) {
       await db.collection('users').doc(S.user.uid).set({
-        fcmToken: token,
-        fcmTokenUpdated: new Date().toISOString(),
-        timezoneOffset: new Date().getTimezoneOffset()
+        fcmTokens:        firebase.firestore.FieldValue.arrayUnion(token),
+        fcmTokenUpdated:  new Date().toISOString(),
+        timezoneOffset:   new Date().getTimezoneOffset()
       }, { merge: true });
     }
-    console.log('[FCM] Token enregistré');
+    console.log('[FCM] Token enregistré (multi-appareils)');
   } catch(e) {
     console.warn('[FCM] getToken error:', e);
   }
@@ -4791,8 +4794,21 @@ async function activateNotifications() {
 }
 window.activateNotifications = activateNotifications;
 
-function deactivateNotifications() {
-  toast('Pour désactiver, cliquez sur 🔒 dans la barre d\'adresse et bloquez les notifications', 'info');
+async function deactivateNotifications() {
+  if (_fcmToken && S.user && db) {
+    try {
+      await db.collection('users').doc(S.user.uid).update({
+        fcmTokens: firebase.firestore.FieldValue.arrayRemove(_fcmToken)
+      });
+      _fcmToken = null;
+      toast('🔕 Push désactivé sur cet appareil — les autres restent actifs', 'info');
+      renderSettings('notifications');
+    } catch(e) {
+      toast('Erreur lors de la désactivation : ' + e.message, 'error');
+    }
+  } else {
+    toast('Pour désactiver complètement, cliquez sur 🔒 dans la barre d\'adresse → bloquer les notifications', 'info');
+  }
 }
 window.deactivateNotifications = deactivateNotifications;
 
