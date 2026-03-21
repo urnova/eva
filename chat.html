@@ -2160,6 +2160,15 @@ function updateProviderLabel(p) {
   /* Bannière d'avertissement mode local */
   var banner = document.getElementById('localModeBanner');
   if (banner) banner.style.display = p === 'qwen' ? 'flex' : 'none';
+  /* Bouton image — désactivé en mode local (pas de vision) */
+  var btn = document.getElementById('attachBtn');
+  if (btn) {
+    var isLocal = p === 'qwen';
+    btn.disabled = isLocal;
+    btn.style.opacity = isLocal ? '0.3' : '';
+    btn.style.cursor = isLocal ? 'not-allowed' : '';
+    btn.title = isLocal ? 'Vision non disponible en mode local' : 'Joindre une image';
+  }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2825,7 +2834,6 @@ async function handleSend() {
       'TES FONCTIONNALITÉS :\n' +
       '- Répondre à toutes les questions (culture générale, sciences, cuisine, conseils, actualités…)\n' +
       '- Créer des notes, alarmes, rappels et événements agenda\n' +
-      '- Analyser et décrire des images (via Puter Vision)\n' +
       '- Aider l\'utilisateur à organiser son quotidien\n' +
       '- Tu ne génères PAS de code informatique\n\n' +
       'ACTIONS (utilise ces formats si l\'utilisateur demande) :\n' +
@@ -2844,17 +2852,7 @@ async function handleSend() {
   if (img) {
     try {
       var vision = await analyzeImage(img.data, text || 'Décris cette image.');
-      if (vision) {
-        /* Pour Qwen : Puter a déjà répondu — on affiche directement sans passer par le modèle local */
-        if (_activeProv === 'qwen') {
-          hideTyping();
-          streamEvaMsg(vision);
-          saveConvMsg(text || '[Image]', vision);
-          if (window.EvaCharacter) window.EvaCharacter.setIdle();
-          return;
-        }
-        msgContent = vision;
-      }
+      if (vision) msgContent = vision;
     } catch(e) {}
   }
 
@@ -3041,20 +3039,8 @@ async function analyzeImage(base64Data, prompt) {
     return null;
   }
 
-  /* ── Qwen Local — vision via Puter GPT-4o (gratuit, sans clé) ── */
-  if (prov === 'qwen') {
-    if (typeof puter === 'undefined') return null;
-    try {
-      var msg = [{ role: 'user', content: [
-        { type: 'image_url', image_url: { url: base64Data } },
-        { type: 'text', text: prompt || 'Décris cette image en détail.' }
-      ]}];
-      var resp = await puter.ai.chat(msg, { model: 'gpt-4o' });
-      if (typeof resp === 'string') return resp;
-      if (resp && resp.message && resp.message.content) return resp.message.content;
-    } catch(e) { console.warn('[EVA Vision] Puter fallback error:', e); }
-    return null;
-  }
+  /* ── Qwen Local — vision non disponible ── */
+  if (prov === 'qwen') return null;
 
   /* ── Puter (défaut / fallback) ── */
   if (typeof puter === 'undefined') return null;
