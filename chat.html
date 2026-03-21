@@ -3269,7 +3269,7 @@ function renderSettings(section) {
 
       /* === RECOMMANDÉS === */
       '<div style="font-size:0.65em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">⭐ Recommandés</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:12px;margin-bottom:20px;">' +
 
       /* Puter card */
       '<div id="aicard-puter" style="'+cardStyle('puter')+'" onclick="window._selectAIProv(\'puter\')">' +
@@ -3290,7 +3290,7 @@ function renderSettings(section) {
 
       /* === AUTRES FOURNISSEURS === */
       '<div style="font-size:0.65em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">Autres fournisseurs</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-bottom:20px;">' +
 
       /* OpenAI */
       '<div id="aicard-openai" style="'+cardStyle('openai')+'" onclick="window._selectAIProv(\'openai\')">' +
@@ -3487,7 +3487,7 @@ function renderSettings(section) {
 
       /* === SERVICE DE VOIX — RECOMMANDÉS === */
       '<div style="font-size:0.65em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">⭐ Recommandés</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:12px;margin-bottom:16px;">' +
 
         /* Navigateur */
         '<div id="ttscard-native" style="'+ttsCardSt('native')+'" onclick="window._selectTTS(\'native\')">' +
@@ -3508,7 +3508,7 @@ function renderSettings(section) {
 
       /* === AUTRES SERVICES === */
       '<div style="font-size:0.65em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">Autres services</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin-bottom:16px;">' +
 
         /* ElevenLabs */
         '<div id="ttscard-elevenlabs" style="'+ttsCardSt('elevenlabs')+'" onclick="window._selectTTS(\'elevenlabs\')">' +

@@ -328,7 +328,7 @@ body::before{
         <label class="field-label" style="margin-bottom:10px;display:block;">Service de synthèse vocale</label>
 
         <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">⭐ Recommandés</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px;">
           <div id="obttsc-native" onclick="obSelectTTS('native')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid var(--cyan);background:rgba(0,212,255,0.07);text-align:center;position:relative;transition:all 0.2s;">
             <span style="font-size:0.52em;font-weight:700;background:#06b6d4;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">GRATUIT</span>
             <div id="obc-native" style="position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">✓</div>
@@ -346,7 +346,7 @@ body::before{
         </div>
 
         <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Autres services</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:10px;">
           <div id="obttsc-elevenlabs" onclick="obSelectTTS('elevenlabs')" style="cursor:pointer;border-radius:12px;padding:12px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
             <span style="font-size:0.5em;font-weight:700;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
             <div id="obc-elevenlabs" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">✓</div>
@@ -380,7 +380,7 @@ body::before{
 
         <!-- RECOMMANDÉS -->
         <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">⭐ Recommandés</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;">
 
           <!-- Puter -->
           <div id="obcard-puter" onclick="obSelectProvider('puter')" style="cursor:pointer;border-radius:12px;padding:14px 12px;border:2px solid var(--cyan);background:rgba(0,212,255,0.07);text-align:center;position:relative;transition:all 0.2s;">
@@ -403,7 +403,7 @@ body::before{
 
         <!-- AUTRES -->
         <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Autres fournisseurs</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;">
 
           <!-- OpenAI -->
           <div id="obcard-openai" onclick="obSelectProvider('openai')" style="cursor:pointer;border-radius:12px;padding:12px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
