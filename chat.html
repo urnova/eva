@@ -2825,7 +2825,7 @@ async function handleSend() {
       'TES FONCTIONNALITÉS :\n' +
       '- Répondre à toutes les questions (culture générale, sciences, cuisine, conseils, actualités…)\n' +
       '- Créer des notes, alarmes, rappels et événements agenda\n' +
-      '- Analyser et décrire des images (via Moondream)\n' +
+      '- Analyser et décrire des images (via Puter Vision)\n' +
       '- Aider l\'utilisateur à organiser son quotidien\n' +
       '- Tu ne génères PAS de code informatique\n\n' +
       'ACTIONS (utilise ces formats si l\'utilisateur demande) :\n' +
@@ -2844,7 +2844,17 @@ async function handleSend() {
   if (img) {
     try {
       var vision = await analyzeImage(img.data, text || 'Décris cette image.');
-      msgContent = vision || text;
+      if (vision) {
+        /* Pour Qwen : Puter a déjà répondu — on affiche directement sans passer par le modèle local */
+        if (_activeProv === 'qwen') {
+          hideTyping();
+          streamEvaMsg(vision);
+          saveConvMsg(text || '[Image]', vision);
+          if (window.EvaCharacter) window.EvaCharacter.setIdle();
+          return;
+        }
+        msgContent = vision;
+      }
     } catch(e) {}
   }
 
@@ -3031,24 +3041,19 @@ async function analyzeImage(base64Data, prompt) {
     return null;
   }
 
-  /* ── Qwen Local — vision via Moondream (gratuit, sans clé) ── */
+  /* ── Qwen Local — vision via Puter GPT-4o (gratuit, sans clé) ── */
   if (prov === 'qwen') {
+    if (typeof puter === 'undefined') return null;
     try {
-      var resp = await fetch('https://api.moondream.ai/v1/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image_url: base64Data,
-          question: prompt || 'Décris cette image en détail.',
-          stream: false
-        })
-      });
-      if (resp.ok) {
-        var data = await resp.json();
-        if (data && data.answer) return data.answer;
-      }
-    } catch(e) { console.warn('[EVA Vision] Moondream error:', e); }
-    return '[Analyse d\'image temporairement indisponible. Vérifiez votre connexion internet.]';
+      var msg = [{ role: 'user', content: [
+        { type: 'image_url', image_url: { url: base64Data } },
+        { type: 'text', text: prompt || 'Décris cette image en détail.' }
+      ]}];
+      var resp = await puter.ai.chat(msg, { model: 'gpt-4o' });
+      if (typeof resp === 'string') return resp;
+      if (resp && resp.message && resp.message.content) return resp.message.content;
+    } catch(e) { console.warn('[EVA Vision] Puter fallback error:', e); }
+    return null;
   }
 
   /* ── Puter (défaut / fallback) ── */
@@ -3203,7 +3208,7 @@ function renderSettings(section) {
       puter:    { label:'Puter Cloud', icon:'☁️', tag:'GRATUIT', tagColor:'#06b6d4', desc:'Accès gratuit via Puter.com. Aucune clé API requise. Modèles GPT-4o disponibles.', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'}], modelKey:'puterModel' },
       openai:   { label:'OpenAI',      icon:'🤖', tag:'PAYANT',  tagColor:'#10b981', desc:'GPT-4o, GPT-4 Turbo. Nécessite une clé API OpenAI. Supporte la vision (analyse d\'images).', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'},{id:'gpt-4-turbo',label:'GPT-4 Turbo — Puissant'},{id:'gpt-3.5-turbo',label:'GPT-3.5 Turbo — Économique'}], modelKey:'openaiModel' },
       claude:   { label:'Claude',      icon:'🧠', tag:'PAYANT',  tagColor:'#10b981', desc:'Claude Haiku et Opus d\'Anthropic. Excellent pour le raisonnement et l\'analyse. Supporte la vision.', models:[{id:'claude-3-5-haiku-20241022',label:'Haiku — Rapide'},{id:'claude-3-opus-20240229',label:'Opus — Ultra'}], modelKey:'claudeModel' },
-      qwen:     { label:'Local Privé', icon:'🖥️', tag:'LOCAL',   tagColor:'#f59e0b', desc:'Modèle IA local, 100% privé. Fonctionne sans internet. Analyse d\'images via Moondream. ⚠️ Performances limitées selon le modèle choisi.', models:[{id:'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',label:'Qwen2.5 1.5B — Léger (~900 MB)'},{id:'Qwen2.5-3B-Instruct-q4f16_1-MLC',label:'Qwen2.5 3B — Équilibré (~1.8 GB)'},{id:'Llama-3.2-3B-Instruct-q4f16_1-MLC',label:'Llama 3.2 3B — Recommandé (~1.8 GB)'},{id:'Phi-3.5-mini-instruct-q4f16_1-MLC',label:'Phi 3.5 Mini — Meilleur (~2.2 GB)'},{id:'Qwen2.5-7B-Instruct-q4f16_1-MLC',label:'Qwen2.5 7B — Puissant (~4 GB)'}], modelKey:'qwenModel' },
+      qwen:     { label:'Local Privé', icon:'🖥️', tag:'LOCAL',   tagColor:'#f59e0b', desc:'Modèle IA local, 100% privé. Fonctionne sans internet. Analyse d\'images via Puter (connexion requise pour la vision). ⚠️ Performances limitées selon le modèle choisi.', models:[{id:'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',label:'Qwen2.5 1.5B — Léger (~900 MB)'},{id:'Qwen2.5-3B-Instruct-q4f16_1-MLC',label:'Qwen2.5 3B — Équilibré (~1.8 GB)'},{id:'Llama-3.2-3B-Instruct-q4f16_1-MLC',label:'Llama 3.2 3B — Recommandé (~1.8 GB)'},{id:'Phi-3.5-mini-instruct-q4f16_1-MLC',label:'Phi 3.5 Mini — Meilleur (~2.2 GB)'},{id:'Qwen2.5-7B-Instruct-q4f16_1-MLC',label:'Qwen2.5 7B — Puissant (~4 GB)'}], modelKey:'qwenModel' },
       lmstudio: { label:'LM Studio',  icon:'💻', tag:'LOCAL',   tagColor:'#f59e0b', desc:'Serveur local via LM Studio. Nécessite LM Studio installé sur votre machine.', models:[], modelKey:'customModel' },
       ollama:   { label:'Ollama',      icon:'🦙', tag:'LOCAL',   tagColor:'#f59e0b', desc:'Serveur local Ollama. Complètement privé, fonctionne sans internet.', models:[], modelKey:'ollamaModel' }
     };
