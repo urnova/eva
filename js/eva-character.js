@@ -42,11 +42,11 @@ var P = {
   sX: mkV(0), sZ: mkV(0),
   /* Hips */
   hipZ: mkV(0),
-  /* Arms upper */
-  lAZ: mkV(1.15), rAZ: mkV(-1.15),   // Z = primary lift axis
-  lAX: mkV(0),    rAX: mkV(0),        // X = forward/back
+  /* Arms upper — NEGATIVE Z lowers left arm, POSITIVE Z lowers right arm */
+  lAZ: mkV(-1.15), rAZ: mkV(1.15),   // Z = primary lift axis
+  lAX: mkV(0),     rAX: mkV(0),       // X = forward/back
   /* Elbows lower arm */
-  lEZ: mkV(0.08), rEZ: mkV(-0.08),
+  lEZ: mkV(-0.08), rEZ: mkV(0.08),
   /* Expressions */
   blink: mkV(0), mouth: mkV(0),
   happy: mkV(0), angry: mkV(0), sad: mkV(0), sur: mkV(0)
@@ -138,10 +138,10 @@ async function loadVRM() {
   scene = new THREE.Scene();
   clock = new THREE.Clock();
 
-  /* ── Camera (EVA ~1.85 m, show bust-to-knee with slight look-up) ── */
+  /* ── Camera — look DOWN slightly so feet have ground space below ── */
   cam = new THREE.PerspectiveCamera(28, W / H, 0.1, 20);
-  cam.position.set(0, 0.85, 3.8);
-  cam.lookAt(0, 0.72, 0);
+  cam.position.set(0, 1.1, 3.8);
+  cam.lookAt(0, 0.55, 0);
 
   /* ── Lighting ── */
   scene.add(new THREE.AmbientLight(0xffffff, 1.1));
@@ -222,10 +222,11 @@ async function loadVRM() {
    A-POSE  (lower arms ~65° from VRM0 T-pose horizontal)
    ═══════════════════════════════════════════════════════════════════════════ */
 function applyAPose() {
-  setBone('leftUpperArm',  { z:  1.15, x: 0, y: 0 });
-  setBone('rightUpperArm', { z: -1.15, x: 0, y: 0 });
-  setBone('leftLowerArm',  { z:  0.08 });
-  setBone('rightLowerArm', { z: -0.08 });
+  /* NEGATIVE Z = arm goes DOWN for left arm; POSITIVE Z = arm goes DOWN for right arm */
+  setBone('leftUpperArm',  { z: -1.15, x: 0, y: 0 });
+  setBone('rightUpperArm', { z:  1.15, x: 0, y: 0 });
+  setBone('leftLowerArm',  { z: -0.08 });
+  setBone('rightLowerArm', { z:  0.08 });
   vrm.update(0);
 }
 
@@ -360,11 +361,11 @@ function tick_state(dt) {
       P.sX.tgt = procedural.breath + Math.sin(T * 0.25) * 0.008;
       P.sZ.tgt = procedural.wShift;
       P.hipZ.tgt = procedural.wShift * 0.5;
-      /* Arms: relaxed A-pose, tiny float */
-      P.lAZ.tgt =  1.15 + Math.sin(T * 0.28) * 0.025;
-      P.rAZ.tgt = -1.15 - Math.sin(T * 0.28) * 0.025;
+      /* Arms: relaxed A-pose, tiny breathing float */
+      P.lAZ.tgt = -1.15 + Math.sin(T * 0.28) * 0.025;
+      P.rAZ.tgt =  1.15 - Math.sin(T * 0.28) * 0.025;
       P.lAX.tgt = 0; P.rAX.tgt = 0;
-      P.lEZ.tgt =  0.08; P.rEZ.tgt = -0.08;
+      P.lEZ.tgt = -0.08; P.rEZ.tgt =  0.08;
       /* Expressions: neutral */
       P.happy.tgt = 0; P.angry.tgt = 0; P.sad.tgt = 0;
       break;
@@ -393,9 +394,9 @@ function tick_state(dt) {
       P.nX.tgt =  P.hX.tgt * 0.45;
       P.nY.tgt =  P.hY.tgt * 0.35;
       /* Arms: relaxed, slightly more still */
-      P.lAZ.tgt =  1.12; P.rAZ.tgt = -1.12;
+      P.lAZ.tgt = -1.12; P.rAZ.tgt =  1.12;
       P.lAX.tgt = 0; P.rAX.tgt = 0;
-      P.lEZ.tgt =  0.08; P.rEZ.tgt = -0.08;
+      P.lEZ.tgt = -0.08; P.rEZ.tgt =  0.08;
       /* Expression: slightly raised attention (no expression change needed) */
       P.happy.tgt = 0; P.angry.tgt = 0; P.sad.tgt = 0;
       break;
@@ -413,15 +414,15 @@ function tick_state(dt) {
       P.hZ.tgt =  0.07;
       P.nX.tgt =  P.hX.tgt * 0.4;
       P.nY.tgt =  P.hY.tgt * 0.35;
-      /* Arms: right arm crossed / hand near chin pose */
-      /* Left arm: comes across body */
-      P.lAZ.tgt =  0.55;   /* more horizontal, in front */
-      P.lAX.tgt = -0.12;   /* slightly forward */
-      P.lEZ.tgt =  0.30;   /* forearm angle up */
-      /* Right arm: elbow raised, hand near chin */
-      P.rAZ.tgt = -0.55;
-      P.rAX.tgt = -0.20;   /* forward */
-      P.rEZ.tgt = -0.55;   /* elbow bent upward (hand toward face) */
+      /* Arms: thinking pose — right hand near chin, left arm slightly raised as support */
+      /* Left arm: slightly forward and a bit lower than idle */
+      P.lAZ.tgt = -0.65;   /* arm still somewhat down */
+      P.lAX.tgt = -0.20;   /* slightly forward */
+      P.lEZ.tgt = -0.25;   /* light elbow bend */
+      /* Right arm: raised forward so hand can be near chin */
+      P.rAZ.tgt = -0.25;   /* arm above horizontal (negative = UP for right) */
+      P.rAX.tgt = -0.45;   /* arm comes forward toward body */
+      P.rEZ.tgt =  0.60;   /* elbow bends, forearm angles toward face */
       /* Expression: slight concentration frown */
       P.angry.tgt = 0.15; P.happy.tgt = 0; P.sad.tgt = 0;
       break;
@@ -441,11 +442,11 @@ function tick_state(dt) {
       P.nX.tgt =  P.hX.tgt * 0.45;
       P.nY.tgt =  P.hY.tgt * 0.40;
       /* Arms: gestural, natural movement */
-      P.lAZ.tgt =  1.10 + Math.sin(s * 0.82) * 0.08;
-      P.rAZ.tgt = -1.10 - Math.sin(s * 0.70) * 0.08;
+      P.lAZ.tgt = -1.10 + Math.sin(s * 0.82) * 0.08;
+      P.rAZ.tgt =  1.10 - Math.sin(s * 0.70) * 0.08;
       P.lAX.tgt =  Math.sin(s * 0.55) * 0.05;
       P.rAX.tgt = -Math.sin(s * 0.55) * 0.05;
-      P.lEZ.tgt =  0.08; P.rEZ.tgt = -0.08;
+      P.lEZ.tgt = -0.08; P.rEZ.tgt =  0.08;
       /* Expression: animated — slight happy */
       P.happy.tgt = 0.20; P.angry.tgt = 0; P.sad.tgt = 0;
       break;
@@ -464,10 +465,10 @@ function tick_state(dt) {
       P.nX.tgt = P.hX.tgt * 0.40;
       P.nY.tgt = P.hY.tgt * 0.35;
       /* Arms: cheerful float */
-      P.lAZ.tgt =  1.10 + Math.sin(s * 0.88) * 0.10;
-      P.rAZ.tgt = -1.10 - Math.sin(s * 0.88) * 0.10;
+      P.lAZ.tgt = -1.10 + Math.sin(s * 0.88) * 0.10;
+      P.rAZ.tgt =  1.10 - Math.sin(s * 0.88) * 0.10;
       P.lAX.tgt = 0; P.rAX.tgt = 0;
-      P.lEZ.tgt =  0.08; P.rEZ.tgt = -0.08;
+      P.lEZ.tgt = -0.08; P.rEZ.tgt =  0.08;
       P.happy.tgt = 0.85; P.angry.tgt = 0; P.sad.tgt = 0;
       break;
     }

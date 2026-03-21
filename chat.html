@@ -582,6 +582,23 @@ body::before{
   min-height:0;
   overflow:hidden;
 }
+.eva-ground-glow{
+  position:absolute;
+  bottom:0;left:50%;
+  transform:translateX(-50%);
+  width:180px;height:28px;
+  background:radial-gradient(ellipse at center, rgba(0,212,255,0.65) 0%, rgba(0,212,255,0.22) 45%, transparent 75%);
+  border-radius:50%;
+  filter:blur(5px);
+  pointer-events:none;
+  z-index:2;
+  mix-blend-mode:screen;
+  animation:groundPulse 3s ease-in-out infinite;
+}
+@keyframes groundPulse{
+  0%,100%{opacity:0.75;transform:translateX(-50%) scaleX(1);}
+  50%{opacity:1;transform:translateX(-50%) scaleX(1.08);}
+}
 .eva-panel-info{
   flex-shrink:0;padding:13px 14px;
   border-top:1px solid var(--border);
@@ -1702,7 +1719,9 @@ body::before{
 
   <!-- ══ EVA PANEL ══ -->
   <div class="eva-panel" id="evaPanel">
-    <div class="eva-panel-char" id="evaCharContainer"></div>
+    <div class="eva-panel-char" id="evaCharContainer">
+      <div class="eva-ground-glow"></div>
+    </div>
     <div class="eva-panel-info">
       <div class="eva-provider-chip" id="providerChip" onclick="openSettings('ai')">
         <div class="provider-dot"></div>
