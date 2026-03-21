@@ -104,11 +104,12 @@ async function checkAndNotify() {
           if (remDate > now) continue;
 
           await sendFCMMulticast(tokens, uid, {
-            title: '📝 Rappel',
-            body:  rem.text || 'Rappel E.V.A',
-            type:  'reminder',
-            tag:   'reminder-' + rDoc.id,
-            userId: uid
+            title:      '📝 Rappel',
+            body:       rem.text || 'Rappel E.V.A',
+            type:       'reminder',
+            tag:        'reminder-' + rDoc.id,
+            reminderId: rDoc.id,
+            userId:     uid
           });
           await rDoc.ref.update({ notified: true });
         }

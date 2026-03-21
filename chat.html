@@ -4620,17 +4620,18 @@ async function checkAlarms() {
 }
 
 function triggerAlarm(label, id) {
+  /* Éviter le double déclenchement (client + FCM serveur) */
+  if (id) {
+    if (firedAlarms['id_' + id]) return;
+    firedAlarms['id_' + id] = true;
+  }
   toast('⏰ ' + label, 'info');
   showAlarmOverlay(label);
   startAlarmAudio();
-  var sent = showSwNotification('SHOW_ALARM', { label: label, id: id });
-  if (!sent && 'Notification' in window && Notification.permission === 'granted') {
-    new Notification('⏰ E.V.A — Alarme', {
-      body: label,
-      icon: '/assets/images/eva.svg',
-      requireInteraction: true
-    });
-  }
+  _showDirectNotif('⏰ E.V.A — Alarme', label, {
+    tag: 'eva-alarm-' + (id || Date.now()),
+    requireInteraction: true
+  });
 }
 
 function startAlarmAudio() {
@@ -4672,7 +4673,6 @@ function hideAlarmOverlay() {
 function alarmStop() {
   stopAlarmAudio();
   hideAlarmOverlay();
-  showSwNotification('STOP_ALARM', {});
 }
 window.alarmStop = alarmStop;
 
@@ -4734,12 +4734,25 @@ async function initFCM() {
       var data  = payload.data || {};
       var title = data.title || 'E.V.A';
       var body  = data.body  || '';
+      var type  = data.type  || 'general';
 
-      /* Notification système directe — la plus fiable en foreground */
-      _showDirectNotif(title, body, data);
-
-      /* Toast in-app en plus */
-      toast('🔔 ' + title + (body ? ' — ' + body : ''), 'info');
+      if (type === 'alarm') {
+        /* Déclencher la vraie alarme si l'overlay n'est pas déjà visible */
+        var ov = document.getElementById('alarmOverlay');
+        if (!ov || !ov.classList.contains('active')) {
+          triggerAlarm(body || data.label || title, data.alarmId || null);
+        } else {
+          _showDirectNotif(title, body, { tag: data.tag, requireInteraction: true });
+        }
+      } else if (type === 'reminder') {
+        /* Déclencher le rappel côté client */
+        var fakeReminder = { text: body || title, id: data.reminderId || data.tag || null, datetimeObj: new Date() };
+        triggerReminder(fakeReminder);
+      } else {
+        /* Notification générique (calendar, test, etc.) */
+        _showDirectNotif(title, body, { tag: data.tag });
+        toast('🔔 ' + title + (body ? ' — ' + body : ''), 'info');
+      }
     });
 
   } catch(e) {
@@ -4857,10 +4870,11 @@ function _showDirectNotif(title, body, data) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try {
     var opts = {
-      body:  body || '',
-      icon:  '/assets/images/favicon.svg',
-      badge: '/assets/images/favicon.svg',
-      tag:   (data && data.tag) ? data.tag : ('eva-notif-' + Date.now())
+      body:               body || '',
+      icon:               '/assets/images/favicon.svg',
+      badge:              '/assets/images/favicon.svg',
+      tag:                (data && data.tag) ? data.tag : ('eva-notif-' + Date.now()),
+      requireInteraction: !!(data && data.requireInteraction)
     };
     var n = new Notification(title || 'E.V.A', opts);
     n.onclick = function() { n.close(); window.focus(); };
@@ -4997,15 +5011,17 @@ function checkRemindersTime() {
 }
 
 function triggerReminder(r) {
-  toast('📌 ' + (r.text || 'Rappel'), 'info');
-  var sent = showSwNotification('SHOW_REMINDER', { text: r.text, id: r.id });
-  if (!sent && 'Notification' in window && Notification.permission === 'granted') {
-    new Notification('📌 E.V.A — Rappel', {
-      body: r.text || 'Rappel',
-      icon: '/assets/images/eva.svg',
-      requireInteraction: true
-    });
+  /* Éviter le double déclenchement (FCM + checkRemindersTime) */
+  if (r.id) {
+    var key = 'rem_' + r.id;
+    if (firedReminders[key]) return;
+    firedReminders[key] = true;
   }
+  toast('📌 ' + (r.text || 'Rappel'), 'info');
+  _showDirectNotif('📌 E.V.A — Rappel', r.text || 'Rappel', {
+    tag: 'eva-reminder-' + (r.id || Date.now()),
+    requireInteraction: true
+  });
   try { var audio = new Audio('assets/sounds/notification.mp3'); audio.volume = 0.5; audio.play(); } catch(e) {}
   if (S.user) {
     db.collection('users').doc(S.user.uid).collection('reminders').doc(r.id)
