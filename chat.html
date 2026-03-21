@@ -1995,6 +1995,11 @@ function cfg() {
 }
 function saveCfg() {
   try { localStorage.setItem('eva_config', JSON.stringify(S.config)); } catch(e){}
+  if (S.user && typeof db !== 'undefined') {
+    try {
+      db.collection('users').doc(S.user.uid).set({ preferences: S.config }, { merge: true }).catch(function(){});
+    } catch(e){}
+  }
 }
 
 /* ═══ TOAST ═══ */
@@ -2091,7 +2096,8 @@ async function loadProfile(uid) {
       S.keyPersonality = S.profile.keyPersonality || null;
       renderUserUI(S.profile);
       if (S.profile.preferences) {
-        S.config = Object.assign({}, S.profile.preferences, S.config);
+        /* Firebase gagne sur le cache localStorage — sync multi-appareils */
+        S.config = Object.assign({}, S.config, S.profile.preferences);
         /* Sync runtime state from merged config */
         if (S.config.ttsOn !== undefined) S.ttsOn = S.config.ttsOn !== false;
         if (S.config.wakeWordOn !== undefined) S.wakeWordOn = !!S.config.wakeWordOn;
@@ -2099,13 +2105,50 @@ async function loadProfile(uid) {
         if (window.updateProviderBadge) window.updateProviderBadge();
         var wwBtn = document.getElementById('wakeWordBtn');
         if (wwBtn) wwBtn.classList.toggle('active', S.wakeWordOn);
+        /* Re-apply panel pref now that Firebase config is loaded */
+        if (typeof applyEvaPanelPreference === 'function') applyEvaPanelPreference();
+        /* Persist merged config back to localStorage as cache */
+        try { localStorage.setItem('eva_config', JSON.stringify(S.config)); } catch(e){}
       }
       if (typeof setupReportsAccess === 'function') { setupReportsAccess(); updateReportBadge(); }
+      /* Puter auto-check après chargement Firebase */
+      if (window.puter) {
+        setTimeout(async function() {
+          try {
+            var pu = await puter.auth.getUser();
+            if (pu && pu.username) {
+              S.config.puterUsername = pu.username;
+              try { localStorage.setItem('eva_config', JSON.stringify(S.config)); } catch(e){}
+            } else if (S.profile.puterUsername) {
+              /* Compte Puter connu mais non connecté sur cet appareil */
+              showPuterReconnectBanner(S.profile.puterUsername);
+            }
+          } catch(e) {
+            if (S.profile.puterUsername) showPuterReconnectBanner(S.profile.puterUsername);
+          }
+        }, 1500);
+      }
     } else {
       await createProfile(S.user);
     }
   } catch(e) { console.error('loadProfile:', e); }
 }
+
+function showPuterReconnectBanner(username) {
+  if (document.getElementById('puterReconnectBanner')) return;
+  var banner = document.createElement('div');
+  banner.id = 'puterReconnectBanner';
+  banner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(20,20,30,0.95);border:1px solid var(--cyan);border-radius:14px;padding:12px 18px;display:flex;align-items:center;gap:12px;font-size:0.78em;color:var(--text);box-shadow:0 4px 24px rgba(0,212,255,0.15);max-width:90vw;';
+  banner.innerHTML =
+    '<span style="color:var(--cyan);font-size:1.2em;">☁️</span>' +
+    '<div><div style="font-weight:600;margin-bottom:2px;">Compte Puter détecté</div>' +
+    '<div style="color:var(--text-muted);font-size:0.88em;">@'+username+' — Reconnectez-vous pour activer les fonctions Puter.</div></div>' +
+    '<button onclick="connectPuter();document.getElementById(\'puterReconnectBanner\').remove();" style="background:var(--cyan);color:#000;border:none;border-radius:8px;padding:6px 12px;font-size:0.85em;font-weight:700;cursor:pointer;white-space:nowrap;">Se reconnecter</button>' +
+    '<button onclick="this.closest(\'#puterReconnectBanner\').remove();" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1em;padding:0 4px;">×</button>';
+  document.body.appendChild(banner);
+  setTimeout(function(){ if(banner.parentNode) banner.remove(); }, 12000);
+}
+window.showPuterReconnectBanner = showPuterReconnectBanner;
 
 async function createProfile(user) {
   var name = user.displayName || user.email.split('@')[0];
@@ -3183,7 +3226,7 @@ function renderSettings(section) {
       '</div>' +
       '<div class="settings-row" style="padding:10px 0;border-top:1px solid var(--border)">' +
       '<div><div class="settings-row-label">Panneau EVA</div><div class="settings-row-sub">Afficher le personnage animé EVA</div></div>' +
-      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sEvaPanel"'+(localStorage.getItem('eva_show_panel')!=='false'?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;" onchange="toggleEvaPanelSetting(this.checked)"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label>' +
+      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sEvaPanel"'+(S.config.showEvaPanel!==false?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;" onchange="toggleEvaPanelSetting(this.checked)"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label>' +
       '</div>' +
       '</div>' +
       '<div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveProfileSettings()">Sauvegarder le profil</button></div>';
@@ -4268,7 +4311,8 @@ window.deleteMyAccount = deleteMyAccount;
    EVA PANEL TOGGLE
 ═══════════════════════════════════════════════════ */
 function toggleEvaPanelSetting(show) {
-  localStorage.setItem('eva_show_panel', show ? 'true' : 'false');
+  S.config.showEvaPanel = show;
+  saveCfg();
   var panel = document.getElementById('evaPanel');
   if (!panel) return;
   if (show) {
@@ -4284,7 +4328,7 @@ function toggleEvaPanelSetting(show) {
 window.toggleEvaPanelSetting = toggleEvaPanelSetting;
 
 function applyEvaPanelPreference() {
-  var show = localStorage.getItem('eva_show_panel') !== 'false';
+  var show = S.config.showEvaPanel !== false;
   var panel = document.getElementById('evaPanel');
   if (!panel) return;
   if (!show) {
