@@ -26,7 +26,7 @@ class QwenProvider {
     this._initializing = true;
     try {
       const { CreateMLCEngine } = await import('https://esm.run/@mlc-ai/web-llm');
-      const selectedModel = this.config.qwenModel || 'Qwen2-1.5B-Instruct-q4f16_1-MLC';
+      const selectedModel = this.config.qwenModel || 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
 
       if (window.showQwenDownloadModal) window.showQwenDownloadModal(selectedModel);
 

@@ -1535,6 +1535,13 @@ body::before{
         </div>
       </div>
 
+      <!-- Bannière avertissement mode local -->
+      <div id="localModeBanner" style="display:none;align-items:center;gap:10px;background:rgba(245,158,11,0.12);border-top:1px solid rgba(245,158,11,0.35);padding:7px 16px;font-size:0.72em;color:#fbbf24;line-height:1.4;">
+        <span style="font-size:1.1em;">⚠️</span>
+        <span><strong>Mode local actif</strong> — Performances limitées. Pour changer de modèle ou de fournisseur, <span style="text-decoration:underline;cursor:pointer;" onclick="openSettings('ai')">ouvrez les paramètres IA</span>.</span>
+        <button onclick="document.getElementById('localModeBanner').style.display='none'" style="margin-left:auto;background:none;border:none;color:#fbbf24;cursor:pointer;font-size:1em;opacity:0.7;">✕</button>
+      </div>
+
       <div class="input-area">
         <div id="imagePreviewBar">
           <img id="previewImg" src="" alt="preview">
@@ -2147,9 +2154,12 @@ function initChatSession() {
 }
 
 function updateProviderLabel(p) {
-  var labels = {puter:'Puter (Gratuit)',qwen:'Qwen Local',openai:'OpenAI GPT',claude:'Claude',lmstudio:'LM Studio',ollama:'Ollama'};
+  var labels = {puter:'Puter (Gratuit)',qwen:'Local Privé',openai:'OpenAI GPT',claude:'Claude',lmstudio:'LM Studio',ollama:'Ollama'};
   var el = document.getElementById('providerName');
   if (el) el.textContent = labels[p] || p;
+  /* Bannière d'avertissement mode local */
+  var banner = document.getElementById('localModeBanner');
+  if (banner) banner.style.display = p === 'qwen' ? 'flex' : 'none';
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2173,7 +2183,11 @@ var CONV_MODELS = {
     { id:'claude-3-opus-20240229', label:'Opus — Ultra' }
   ],
   qwen: [
-    { id:'Qwen2-1.5B-Instruct-q4f16_1-MLC', label:'Qwen2 1.5B — Rapide' }
+    { id:'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', label:'Qwen2.5 1.5B — Léger (~900 MB)' },
+    { id:'Qwen2.5-3B-Instruct-q4f16_1-MLC',   label:'Qwen2.5 3B — Équilibré (~1.8 GB)' },
+    { id:'Llama-3.2-3B-Instruct-q4f16_1-MLC', label:'Llama 3.2 3B — Recommandé (~1.8 GB)' },
+    { id:'Phi-3.5-mini-instruct-q4f16_1-MLC', label:'Phi 3.5 Mini — Meilleur (~2.2 GB)' },
+    { id:'Qwen2.5-7B-Instruct-q4f16_1-MLC',   label:'Qwen2.5 7B — Puissant (~4 GB)' }
   ]
 };
 
@@ -3186,81 +3200,204 @@ function renderSettings(section) {
   } else if (section === 'ai') {
     var cur = cfg.aiProvider || 'puter';
     var provDefs = {
-      puter:    { label:'☁️ Puter Cloud', tag:'GRATUIT', desc:'Accès gratuit via Puter.com. Aucune clé API requise. Modèles GPT-4o disponibles.', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'}], modelKey:'puterModel' },
-      openai:   { label:'🤖 OpenAI',      tag:'API',     desc:'GPT-4o, GPT-4 Turbo. Nécessite une clé API OpenAI. Supporte la vision (analyse d\'images).', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'},{id:'gpt-4-turbo',label:'GPT-4 Turbo — Puissant'},{id:'gpt-3.5-turbo',label:'GPT-3.5 Turbo — Économique'}], modelKey:'openaiModel' },
-      claude:   { label:'🧠 Claude',      tag:'API',     desc:'Claude Haiku et Opus d\'Anthropic. Excellent pour le raisonnement et l\'analyse. Supporte la vision (analyse d\'images).', models:[{id:'claude-3-5-haiku-20241022',label:'Haiku — Rapide'},{id:'claude-3-opus-20240229',label:'Opus — Ultra'}], modelKey:'claudeModel' },
-      qwen:     { label:'🖥️ Qwen Local',  tag:'LOCAL',   desc:'Modèle Qwen local, gratuit et 100% privé. Fonctionne sans internet. Analyse d\'images via Moondream (connexion requise pour la vision). ⚠️ Ne convient pas pour le code. Premier usage : téléchargement automatique du modèle requis (quelques minutes, mis en cache ensuite).', models:[{id:'Qwen2-1.5B-Instruct-q4f16_1-MLC',label:'Qwen2 1.5B — Rapide'}], modelKey:'qwenModel' },
-      lmstudio: { label:'💻 LM Studio',  tag:'LOCAL',   desc:'Serveur local via LM Studio. Nécessite LM Studio installé sur votre machine.', models:[], modelKey:'customModel' },
-      ollama:   { label:'🦙 Ollama',      tag:'LOCAL',   desc:'Serveur local Ollama. Complètement privé, fonctionne sans internet.', models:[], modelKey:'ollamaModel' }
+      puter:    { label:'Puter Cloud', icon:'☁️', tag:'GRATUIT', tagColor:'#06b6d4', desc:'Accès gratuit via Puter.com. Aucune clé API requise. Modèles GPT-4o disponibles.', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'}], modelKey:'puterModel' },
+      openai:   { label:'OpenAI',      icon:'🤖', tag:'PAYANT',  tagColor:'#10b981', desc:'GPT-4o, GPT-4 Turbo. Nécessite une clé API OpenAI. Supporte la vision (analyse d\'images).', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'},{id:'gpt-4-turbo',label:'GPT-4 Turbo — Puissant'},{id:'gpt-3.5-turbo',label:'GPT-3.5 Turbo — Économique'}], modelKey:'openaiModel' },
+      claude:   { label:'Claude',      icon:'🧠', tag:'PAYANT',  tagColor:'#10b981', desc:'Claude Haiku et Opus d\'Anthropic. Excellent pour le raisonnement et l\'analyse. Supporte la vision.', models:[{id:'claude-3-5-haiku-20241022',label:'Haiku — Rapide'},{id:'claude-3-opus-20240229',label:'Opus — Ultra'}], modelKey:'claudeModel' },
+      qwen:     { label:'Local Privé', icon:'🖥️', tag:'LOCAL',   tagColor:'#f59e0b', desc:'Modèle IA local, 100% privé. Fonctionne sans internet. Analyse d\'images via Moondream. ⚠️ Performances limitées selon le modèle choisi.', models:[{id:'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',label:'Qwen2.5 1.5B — Léger (~900 MB)'},{id:'Qwen2.5-3B-Instruct-q4f16_1-MLC',label:'Qwen2.5 3B — Équilibré (~1.8 GB)'},{id:'Llama-3.2-3B-Instruct-q4f16_1-MLC',label:'Llama 3.2 3B — Recommandé (~1.8 GB)'},{id:'Phi-3.5-mini-instruct-q4f16_1-MLC',label:'Phi 3.5 Mini — Meilleur (~2.2 GB)'},{id:'Qwen2.5-7B-Instruct-q4f16_1-MLC',label:'Qwen2.5 7B — Puissant (~4 GB)'}], modelKey:'qwenModel' },
+      lmstudio: { label:'LM Studio',  icon:'💻', tag:'LOCAL',   tagColor:'#f59e0b', desc:'Serveur local via LM Studio. Nécessite LM Studio installé sur votre machine.', models:[], modelKey:'customModel' },
+      ollama:   { label:'Ollama',      icon:'🦙', tag:'LOCAL',   tagColor:'#f59e0b', desc:'Serveur local Ollama. Complètement privé, fonctionne sans internet.', models:[], modelKey:'ollamaModel' }
     };
     var curDef = provDefs[cur] || provDefs.puter;
     var curModel = cfg[curDef.modelKey] || (curDef.models[0] && curDef.models[0].id) || '';
-    var allProvs = ['puter','openai','claude','qwen','lmstudio','ollama'];
 
     function buildModelOpts(provKey, selModel) {
       var def = provDefs[provKey]; if (!def || !def.models.length) return '';
       return def.models.map(function(m){ return '<option value="'+m.id+'"'+(m.id===selModel?' selected':'')+'>'+m.label+'</option>'; }).join('');
     }
 
+    function cardStyle(key) {
+      var active = key === cur;
+      return 'cursor:pointer;border-radius:14px;padding:16px 14px;border:2px solid '+(active?'var(--cyan)':'rgba(255,255,255,0.08)')+';background:'+(active?'rgba(0,220,220,0.07)':'rgba(255,255,255,0.02)')+';transition:all 0.2s;text-align:center;position:relative;';
+    }
+    function tagBadge(d) {
+      return '<span style="font-size:0.55em;font-weight:700;letter-spacing:0.06em;background:'+d.tagColor+';color:#000;border-radius:4px;padding:2px 6px;position:absolute;top:10px;right:10px;">'+d.tag+'</span>';
+    }
+    function checkMark(key) {
+      return cur===key ? '<div style="position:absolute;top:10px;left:10px;color:var(--cyan);font-size:0.9em;">✓</div>' : '';
+    }
+
     c.innerHTML =
       '<div class="settings-section">' +
       '<div class="settings-section-title">Intelligence Artificielle</div>' +
-      '<div class="form-field"><label class="form-label">Fournisseur IA</label>' +
-      '<select class="form-select" id="sProvider">' +
-      allProvs.map(function(o){ var d=provDefs[o]; return '<option value="'+o+'"'+(o===cur?' selected':'')+'>'+d.label+' ('+d.tag+')'+'</option>'; }).join('') +
-      '</select>' +
-      '<div id="sProviderDesc" style="font-size:0.7em;color:var(--text-muted);margin-top:6px;line-height:1.5">'+esc(curDef.desc)+'</div></div>' +
 
-      '<div class="form-field" id="sModelField" style="'+(curDef.models.length?'':'display:none')+'"><label class="form-label">Modèle par défaut</label>' +
-      '<select class="form-select" id="sModel">'+buildModelOpts(cur,curModel)+'</select>' +
-      '<div style="font-size:0.68em;color:var(--text-muted);margin-top:4px">Ce modèle est utilisé par défaut. Il peut être changé par conversation dans la barre de chat.</div></div>' +
+      /* Hidden input — lu par saveAISettings() */
+      '<input type="hidden" id="sProvider" value="'+cur+'">' +
 
-      '<div class="form-field" id="apiKeyFieldOpenAI" style="'+(cur==='openai'?'':'display:none')+'">' +
-      '<label class="form-label">Clé API OpenAI</label>' +
-      '<input type="password" class="form-input" id="sApiKeyOpenAI" placeholder="sk-..." value="'+esc(cfg.openaiApiKey||'')+'"></div>' +
+      /* === RECOMMANDÉS === */
+      '<div style="font-size:0.65em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">⭐ Recommandés</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">' +
 
-      '<div class="form-field" id="apiKeyFieldClaude" style="'+(cur==='claude'?'':'display:none')+'">' +
-      '<label class="form-label">Clé API Anthropic (Claude)</label>' +
-      '<input type="password" class="form-input" id="sApiKeyClaude" placeholder="sk-ant-..." value="'+esc(cfg.claudeApiKey||'')+'"></div>' +
-
-      '<div class="form-field" id="apiKeyFieldLMStudio" style="'+(cur==='lmstudio'?'':'display:none')+'">' +
-      '<label class="form-label">URL LM Studio</label>' +
-      '<input type="text" class="form-input" id="sLMStudioURL" placeholder="http://localhost:1234" value="'+esc(cfg.lmstudioUrl||'http://localhost:1234')+'"></div>' +
-
-      '<div class="form-field" id="apiKeyFieldOllama" style="'+(cur==='ollama'?'':'display:none')+'">' +
-      '<label class="form-label">URL Ollama</label>' +
-      '<input type="text" class="form-input" id="sOllamaURL" placeholder="http://localhost:11434" value="'+esc(cfg.ollamaUrl||'http://localhost:11434')+'"><label class="form-label" style="margin-top:8px">Modèle Ollama</label>' +
-      '<input type="text" class="form-input" id="sOllamaModel" placeholder="ex: llama3, mistral..." value="'+esc(cfg.ollamaModel||'')+'"></div>' +
-
-      '<div id="puterConnectField" style="'+(cur==='puter'?'':'display:none')+'">'+
-      '<div class="puter-connect-block" id="puterConnectBlock"><div id="puterConnectStatus" style="font-size:0.78em;color:var(--text-muted);margin-bottom:10px">Vérification du statut Puter...</div>' +
-      '<div id="puterConnectButtons"></div></div></div>' +
-
-      '<div class="form-field"><label class="form-label">Contexte mémorisé (messages)</label>' +
-      '<div style="display:flex;align-items:center;gap:10px"><input type="range" min="4" max="40" step="2" id="sContextLen" value="'+(cfg.contextLength||10)+'" style="flex:1;accent-color:var(--cyan)">' +
-      '<span id="sContextLenVal" style="font-size:0.75em;color:var(--cyan);min-width:30px">'+(cfg.contextLength||10)+'</span></div></div>' +
+      /* Puter card */
+      '<div id="aicard-puter" style="'+cardStyle('puter')+'" onclick="window._selectAIProv(\'puter\')">' +
+        checkMark('puter') + tagBadge(provDefs.puter) +
+        '<div style="font-size:1.6em;margin-bottom:6px;">☁️</div>' +
+        '<div style="font-weight:700;font-size:0.85em;margin-bottom:4px;">Puter Cloud</div>' +
+        '<div style="font-size:0.68em;color:var(--text-muted);line-height:1.4;">Meilleure qualité<br>Gratuit · Sans clé API<br>GPT-4o disponible</div>' +
       '</div>' +
+
+      /* Local card */
+      '<div id="aicard-qwen" style="'+cardStyle('qwen')+'" onclick="window._selectAIProv(\'qwen\')">' +
+        checkMark('qwen') + tagBadge(provDefs.qwen) +
+        '<div style="font-size:1.6em;margin-bottom:6px;">🖥️</div>' +
+        '<div style="font-weight:700;font-size:0.85em;margin-bottom:4px;">Local Privé</div>' +
+        '<div style="font-size:0.68em;color:var(--text-muted);line-height:1.4;">100% privé · Offline<br>Téléchargement requis<br>Performances limitées</div>' +
+      '</div>' +
+      '</div>' +
+
+      /* === AUTRES FOURNISSEURS === */
+      '<div style="font-size:0.65em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">Autres fournisseurs</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">' +
+
+      /* OpenAI */
+      '<div id="aicard-openai" style="'+cardStyle('openai')+'" onclick="window._selectAIProv(\'openai\')">' +
+        checkMark('openai') + tagBadge(provDefs.openai) +
+        '<div style="font-size:1.3em;margin-bottom:5px;">🤖</div>' +
+        '<div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">OpenAI</div>' +
+        '<div style="font-size:0.64em;color:var(--text-muted);">GPT-4o · Vision<br>Clé API requise</div>' +
+      '</div>' +
+
+      /* Claude */
+      '<div id="aicard-claude" style="'+cardStyle('claude')+'" onclick="window._selectAIProv(\'claude\')">' +
+        checkMark('claude') + tagBadge(provDefs.claude) +
+        '<div style="font-size:1.3em;margin-bottom:5px;">🧠</div>' +
+        '<div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">Claude</div>' +
+        '<div style="font-size:0.64em;color:var(--text-muted);">Anthropic · Vision<br>Clé API requise</div>' +
+      '</div>' +
+
+      /* LM Studio */
+      '<div id="aicard-lmstudio" style="'+cardStyle('lmstudio')+'" onclick="window._selectAIProv(\'lmstudio\')">' +
+        checkMark('lmstudio') + tagBadge(provDefs.lmstudio) +
+        '<div style="font-size:1.3em;margin-bottom:5px;">💻</div>' +
+        '<div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">LM Studio</div>' +
+        '<div style="font-size:0.64em;color:var(--text-muted);">Local · Serveur perso<br>LM Studio requis</div>' +
+      '</div>' +
+
+      /* Ollama */
+      '<div id="aicard-ollama" style="'+cardStyle('ollama')+'" onclick="window._selectAIProv(\'ollama\')">' +
+        checkMark('ollama') + tagBadge(provDefs.ollama) +
+        '<div style="font-size:1.3em;margin-bottom:5px;">🦙</div>' +
+        '<div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">Ollama</div>' +
+        '<div style="font-size:0.64em;color:var(--text-muted);">Local · 100% privé<br>Ollama requis</div>' +
+      '</div>' +
+      '</div>' +
+
+      /* === AVERTISSEMENT QWEN === */
+      '<div id="qwenWarningBox" style="'+(cur==='qwen'?'':'display:none;')+'background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:0.72em;color:#fbbf24;line-height:1.5;">' +
+        '⚠️ <strong>Mode local activé</strong> — Les performances dépendent du modèle choisi. Les petits modèles (&lt;3B) peuvent ignorer le rôle d\'EVA ou donner des réponses génériques. Pour une meilleure expérience, choisissez <strong>Llama 3.2 3B</strong> ou <strong>Phi 3.5 Mini</strong>.' +
+      '</div>' +
+
+      /* === CONFIG DYNAMIQUE === */
+      '<div id="aiDynConfig">' +
+
+      /* Puter connect */
+      '<div id="puterConnectField" style="'+(cur==='puter'?'':'display:none')+'">'+
+        '<div class="puter-connect-block" id="puterConnectBlock">' +
+          '<div id="puterConnectStatus" style="font-size:0.78em;color:var(--text-muted);margin-bottom:10px">Vérification du statut Puter...</div>' +
+          '<div id="puterConnectButtons"></div>' +
+        '</div>' +
+      '</div>' +
+
+      /* Modèle sélectionnable */
+      '<div class="form-field" id="sModelField" style="'+(curDef.models.length?'':'display:none')+'"><label class="form-label">Modèle</label>' +
+        '<select class="form-select" id="sModel">'+buildModelOpts(cur,curModel)+'</select>' +
+        '<div style="font-size:0.66em;color:var(--text-muted);margin-top:4px">Le modèle peut aussi être changé directement dans la barre de chat.</div>' +
+      '</div>' +
+
+      /* OpenAI key */
+      '<div class="form-field" id="apiKeyFieldOpenAI" style="'+(cur==='openai'?'':'display:none')+'">' +
+        '<label class="form-label">Clé API OpenAI</label>' +
+        '<input type="password" class="form-input" id="sApiKeyOpenAI" placeholder="sk-..." value="'+esc(cfg.openaiApiKey||'')+'">' +
+        '<div style="font-size:0.66em;color:var(--text-muted);margin-top:4px">Disponible sur <strong>platform.openai.com</strong> · Service payant à l\'usage</div>' +
+      '</div>' +
+
+      /* Claude key */
+      '<div class="form-field" id="apiKeyFieldClaude" style="'+(cur==='claude'?'':'display:none')+'">' +
+        '<label class="form-label">Clé API Anthropic (Claude)</label>' +
+        '<input type="password" class="form-input" id="sApiKeyClaude" placeholder="sk-ant-..." value="'+esc(cfg.claudeApiKey||'')+'">' +
+        '<div style="font-size:0.66em;color:var(--text-muted);margin-top:4px">Disponible sur <strong>console.anthropic.com</strong> · Service payant à l\'usage</div>' +
+      '</div>' +
+
+      /* LM Studio */
+      '<div class="form-field" id="apiKeyFieldLMStudio" style="'+(cur==='lmstudio'?'':'display:none')+'">' +
+        '<label class="form-label">URL LM Studio</label>' +
+        '<input type="text" class="form-input" id="sLMStudioURL" placeholder="http://localhost:1234" value="'+esc(cfg.lmstudioUrl||'http://localhost:1234')+'">' +
+      '</div>' +
+
+      /* Ollama */
+      '<div class="form-field" id="apiKeyFieldOllama" style="'+(cur==='ollama'?'':'display:none')+'">' +
+        '<label class="form-label">URL Ollama</label>' +
+        '<input type="text" class="form-input" id="sOllamaURL" placeholder="http://localhost:11434" value="'+esc(cfg.ollamaUrl||'http://localhost:11434')+'">' +
+        '<label class="form-label" style="margin-top:8px">Modèle Ollama</label>' +
+        '<input type="text" class="form-input" id="sOllamaModel" placeholder="ex: llama3, mistral..." value="'+esc(cfg.ollamaModel||'')+'">' +
+      '</div>' +
+
+      '</div>' + /* fin aiDynConfig */
+
+      /* Contexte */
+      '<div class="form-field"><label class="form-label">Contexte mémorisé (messages)</label>' +
+        '<div style="display:flex;align-items:center;gap:10px"><input type="range" min="4" max="40" step="2" id="sContextLen" value="'+(cfg.contextLength||10)+'" style="flex:1;accent-color:var(--cyan)">' +
+        '<span id="sContextLenVal" style="font-size:0.75em;color:var(--cyan);min-width:30px">'+(cfg.contextLength||10)+'</span>' +
+        '</div>' +
+      '</div>' +
+      '</div>' + /* fin settings-section */
       '<div style="display:flex;gap:8px"><button class="btn btn-primary" id="applyAIBtn" onclick="saveAISettings()">Appliquer</button></div>';
 
     setTimeout(function() {
-      var provSel = document.getElementById('sProvider');
-      var desc = document.getElementById('sProviderDesc');
-      var modelField = document.getElementById('sModelField');
-      var modelSel = document.getElementById('sModel');
       var sl = document.getElementById('sContextLen');
       var sv = document.getElementById('sContextLenVal');
       if (sl && sv) sl.addEventListener('input', function(){ sv.textContent = this.value; });
-      if (provSel) provSel.addEventListener('change', function() {
-        var v = this.value;
-        var def = provDefs[v] || {};
-        if (desc) desc.textContent = def.desc || '';
+
+      window._selectAIProv = function(v) {
+        /* Mettre à jour le hidden input */
+        var hi = document.getElementById('sProvider'); if(hi) hi.value = v;
+
+        /* Mettre à jour l'apparence des cartes */
+        ['puter','openai','claude','qwen','lmstudio','ollama'].forEach(function(k) {
+          var card = document.getElementById('aicard-'+k);
+          if (!card) return;
+          var active = k === v;
+          card.style.border = '2px solid '+(active?'var(--cyan)':'rgba(255,255,255,0.08)');
+          card.style.background = active?'rgba(0,220,220,0.07)':'rgba(255,255,255,0.02)';
+          /* check mark */
+          var existing = card.querySelector('.aicard-check');
+          if (active && !existing) {
+            var chk = document.createElement('div');
+            chk.className = 'aicard-check';
+            chk.style.cssText = 'position:absolute;top:10px;left:10px;color:var(--cyan);font-size:0.9em;';
+            chk.textContent = '✓';
+            card.appendChild(chk);
+          } else if (!active && existing) {
+            existing.remove();
+          }
+        });
+
+        /* Avertissement Qwen */
+        var warn = document.getElementById('qwenWarningBox');
+        if (warn) warn.style.display = v==='qwen' ? '' : 'none';
+
+        /* Champs API/URL */
         ['OpenAI','Claude','LMStudio','Ollama'].forEach(function(x){
           var f = document.getElementById('apiKeyField'+x); if(f) f.style.display='none';
         });
         var puterF = document.getElementById('puterConnectField');
         if (puterF) puterF.style.display = v==='puter' ? '' : 'none';
-        var show = {openai:'OpenAI',claude:'Claude',lmstudio:'LMStudio',ollama:'Ollama'}[v];
-        if (show) { var f=document.getElementById('apiKeyField'+show); if(f) f.style.display=''; }
+        var apiShow = {openai:'OpenAI',claude:'Claude',lmstudio:'LMStudio',ollama:'Ollama'}[v];
+        if (apiShow) { var f=document.getElementById('apiKeyField'+apiShow); if(f) f.style.display=''; }
+
+        /* Modèles */
+        var modelField = document.getElementById('sModelField');
+        var modelSel = document.getElementById('sModel');
+        var def = provDefs[v] || {};
         if (def.models && def.models.length) {
           var selModel = cfg[def.modelKey] || (def.models[0] && def.models[0].id) || '';
           if (modelSel) modelSel.innerHTML = def.models.map(function(m){ return '<option value="'+m.id+'"'+(m.id===selModel?' selected':'')+'>'+m.label+'</option>'; }).join('');
@@ -3269,9 +3406,9 @@ function renderSettings(section) {
           if (modelField) modelField.style.display = 'none';
         }
         if (v==='puter') refreshPuterStatusUI();
-      });
+      };
+
       if (cur==='puter') refreshPuterStatusUI();
-    }, 50);
 
   } else if (section === 'voice') {
     var curTTSProv = cfg.voiceProvider || 'native';
