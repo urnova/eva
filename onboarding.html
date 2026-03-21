@@ -346,29 +346,58 @@ body::before{
     <div class="ob-view" id="ob4">
       <div class="step-label">Étape 4 — Intelligence artificielle</div>
       <div class="field">
-        <label class="field-label">Provider IA</label>
-        <div class="field-hint" style="margin-bottom:10px">Choisissez comment E.V.A va communiquer.</div>
-        <div class="voice-opt selected" id="provPuter" onclick="selectProvider('puter',this)" style="flex-direction:column;align-items:flex-start;gap:8px">
-          <div class="voice-opt-info">
-            <div class="voice-name">⚡ Puter Cloud (Recommandé)</div>
-            <div class="voice-desc">Gratuit · Aucune clé API · Connexion Puter requise</div>
+        <div class="field-hint" style="margin-bottom:12px">Comment E.V.A va traiter vos conversations.</div>
+
+        <!-- RECOMMANDÉS -->
+        <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">⭐ Recommandés</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+
+          <!-- Puter -->
+          <div id="obcard-puter" onclick="obSelectProvider('puter')" style="cursor:pointer;border-radius:12px;padding:14px 12px;border:2px solid var(--cyan);background:rgba(0,212,255,0.07);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.55em;font-weight:700;letter-spacing:0.06em;background:#06b6d4;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:8px;right:8px;">GRATUIT</span>
+            <div id="obcheck-puter" style="position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;">✓</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">☁️</div>
+            <div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">Puter Cloud</div>
+            <div style="font-size:0.65em;color:var(--text-muted);line-height:1.4;">Meilleure qualité<br>Sans clé API</div>
           </div>
-          <div id="puterAuthSection" style="width:100%">
-            <div id="obPuterStatus" style="font-size:0.74em;color:rgba(0,212,255,0.6);margin-bottom:6px">Vérification...</div>
-            <button id="obPuterBtn" class="voice-test-btn" onclick="obConnectPuter(event)" style="width:auto">🔗 Connexion Puter</button>
+
+          <!-- Local -->
+          <div id="obcard-qwen" onclick="obSelectProvider('qwen')" style="cursor:pointer;border-radius:12px;padding:14px 12px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.55em;font-weight:700;letter-spacing:0.06em;background:#f59e0b;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:8px;right:8px;">LOCAL</span>
+            <div id="obcheck-qwen" style="display:none;position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;">✓</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">🖥️</div>
+            <div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">Local Privé</div>
+            <div style="font-size:0.65em;color:var(--text-muted);line-height:1.4;">100% privé<br>Limité</div>
           </div>
         </div>
-        <div class="voice-opt" id="provOpenAI" onclick="selectProvider('openai',this)">
-          <div class="voice-opt-info">
-            <div class="voice-name">🧠 OpenAI GPT-4o</div>
-            <div class="voice-desc">Clé API OpenAI requise (sk-...)</div>
+
+        <!-- AUTRES -->
+        <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Autres fournisseurs</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+
+          <!-- OpenAI -->
+          <div id="obcard-openai" onclick="obSelectProvider('openai')" style="cursor:pointer;border-radius:12px;padding:12px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.52em;font-weight:700;letter-spacing:0.06em;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
+            <div id="obcheck-openai" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.85em;">✓</div>
+            <div style="font-size:1.2em;margin-bottom:4px;">🤖</div>
+            <div style="font-weight:700;font-size:0.76em;margin-bottom:2px;">OpenAI</div>
+            <div style="font-size:0.62em;color:var(--text-muted);">GPT-4o · Clé API</div>
+          </div>
+
+          <!-- Claude -->
+          <div id="obcard-claude" onclick="obSelectProvider('claude')" style="cursor:pointer;border-radius:12px;padding:12px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.52em;font-weight:700;letter-spacing:0.06em;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
+            <div id="obcheck-claude" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.85em;">✓</div>
+            <div style="font-size:1.2em;margin-bottom:4px;">🧠</div>
+            <div style="font-weight:700;font-size:0.76em;margin-bottom:2px;">Claude</div>
+            <div style="font-size:0.62em;color:var(--text-muted);">Anthropic · Clé API</div>
           </div>
         </div>
-        <div class="voice-opt" id="provClaude" onclick="selectProvider('claude',this)">
-          <div class="voice-opt-info">
-            <div class="voice-name">🤖 Claude (Anthropic)</div>
-            <div class="voice-desc">Clé API Anthropic requise</div>
-          </div>
+
+        <!-- Puter connect (visible si Puter sélectionné) -->
+        <div id="obPuterSection" style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:12px 14px;">
+          <div id="obPuterStatus" style="font-size:0.74em;color:rgba(0,212,255,0.6);margin-bottom:8px;">Vérification du statut Puter...</div>
+          <button id="obPuterBtn" class="voice-test-btn" onclick="obConnectPuter(event)">🔗 Connexion Puter</button>
         </div>
       </div>
       <div class="ob-actions">
@@ -666,11 +695,24 @@ function goStep(n) {
   document.getElementById('step-bar-'+currentStep).classList.add('active');
 }
 
-function selectProvider(prov, el) {
+function obSelectProvider(prov) {
   selectedProvider = prov;
-  document.querySelectorAll('.voice-opt[id^="prov"]').forEach(function(o){ o.classList.remove('selected'); });
-  el.classList.add('selected');
+  var allCards = ['puter','qwen','openai','claude'];
+  allCards.forEach(function(k) {
+    var card = document.getElementById('obcard-'+k);
+    var chk  = document.getElementById('obcheck-'+k);
+    if (!card) return;
+    var active = k === prov;
+    card.style.border  = '2px solid ' + (active ? 'var(--cyan)' : 'rgba(255,255,255,0.08)');
+    card.style.background = active ? 'rgba(0,212,255,0.07)' : 'rgba(255,255,255,0.02)';
+    if (chk) chk.style.display = active ? '' : 'none';
+  });
+  /* Bloc connexion Puter — visible seulement si Puter sélectionné */
+  var puterSec = document.getElementById('obPuterSection');
+  if (puterSec) puterSec.style.display = prov === 'puter' ? '' : 'none';
 }
+/* Alias pour compatibilité ancienne fonction */
+function selectProvider(prov, el) { obSelectProvider(prov); }
 
 async function checkObPuterStatus() {
   var statusEl = document.getElementById('obPuterStatus');
