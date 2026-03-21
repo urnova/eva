@@ -135,10 +135,10 @@ async function loadVRM() {
   /* Scene */
   scene = new THREE.Scene();
 
-  /* Camera — full body framing with breathing room */
-  camera = new THREE.PerspectiveCamera(35, W / H, 0.1, 20);
-  camera.position.set(0, 0.9, 3.8);
-  camera.lookAt(new THREE.Vector3(0, 0.75, 0));
+  /* Camera — show full body, feet grounded, breathing room above */
+  camera = new THREE.PerspectiveCamera(32, W / H, 0.1, 20);
+  camera.position.set(0, 0.75, 4.0);
+  camera.lookAt(new THREE.Vector3(0, 0.6, 0));
 
   /* Lighting */
   var ambLight = new THREE.AmbientLight(0xffffff, 1.1);
@@ -193,15 +193,35 @@ async function loadVRM() {
 
       scene.add(vrm.scene);
 
-      /* Log available expressions for debugging */
+      /* ── Debug: log available bones & expressions ── */
+      console.log('[EVA-VRM] VRM version:', (vrm.meta && vrm.meta.metaVersion) || 'unknown');
       if (vrm.expressionManager) {
-        var exprMap  = vrm.expressionManager.expressionMap || {};
+        var exprMap = vrm.expressionManager.expressionMap || {};
         console.log('[EVA-VRM] Expressions:', Object.keys(exprMap).join(', ') || '(aucune)');
       }
       if (vrm.humanoid) {
-        console.log('[EVA-VRM] Humanoid bones OK');
+        var boneNames = ['head','neck','chest','upperChest','spine','hips',
+                         'leftUpperArm','rightUpperArm','leftLowerArm','rightLowerArm',
+                         'leftShoulder','rightShoulder'];
+        var found = boneNames.filter(function(b) {
+          try { return vrm.humanoid.getNormalizedBoneNode(b) !== null; } catch(e) { return false; }
+        });
+        console.log('[EVA-VRM] Bones found:', found.join(', ') || 'NONE');
       }
-      console.log('[EVA-VRM] VRM version:', (vrm.meta && vrm.meta.metaVersion) || 'unknown');
+
+      /* ── Set natural A-pose (lower arms from VRM0 T-pose) ── */
+      try {
+        var lArm = vrm.humanoid.getNormalizedBoneNode('leftUpperArm');
+        var rArm = vrm.humanoid.getNormalizedBoneNode('rightUpperArm');
+        if (lArm)  lArm.rotation.z  =  1.1;   /* lower left arm  ~63° */
+        if (rArm)  rArm.rotation.z  = -1.1;   /* lower right arm ~63° */
+        var lElbow = vrm.humanoid.getNormalizedBoneNode('leftLowerArm');
+        var rElbow = vrm.humanoid.getNormalizedBoneNode('rightLowerArm');
+        if (lElbow) lElbow.rotation.z =  0.15;
+        if (rElbow) rElbow.rotation.z = -0.15;
+        vrm.update(0);  /* apply pose immediately */
+        console.log('[EVA-VRM] A-pose applied');
+      } catch(e) { console.warn('[EVA-VRM] A-pose error:', e); }
 
       if (loadingEl) loadingEl.style.display = 'none';
 
@@ -288,102 +308,143 @@ function tickAnimation(dt) {
   if (!vrm) return;
   var u = dt * 60; /* Normalized to 60fps units */
 
-  /* ── 1. BLINK ───────────────────────────────────────────── */
+  /* ── 1. BLINK ──────────────────────────────────────────────
+     Close eye quickly, hold, reopen — every 3-5 seconds       */
   blinkTimer -= u;
   if (!isBlinking && blinkTimer <= 0) {
     isBlinking    = true;
     blinkProgress = 0;
-    blinkTimer    = 160 + Math.random() * 260;
+    blinkTimer    = 180 + Math.random() * 240; /* 3-7 s at 60fps */
   }
   if (isBlinking) {
     blinkProgress += u;
-    var eyeOpen;
-    if      (blinkProgress <= 4)  eyeOpen = 1 - blinkProgress / 4;
-    else if (blinkProgress <= 7)  eyeOpen = 0;
-    else if (blinkProgress <= 13) eyeOpen = (blinkProgress - 7) / 6;
-    else { isBlinking = false; blinkProgress = 0; eyeOpen = 1; }
-    setExpr('blink', Math.max(0, 1 - eyeOpen));
+    var eyeVal;
+    if      (blinkProgress < 3)  eyeVal = blinkProgress / 3;       /* close */
+    else if (blinkProgress < 6)  eyeVal = 1;                        /* hold  */
+    else if (blinkProgress < 12) eyeVal = 1 - (blinkProgress-6)/6; /* open  */
+    else { isBlinking = false; blinkProgress = 0; eyeVal = 0; }
+    setExpr('blink', Math.max(0, Math.min(1, eyeVal)));
   }
 
-  /* ── 2. LIP SYNC ────────────────────────────────────────── */
+  /* ── 2. LIP SYNC ──────────────────────────────────────────── */
   if (lipActive) {
     syllTimer -= u;
     if (syllTimer <= 0) {
       var r = Math.random();
-      if      (r < 0.22) { syllTarget = Math.random() * 0.10;           syllDur = 3  + Math.floor(Math.random() * 4);  }
-      else if (r < 0.52) { syllTarget = 0.28 + Math.random() * 0.32;   syllDur = 5  + Math.floor(Math.random() * 7);  }
-      else if (r < 0.82) { syllTarget = 0.62 + Math.random() * 0.33;   syllDur = 6  + Math.floor(Math.random() * 9);  }
-      else               { syllTarget = 0;                              syllDur = 10 + Math.floor(Math.random() * 12); }
+      if      (r < 0.20) { syllTarget = 0.05 + Math.random() * 0.10; syllDur = 3 + Math.floor(Math.random()*3); }
+      else if (r < 0.55) { syllTarget = 0.30 + Math.random() * 0.35; syllDur = 4 + Math.floor(Math.random()*6); }
+      else if (r < 0.85) { syllTarget = 0.65 + Math.random() * 0.30; syllDur = 5 + Math.floor(Math.random()*8); }
+      else               { syllTarget = 0;                            syllDur = 8 + Math.floor(Math.random()*10); }
       syllTimer = syllDur;
     }
-    mouthVal += (syllTarget - mouthVal) * Math.min(0.40 * u * 0.5, 1);
+    mouthVal += (syllTarget - mouthVal) * Math.min(0.35 * u, 1);
   } else {
-    mouthVal += (0 - mouthVal) * Math.min(0.35 * u * 0.5, 1);
+    mouthVal += (0 - mouthVal) * Math.min(0.25 * u, 1);
   }
   setExpr('aa', Math.max(0, Math.min(1, mouthVal)));
 
-  /* ── 3. HEAD / NECK — STATE SPECIFIC ───────────────────── */
-  var head  = getBone('head');
-  var neck  = getBone('neck');
-  var spine = getBone('upperChest') || getBone('chest') || getBone('spine');
+  /* ── 3. BONES — get once per tick ───────────────────────── */
+  var head     = getBone('head');
+  var neck     = getBone('neck');
+  var spine    = getBone('upperChest') || getBone('chest') || getBone('spine');
+  var lArm     = getBone('leftUpperArm');
+  var rArm     = getBone('rightUpperArm');
+  var lerpF    = Math.min(LERP * u, 1);
 
-  var lerpF = Math.min(LERP * u, 1);
+  /* Base A-pose for arms — maintained every frame so vrm.update doesn't drift */
+  var armBaseL =  1.1;
+  var armBaseR = -1.1;
 
+  /* ── 4. STATE ANIMATIONS ─────────────────────────────────── */
   if (state === 'idle') {
-    idlePhase += dt * 0.38;
-    hXt = Math.sin(idlePhase * 0.70) * 0.030;
-    hYt = Math.sin(idlePhase * 0.50) * 0.035;
-    hZt = Math.sin(idlePhase * 0.35) * 0.020;
+    idlePhase += dt * 0.45;
+
+    /* Visible head sway: ~7° Y, ~5° X, ~4° Z */
+    hXt = Math.sin(idlePhase * 0.72) * 0.09;
+    hYt = Math.sin(idlePhase * 0.51) * 0.12;
+    hZt = Math.sin(idlePhase * 0.37) * 0.07;
 
     hX = lerp(hX, hXt, lerpF);
     hY = lerp(hY, hYt, lerpF);
     hZ = lerp(hZ, hZt, lerpF);
-    if (head)  { head.rotation.x = hX; head.rotation.y = hY; head.rotation.z = hZ; }
-    if (neck)  { neck.rotation.x = hX * 0.30; neck.rotation.y = hY * 0.30; }
-    if (spine) { spine.rotation.x = Math.sin(idlePhase * 0.28) * 0.008; }
+
+    if (head)  { head.rotation.x = hX;            head.rotation.y = hY;            head.rotation.z = hZ; }
+    if (neck)  { neck.rotation.x = hX * 0.40;     neck.rotation.y = hY * 0.40; }
+    if (spine) { spine.rotation.x = Math.sin(idlePhase * 0.29) * 0.03;
+                 spine.rotation.z = Math.sin(idlePhase * 0.41) * 0.02; }
+    /* Gentle arm breathe sway */
+    if (lArm)  lArm.rotation.z  = armBaseL + Math.sin(idlePhase * 0.33) * 0.05;
+    if (rArm)  rArm.rotation.z  = armBaseR - Math.sin(idlePhase * 0.33) * 0.05;
 
   } else if (state === 'talking') {
-    talkPhase += dt * 0.90;
-    hXt = -0.015 + Math.sin(talkPhase * 0.88) * 0.055;
-    hYt =          Math.sin(talkPhase * 0.58) * 0.065;
-    hZt =          Math.sin(talkPhase * 0.44) * 0.038;
+    talkPhase += dt * 1.1;
+
+    /* More expressive head during speech */
+    hXt = -0.04 + Math.sin(talkPhase * 0.90) * 0.14;
+    hYt =         Math.sin(talkPhase * 0.60) * 0.16;
+    hZt =         Math.sin(talkPhase * 0.46) * 0.09;
 
     hX = lerp(hX, hXt, lerpF);
     hY = lerp(hY, hYt, lerpF);
     hZ = lerp(hZ, hZt, lerpF);
+
     if (head) { head.rotation.x = hX; head.rotation.y = hY; head.rotation.z = hZ; }
-    if (neck) { neck.rotation.x = hX * 0.40; neck.rotation.y = hY * 0.40; }
+    if (neck) { neck.rotation.x = hX * 0.45; neck.rotation.y = hY * 0.45; }
+    if (spine){ spine.rotation.z = Math.sin(talkPhase * 0.50) * 0.03; }
+    /* Arms sway with speech rhythm */
+    if (lArm) lArm.rotation.z = armBaseL + Math.sin(talkPhase * 0.60) * 0.08;
+    if (rArm) rArm.rotation.z = armBaseR - Math.sin(talkPhase * 0.70) * 0.08;
 
   } else if (state === 'thinking') {
-    thinkPhase += dt * 0.42;
-    hXt = -0.11 + Math.sin(thinkPhase * 0.68) * 0.038;
-    hYt =  0.09 + Math.sin(thinkPhase * 0.48) * 0.030;
-    hZt =  0.07 + Math.sin(thinkPhase * 0.38) * 0.022;
+    thinkPhase += dt * 0.50;
+
+    /* Head tilted, slow contemplative sway */
+    hXt = -0.15 + Math.sin(thinkPhase * 0.55) * 0.06;
+    hYt =  0.12 + Math.sin(thinkPhase * 0.42) * 0.05;
+    hZt =  0.10 + Math.sin(thinkPhase * 0.32) * 0.04;
 
     hX = lerp(hX, hXt, lerpF);
     hY = lerp(hY, hYt, lerpF);
     hZ = lerp(hZ, hZt, lerpF);
+
     if (head) { head.rotation.x = hX; head.rotation.y = hY; head.rotation.z = hZ; }
-    if (neck) { neck.rotation.x = hX * 0.38; neck.rotation.y = hY * 0.30; }
+    if (neck) { neck.rotation.x = hX * 0.40; neck.rotation.y = hY * 0.35; }
+    if (lArm) lArm.rotation.z = armBaseL + 0.05;
+    if (rArm) rArm.rotation.z = armBaseR - 0.05;
 
   } else if (state === 'listening') {
-    listenPhase += dt * 0.25;
-    hX = lerp(hX, hXt + Math.sin(listenPhase * 0.5) * 0.008, lerpF);
-    hY = lerp(hY, hYt, lerpF);
-    hZ = lerp(hZ, hZt, lerpF);
-    if (head) { head.rotation.x = hX; head.rotation.y = hY; head.rotation.z = hZ; }
-    if (neck) { neck.rotation.x = hX * 0.30; }
+    listenPhase += dt * 0.30;
 
-  } else { /* happy */
-    idlePhase += dt * 0.55;
-    hXt =  Math.sin(idlePhase * 0.80) * 0.040;
-    hYt =  Math.sin(idlePhase * 0.60) * 0.050;
-    hZt = -0.015 + Math.sin(idlePhase * 0.40) * 0.025;
+    /* Attentive: slight forward tilt, minimal sway */
+    hXt = -0.06 + Math.sin(listenPhase * 0.48) * 0.04;
+    hYt =         Math.sin(listenPhase * 0.35) * 0.06;
+    hZt =         Math.sin(listenPhase * 0.28) * 0.03;
+
     hX = lerp(hX, hXt, lerpF);
     hY = lerp(hY, hYt, lerpF);
     hZ = lerp(hZ, hZt, lerpF);
+
     if (head) { head.rotation.x = hX; head.rotation.y = hY; head.rotation.z = hZ; }
-    if (neck) { neck.rotation.x = hX * 0.30; neck.rotation.y = hY * 0.30; }
+    if (neck) { neck.rotation.x = hX * 0.35; neck.rotation.y = hY * 0.30; }
+    if (lArm) lArm.rotation.z = armBaseL;
+    if (rArm) rArm.rotation.z = armBaseR;
+
+  } else { /* happy */
+    idlePhase += dt * 0.65;
+
+    hXt =  Math.sin(idlePhase * 0.85) * 0.12;
+    hYt =  Math.sin(idlePhase * 0.65) * 0.14;
+    hZt = -0.03 + Math.sin(idlePhase * 0.45) * 0.08;
+
+    hX = lerp(hX, hXt, lerpF);
+    hY = lerp(hY, hYt, lerpF);
+    hZ = lerp(hZ, hZt, lerpF);
+
+    if (head) { head.rotation.x = hX; head.rotation.y = hY; head.rotation.z = hZ; }
+    if (neck) { neck.rotation.x = hX * 0.35; neck.rotation.y = hY * 0.35; }
+    /* Happily bouncy arms */
+    if (lArm) lArm.rotation.z = armBaseL + Math.sin(idlePhase * 0.80) * 0.10;
+    if (rArm) rArm.rotation.z = armBaseR - Math.sin(idlePhase * 0.80) * 0.10;
   }
 }
 
