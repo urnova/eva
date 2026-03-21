@@ -38,15 +38,18 @@ var P = {
   hX: mkV(0), hY: mkV(0), hZ: mkV(0),
   /* Neck */
   nX: mkV(0), nY: mkV(0),
-  /* Spine (upperChest / chest) */
+  /* Spine */
   sX: mkV(0), sZ: mkV(0),
   /* Hips */
-  hipZ: mkV(0),
+  hipZ: mkV(0), hipX: mkV(0),
   /* Arms upper — NEGATIVE Z lowers left arm, POSITIVE Z lowers right arm */
-  lAZ: mkV(-1.15), rAZ: mkV(1.15),   // Z = primary lift axis
-  lAX: mkV(0),     rAX: mkV(0),       // X = forward/back
-  /* Elbows lower arm */
-  lEZ: mkV(-0.08), rEZ: mkV(0.08),
+  lAZ: mkV(-1.50), rAZ: mkV(1.50),
+  lAX: mkV(0),     rAX: mkV(0),
+  /* Elbows */
+  lEZ: mkV(-0.10), rEZ: mkV(0.10),
+  /* Upper legs (thighs) */
+  lLZ: mkV(0), rLZ: mkV(0),
+  lLX: mkV(0), rLX: mkV(0),
   /* Expressions */
   blink: mkV(0), mouth: mkV(0),
   happy: mkV(0), angry: mkV(0), sad: mkV(0), sur: mkV(0)
@@ -61,11 +64,11 @@ var SPD = {
 
 /* ─── PROCEDURAL OVERLAYS (add on top of state targets) ─────────────────── */
 /* Breathing: 1 cycle ≈ 4 s */
-var breathAmp   = 0.018;
+var breathAmp   = 0.022;
 /* Weight shift */
 var wShiftSide  = 1;          /* +1 = right,  -1 = left */
 var wShiftTimer = 0;          /* seconds until next shift */
-var wShiftAmp   = 0.022;      /* spine Z lean */
+var wShiftAmp   = 0.038;      /* spine Z lean — more visible sway */
 var wShiftCur   = mkV(0);     /* current lean value (smooth) */
 
 /* Gaze "look-around" during idle */
@@ -138,10 +141,10 @@ async function loadVRM() {
   scene = new THREE.Scene();
   clock = new THREE.Clock();
 
-  /* ── Camera — look DOWN slightly so feet have ground space below ── */
-  cam = new THREE.PerspectiveCamera(28, W / H, 0.1, 20);
-  cam.position.set(0, 1.1, 3.8);
-  cam.lookAt(0, 0.55, 0);
+  /* ── Camera — low angle, see full body + ground space below feet ── */
+  cam = new THREE.PerspectiveCamera(32, W / H, 0.1, 20);
+  cam.position.set(0, 0.60, 3.6);
+  cam.lookAt(0, 0.90, 0);
 
   /* ── Lighting ── */
   scene.add(new THREE.AmbientLight(0xffffff, 1.1));
@@ -153,6 +156,30 @@ async function loadVRM() {
   rim.position.set(-0.8, 2.0, -0.9); scene.add(rim);
   var rim2 = new THREE.PointLight(0x8b5cf6, 0.8, 3.5);
   rim2.position.set(1, 1.2, -0.6); scene.add(rim2);
+
+  /* ── Ground glow disc (3D — perspectively correct under feet) ── */
+  var gc_ = document.createElement('canvas');
+  gc_.width = gc_.height = 256;
+  var gc = gc_.getContext('2d');
+  var gg = gc.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gg.addColorStop(0,    'rgba(0,212,255,0.95)');
+  gg.addColorStop(0.25, 'rgba(0,212,255,0.70)');
+  gg.addColorStop(0.55, 'rgba(0,212,255,0.28)');
+  gg.addColorStop(1,    'rgba(0,212,255,0)');
+  gc.fillStyle = gg; gc.fillRect(0, 0, 256, 256);
+  var glowTex  = new THREE.CanvasTexture(gc_);
+  var glowMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.85, 0.85),
+    new THREE.MeshBasicMaterial({
+      map: glowTex, transparent: true, opacity: 0.9,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+    })
+  );
+  glowMesh.rotation.x = -Math.PI / 2;
+  glowMesh.position.set(0, 0.008, 0);
+  scene.add(glowMesh);
+  /* Gentle pulse stored on object for animation loop */
+  glowMesh.userData.pulse = 0;
 
   /* ── Resize ── */
   window.addEventListener('resize', function () {
@@ -222,11 +249,10 @@ async function loadVRM() {
    A-POSE  (lower arms ~65° from VRM0 T-pose horizontal)
    ═══════════════════════════════════════════════════════════════════════════ */
 function applyAPose() {
-  /* NEGATIVE Z = arm goes DOWN for left arm; POSITIVE Z = arm goes DOWN for right arm */
-  setBone('leftUpperArm',  { z: -1.15, x: 0, y: 0 });
-  setBone('rightUpperArm', { z:  1.15, x: 0, y: 0 });
-  setBone('leftLowerArm',  { z: -0.08 });
-  setBone('rightLowerArm', { z:  0.08 });
+  setBone('leftUpperArm',  { z: -1.50, x: 0, y: 0 });
+  setBone('rightUpperArm', { z:  1.50, x: 0, y: 0 });
+  setBone('leftLowerArm',  { z: -0.10 });
+  setBone('rightLowerArm', { z:  0.10 });
   vrm.update(0);
 }
 
@@ -269,6 +295,8 @@ function setExpr(key, val) {
    RENDER LOOP
    ═══════════════════════════════════════════════════════════════════════════ */
 function startLoop(THREE) {
+  /* capture glowMesh from scene for pulse animation */
+  var gm = scene.children.find(function (c) { return c.userData && c.userData.pulse !== undefined; });
   function tick() {
     raf = requestAnimationFrame(tick);
     var dt = Math.min(clock.getDelta(), 0.05);
@@ -276,6 +304,13 @@ function startLoop(THREE) {
     tick_procedural(dt);
     tick_state(dt);
     tick_apply(dt);
+    /* Ground glow pulse */
+    if (gm && gm.material) {
+      var pulse = 0.78 + Math.sin(T * 1.8) * 0.12;
+      gm.material.opacity = pulse;
+      var sc = 0.95 + Math.sin(T * 1.1) * 0.05;
+      gm.scale.set(sc, 1, sc);
+    }
     vrm.update(dt);
     R.render(scene, cam);
   }
@@ -361,11 +396,18 @@ function tick_state(dt) {
       P.sX.tgt = procedural.breath + Math.sin(T * 0.25) * 0.008;
       P.sZ.tgt = procedural.wShift;
       P.hipZ.tgt = procedural.wShift * 0.5;
-      /* Arms: relaxed A-pose, tiny breathing float */
-      P.lAZ.tgt = -1.15 + Math.sin(T * 0.28) * 0.025;
-      P.rAZ.tgt =  1.15 - Math.sin(T * 0.28) * 0.025;
-      P.lAX.tgt = 0; P.rAX.tgt = 0;
-      P.lEZ.tgt = -0.08; P.rEZ.tgt =  0.08;
+      /* Arms: hang down, gentle swing follows weight-shift */
+      var ws = procedural.wShift;
+      P.lAZ.tgt = -1.50 + Math.sin(T * 0.35) * 0.07 +  ws * 0.15;
+      P.rAZ.tgt =  1.50 + Math.sin(T * 0.35) * 0.07 -  ws * 0.15;
+      P.lAX.tgt = Math.sin(T * 0.28) * 0.04;
+      P.rAX.tgt = Math.sin(T * 0.28 + 1.0) * 0.04;
+      P.lEZ.tgt = -0.10; P.rEZ.tgt =  0.10;
+      /* Legs: follow weight shift (thighs rock with hips) */
+      P.lLZ.tgt =  ws *  0.12;   /* left thigh shifts opposite to hip lean */
+      P.rLZ.tgt =  ws * -0.12;
+      P.lLX.tgt = Math.sin(T * 0.22) * 0.02;
+      P.rLX.tgt = Math.sin(T * 0.22 + 0.8) * 0.02;
       /* Expressions: neutral */
       P.happy.tgt = 0; P.angry.tgt = 0; P.sad.tgt = 0;
       break;
@@ -393,11 +435,14 @@ function tick_state(dt) {
       P.hZ.tgt =  0.06;          /* head tilt — empathic lean */
       P.nX.tgt =  P.hX.tgt * 0.45;
       P.nY.tgt =  P.hY.tgt * 0.35;
-      /* Arms: relaxed, slightly more still */
-      P.lAZ.tgt = -1.12; P.rAZ.tgt =  1.12;
-      P.lAX.tgt = 0; P.rAX.tgt = 0;
-      P.lEZ.tgt = -0.08; P.rEZ.tgt =  0.08;
-      /* Expression: slightly raised attention (no expression change needed) */
+      /* Arms: hanging naturally, relaxed */
+      P.lAZ.tgt = -1.46; P.rAZ.tgt =  1.46;
+      P.lAX.tgt = 0.02; P.rAX.tgt = -0.02;
+      P.lEZ.tgt = -0.10; P.rEZ.tgt =  0.10;
+      /* Legs: neutral, engaged stance */
+      P.lLZ.tgt = 0; P.rLZ.tgt = 0;
+      P.lLX.tgt = 0; P.rLX.tgt = 0;
+      /* Expression */
       P.happy.tgt = 0; P.angry.tgt = 0; P.sad.tgt = 0;
       break;
     }
@@ -414,16 +459,17 @@ function tick_state(dt) {
       P.hZ.tgt =  0.07;
       P.nX.tgt =  P.hX.tgt * 0.4;
       P.nY.tgt =  P.hY.tgt * 0.35;
-      /* Arms: thinking pose — right hand near chin, left arm slightly raised as support */
-      /* Left arm: slightly forward and a bit lower than idle */
-      P.lAZ.tgt = -0.65;   /* arm still somewhat down */
-      P.lAX.tgt = -0.20;   /* slightly forward */
-      P.lEZ.tgt = -0.25;   /* light elbow bend */
-      /* Right arm: raised forward so hand can be near chin */
-      P.rAZ.tgt = -0.25;   /* arm above horizontal (negative = UP for right) */
-      P.rAX.tgt = -0.45;   /* arm comes forward toward body */
-      P.rEZ.tgt =  0.60;   /* elbow bends, forearm angles toward face */
-      /* Expression: slight concentration frown */
+      /* Arms: right hand toward chin, left arm forward as support */
+      P.lAZ.tgt = -0.70;   /* left arm partially raised, crossing in front */
+      P.lAX.tgt = -0.22;   /* slightly forward */
+      P.lEZ.tgt = -0.30;   /* light elbow bend */
+      P.rAZ.tgt = -0.18;   /* right arm raised above horizontal */
+      P.rAX.tgt = -0.48;   /* arm comes forward toward face */
+      P.rEZ.tgt =  0.65;   /* elbow bends, forearm points toward chin */
+      /* Legs: weight shifted slightly back, contemplative stance */
+      P.lLZ.tgt = -0.04; P.rLZ.tgt =  0.04;
+      P.lLX.tgt =  0.02; P.rLX.tgt =  0.02;
+      /* Expression: concentration */
       P.angry.tgt = 0.15; P.happy.tgt = 0; P.sad.tgt = 0;
       break;
     }
@@ -441,13 +487,18 @@ function tick_state(dt) {
       P.hZ.tgt =          Math.sin(s * 0.55) * 0.07;
       P.nX.tgt =  P.hX.tgt * 0.45;
       P.nY.tgt =  P.hY.tgt * 0.40;
-      /* Arms: gestural, natural movement */
-      P.lAZ.tgt = -1.10 + Math.sin(s * 0.82) * 0.08;
-      P.rAZ.tgt =  1.10 - Math.sin(s * 0.70) * 0.08;
-      P.lAX.tgt =  Math.sin(s * 0.55) * 0.05;
-      P.rAX.tgt = -Math.sin(s * 0.55) * 0.05;
-      P.lEZ.tgt = -0.08; P.rEZ.tgt =  0.08;
-      /* Expression: animated — slight happy */
+      /* Arms: expressive gestural movement — bigger swings during speech */
+      P.lAZ.tgt = -1.42 + Math.sin(s * 0.82) * 0.14 + Math.sin(s * 1.35) * 0.06;
+      P.rAZ.tgt =  1.42 - Math.sin(s * 0.70) * 0.14 - Math.sin(s * 1.20) * 0.05;
+      P.lAX.tgt =  Math.sin(s * 0.60) * 0.08;
+      P.rAX.tgt = -Math.sin(s * 0.60) * 0.08;
+      P.lEZ.tgt = -0.10 + Math.sin(s * 0.90) * 0.06;
+      P.rEZ.tgt =  0.10 + Math.sin(s * 0.75) * 0.06;
+      /* Legs: subtle alive movement while talking */
+      P.lLZ.tgt = Math.sin(s * 0.55) * 0.04;
+      P.rLZ.tgt = Math.sin(s * 0.55 + 0.8) * 0.04;
+      P.lLX.tgt = 0; P.rLX.tgt = 0;
+      /* Expression: slight happy */
       P.happy.tgt = 0.20; P.angry.tgt = 0; P.sad.tgt = 0;
       break;
     }
@@ -464,11 +515,18 @@ function tick_state(dt) {
       P.hZ.tgt = Math.sin(s * 0.50) * 0.07 - 0.02;
       P.nX.tgt = P.hX.tgt * 0.40;
       P.nY.tgt = P.hY.tgt * 0.35;
-      /* Arms: cheerful float */
-      P.lAZ.tgt = -1.10 + Math.sin(s * 0.88) * 0.10;
-      P.rAZ.tgt =  1.10 - Math.sin(s * 0.88) * 0.10;
-      P.lAX.tgt = 0; P.rAX.tgt = 0;
-      P.lEZ.tgt = -0.08; P.rEZ.tgt =  0.08;
+      /* Arms: cheerful, bounce with body */
+      P.lAZ.tgt = -1.38 + Math.sin(s * 0.88) * 0.16;
+      P.rAZ.tgt =  1.38 - Math.sin(s * 0.88) * 0.16;
+      P.lAX.tgt = Math.sin(s * 0.70) * 0.06;
+      P.rAX.tgt = Math.sin(s * 0.70 + 1.0) * 0.06;
+      P.lEZ.tgt = -0.10 + Math.sin(s * 0.80) * 0.08;
+      P.rEZ.tgt =  0.10 - Math.sin(s * 0.80) * 0.08;
+      /* Legs: bounce / happy little shift */
+      var ws2 = procedural.wShift;
+      P.lLZ.tgt =  ws2 * 0.10 + Math.sin(s * 1.0) * 0.03;
+      P.rLZ.tgt = -ws2 * 0.10 + Math.sin(s * 1.0 + 0.5) * 0.03;
+      P.lLX.tgt = 0; P.rLX.tgt = 0;
       P.happy.tgt = 0.85; P.angry.tgt = 0; P.sad.tgt = 0;
       break;
     }
@@ -490,10 +548,12 @@ function tick_apply(dt) {
   lerpV(P.hX,    dt, SPD.head);  lerpV(P.hY,    dt, SPD.head);  lerpV(P.hZ,    dt, SPD.head);
   lerpV(P.nX,    dt, SPD.neck);  lerpV(P.nY,    dt, SPD.neck);
   lerpV(P.sX,    dt, SPD.spine); lerpV(P.sZ,    dt, SPD.spine);
-  lerpV(P.hipZ,  dt, SPD.hip);
+  lerpV(P.hipZ,  dt, SPD.hip);    lerpV(P.hipX,  dt, SPD.hip);
   lerpV(P.lAZ,   dt, SPD.arm);   lerpV(P.rAZ,   dt, SPD.arm);
   lerpV(P.lAX,   dt, SPD.arm);   lerpV(P.rAX,   dt, SPD.arm);
   lerpV(P.lEZ,   dt, SPD.elbow); lerpV(P.rEZ,   dt, SPD.elbow);
+  lerpV(P.lLZ,   dt, SPD.hip);   lerpV(P.rLZ,   dt, SPD.hip);
+  lerpV(P.lLX,   dt, SPD.hip);   lerpV(P.rLX,   dt, SPD.hip);
   lerpV(P.blink, dt, SPD.blink);
   lerpV(P.mouth, dt, SPD.mouth);
   lerpV(P.happy, dt, SPD.expr);  lerpV(P.angry, dt, SPD.expr);
@@ -506,15 +566,18 @@ function tick_apply(dt) {
   var hip = getBone('hips');
   var lUA = getBone('leftUpperArm'),  rUA = getBone('rightUpperArm');
   var lLA = getBone('leftLowerArm'),  rLA = getBone('rightLowerArm');
+  var lUL = getBone('leftUpperLeg'),  rUL = getBone('rightUpperLeg');
 
   if (hd)  { hd.rotation.x  = P.hX.cur;  hd.rotation.y  = P.hY.cur;  hd.rotation.z  = P.hZ.cur; }
   if (nk)  { nk.rotation.x  = P.nX.cur;  nk.rotation.y  = P.nY.cur; }
   if (sp)  { sp.rotation.x  = P.sX.cur;  sp.rotation.z  = P.sZ.cur; }
-  if (hip) { hip.rotation.z = P.hipZ.cur; }
+  if (hip) { hip.rotation.z = P.hipZ.cur; hip.rotation.x = P.hipX.cur; }
   if (lUA) { lUA.rotation.z = P.lAZ.cur; lUA.rotation.x = P.lAX.cur; }
   if (rUA) { rUA.rotation.z = P.rAZ.cur; rUA.rotation.x = P.rAX.cur; }
   if (lLA) { lLA.rotation.z = P.lEZ.cur; }
   if (rLA) { rLA.rotation.z = P.rEZ.cur; }
+  if (lUL) { lUL.rotation.z = P.lLZ.cur; lUL.rotation.x = P.lLX.cur; }
+  if (rUL) { rUL.rotation.z = P.rLZ.cur; rUL.rotation.x = P.rLX.cur; }
 
   /* Expressions */
   setExpr('blink', Math.max(0, Math.min(1, P.blink.cur)));
