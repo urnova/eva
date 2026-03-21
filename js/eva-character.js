@@ -11,7 +11,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ─── PATH ──────────────────────────────────────────────────────────────── */
-var MODEL_PATH = '/models/eva.vrm';
+var MODEL_PATH = '/models/eva.vrm?v=3';
 
 /* ─── ENGINE ────────────────────────────────────────────────────────────── */
 var R, scene, cam, clock, vrm, raf;           // renderer, scene, camera, clock, vrm, animFrame
