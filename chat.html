@@ -1175,6 +1175,39 @@ body::before{
 .alarm-btn-snooze:hover{border-color:var(--cyan);color:var(--cyan);transform:translateY(-1px);}
 
 /* ══════════════════════════════════════════════
+   QWEN DOWNLOAD MODAL
+══════════════════════════════════════════════ */
+.qwen-dl-overlay{
+  position:fixed;inset:0;z-index:10000;
+  background:rgba(0,0,0,0.88);backdrop-filter:blur(14px);
+  display:none;align-items:center;justify-content:center;
+}
+.qwen-dl-overlay.active{display:flex;}
+.qwen-dl-box{
+  background:var(--surface);border:1px solid rgba(0,212,255,0.35);
+  border-radius:20px;padding:36px 40px;max-width:420px;width:90%;
+  text-align:center;box-shadow:0 0 60px rgba(0,212,255,0.18);
+  animation:modalIn 0.28s cubic-bezier(0.34,1.56,0.64,1);
+}
+.qwen-dl-icon{font-size:2.8em;margin-bottom:14px;animation:pulse 1.5s ease-in-out infinite alternate;}
+@keyframes pulse{from{transform:scale(0.95);}to{transform:scale(1.05);}}
+.qwen-dl-title{
+  font-family:'Orbitron',monospace;font-size:1em;font-weight:800;
+  color:var(--text);letter-spacing:1.5px;margin-bottom:8px;
+}
+.qwen-dl-sub{font-size:0.78em;color:var(--text-muted);margin-bottom:22px;line-height:1.5;}
+.qwen-dl-bar-wrap{
+  background:rgba(255,255,255,0.06);border-radius:8px;overflow:hidden;
+  height:10px;margin-bottom:10px;
+}
+.qwen-dl-bar{
+  height:100%;background:linear-gradient(90deg,#00d4ff,#7c3aed);
+  width:0%;transition:width 0.5s ease;border-radius:8px;
+}
+.qwen-dl-pct{font-size:0.75em;color:var(--cyan);font-family:'Space Mono',monospace;}
+.qwen-dl-hint{font-size:0.68em;color:var(--text-muted);margin-top:14px;line-height:1.4;}
+
+/* ══════════════════════════════════════════════
    SYSTÈME DE RAPPORTS
 ══════════════════════════════════════════════ */
 .nav-gold-section{display:none;}
@@ -2762,6 +2795,12 @@ async function handleSend() {
 
   var sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
 
+  /* Renforcement rôle pour modèles locaux légers (Qwen) */
+  var _activeProv = (S.config && S.config.aiProvider) || 'puter';
+  if (_activeProv === 'qwen') {
+    sysPrompt += '\n\n[RAPPEL CRITIQUE — modèle local Qwen] Tu es EVA, l\'IA. L\'utilisateur est la personne qui te parle. Ne joue jamais le rôle de l\'utilisateur. Ce modèle est un assistant conversationnel uniquement — ne génère pas de code. Reste dans ton rôle d\'Eva à tout moment.';
+  }
+
   var msgContent = text;
   if (img) {
     try {
@@ -2858,6 +2897,107 @@ function streamEvaMsg(content) {
 }
 
 async function analyzeImage(base64Data, prompt) {
+  var prov = (S.config && S.config.aiProvider) || 'puter';
+
+  /* ── OpenAI Vision ── */
+  if (prov === 'openai' && S.config && S.config.openaiApiKey) {
+    try {
+      var model = (S.config.openaiModel && S.config.openaiModel.includes('gpt-4')) ? S.config.openaiModel : 'gpt-4o';
+      var resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + S.config.openaiApiKey },
+        body: JSON.stringify({
+          model: model,
+          messages: [{ role: 'user', content: [
+            { type: 'image_url', image_url: { url: base64Data } },
+            { type: 'text', text: prompt }
+          ]}],
+          max_tokens: 600
+        })
+      });
+      var data = await resp.json();
+      if (data.choices && data.choices[0]) return data.choices[0].message.content;
+    } catch(e) { console.warn('[EVA Vision] OpenAI error:', e); }
+    return null;
+  }
+
+  /* ── Claude Vision ── */
+  if (prov === 'claude' && S.config && S.config.claudeApiKey) {
+    try {
+      var b64 = base64Data.replace(/^data:image\/[^;]+;base64,/, '');
+      var mimeMatch = base64Data.match(/^data:(image\/[^;]+);base64,/);
+      var mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+      var claudeModel = S.config.claudeModel || 'claude-3-5-haiku-20241022';
+      var resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': S.config.claudeApiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: claudeModel,
+          max_tokens: 600,
+          messages: [{ role: 'user', content: [
+            { type: 'image', source: { type: 'base64', media_type: mimeType, data: b64 } },
+            { type: 'text', text: prompt }
+          ]}]
+        })
+      });
+      var data = await resp.json();
+      if (data.content && data.content[0]) return data.content[0].text;
+    } catch(e) { console.warn('[EVA Vision] Claude error:', e); }
+    return null;
+  }
+
+  /* ── LM Studio Vision ── */
+  if (prov === 'lmstudio') {
+    try {
+      var endpoint = (S.config && S.config.lmstudioUrl) || 'http://localhost:1234';
+      var resp = await fetch(endpoint + '/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: [
+            { type: 'image_url', image_url: { url: base64Data } },
+            { type: 'text', text: prompt }
+          ]}],
+          max_tokens: 600
+        })
+      });
+      var data = await resp.json();
+      if (data.choices && data.choices[0]) return data.choices[0].message.content;
+    } catch(e) { console.warn('[EVA Vision] LM Studio error:', e); }
+    return null;
+  }
+
+  /* ── Ollama Vision (llava) ── */
+  if (prov === 'ollama') {
+    try {
+      var endpoint = (S.config && S.config.ollamaUrl) || 'http://localhost:11434';
+      var b64 = base64Data.replace(/^data:image\/[^;]+;base64,/, '');
+      var resp = await fetch(endpoint + '/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: (S.config && S.config.ollamaModel) || 'llava',
+          prompt: prompt,
+          images: [b64],
+          stream: false
+        })
+      });
+      var data = await resp.json();
+      if (data.response) return data.response;
+    } catch(e) { console.warn('[EVA Vision] Ollama error:', e); }
+    return null;
+  }
+
+  /* ── Qwen Local — pas de vision ── */
+  if (prov === 'qwen') {
+    return '[Vision non disponible avec Qwen Local. L\'image ne peut pas être analysée par ce modèle. Décrivez votre image en texte.]';
+  }
+
+  /* ── Puter (défaut / fallback) ── */
   if (typeof puter === 'undefined') return null;
   try {
     var msg = [{
@@ -3006,10 +3146,10 @@ function renderSettings(section) {
   } else if (section === 'ai') {
     var cur = cfg.aiProvider || 'puter';
     var provDefs = {
-      puter:    { label:'☁️ Puter Cloud', tag:'GRATUIT', desc:'Accès gratuit via Puter.com. Aucune clé API requise. Modèles GPT-4o, Claude 3.5.', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'},{id:'claude-3-5-sonnet',label:'Claude 3.5 Sonnet'}], modelKey:'puterModel' },
-      openai:   { label:'🤖 OpenAI',      tag:'API',     desc:'GPT-4o, GPT-4 Turbo. Nécessite une clé API OpenAI.', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'},{id:'gpt-4-turbo',label:'GPT-4 Turbo — Puissant'},{id:'gpt-3.5-turbo',label:'GPT-3.5 Turbo — Économique'}], modelKey:'openaiModel' },
-      claude:   { label:'🧠 Claude',      tag:'API',     desc:'Claude 3.5 Sonnet, Haiku et Opus d\'Anthropic. Excellent pour le raisonnement.', models:[{id:'claude-3-5-haiku-20241022',label:'Haiku — Rapide'},{id:'claude-3-5-sonnet-20241022',label:'Sonnet — Expert'},{id:'claude-3-opus-20240229',label:'Opus — Ultra'}], modelKey:'claudeModel' },
-      qwen:     { label:'🖥️ Qwen Local',  tag:'LOCAL',   desc:'Modèle Qwen 3 local, gratuit et privé. Fonctionne sans internet ni compte.', models:[{id:'Qwen2-0.5B-Instruct-q4f16_1-MLC',label:'Qwen2 0.5B — Ultra-Rapide'},{id:'Qwen2-1.5B-Instruct-q4f16_1-MLC',label:'Qwen2 1.5B — Rapide'}], modelKey:'qwenModel' },
+      puter:    { label:'☁️ Puter Cloud', tag:'GRATUIT', desc:'Accès gratuit via Puter.com. Aucune clé API requise. Modèles GPT-4o disponibles.', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'}], modelKey:'puterModel' },
+      openai:   { label:'🤖 OpenAI',      tag:'API',     desc:'GPT-4o, GPT-4 Turbo. Nécessite une clé API OpenAI. Supporte la vision (analyse d\'images).', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'},{id:'gpt-4-turbo',label:'GPT-4 Turbo — Puissant'},{id:'gpt-3.5-turbo',label:'GPT-3.5 Turbo — Économique'}], modelKey:'openaiModel' },
+      claude:   { label:'🧠 Claude',      tag:'API',     desc:'Claude Haiku et Opus d\'Anthropic. Excellent pour le raisonnement et l\'analyse. Supporte la vision (analyse d\'images).', models:[{id:'claude-3-5-haiku-20241022',label:'Haiku — Rapide'},{id:'claude-3-opus-20240229',label:'Opus — Ultra'}], modelKey:'claudeModel' },
+      qwen:     { label:'🖥️ Qwen Local',  tag:'LOCAL',   desc:'Modèle Qwen local, gratuit et 100% privé. Fonctionne sans internet. ⚠️ Assistant uniquement — ne convient pas pour le code. Premier usage : téléchargement automatique du modèle requis (quelques minutes, mis en cache ensuite).', models:[{id:'Qwen2-0.5B-Instruct-q4f16_1-MLC',label:'Qwen2 0.5B — Ultra-Rapide'},{id:'Qwen2-1.5B-Instruct-q4f16_1-MLC',label:'Qwen2 1.5B — Rapide'}], modelKey:'qwenModel' },
       lmstudio: { label:'💻 LM Studio',  tag:'LOCAL',   desc:'Serveur local via LM Studio. Nécessite LM Studio installé sur votre machine.', models:[], modelKey:'customModel' },
       ollama:   { label:'🦙 Ollama',      tag:'LOCAL',   desc:'Serveur local Ollama. Complètement privé, fonctionne sans internet.', models:[], modelKey:'ollamaModel' }
     };
@@ -3060,7 +3200,7 @@ function renderSettings(section) {
       '<div style="display:flex;align-items:center;gap:10px"><input type="range" min="4" max="40" step="2" id="sContextLen" value="'+(cfg.contextLength||10)+'" style="flex:1;accent-color:var(--cyan)">' +
       '<span id="sContextLenVal" style="font-size:0.75em;color:var(--cyan);min-width:30px">'+(cfg.contextLength||10)+'</span></div></div>' +
       '</div>' +
-      '<div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveAISettings()">Appliquer</button></div>';
+      '<div style="display:flex;gap:8px"><button class="btn btn-primary" id="applyAIBtn" onclick="saveAISettings()">Appliquer</button></div>';
 
     setTimeout(function() {
       var provSel = document.getElementById('sProvider');
@@ -3258,6 +3398,14 @@ async function saveProfileSettings() {
 }
 
 async function saveAISettings() {
+  /* Feedback immédiat sur le bouton */
+  var applyBtn = document.getElementById('applyAIBtn');
+  if (applyBtn) {
+    applyBtn.textContent = '⏳ Application...';
+    applyBtn.disabled = true;
+    applyBtn.style.opacity = '0.8';
+  }
+
   var prov = document.getElementById('sProvider').value;
   S.config.aiProvider = prov;
   var k;
@@ -3273,16 +3421,54 @@ async function saveAISettings() {
   k = document.getElementById('sOllamaURL'); if(k && k.value.trim()) S.config.ollamaUrl = k.value.trim();
   k = document.getElementById('sOllamaModel'); if(k && k.value.trim()) S.config.ollamaModel = k.value.trim();
   k = document.getElementById('sContextLen'); if(k) S.config.contextLength = parseInt(k.value);
+
+  /* Sauvegarde locale */
   saveCfg();
+
+  /* Sauvegarde Firebase — sync cross-appareils */
+  if (S.user && S.user.uid) {
+    try {
+      await db.collection('users').doc(S.user.uid).set(
+        { preferences: S.config },
+        { merge: true }
+      );
+    } catch(e) { console.warn('[EVA] Firebase AI prefs save:', e); }
+  }
+
   /* Réinitialiser le conv state pour que la nouvelle conv utilise le nouveau provider */
   if (!S.convId) S.conv = {};
-  if (window.EVAChatHandler) {
-    await window.EVAChatHandler.initChatHandler(Object.assign({aiProvider:prov},S.config));
+
+  /* Pour Qwen : ne pas initialiser maintenant (téléchargement lourd, se fait au 1er message) */
+  if (prov !== 'qwen') {
+    if (window.EVAChatHandler) {
+      await window.EVAChatHandler.initChatHandler(Object.assign({aiProvider:prov},S.config));
+    }
+  } else {
+    /* Réinitialiser l'état du provider Qwen pour forcer re-téléchargement si modèle changé */
+    if (window.EVAChatHandler) {
+      window.EVAChatHandler.initChatHandler(Object.assign({aiProvider:prov},S.config));
+    }
   }
+
   updateProviderLabel(prov);
   updateModelSelectUI();
-  toast('IA mise à jour — ' + prov + ' ✓', 'success');
-  closeSettings();
+
+  /* Feedback bouton — Appliqué */
+  if (applyBtn) {
+    applyBtn.textContent = '✓ Appliqué';
+    applyBtn.disabled = false;
+    applyBtn.style.opacity = '1';
+    applyBtn.style.background = '#00c853';
+    applyBtn.style.borderColor = '#00c853';
+  }
+
+  /* Noms lisibles */
+  var provNames = {puter:'Puter Cloud',openai:'OpenAI',claude:'Claude (Anthropic)',qwen:'Qwen Local',lmstudio:'LM Studio',ollama:'Ollama'};
+  var provLabel = provNames[prov] || prov;
+  toast('✓ Fournisseur IA appliqué : ' + provLabel, 'success');
+
+  /* Fermer après 1.5s */
+  setTimeout(closeSettings, 1500);
 }
 
 /* ─── Render TTS provider sub-options ─────────────────────── */
@@ -3349,7 +3535,7 @@ function renderTTSProvOpts(provider) {
 }
 window.renderTTSProvOpts = renderTTSProvOpts;
 
-function saveVoiceSettings() {
+async function saveVoiceSettings() {
   /* TTS on/off */
   var ttsCb = document.getElementById('sTTS');
   if (ttsCb) { S.ttsOn = ttsCb.checked; S.config.ttsOn = S.ttsOn; }
@@ -3411,15 +3597,25 @@ function saveVoiceSettings() {
     else              { if (window.EVAWakeWord) window.EVAWakeWord.stop();  }
   }
 
-  /* Sauvegarde */
+  /* Sauvegarde locale */
   saveCfg();
   if (window.updateTtsBtn) window.updateTtsBtn();
 
   /* Mise à jour du badge provider dans l'UI */
   updateProviderBadge();
 
+  /* Sauvegarde Firebase — sync cross-appareils (clés incluses) */
+  if (S.user && S.user.uid) {
+    try {
+      await db.collection('users').doc(S.user.uid).set(
+        { preferences: S.config },
+        { merge: true }
+      );
+    } catch(e) { console.warn('[EVA] Firebase voice prefs save:', e); }
+  }
+
   var provLabel = {'native':'Navigateur','puter':'Puter','elevenlabs':'ElevenLabs','openai':'OpenAI TTS'}[S.config.voiceProvider||'native'] || S.config.voiceProvider;
-  toast('Paramètres audio sauvegardés — provider : ' + provLabel, 'success');
+  toast('✓ Paramètres audio sauvegardés — provider : ' + provLabel, 'success');
 
   /* Re-render les options pour afficher l'état mis à jour des clés */
   if (provSel) setTimeout(function(){ renderTTSProvOpts(provSel.value); }, 100);
@@ -4861,6 +5057,72 @@ document.addEventListener('keydown', function(e) {
     </div>
   </div>
 </div>
+
+<!-- ════════════════ QWEN DOWNLOAD MODAL ════════════════ -->
+<div class="qwen-dl-overlay" id="qwenDlOverlay">
+  <div class="qwen-dl-box">
+    <div class="qwen-dl-icon">⬇️</div>
+    <div class="qwen-dl-title" id="qwenDlTitle">CHARGEMENT DU MODÈLE IA</div>
+    <div class="qwen-dl-sub" id="qwenDlSub">Téléchargement en cours... Veuillez patienter quelques minutes.<br>Le modèle sera mis en cache pour les prochaines utilisations.</div>
+    <div class="qwen-dl-bar-wrap">
+      <div class="qwen-dl-bar" id="qwenDlBar"></div>
+    </div>
+    <div class="qwen-dl-pct" id="qwenDlPct">0%</div>
+    <div class="qwen-dl-hint">Le modèle Qwen fonctionne entièrement sur votre appareil — aucune donnée n'est envoyée sur internet.</div>
+  </div>
+</div>
+
+<script>
+/* ═══ QWEN DOWNLOAD MODAL CONTROLS ═══ */
+window.showQwenDownloadModal = function(modelName) {
+  var overlay = document.getElementById('qwenDlOverlay');
+  var title = document.getElementById('qwenDlTitle');
+  var sub = document.getElementById('qwenDlSub');
+  var bar = document.getElementById('qwenDlBar');
+  var pct = document.getElementById('qwenDlPct');
+  if (!overlay) return;
+  if (title) title.textContent = 'CHARGEMENT DU MODÈLE IA';
+  if (sub) sub.innerHTML = 'Téléchargement en cours...<br><strong style="color:var(--cyan)">' + (modelName||'Qwen Local') + '</strong><br><span style="color:var(--text-muted)">Veuillez patienter quelques minutes.</span>';
+  if (bar) bar.style.width = '0%';
+  if (pct) pct.textContent = '0%';
+  overlay.classList.add('active');
+};
+
+window.updateQwenDownloadProgress = function(progressObj) {
+  var bar = document.getElementById('qwenDlBar');
+  var pct = document.getElementById('qwenDlPct');
+  var sub = document.getElementById('qwenDlSub');
+  if (!bar) return;
+  var p = 0;
+  if (progressObj && typeof progressObj.progress === 'number') {
+    p = Math.round(progressObj.progress * 100);
+  } else if (progressObj && typeof progressObj === 'string') {
+    var m = progressObj.match(/(\d+(\.\d+)?)\s*%/);
+    if (m) p = Math.round(parseFloat(m[1]));
+  }
+  p = Math.min(Math.max(p, 0), 100);
+  bar.style.width = p + '%';
+  if (pct) pct.textContent = p + '%';
+  if (sub && p > 0) {
+    var phase = progressObj && progressObj.text ? progressObj.text : ('Téléchargement en cours... ' + p + '%');
+    sub.innerHTML = '<span style="color:var(--text-muted)">' + phase + '</span>';
+  }
+};
+
+window.hideQwenDownloadModal = function() {
+  var overlay = document.getElementById('qwenDlOverlay');
+  if (!overlay) return;
+  var bar = document.getElementById('qwenDlBar');
+  var pct = document.getElementById('qwenDlPct');
+  var title = document.getElementById('qwenDlTitle');
+  var sub = document.getElementById('qwenDlSub');
+  if (bar) bar.style.width = '100%';
+  if (pct) pct.textContent = '100%';
+  if (title) title.textContent = '✓ MODÈLE PRÊT';
+  if (sub) sub.innerHTML = '<span style="color:#00c853">EVA est prête à répondre avec Qwen Local.</span>';
+  setTimeout(function() { overlay.classList.remove('active'); }, 1200);
+};
+</script>
 
 </body>
 </html>

@@ -107,6 +107,43 @@ An AI-powered intelligent virtual assistant web app with a Grok-like chat interf
 - Natural blinking every 3–7 seconds; states managed in `js/eva-character.js`
 
 ## Architecture Notes
-- `chat.html` is monolithic (~4540 lines) — all chat logic is inline; `js/ui/chat-ui.js` and `js/app.js` are NOT imported by chat.html
+- `chat.html` is monolithic (~5100 lines) — all chat logic is inline; `js/ui/chat-ui.js` and `js/app.js` are NOT imported by chat.html
 - `js/settings/settings-ui.js` is a module used by the module-based app system only — NOT by chat.html
 - Settings in chat.html use `S` (global state object) and `saveCfg()`/`loadCfg()` (localStorage)
+
+## API Keys / Provider Settings — Firebase Sync (2025-03)
+- All API keys (OpenAI, Claude, ElevenLabs, OpenAI TTS, Ollama, LM Studio, etc.) and provider prefs are saved to Firebase `users/{uid}/preferences` on every "Appliquer" / "Sauvegarder" action
+- On login, `loadProfile()` merges Firebase preferences into `S.config` — keys are restored automatically across devices
+- `saveCfg()` still writes to localStorage as local cache; Firebase is the cross-device source of truth
+- `saveAISettings()` and `saveVoiceSettings()` are both `async` to support Firebase writes
+
+## Provider Definitions — Changes (2025-03)
+- **Puter:** Removed Claude 3.5 Sonnet (broken) — only GPT-4o Mini and GPT-4o remain
+- **Claude:** Removed Claude 3.5 Sonnet — only Haiku and Opus available
+- **Qwen:** Description updated with disclaimer "Assistant uniquement — ne convient pas pour le code"
+
+## Apply Button UX (2025-03)
+- Clicking "Appliquer" in AI settings: button immediately changes to "⏳ Application...", then "✓ Appliqué" (green) on success
+- Settings panel auto-closes after 1.5s
+- Toast notification confirms the new provider name in plain language
+- Same pattern for all providers (Puter, OpenAI, Claude, Qwen, LM Studio, Ollama)
+
+## Qwen Local — Download Progress Modal (2025-03)
+- Qwen initialization is now lazy — model is NOT downloaded when clicking "Appliquer"
+- Download triggers on the FIRST message sent in the conversation
+- Progress modal (`.qwen-dl-overlay`) appears with: animated icon, model name, progress bar (0→100%), percentage, and hint text
+- `window.showQwenDownloadModal(modelName)`, `window.updateQwenDownloadProgress(progress)`, `window.hideQwenDownloadModal()` — global controls
+- `js/ai/providers.js` QwenProvider uses `_doDownload()` which calls WebLLM with `initProgressCallback` → updates modal
+- Modal auto-closes 1.2s after download completes with "✓ MODÈLE PRÊT" confirmation
+
+## Qwen Role Fix (2025-03)
+- System prompt for Qwen gets an appended reinforcement: `[RAPPEL CRITIQUE — modèle local Qwen]` reminding it that it is EVA (the AI) not the user, and that it is an assistant-only model (no code)
+
+## Vision / Image Analysis — Provider-Aware (2025-03)
+- `analyzeImage()` in chat.html now routes based on `S.config.aiProvider`:
+  - **openai** → OpenAI Vision API (gpt-4o) using `openaiApiKey`
+  - **claude** → Anthropic API with base64 image using `claudeApiKey`
+  - **lmstudio** → LM Studio `/v1/chat/completions` with image_url
+  - **ollama** → Ollama `/api/generate` with llava model and base64 images
+  - **qwen** → Returns informative message (vision not supported locally)
+  - **puter** → Default, uses Puter GPT-4o (fallback for all others without keys)

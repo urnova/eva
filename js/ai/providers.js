@@ -12,33 +12,53 @@ class QwenProvider {
     this.config = config;
     this.engine = null;
     this.ready = false;
+    this._initializing = false;
   }
 
+  // Lazy init — ne télécharge pas au démarrage
   async initialize() {
-    try {
-      // Import WebLLM dynamically
-      const { CreateMLCEngine } = await import('https://esm.run/@mlc-ai/web-llm');
+    return { success: true };
+  }
 
+  // Téléchargement réel avec modal de progression
+  async _doDownload() {
+    if (this._initializing) return;
+    this._initializing = true;
+    try {
+      const { CreateMLCEngine } = await import('https://esm.run/@mlc-ai/web-llm');
       const selectedModel = this.config.qwenModel || 'Qwen2-0.5B-Instruct-q4f16_1-MLC';
+
+      if (window.showQwenDownloadModal) window.showQwenDownloadModal(selectedModel);
 
       this.engine = await CreateMLCEngine(selectedModel, {
         initProgressCallback: (progress) => {
-          console.log('Loading Qwen:', progress);
+          console.log('Qwen progress:', progress);
+          if (window.updateQwenDownloadProgress) window.updateQwenDownloadProgress(progress);
         }
       });
 
       this.ready = true;
-      return { success: true };
+      if (window.hideQwenDownloadModal) window.hideQwenDownloadModal();
     } catch (error) {
+      this._initializing = false;
+      if (window.hideQwenDownloadModal) window.hideQwenDownloadModal();
       console.error('Qwen init error:', error);
-      return { success: false, error: error.message };
+      throw error;
     }
+    this._initializing = false;
   }
 
   async sendMessage(messages, systemPrompt) {
-    if (systemPrompt === undefined) systemPrompt = window.EVA_SYSTEM_PROMPT || 'Tu es Eva, une assistante IA bienveillante.';
+    if (systemPrompt === undefined) {
+      systemPrompt = window.EVA_SYSTEM_PROMPT ||
+        'Tu es Eva, une assistante IA bienveillante créée par Astral Technologie. ' +
+        'Tu es un assistant personnel conversationnel. ' +
+        'IMPORTANT : Tu es l\'IA, PAS l\'utilisateur. Réponds toujours en tant qu\'Eva. ' +
+        '⚠️ Ce modèle Qwen est un assistant uniquement — il ne génère pas de code. ' +
+        'Réponds en français de manière naturelle et bienveillante.';
+    }
     if (!this.ready) {
-      await this.initialize();
+      await this._doDownload();
     }
 
     try {
