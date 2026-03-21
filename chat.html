@@ -20,6 +20,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
 <script src="https://js.puter.com/v2/"></script>
 
 <style>
@@ -2067,6 +2068,7 @@ function initAuth() {
     initChatSession();
     loadConvs();
     setTimeout(function(){ loadReminders(); }, 2000);
+    setTimeout(function(){ initFCM(); }, 3000);
     // Init wake word (stays off until user activates)
     if (window.EVAWakeWord) {
       window.EVAWakeWord.init({
@@ -3604,19 +3606,31 @@ function renderSettings(section) {
     var notifPerm = ('Notification' in window) ? Notification.permission : 'unavailable';
     var permLabel = {granted:'✅ Autorisées', denied:'❌ Bloquées', default:'⏳ Non configurées', unavailable:'⚠ Non supporté'}[notifPerm] || notifPerm;
     var permColor = {granted:'var(--cyan)', denied:'#ff4d6d', default:'var(--text-muted)', unavailable:'var(--text-dim)'}[notifPerm] || 'var(--text-muted)';
+    var hasFcmToken = !!_fcmToken;
+    var fcmStatus = notifPerm === 'granted' && hasFcmToken ? '✅ Push actif (hors-ligne)' : notifPerm === 'granted' ? '🔄 Navigateur seulement' : '—';
+    var fcmColor  = notifPerm === 'granted' && hasFcmToken ? 'var(--cyan)' : notifPerm === 'granted' ? 'var(--text-muted)' : 'var(--text-dim)';
     c.innerHTML =
       '<div class="settings-section">' +
       '<div class="settings-section-title">Notifications Push</div>' +
       '<div class="settings-row">' +
-        '<div><div class="settings-row-label">État actuel</div><div class="settings-row-sub">Chrome, Edge, Opera (PC &amp; mobile)</div></div>' +
+        '<div><div class="settings-row-label">Permission navigateur</div><div class="settings-row-sub">Chrome, Edge, Firefox, Opera</div></div>' +
         '<div style="color:'+permColor+';font-size:0.82em;font-weight:600">'+permLabel+'</div>' +
       '</div>' +
+      '<div class="settings-row">' +
+        '<div><div class="settings-row-label">Mode push Firebase</div><div class="settings-row-sub">Reçoit les alertes même site fermé</div></div>' +
+        '<div style="color:'+fcmColor+';font-size:0.80em;font-weight:600">'+fcmStatus+'</div>' +
+      '</div>' +
       (notifPerm !== 'granted' && notifPerm !== 'denied' && notifPerm !== 'unavailable' ?
-        '<button class="btn btn-primary" onclick="activateNotifications()" style="margin-top:10px;width:100%">🔔 Activer les notifications</button>' +
-        '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px">Recevez des alertes même quand vous n\'êtes pas sur E.V.A. Le navigateur doit rester ouvert.</div>'
+        '<button class="btn btn-primary" onclick="activateNotifications()" style="margin-top:10px;width:100%">🔔 Activer les notifications push</button>' +
+        '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px">Recevez vos alarmes et rappels <strong>même si vous fermez le site</strong> — fonctionne sur PC et Android.</div>'
       : notifPerm === 'granted' ?
-        '<button class="btn btn-secondary" onclick="deactivateNotifications()" style="margin-top:10px;width:100%">🔕 Désactiver les notifications</button>' +
-        '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px">Les notifications sont actives. Cliquez pour les désactiver dans les paramètres du navigateur.</div>'
+        '<div style="display:flex;gap:8px;margin-top:10px">' +
+        '<button class="btn btn-secondary" onclick="deactivateNotifications()" style="flex:1">🔕 Désactiver</button>' +
+        (hasFcmToken ? '' : '<button class="btn btn-primary" onclick="activateNotifications()" style="flex:1">🔁 Re-enregistrer</button>') +
+        '</div>' +
+        '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px">' +
+        (hasFcmToken ? '🛡️ Push Firebase actif — alertes garanties même hors-ligne.' : '⚠ Push non enregistré. Cliquez sur Re-enregistrer.') +
+        '</div>'
       : notifPerm === 'denied' ?
         '<div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);border-radius:10px;padding:12px;margin-top:10px;font-size:0.78em;color:var(--text-muted)">' +
         '⚠ Les notifications ont été bloquées par votre navigateur.<br>Pour les réactiver, cliquez sur l\'icône 🔒 dans la barre d\'adresse et autorisez les notifications pour E.V.A.' +
@@ -3626,12 +3640,27 @@ function renderSettings(section) {
       '<div class="settings-section">' +
       '<div class="settings-section-title">Types de notifications</div>' +
       '<div class="settings-row">' +
-        '<div><div class="settings-row-label">Alarmes</div><div class="settings-row-sub">Son en boucle + boutons Arrêter / Reporter</div></div>' +
-        '<span style="color:var(--cyan);font-size:0.75em">Toujours actif</span>' +
+        '<div><div class="settings-row-label">⏰ Alarmes</div><div class="settings-row-sub">Alerte push + boutons Arrêter / Reporter 10 min</div></div>' +
+        '<span style="color:var(--cyan);font-size:0.75em">Auto</span>' +
       '</div>' +
       '<div class="settings-row">' +
-        '<div><div class="settings-row-label">Rappels</div><div class="settings-row-sub">Notification à l\'heure définie</div></div>' +
-        '<span style="color:var(--cyan);font-size:0.75em">Toujours actif</span>' +
+        '<div><div class="settings-row-label">📝 Rappels</div><div class="settings-row-sub">Notification push à l\'heure exacte</div></div>' +
+        '<span style="color:var(--cyan);font-size:0.75em">Auto</span>' +
+      '</div>' +
+      '<div class="settings-row">' +
+        '<div><div class="settings-row-label">📅 Événements calendrier</div><div class="settings-row-sub">Alerte 15 min avant</div></div>' +
+        '<span style="color:var(--cyan);font-size:0.75em">Auto</span>' +
+      '</div>' +
+      '</div>' +
+      '<div class="settings-section">' +
+      '<div class="settings-section-title">Compatibilité</div>' +
+      '<div style="font-size:0.75em;color:var(--text-muted);line-height:1.7">' +
+      '✅ Chrome PC &amp; Android<br>' +
+      '✅ Edge PC &amp; Android<br>' +
+      '✅ Firefox PC &amp; Android<br>' +
+      '✅ Opera PC &amp; Android<br>' +
+      '✅ Safari iOS 16.4+ (iPad &amp; iPhone)<br>' +
+      '❌ Safari macOS (non supporté)' +
       '</div>' +
       '</div>';
 
@@ -4667,14 +4696,96 @@ function alarmSnooze() {
 }
 window.alarmSnooze = alarmSnooze;
 
+/* ═══════════════════════════════════════════════════
+   FCM — PUSH NOTIFICATIONS FIREBASE CLOUD MESSAGING
+═══════════════════════════════════════════════════ */
+var _fcmMessaging = null;
+var _fcmToken = null;
+
+async function initFCM() {
+  if (!S.user) return;
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+  try {
+    /* Récupérer la VAPID key depuis le serveur */
+    var cfgRes = await fetch('/api/config');
+    var cfgJson = await cfgRes.json();
+    var vapidKey = cfgJson.vapidKey;
+    if (!vapidKey) return; /* Clé non configurée — on attend */
+
+    /* Enregistrer le service worker */
+    var swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+
+    /* Initialiser Firebase Messaging */
+    if (!_fcmMessaging) {
+      _fcmMessaging = firebase.messaging();
+    }
+
+    /* Si permission déjà accordée → enregistrer le token */
+    if (Notification.permission === 'granted') {
+      await _fcmRegisterToken(swReg, vapidKey);
+    }
+
+    /* Messages quand l'app est au premier plan */
+    _fcmMessaging.onMessage(function(payload) {
+      var data = payload.data || {};
+      var notif = payload.notification || {};
+      var title = notif.title || data.title || 'E.V.A';
+      var body  = notif.body  || data.body  || '';
+      toast('🔔 ' + title + (body ? ' — ' + body : ''), 'info');
+    });
+
+  } catch(e) {
+    console.warn('[FCM] initFCM error:', e);
+  }
+}
+
+async function _fcmRegisterToken(swReg, vapidKey) {
+  try {
+    if (!_fcmMessaging) return;
+    var token = await _fcmMessaging.getToken({ vapidKey: vapidKey, serviceWorkerRegistration: swReg });
+    if (!token) return;
+    _fcmToken = token;
+    /* Sauvegarder le token dans Firestore */
+    if (S.user && db) {
+      await db.collection('users').doc(S.user.uid).set({
+        fcmToken: token,
+        fcmTokenUpdated: new Date().toISOString(),
+        timezoneOffset: new Date().getTimezoneOffset()
+      }, { merge: true });
+    }
+    console.log('[FCM] Token enregistré');
+  } catch(e) {
+    console.warn('[FCM] getToken error:', e);
+  }
+}
+
 async function activateNotifications() {
-  var granted = await requestNotificationPermission();
-  if (granted) {
-    toast('🔔 Notifications activées !', 'success');
-    renderSettings('notifications');
-  } else {
-    toast('Notifications refusées ou non supportées', 'error');
-    renderSettings('notifications');
+  if (!('Notification' in window)) {
+    toast('Les notifications ne sont pas supportées par ce navigateur', 'error');
+    return;
+  }
+  try {
+    var perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      /* Enregistrer le token FCM */
+      var cfgRes = await fetch('/api/config');
+      var cfgJson = await cfgRes.json();
+      var vapidKey = cfgJson.vapidKey;
+      if (vapidKey && _fcmMessaging) {
+        var swReg = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+                    || await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        await _fcmRegisterToken(swReg, vapidKey);
+        toast('🔔 Notifications push activées — vous recevrez des alertes même hors-ligne !', 'success');
+      } else {
+        toast('🔔 Notifications navigateur activées', 'success');
+      }
+      renderSettings('notifications');
+    } else {
+      toast('Notifications refusées', 'error');
+      renderSettings('notifications');
+    }
+  } catch(e) {
+    toast('Erreur lors de l\'activation des notifications', 'error');
   }
 }
 window.activateNotifications = activateNotifications;
