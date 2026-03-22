@@ -1900,7 +1900,7 @@ body::before{
             </div>
             <div class="vision-chat-input-row">
               <textarea id="vrInput" placeholder="Décris le problème ou montre le matériel…" onkeydown="visionInputKey(event,'vr')"></textarea>
-              <button class="vision-mic-btn" id="vrMicBtn" title="Wake word — Parler pour capturer et envoyer" onclick="visionWakeCapture('vr')">
+              <button class="vision-mic-btn" id="vrMicBtn" title='Wake word vision — cliquer pour activer, puis dites "Eva, [commande]"' onclick="visionWakeCapture('vr')">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
               </button>
               <button class="vision-btn" title="Capturer l'image et analyser" onclick="visionCaptureSend('vr')" style="padding:0 10px;height:40px;">📷</button>
@@ -1994,7 +1994,7 @@ body::before{
             </div>
             <div class="vision-chat-input-row">
               <textarea id="vaInput" placeholder="Pose ta question ou décris ce que tu veux analyser…" onkeydown="visionInputKey(event,'va')"></textarea>
-              <button class="vision-mic-btn" id="vaMicBtn" title="Wake word — Parler pour capturer et envoyer" onclick="visionWakeCapture('va')">
+              <button class="vision-mic-btn" id="vaMicBtn" title='Wake word vision — cliquer pour activer, puis dites "Eva, [commande]"' onclick="visionWakeCapture('va')">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
               </button>
               <button class="vision-btn" title="Capturer la source et analyser" onclick="visionCaptureSend('va')" style="padding:0 10px;height:40px;">📷</button>
@@ -6244,7 +6244,8 @@ async function visionCaptureSend(prefix) {
   } catch(e) {
     if (thinking) thinking.remove();
     console.error('[VISION] captureSend:', e);
-    _visionAppendMsg(prefix, 'assistant', '❌ Erreur: ' + (e.message || e), null);
+    var errMsg = (e && e.message) ? e.message : (e && e.error) ? e.error : (typeof e === 'string' ? e : JSON.stringify(e) || 'Erreur inconnue');
+    _visionAppendMsg(prefix, 'assistant', '❌ Erreur: ' + errMsg, null);
   }
   state.busy = false;
 }
@@ -6399,54 +6400,137 @@ window.visionNewSession = visionNewSession;
 function visionClearSession(prefix) { visionNewSession(prefix); }
 window.visionClearSession = visionClearSession;
 
-/* ── Capture vocale pour les modules vision (bouton 🎤) ─────── */
-function visionWakeCapture(prefix) {
-  var inputId = prefix === 'vr' ? 'vrInput' : 'vaInput';
-  var micBtnId = prefix === 'vr' ? 'vrMicBtn' : 'vaMicBtn';
-  var inp = document.getElementById(inputId);
-  var micBtn = document.getElementById(micBtnId);
+/* ═══ VISION WAKE WORD — Écoute continue "Eva, [commande]" ════ */
+var _VWW = {
+  vr: { recognition: null, isActive: false, state: 'idle', buffer: '', restartTimer: null },
+  va: { recognition: null, isActive: false, state: 'idle', buffer: '', restartTimer: null }
+};
+var _VWW_WORDS = ['eva', 'éva', 'hey eva', 'e.v.a'];
+
+function _vwwHasWake(t) {
+  var lo = t.toLowerCase();
+  return _VWW_WORDS.some(function(w) { return lo.includes(w); });
+}
+function _vwwExtractCmd(text) {
+  var lo = text.toLowerCase(), best = -1, bestLen = 0;
+  _VWW_WORDS.forEach(function(w) {
+    var idx = lo.indexOf(w);
+    if (idx !== -1 && w.length > bestLen) { best = idx; bestLen = w.length; }
+  });
+  if (best === -1) return null;
+  return text.substring(best + bestLen).replace(/^[\s,\.!?]+/, '').trim() || null;
+}
+function _vwwSetPlaceholder(prefix, listening) {
+  var inp = document.getElementById(prefix === 'vr' ? 'vrInput' : 'vaInput');
+  if (!inp) return;
+  if (listening) { inp.placeholder = '🎤 J\'écoute… dites "Eva, [commande]"'; }
+  else { inp.placeholder = prefix === 'vr' ? 'Décris le problème ou montre le matériel…' : 'Pose ta question ou décris ce que tu veux analyser…'; }
+}
+function _vwwFire(prefix, cmd) {
+  var inp = document.getElementById(prefix === 'vr' ? 'vrInput' : 'vaInput');
+  if (inp) inp.value = cmd;
+  var st = _VS[prefix];
+  var hasVideo = (prefix === 'vr' && st.camStream) ||
+                 (prefix === 'va' && (st.camStream || st.screenStream));
+  setTimeout(function() {
+    if (hasVideo) { visionCaptureSend(prefix); } else { visionSend(prefix); }
+  }, 80);
+}
+function _vwwBuild(prefix) {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  var ws = _VWW[prefix];
+  var r = new SR();
+  r.lang = (S.config && S.config.voiceLang) || 'fr-FR';
+  r.continuous = true;
+  r.interimResults = true;
+  r.maxAlternatives = 1;
+  r.onresult = function(event) {
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      var res = event.results[i];
+      var transcript = res[0].transcript;
+      var isFinal = res.isFinal;
+      if (ws.state === 'idle') {
+        if (_vwwHasWake(transcript) && isFinal) {
+          var cmd = _vwwExtractCmd(transcript);
+          if (cmd && cmd.length > 1) {
+            _vwwFire(prefix, cmd);
+          } else {
+            ws.state = 'triggered';
+            ws.buffer = '';
+            _vwwSetPlaceholder(prefix, true);
+          }
+        }
+      } else if (ws.state === 'triggered') {
+        ws.buffer = transcript;
+        if (isFinal && ws.buffer.trim().length > 1) {
+          var finalCmd = ws.buffer.trim();
+          ws.state = 'idle';
+          ws.buffer = '';
+          _vwwSetPlaceholder(prefix, false);
+          _vwwFire(prefix, finalCmd);
+        }
+      }
+    }
+  };
+  r.onend = function() {
+    if (ws.state === 'triggered' && ws.buffer.trim().length > 1) {
+      var cmd2 = ws.buffer.trim();
+      ws.state = 'idle'; ws.buffer = '';
+      _vwwSetPlaceholder(prefix, false);
+      _vwwFire(prefix, cmd2);
+      return;
+    }
+    ws.state = 'idle'; ws.buffer = '';
+    if (!ws.isActive) return;
+    if (ws.restartTimer) clearTimeout(ws.restartTimer);
+    ws.restartTimer = setTimeout(function() {
+      if (ws.isActive && ws.recognition) { try { ws.recognition.start(); } catch(e) {} }
+    }, 350);
+  };
+  r.onerror = function(ev) {
+    ws.state = 'idle'; ws.buffer = '';
+    if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+      toast('Microphone non autorisé', 'error');
+      visionWakeStop(prefix);
+      return;
+    }
+    if (!ws.isActive) return;
+    if (ws.restartTimer) clearTimeout(ws.restartTimer);
+    ws.restartTimer = setTimeout(function() {
+      if (ws.isActive && ws.recognition) { try { ws.recognition.start(); } catch(e2) {} }
+    }, 1000);
+  };
+  return r;
+}
+function visionWakeStart(prefix) {
+  var ws = _VWW[prefix];
+  if (ws.isActive) return;
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { toast('Reconnaissance vocale non supportée par ce navigateur', 'error'); return; }
-  /* Si déjà en cours, annuler */
-  if (micBtn && micBtn._recognition) {
-    micBtn._recognition.abort();
-    micBtn._recognition = null;
-    micBtn.classList.remove('listening');
-    return;
-  }
-  var recognition = new SR();
-  recognition.lang = (S.config && S.config.voiceLang) || 'fr-FR';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-  recognition.continuous = false;
-  if (micBtn) {
-    micBtn._recognition = recognition;
-    micBtn.classList.add('listening');
-    micBtn.title = 'Cliquer pour annuler';
-  }
-  recognition.onresult = function(e) {
-    var transcript = e.results[0][0].transcript.trim();
-    if (inp) inp.value = transcript;
-    if (micBtn) { micBtn._recognition = null; micBtn.classList.remove('listening'); micBtn.title = 'Wake word — Parler pour capturer et envoyer'; }
-    /* Déclencher capture si flux actif, sinon texte seul */
-    var state = _VS[prefix];
-    var hasVideo = (prefix === 'vr' && state.camStream) ||
-                  (prefix === 'va' && (state.camStream || state.screenStream));
-    setTimeout(function() {
-      if (hasVideo) { visionCaptureSend(prefix); }
-      else { visionSend(prefix); }
-    }, 150);
-  };
-  recognition.onerror = function(e) {
-    if (micBtn) { micBtn._recognition = null; micBtn.classList.remove('listening'); }
-    if (e.error !== 'aborted' && e.error !== 'no-speech') toast('Micro : ' + e.error, 'error');
-  };
-  recognition.onend = function() {
-    if (micBtn) { micBtn._recognition = null; micBtn.classList.remove('listening'); }
-  };
-  recognition.start();
+  ws.isActive = true; ws.state = 'idle'; ws.buffer = '';
+  ws.recognition = _vwwBuild(prefix);
+  try { ws.recognition.start(); } catch(e) {}
+  var btn = document.getElementById(prefix === 'vr' ? 'vrMicBtn' : 'vaMicBtn');
+  if (btn) { btn.classList.add('listening'); btn.title = 'Wake word actif — dites "Eva, [commande]" — cliquer pour arrêter'; }
+  _vwwSetPlaceholder(prefix, false);
+}
+function visionWakeStop(prefix) {
+  var ws = _VWW[prefix];
+  ws.isActive = false; ws.state = 'idle'; ws.buffer = '';
+  if (ws.restartTimer) { clearTimeout(ws.restartTimer); ws.restartTimer = null; }
+  if (ws.recognition) { try { ws.recognition.stop(); } catch(e) {} ws.recognition = null; }
+  var btn = document.getElementById(prefix === 'vr' ? 'vrMicBtn' : 'vaMicBtn');
+  if (btn) { btn.classList.remove('listening'); btn.title = 'Wake word vision — cliquer pour activer'; }
+  _vwwSetPlaceholder(prefix, false);
+}
+function visionWakeCapture(prefix) {
+  /* Toggle : activer ou désactiver l'écoute continue */
+  if (_VWW[prefix].isActive) { visionWakeStop(prefix); } else { visionWakeStart(prefix); }
 }
 window.visionWakeCapture = visionWakeCapture;
+window.visionWakeStart = visionWakeStart;
+window.visionWakeStop = visionWakeStop;
 
 /* ── Griser/restaurer le bouton wake word principal ─────────── */
 function _visionSetWwBtn(gray) {
@@ -6463,15 +6547,10 @@ function _visionSetWwBtn(gray) {
   }
 }
 
-/* ── Arrêter le mic vision si actif ─────────────────────────── */
+/* ── Arrêter le wake word vision si actif ───────────────────── */
 function _visionStopMic(prefix) {
-  var micBtnId = prefix === 'vr' ? 'vrMicBtn' : 'vaMicBtn';
-  var micBtn = document.getElementById(micBtnId);
-  if (micBtn && micBtn._recognition) {
-    micBtn._recognition.abort();
-    micBtn._recognition = null;
-    micBtn.classList.remove('listening');
-    micBtn.title = 'Wake word — Parler pour capturer et envoyer';
+  if (_VWW && _VWW[prefix] && _VWW[prefix].isActive) {
+    visionWakeStop(prefix);
   }
 }
 
