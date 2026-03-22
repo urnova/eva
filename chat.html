@@ -2309,6 +2309,7 @@ async function loadProfile(uid) {
         try { localStorage.setItem('eva_config', JSON.stringify(S.config)); } catch(e){}
       }
       if (typeof setupReportsAccess === 'function') { setupReportsAccess(); updateReportBadge(); }
+      if (typeof initVisionModules === 'function') { initVisionModules(); }
       /* Puter auto-check après chargement Firebase */
       if (window.puter) {
         setTimeout(async function() {
@@ -5836,7 +5837,9 @@ var _VA_SYSTEM = 'Tu es E.V.A, une assistante intelligente et polyvalente avec v
 /* ── Vérification du rôle ─────────────────────────────────────── */
 function _isCreator() {
   var r = ((S.profile && S.profile.role) || '').toLowerCase().trim();
-  return r === 'creator' || r === 'createur' || r === 'créateur';
+  var lbl = ((S.profile && S.profile.devKeyLabel) || '').toLowerCase();
+  var creatorTerms = ['creator', 'createur', 'créateur'];
+  return creatorTerms.some(function(t){ return r === t || lbl.indexOf(t) !== -1; });
 }
 
 function _isVisionAssistUser() {
@@ -5845,8 +5848,8 @@ function _isVisionAssistUser() {
   var creatorTerms = ['creator', 'createur', 'créateur'];
   var devTerms = ['developer', 'développeur', 'developpeur'];
   var wifeTerms = ['creator_wife', 'wife', 'femme', 'epouse', 'épouse'];
-  return creatorTerms.some(function(t){ return r === t; }) ||
-         devTerms.some(function(t){ return r === t || r.indexOf(t) !== -1; }) ||
+  return creatorTerms.some(function(t){ return r === t || lbl.indexOf(t) !== -1; }) ||
+         devTerms.some(function(t){ return r === t || r.indexOf(t) !== -1 || lbl.indexOf(t) !== -1; }) ||
          wifeTerms.some(function(t){ return r === t || lbl.indexOf(t) !== -1; });
 }
 
