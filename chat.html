@@ -1459,14 +1459,6 @@ body::before{
       </div>
     </div>
 
-    <div class="conv-section">
-      <div class="conv-header">
-        <span class="conv-label">Conversations</span>
-        <button class="new-conv-btn" id="newConvBtn">+ Nouvelle</button>
-      </div>
-      <div id="convList"><div class="conv-empty">Aucune conversation</div></div>
-    </div>
-
     <!-- ── Section Admin (or/gold) — visible dev/creator uniquement ── -->
     <div class="sb-nav-section nav-gold-section" id="navGoldSection">
       <div class="sb-nav-label gold-label">⬥ Admin</div>
@@ -1485,6 +1477,14 @@ body::before{
         <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         Vision Assistance
       </div>
+    </div>
+
+    <div class="conv-section">
+      <div class="conv-header">
+        <span class="conv-label">Conversations</span>
+        <button class="new-conv-btn" id="newConvBtn">+ Nouvelle</button>
+      </div>
+      <div id="convList" style="max-height:260px;overflow-y:auto;"><div class="conv-empty">Aucune conversation</div></div>
     </div>
   </div>
 
@@ -1871,6 +1871,7 @@ body::before{
             </div>
             <div class="vision-chat-input-row">
               <textarea id="vrInput" placeholder="Décris le problème ou montre le matériel…" onkeydown="visionInputKey(event,'vr')"></textarea>
+              <button class="vision-btn" id="vrMicBtn" title="Parler — capture + envoi vocal" onclick="visionWakeCapture('vr')" style="font-size:1em;">🎤</button>
               <button class="vision-btn" title="Capturer la caméra et analyser" onclick="visionCaptureSend('vr')">📷</button>
               <button class="vision-btn" onclick="visionSend('vr')">➤</button>
             </div>
@@ -1948,6 +1949,7 @@ body::before{
             </div>
             <div class="vision-chat-input-row">
               <textarea id="vaInput" placeholder="Pose ta question ou décris ce que tu veux analyser…" onkeydown="visionInputKey(event,'va')"></textarea>
+              <button class="vision-btn" id="vaMicBtn" title="Parler — capture + envoi vocal" onclick="visionWakeCapture('va')" style="font-size:1em;">🎤</button>
               <button class="vision-btn" title="Capturer la source active et analyser" onclick="visionCaptureSend('va')">📷</button>
               <button class="vision-btn" onclick="visionSend('va')">➤</button>
             </div>
@@ -6084,10 +6086,11 @@ function _visionShowThinking(prefix) {
 async function _visionCallPuter(prefix, userText, imageDataUrl) {
   var sysPrompt = prefix === 'vr' ? _VR_SYSTEM : _VA_SYSTEM;
   var history = _VS[prefix].messages;
+  /* Garder seulement les 12 derniers messages pour éviter les dépassements de tokens */
+  var recent = history.slice(-12);
   var messages = [{ role: 'system', content: sysPrompt }];
-  /* Ajouter l'historique (texte seulement pour les anciens messages) */
-  for (var i = 0; i < history.length; i++) {
-    messages.push({ role: history[i].role, content: history[i].content });
+  for (var i = 0; i < recent.length; i++) {
+    messages.push({ role: recent[i].role, content: recent[i].content });
   }
   /* Message courant avec ou sans image */
   if (imageDataUrl) {
@@ -6096,16 +6099,28 @@ async function _visionCallPuter(prefix, userText, imageDataUrl) {
     messages.push({
       role: 'user',
       content: [
-        { type: 'text', text: userText || 'Analyse cette image.' },
+        { type: 'text', text: userText || 'Analyse cette image et décris ce que tu vois.' },
         { type: 'image', image: blob }
       ]
     });
   } else {
     messages.push({ role: 'user', content: userText });
   }
-  var result = await puter.ai.chat(messages, { model: 'gpt-4o' });
-  var reply = (result && result.message && result.message.content) ? result.message.content :
-              (result && result.toString ? result.toString() : 'Réponse vide');
+  /* vision:true est OBLIGATOIRE pour que Puter envoie les images à gpt-4o */
+  var result = await puter.ai.chat(messages, { model: 'gpt-4o', vision: true });
+  /* Parsing robuste de la réponse */
+  var reply = '';
+  if (result && result.message && result.message.content) {
+    reply = result.message.content;
+  } else if (result && result.choices && result.choices[0] && result.choices[0].message) {
+    reply = result.choices[0].message.content;
+  } else if (typeof result === 'string') {
+    reply = result;
+  } else if (result && result.text) {
+    reply = result.text;
+  } else {
+    reply = String(result || 'Aucune réponse');
+  }
   return reply;
 }
 
@@ -6245,19 +6260,39 @@ async function visionLoadHistory(prefix) {
       var data = d.data();
       var date = data.updatedAt ? new Date(data.updatedAt.toDate()).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
       var active = d.id === _VS[prefix].sessionId ? ' style="border-color:var(--cyan);"' : '';
-      html += '<div class="vision-session-card"' + active + ' onclick="visionRestoreSession(\'' + prefix + '\',\'' + d.id + '\')">';
-      if (data.thumb) {
-        html += '<img class="vision-session-thumb" src="' + data.thumb + '" alt="aperçu">';
-      } else {
-        html += '<div class="vision-session-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:1.4em;">' + (prefix === 'vr' ? '🔧' : '👁️') + '</div>';
-      }
-      html += '<div class="vision-session-title">' + esc(data.title || 'Session') + '</div>';
+      html += '<div class="vision-session-card"' + active + '>';
+      var thumbEl = data.thumb
+        ? '<img class="vision-session-thumb" src="' + data.thumb + '" alt="aperçu" onclick="visionRestoreSession(\'' + prefix + '\',\'' + d.id + '\')">'
+        : '<div class="vision-session-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:1.4em;cursor:pointer;" onclick="visionRestoreSession(\'' + prefix + '\',\'' + d.id + '\')">' + (prefix === 'vr' ? '🔧' : '👁️') + '</div>';
+      html += thumbEl;
+      html += '<div class="vision-session-title" onclick="visionRestoreSession(\'' + prefix + '\',\'' + d.id + '\')" style="cursor:pointer;">' + esc(data.title || 'Session') + '</div>';
       html += '<div class="vision-session-date">' + date + '</div>';
+      html += '<button onclick="visionDeleteSession(\'' + prefix + '\',\'' + d.id + '\')" style="margin-top:4px;width:100%;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.3);color:#ff4d6d;border-radius:6px;padding:2px 0;font-size:0.62em;cursor:pointer;" title="Supprimer cette session">🗑 Supprimer</button>';
       html += '</div>';
     });
     list.innerHTML = html;
   } catch(e) { console.error('[VISION] loadHistory:', e); }
 }
+
+/* ── Supprimer une session ───────────────────────────────────── */
+async function visionDeleteSession(prefix, sessionId) {
+  if (!S.user) return;
+  if (!confirm('Supprimer cette session vision ?')) return;
+  var collName = prefix === 'vr' ? 'visionRepairSessions' : 'visionAssistSessions';
+  try {
+    await db.collection('users').doc(S.user.uid).collection(collName).doc(sessionId).delete();
+    if (_VS[prefix].sessionId === sessionId) {
+      visionNewSession(prefix);
+    } else {
+      await visionLoadHistory(prefix);
+    }
+    toast('Session supprimée', 'success');
+  } catch(e) {
+    console.error('[VISION] deleteSession:', e);
+    toast('Erreur suppression', 'error');
+  }
+}
+window.visionDeleteSession = visionDeleteSession;
 window.visionLoadHistory = visionLoadHistory;
 
 /* ── Restaurer une session ───────────────────────────────────── */
@@ -6310,18 +6345,90 @@ window.visionNewSession = visionNewSession;
 function visionClearSession(prefix) { visionNewSession(prefix); }
 window.visionClearSession = visionClearSession;
 
+/* ── Capture vocale pour les modules vision (bouton 🎤) ─────── */
+function visionWakeCapture(prefix) {
+  var inputId = prefix === 'vr' ? 'vrInput' : 'vaInput';
+  var micBtnId = prefix === 'vr' ? 'vrMicBtn' : 'vaMicBtn';
+  var inp = document.getElementById(inputId);
+  var micBtn = document.getElementById(micBtnId);
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('Reconnaissance vocale non supportée par ce navigateur', 'error'); return; }
+  /* Si déjà en cours, annuler */
+  if (micBtn && micBtn._recognition) {
+    micBtn._recognition.abort();
+    micBtn._recognition = null;
+    micBtn.textContent = '🎤';
+    micBtn.style.color = '';
+    micBtn.style.borderColor = '';
+    return;
+  }
+  var recognition = new SR();
+  recognition.lang = (S.config && S.config.voiceLang) || 'fr-FR';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.continuous = false;
+  if (micBtn) {
+    micBtn._recognition = recognition;
+    micBtn.textContent = '🔴';
+    micBtn.style.color = '#ff4d6d';
+    micBtn.style.borderColor = '#ff4d6d';
+    micBtn.title = 'Cliquer pour annuler';
+  }
+  recognition.onresult = function(e) {
+    var transcript = e.results[0][0].transcript.trim();
+    if (inp) inp.value = transcript;
+    if (micBtn) { micBtn._recognition = null; micBtn.textContent = '🎤'; micBtn.style.color = ''; micBtn.style.borderColor = ''; micBtn.title = 'Parler — capture + envoi vocal'; }
+    /* Déclencher capture si flux actif, sinon texte seul */
+    var state = _VS[prefix];
+    var hasVideo = (prefix === 'vr' && state.camStream) ||
+                  (prefix === 'va' && (state.camStream || state.screenStream));
+    setTimeout(function() {
+      if (hasVideo) { visionCaptureSend(prefix); }
+      else { visionSend(prefix); }
+    }, 150);
+  };
+  recognition.onerror = function(e) {
+    if (micBtn) { micBtn._recognition = null; micBtn.textContent = '🎤'; micBtn.style.color = ''; micBtn.style.borderColor = ''; }
+    if (e.error !== 'aborted' && e.error !== 'no-speech') toast('Micro : ' + e.error, 'error');
+  };
+  recognition.onend = function() {
+    if (micBtn) { micBtn._recognition = null; micBtn.textContent = '🎤'; micBtn.style.color = ''; micBtn.style.borderColor = ''; }
+  };
+  recognition.start();
+}
+window.visionWakeCapture = visionWakeCapture;
+
+/* ── Griser/restaurer le bouton wake word principal ─────────── */
+function _visionSetWwBtn(gray) {
+  var wwBtn = document.getElementById('wakeWordBtn');
+  if (!wwBtn) return;
+  if (gray) {
+    wwBtn.style.opacity = '0.3';
+    wwBtn.style.pointerEvents = 'none';
+    wwBtn.title = 'Wake word indisponible en mode Vision — utilisez le bouton 🎤';
+  } else {
+    wwBtn.style.opacity = '';
+    wwBtn.style.pointerEvents = '';
+    wwBtn.title = 'Wake Word — Dites \'Hey Eva\'';
+  }
+}
+
 /* ── Override setView pour les modules vision ───────────────── */
 var _origSetViewVision = window.setView;
 window.setView = function(name) {
   _origSetViewVision(name);
   if (name === 'visionRepair') {
+    _visionSetWwBtn(true);
     visionCheckLock('vr');
     visionEnumerateCams('vrCamSelect');
     visionLoadHistory('vr');
   } else if (name === 'visionAssist') {
+    _visionSetWwBtn(true);
     visionCheckLock('va');
     visionEnumerateCams('vaCamSelect');
     visionLoadHistory('va');
+  } else {
+    _visionSetWwBtn(false);
   }
 };
 
