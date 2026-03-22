@@ -139,6 +139,25 @@ An AI-powered intelligent virtual assistant web app with a Grok-like chat interf
 ## Qwen Role Fix (2025-03)
 - System prompt for Qwen gets an appended reinforcement: `[RAPPEL CRITIQUE — modèle local Qwen]` reminding it that it is EVA (the AI) not the user, and that it is an assistant-only model (no code)
 
+## Vision Modules — Réparation & Assistance (2026-03)
+- **Vision Réparation** (`viewVisionRepair`) — Créateur uniquement (`_isCreator()`)
+  - Caméra live (getUserMedia), capture de frame, chat IA vision, historique Firestore
+  - Système prompt : expert réparation informatique, diagnose de pannes
+  - Nav item `#navVisionRepair` caché par défaut, affiché via `initVisionModules()`
+- **Vision Assistance** (`viewVisionAssist`) — Créateur + Développeur + Femme du Créateur (`_isVisionAssistUser()`)
+  - Caméra live + partage d'écran (`getDisplayMedia`), onglets source (📷/🖥️)
+  - Système prompt : assistante polyvalente avec vision universelle
+  - Nav item `#navVisionAssist` caché par défaut, affiché via `initVisionModules()`
+- **Verrou Puter** : si `S.config.aiProvider !== 'puter'` ou `typeof puter === 'undefined'`, overlay flou affiché (`visionCheckLock()`) avec bouton "⚙ Changer le fournisseur IA"
+- **Appel IA** : `_visionCallPuter(prefix, text, imageBlob)` — `puter.ai.chat()` avec system prompt + historique + image optionnelle (blob converti depuis dataURL)
+- **Sessions Firestore** : `users/{uid}/visionRepairSessions/{id}` et `users/{uid}/visionAssistSessions/{id}`
+  - Champs : `title`, `messages[]`, `thumb` (miniature base64 120px), `createdAt`, `updatedAt`
+  - Max 40 messages stockés, max 20 sessions affichées dans l'historique
+- **État interne** : `_VS.vr` et `_VS.va` (sessionId, messages[], camStream, screenStream, source, busy)
+- **Fonctions globales** : `visionCamStart/Stop()`, `visionSend()`, `visionCaptureSend()`, `visionNewSession()`, `visionRestoreSession()`, `vaStartScreen()`, `vaSwitchSource()`, `initVisionModules()`, `visionCheckLock()`
+- **setView override** : check lock + énumération caméras + chargement historique à l'entrée dans les vues
+- **Firestore rules** : `visionRepairSessions` et `visionAssistSessions` ajoutées — `isOwner()` uniquement
+
 ## Vision / Image Analysis — Provider-Aware (2025-03)
 - `analyzeImage()` in chat.html now routes based on `S.config.aiProvider`:
   - **openai** → OpenAI Vision API (gpt-4o) using `openaiApiKey`

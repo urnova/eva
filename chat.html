@@ -1362,6 +1362,55 @@ body::before{
 .rp-empty{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:0.82em;}
 .rp-empty-icon{font-size:2.5em;margin-bottom:10px;}
 .rp-loading{text-align:center;padding:20px;color:var(--text-muted);font-size:0.8em;}
+
+/* ═══════════════════════════════════════════════════
+   VISION MODULES — Réparation & Assistance
+═══════════════════════════════════════════════════ */
+.vision-view-wrap{position:relative;flex:1;display:flex;flex-direction:column;gap:10px;overflow:hidden;min-height:0;}
+.vision-lock-overlay{position:absolute;inset:0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);background:rgba(10,10,22,0.72);display:flex;align-items:center;justify-content:center;z-index:20;border-radius:0;}
+.vision-lock-card{background:var(--surface);border:1px solid var(--cyan);border-radius:18px;padding:30px 36px;text-align:center;max-width:360px;box-shadow:0 0 40px rgba(0,212,255,0.15);}
+.vision-lock-icon{font-size:2.4em;margin-bottom:12px;}
+.vision-lock-title{font-family:'Orbitron',monospace;font-size:0.82em;letter-spacing:3px;color:var(--cyan);margin-bottom:8px;}
+.vision-lock-msg{font-size:0.8em;color:var(--text-muted);line-height:1.6;margin-bottom:16px;}
+.vision-lock-badge{display:inline-block;background:rgba(0,212,255,0.08);border:1px solid var(--cyan);border-radius:8px;padding:4px 12px;font-family:'Space Mono',monospace;font-size:0.72em;color:var(--cyan);letter-spacing:1px;}
+.vision-top-grid{display:grid;grid-template-columns:minmax(260px,1fr) 1.6fr;gap:10px;min-height:0;flex:1;}
+.vision-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.vision-panel-hdr{padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:0.62em;font-family:'Orbitron',monospace;letter-spacing:2px;color:var(--text-muted);display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.vision-panel-hdr .live-dot{width:6px;height:6px;border-radius:50%;background:#ff4d6d;animation:livePulse 1.2s infinite;}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.vision-video-wrap{flex:1;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0;}
+.vision-video-wrap video{width:100%;height:100%;object-fit:cover;}
+.vision-video-placeholder{color:var(--text-dim);font-size:0.75em;text-align:center;padding:20px;}
+.vision-cam-controls{padding:8px 12px;display:flex;gap:7px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--border);flex-shrink:0;}
+.vision-cam-controls select{flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 8px;font-size:0.75em;}
+.vision-btn{background:rgba(0,212,255,0.08);border:1px solid var(--cyan);color:var(--cyan);padding:5px 11px;border-radius:8px;font-size:0.73em;font-family:'Space Mono',monospace;cursor:pointer;white-space:nowrap;transition:all 0.15s;}
+.vision-btn:hover{background:rgba(0,212,255,0.18);}
+.vision-btn.red{border-color:#ff4d6d;color:#ff4d6d;background:rgba(255,77,109,0.07);}
+.vision-btn.red:hover{background:rgba(255,77,109,0.18);}
+.vision-btn.green{border-color:#4ade80;color:#4ade80;background:rgba(74,222,128,0.07);}
+.vision-btn.green:hover{background:rgba(74,222,128,0.18);}
+.vision-chat-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px;min-height:0;}
+.vision-msg{max-width:92%;padding:9px 13px;border-radius:12px;font-size:0.82em;line-height:1.5;word-break:break-word;}
+.vision-msg.user{align-self:flex-end;background:rgba(0,212,255,0.09);border:1px solid rgba(0,212,255,0.25);}
+.vision-msg.assistant{align-self:flex-start;background:var(--surface2);border:1px solid var(--border);}
+.vision-msg-img{max-width:140px;border-radius:8px;margin-top:6px;display:block;cursor:pointer;}
+.vision-msg-thinking{color:var(--cyan);font-style:italic;font-size:0.8em;}
+.vision-chat-input-row{padding:9px 12px;border-top:1px solid var(--border);display:flex;gap:7px;align-items:flex-end;flex-shrink:0;}
+.vision-chat-input-row textarea{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 12px;font-size:0.82em;resize:none;height:52px;font-family:inherit;min-width:0;}
+.vision-chat-input-row textarea:focus{outline:none;border-color:var(--cyan);}
+.vision-history-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;flex-shrink:0;max-height:150px;}
+.vision-history-hdr{font-size:0.6em;font-family:'Orbitron',monospace;letter-spacing:2px;color:var(--text-muted);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.vision-history-list{display:flex;gap:9px;overflow-x:auto;padding-bottom:4px;}
+.vision-history-list::-webkit-scrollbar{height:3px;}
+.vision-session-card{min-width:130px;max-width:130px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px;cursor:pointer;transition:border-color 0.18s;flex-shrink:0;}
+.vision-session-card:hover{border-color:var(--cyan);}
+.vision-session-thumb{width:100%;height:52px;object-fit:cover;border-radius:6px;background:#0a0a14;display:block;margin-bottom:5px;}
+.vision-session-title{font-size:0.68em;color:var(--text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.vision-session-date{font-size:0.58em;color:var(--text-muted);margin-top:3px;}
+.vision-screen-panel{margin-top:8px;}
+.vision-mode-tabs{display:flex;gap:6px;padding:0 12px 8px;}
+.vision-mode-tab{flex:1;padding:5px;border:1px solid var(--border);border-radius:8px;font-size:0.7em;font-family:'Space Mono',monospace;color:var(--text-muted);cursor:pointer;text-align:center;transition:all 0.15s;background:transparent;}
+.vision-mode-tab.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,0.07);}
 </style>
 </head>
 <body>
@@ -1425,6 +1474,16 @@ body::before{
         <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Rapports
         <span id="reportBadge" style="margin-left:auto;background:#ff4d6d;color:#fff;font-size:0.6em;font-family:'Orbitron',monospace;padding:1px 6px;border-radius:10px;display:none;"></span>
+      </div>
+      <!-- Vision Réparation — Créateur uniquement -->
+      <div class="nav-item gold" data-view="visionRepair" id="navVisionRepair" style="display:none;">
+        <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        Vision Réparation
+      </div>
+      <!-- Vision Assistance — Créateur + Développeur + Femme du Créateur -->
+      <div class="nav-item gold" data-view="visionAssist" id="navVisionAssist" style="display:none;">
+        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Vision Assistance
       </div>
     </div>
   </div>
@@ -1769,6 +1828,143 @@ body::before{
         <div id="reportsList"><div class="rp-loading">Chargement des rapports...</div></div>
       </div>
     </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       VISION RÉPARATION — Créateur uniquement
+  ═══════════════════════════════════════════════════ -->
+  <div class="view" id="viewVisionRepair">
+    <div class="view-header">
+      <div>
+        <div class="view-title" style="color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,0.35);">VISION RÉPARATION</div>
+        <div class="view-sub">Analyse visuelle IA pour la réparation informatique</div>
+      </div>
+      <button class="btn btn-primary" style="font-size:0.73em;padding:6px 14px;" onclick="visionNewSession('vr')">+ Nouvelle session</button>
+    </div>
+    <div class="view-content" style="padding:0;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="vision-view-wrap" id="vrWrap" style="padding:10px;">
+        <div class="vision-lock-overlay" id="vrLock" style="display:none;">
+          <div class="vision-lock-card">
+            <div class="vision-lock-icon">🔒</div>
+            <div class="vision-lock-title">MODULE DÉSACTIVÉ</div>
+            <div class="vision-lock-msg">Ce module nécessite le fournisseur IA Puter (vision gpt-4o).<br>Pour l'activer, veuillez sélectionner :</div>
+            <div class="vision-lock-badge">Puter Cloud (gpt-4o vision)</div><br>
+            <button class="vision-btn" style="margin-top:14px;" onclick="openSettings('ai')">⚙ Changer le fournisseur IA</button>
+          </div>
+        </div>
+        <div class="vision-top-grid">
+          <div class="vision-panel">
+            <div class="vision-panel-hdr"><span class="live-dot" id="vrLiveDot" style="background:var(--text-dim);animation:none;"></span>CAMÉRA LIVE</div>
+            <div class="vision-video-wrap">
+              <video id="vrVideo" autoplay playsinline muted style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+              <div id="vrVideoPlaceholder" class="vision-video-placeholder">📷<br>Sélectionnez une caméra<br>et démarrez le flux</div>
+            </div>
+            <div class="vision-cam-controls">
+              <select id="vrCamSelect" style="font-size:0.72em;"><option value="">Caméra par défaut</option></select>
+              <button class="vision-btn green" onclick="visionCamStart('vr')">▶ Start</button>
+              <button class="vision-btn red" onclick="visionCamStop('vr')">■ Stop</button>
+            </div>
+          </div>
+          <div class="vision-panel">
+            <div class="vision-panel-hdr">🔧 CHAT — RÉPARATION INFORMATIQUE</div>
+            <div class="vision-chat-messages" id="vrMessages">
+              <div class="vision-msg assistant">👋 Prête pour la réparation informatique. Démarrez la caméra et pointez-la vers le matériel, ou décrivez le problème.</div>
+            </div>
+            <div class="vision-chat-input-row">
+              <textarea id="vrInput" placeholder="Décris le problème ou montre le matériel…" onkeydown="visionInputKey(event,'vr')"></textarea>
+              <button class="vision-btn" title="Capturer la caméra et analyser" onclick="visionCaptureSend('vr')">📷</button>
+              <button class="vision-btn" onclick="visionSend('vr')">➤</button>
+            </div>
+          </div>
+        </div>
+        <div class="vision-history-panel">
+          <div class="vision-history-hdr">
+            <span>SESSIONS SAUVEGARDÉES</span>
+            <button class="vision-btn" style="font-size:0.6em;padding:3px 9px;" onclick="visionClearSession('vr')">↺ Nouvelle session</button>
+          </div>
+          <div class="vision-history-list" id="vrHistory">
+            <div style="color:var(--text-dim);font-size:0.73em;padding:6px;">Aucune session enregistrée</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       VISION ASSISTANCE — Créateur + Développeur + Femme du Créateur
+  ═══════════════════════════════════════════════════ -->
+  <div class="view" id="viewVisionAssist">
+    <div class="view-header">
+      <div>
+        <div class="view-title" style="color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,0.35);">VISION ASSISTANCE</div>
+        <div class="view-sub">Analyse visuelle IA — aide universelle &amp; partage d'écran</div>
+      </div>
+      <button class="btn btn-primary" style="font-size:0.73em;padding:6px 14px;" onclick="visionNewSession('va')">+ Nouvelle session</button>
+    </div>
+    <div class="view-content" style="padding:0;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="vision-view-wrap" id="vaWrap" style="padding:10px;">
+        <div class="vision-lock-overlay" id="vaLock" style="display:none;">
+          <div class="vision-lock-card">
+            <div class="vision-lock-icon">🔒</div>
+            <div class="vision-lock-title">MODULE DÉSACTIVÉ</div>
+            <div class="vision-lock-msg">Ce module nécessite le fournisseur IA Puter (vision gpt-4o).<br>Pour l'activer, veuillez sélectionner :</div>
+            <div class="vision-lock-badge">Puter Cloud (gpt-4o vision)</div><br>
+            <button class="vision-btn" style="margin-top:14px;" onclick="openSettings('ai')">⚙ Changer le fournisseur IA</button>
+          </div>
+        </div>
+        <div class="vision-top-grid">
+          <div class="vision-panel">
+            <div class="vision-mode-tabs">
+              <button class="vision-mode-tab active" id="vaTabCam" onclick="vaSwitchSource('cam')">📷 Caméra</button>
+              <button class="vision-mode-tab" id="vaTabScreen" onclick="vaSwitchSource('screen')">🖥️ Écran</button>
+            </div>
+            <div id="vaCamSource" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+              <div class="vision-panel-hdr"><span class="live-dot" id="vaLiveDot" style="background:var(--text-dim);animation:none;"></span>CAMÉRA LIVE</div>
+              <div class="vision-video-wrap">
+                <video id="vaVideo" autoplay playsinline muted style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+                <div id="vaVideoPlaceholder" class="vision-video-placeholder">📷<br>Sélectionnez une caméra</div>
+              </div>
+              <div class="vision-cam-controls">
+                <select id="vaCamSelect" style="font-size:0.72em;"><option value="">Caméra par défaut</option></select>
+                <button class="vision-btn green" onclick="visionCamStart('va')">▶ Start</button>
+                <button class="vision-btn red" onclick="visionCamStop('va')">■ Stop</button>
+              </div>
+            </div>
+            <div id="vaScreenSource" style="display:none;flex:1;flex-direction:column;min-height:0;">
+              <div class="vision-panel-hdr"><span class="live-dot" id="vaScreenDot" style="background:var(--text-dim);animation:none;"></span>ÉCRAN PARTAGÉ</div>
+              <div class="vision-video-wrap">
+                <video id="vaScreen" autoplay playsinline muted style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+                <div id="vaScreenPlaceholder" class="vision-video-placeholder">🖥️<br>Cliquez pour partager<br>votre écran avec E.V.A</div>
+              </div>
+              <div class="vision-cam-controls">
+                <button class="vision-btn green" onclick="vaStartScreen()">▶ Partager l'écran</button>
+                <button class="vision-btn red" onclick="vaStopScreen()">■ Arrêter</button>
+              </div>
+            </div>
+          </div>
+          <div class="vision-panel">
+            <div class="vision-panel-hdr">👁️ CHAT — ASSISTANCE UNIVERSELLE</div>
+            <div class="vision-chat-messages" id="vaMessages">
+              <div class="vision-msg assistant">👋 Bonjour ! Montrez-moi ce dont vous avez besoin — caméra ou partage d'écran — et je vous aide. Documents, interfaces, matériel, tout ce que vous me montrez.</div>
+            </div>
+            <div class="vision-chat-input-row">
+              <textarea id="vaInput" placeholder="Pose ta question ou décris ce que tu veux analyser…" onkeydown="visionInputKey(event,'va')"></textarea>
+              <button class="vision-btn" title="Capturer la source active et analyser" onclick="visionCaptureSend('va')">📷</button>
+              <button class="vision-btn" onclick="visionSend('va')">➤</button>
+            </div>
+          </div>
+        </div>
+        <div class="vision-history-panel">
+          <div class="vision-history-hdr">
+            <span>SESSIONS SAUVEGARDÉES</span>
+            <button class="vision-btn" style="font-size:0.6em;padding:3px 9px;" onclick="visionClearSession('va')">↺ Nouvelle session</button>
+          </div>
+          <div class="vision-history-list" id="vaHistory">
+            <div style="color:var(--text-dim);font-size:0.73em;padding:6px;">Aucune session enregistrée</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   </div>
 
@@ -5623,6 +5819,527 @@ window.hideQwenDownloadModal = function() {
   if (sub) sub.innerHTML = '<span style="color:#00c853">EVA est prête à répondre avec Qwen Local.</span>';
   setTimeout(function() { overlay.classList.remove('active'); }, 1200);
 };
+
+/* ════════════════════════════════════════════════════════════════
+   MODULES VISION — Réparation & Assistance
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── State interne ─────────────────────────────────────────────── */
+var _VS = {
+  vr: { sessionId: null, messages: [], camStream: null, busy: false },
+  va: { sessionId: null, messages: [], camStream: null, screenStream: null, source: 'cam', busy: false }
+};
+
+var _VR_SYSTEM = 'Tu es E.V.A, une assistante experte en réparation informatique. Tu analyses les images de matériel informatique — PC, laptops, serveurs, composants, câbles, périphériques — et tu aides à diagnostiquer les pannes, identifier les pièces défectueuses, et guider les réparations étape par étape. Sois précise, technique et pratique. Réponds toujours en français.';
+var _VA_SYSTEM = 'Tu es E.V.A, une assistante intelligente et polyvalente avec vision. Tu peux analyser tout ce que l\'utilisateur te montre : un écran d\'ordinateur, des documents, des interfaces logicielles, des objets du quotidien, de la nourriture, du texte imprimé, etc. Tu offres une aide claire, bienveillante et utile. Réponds toujours en français.';
+
+/* ── Vérification du rôle ─────────────────────────────────────── */
+function _isCreator() {
+  var r = ((S.profile && S.profile.role) || '').toLowerCase().trim();
+  return r === 'creator' || r === 'createur' || r === 'créateur';
+}
+
+function _isVisionAssistUser() {
+  var r = ((S.profile && S.profile.role) || '').toLowerCase().trim();
+  var lbl = ((S.profile && S.profile.devKeyLabel) || '').toLowerCase();
+  var creatorTerms = ['creator', 'createur', 'créateur'];
+  var devTerms = ['developer', 'développeur', 'developpeur'];
+  var wifeTerms = ['creator_wife', 'wife', 'femme', 'epouse', 'épouse'];
+  return creatorTerms.some(function(t){ return r === t; }) ||
+         devTerms.some(function(t){ return r === t || r.indexOf(t) !== -1; }) ||
+         wifeTerms.some(function(t){ return r === t || lbl.indexOf(t) !== -1; });
+}
+
+/* ── Init modules : affiche les nav items selon le rôle ─────────── */
+function initVisionModules() {
+  var navVR = document.getElementById('navVisionRepair');
+  var navVA = document.getElementById('navVisionAssist');
+  if (navVR) navVR.style.display = _isCreator() ? '' : 'none';
+  if (navVA) navVA.style.display = _isVisionAssistUser() ? '' : 'none';
+}
+window.initVisionModules = initVisionModules;
+
+/* ── Vérification Puter actif (overlay flou si non) ─────────────── */
+function visionCheckLock(prefix) {
+  var lockId = prefix === 'vr' ? 'vrLock' : 'vaLock';
+  var lockEl = document.getElementById(lockId);
+  if (!lockEl) return;
+  var isPuter = (S.profile && S.profile.aiProvider === 'puter') ||
+                (S.config && S.config.aiProvider === 'puter');
+  var puterLoaded = typeof puter !== 'undefined';
+  if (!isPuter || !puterLoaded) {
+    lockEl.style.display = 'flex';
+  } else {
+    lockEl.style.display = 'none';
+  }
+}
+window.visionCheckLock = visionCheckLock;
+
+/* ── Énumération des caméras ──────────────────────────────────── */
+async function visionEnumerateCams(selectId) {
+  try {
+    var devices = await navigator.mediaDevices.enumerateDevices();
+    var cams = devices.filter(function(d){ return d.kind === 'videoinput'; });
+    var sel = document.getElementById(selectId);
+    if (!sel) return;
+    if (cams.length) {
+      sel.innerHTML = cams.map(function(d, i){
+        return '<option value="'+d.deviceId+'">'+(d.label || 'Caméra '+(i+1))+'</option>';
+      }).join('');
+    }
+  } catch(e) { console.warn('[VISION] enumerateCams:', e); }
+}
+
+/* ── Démarrer la caméra ──────────────────────────────────────── */
+async function visionCamStart(prefix) {
+  var state = _VS[prefix];
+  if (!state) return;
+  var videoId = prefix + 'Video';
+  var placeholderId = prefix === 'vr' ? 'vrVideoPlaceholder' : 'vaVideoPlaceholder';
+  var selectId = prefix === 'vr' ? 'vrCamSelect' : 'vaCamSelect';
+  var dotId = prefix === 'vr' ? 'vrLiveDot' : 'vaLiveDot';
+  try {
+    if (state.camStream) { state.camStream.getTracks().forEach(function(t){ t.stop(); }); state.camStream = null; }
+    var sel = document.getElementById(selectId);
+    var deviceId = sel && sel.value ? sel.value : null;
+    var constraints = { video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 1280 }, height: { ideal: 720 } } };
+    var stream = await navigator.mediaDevices.getUserMedia(constraints);
+    state.camStream = stream;
+    var vid = document.getElementById(videoId);
+    var ph = document.getElementById(placeholderId);
+    if (vid) { vid.srcObject = stream; vid.style.display = ''; }
+    if (ph) ph.style.display = 'none';
+    var dot = document.getElementById(dotId);
+    if (dot) { dot.style.background = '#ff4d6d'; dot.style.animation = ''; }
+    /* Énumérer maintenant qu'on a la permission */
+    await visionEnumerateCams(selectId);
+    if (sel && sel.value && sel.options.length > 0) {
+      var track = stream.getVideoTracks()[0];
+      var settings = track ? track.getSettings() : {};
+      /* Sélectionner la bonne option */
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === (settings.deviceId || '')) { sel.selectedIndex = i; break; }
+      }
+    }
+  } catch(e) {
+    console.error('[VISION] camStart:', e);
+    toast('Impossible d\'accéder à la caméra: ' + e.message, 'error');
+  }
+}
+window.visionCamStart = visionCamStart;
+
+/* ── Arrêter la caméra ──────────────────────────────────────── */
+function visionCamStop(prefix) {
+  var state = _VS[prefix];
+  if (!state || !state.camStream) return;
+  state.camStream.getTracks().forEach(function(t){ t.stop(); });
+  state.camStream = null;
+  var videoId = prefix + 'Video';
+  var placeholderId = prefix === 'vr' ? 'vrVideoPlaceholder' : 'vaVideoPlaceholder';
+  var dotId = prefix === 'vr' ? 'vrLiveDot' : 'vaLiveDot';
+  var vid = document.getElementById(videoId);
+  var ph = document.getElementById(placeholderId);
+  if (vid) { vid.srcObject = null; vid.style.display = 'none'; }
+  if (ph) ph.style.display = '';
+  var dot = document.getElementById(dotId);
+  if (dot) { dot.style.background = 'var(--text-dim)'; dot.style.animation = 'none'; }
+}
+window.visionCamStop = visionCamStop;
+
+/* ── Bascule source Vision Assistance ────────────────────────── */
+function vaSwitchSource(src) {
+  _VS.va.source = src;
+  var tabCam = document.getElementById('vaTabCam');
+  var tabScreen = document.getElementById('vaTabScreen');
+  var camSrc = document.getElementById('vaCamSource');
+  var scrSrc = document.getElementById('vaScreenSource');
+  if (src === 'cam') {
+    if (tabCam) tabCam.classList.add('active');
+    if (tabScreen) tabScreen.classList.remove('active');
+    if (camSrc) camSrc.style.display = 'flex';
+    if (scrSrc) scrSrc.style.display = 'none';
+  } else {
+    if (tabCam) tabCam.classList.remove('active');
+    if (tabScreen) tabScreen.classList.add('active');
+    if (camSrc) camSrc.style.display = 'none';
+    if (scrSrc) scrSrc.style.display = 'flex';
+  }
+}
+window.vaSwitchSource = vaSwitchSource;
+
+/* ── Partage d'écran ────────────────────────────────────────── */
+async function vaStartScreen() {
+  try {
+    if (_VS.va.screenStream) { _VS.va.screenStream.getTracks().forEach(function(t){ t.stop(); }); _VS.va.screenStream = null; }
+    var stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: false });
+    _VS.va.screenStream = stream;
+    var vid = document.getElementById('vaScreen');
+    var ph = document.getElementById('vaScreenPlaceholder');
+    var dot = document.getElementById('vaScreenDot');
+    if (vid) { vid.srcObject = stream; vid.style.display = ''; }
+    if (ph) ph.style.display = 'none';
+    if (dot) { dot.style.background = '#ff4d6d'; dot.style.animation = ''; }
+    stream.getVideoTracks()[0].addEventListener('ended', function(){ vaStopScreen(); });
+  } catch(e) {
+    if (e.name !== 'NotAllowedError') toast('Partage d\'écran échoué: ' + e.message, 'error');
+  }
+}
+window.vaStartScreen = vaStartScreen;
+
+function vaStopScreen() {
+  if (_VS.va.screenStream) { _VS.va.screenStream.getTracks().forEach(function(t){ t.stop(); }); _VS.va.screenStream = null; }
+  var vid = document.getElementById('vaScreen');
+  var ph = document.getElementById('vaScreenPlaceholder');
+  var dot = document.getElementById('vaScreenDot');
+  if (vid) { vid.srcObject = null; vid.style.display = 'none'; }
+  if (ph) ph.style.display = '';
+  if (dot) { dot.style.background = 'var(--text-dim)'; dot.style.animation = 'none'; }
+}
+window.vaStopScreen = vaStopScreen;
+
+/* ── Capture une image depuis le flux vidéo actif ────────────── */
+function visionCaptureFrame(prefix) {
+  var vid = null;
+  if (prefix === 'vr') {
+    vid = document.getElementById('vrVideo');
+  } else {
+    if (_VS.va.source === 'screen') {
+      vid = document.getElementById('vaScreen');
+    } else {
+      vid = document.getElementById('vaVideo');
+    }
+  }
+  if (!vid || !vid.srcObject || vid.videoWidth === 0) return null;
+  var canvas = document.createElement('canvas');
+  var MAX = 1024;
+  var w = vid.videoWidth, h = vid.videoHeight;
+  if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+  if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(vid, 0, 0, w, h);
+  return canvas.toDataURL('image/jpeg', 0.82);
+}
+
+/* ── Miniature pour l'historique (petite taille) ─────────────── */
+function _visionMakethumb(dataUrl) {
+  if (!dataUrl) return null;
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      var c = document.createElement('canvas');
+      var MAX = 120;
+      var w = img.width, h = img.height;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', 0.55));
+    };
+    img.onerror = function(){ resolve(null); };
+    img.src = dataUrl;
+  });
+}
+
+/* ── Ajouter un message dans le chat UI ──────────────────────── */
+function _visionAppendMsg(prefix, role, text, imageDataUrl) {
+  var listId = prefix === 'vr' ? 'vrMessages' : 'vaMessages';
+  var list = document.getElementById(listId);
+  if (!list) return;
+  var div = document.createElement('div');
+  div.className = 'vision-msg ' + role;
+  if (imageDataUrl) {
+    var img = document.createElement('img');
+    img.src = imageDataUrl;
+    img.className = 'vision-msg-img';
+    img.onclick = function(){ window.open(imageDataUrl, '_blank'); };
+    div.appendChild(img);
+  }
+  if (text) {
+    var p = document.createElement('div');
+    p.textContent = text;
+    div.appendChild(p);
+  }
+  list.appendChild(div);
+  list.scrollTop = list.scrollHeight;
+  return div;
+}
+
+/* ── Indicateur de réflexion ─────────────────────────────────── */
+function _visionShowThinking(prefix) {
+  var listId = prefix === 'vr' ? 'vrMessages' : 'vaMessages';
+  var list = document.getElementById(listId);
+  if (!list) return null;
+  var div = document.createElement('div');
+  div.className = 'vision-msg assistant vision-msg-thinking';
+  div.textContent = '⟳ E.V.A analyse…';
+  list.appendChild(div);
+  list.scrollTop = list.scrollHeight;
+  return div;
+}
+
+/* ── Appel Puter AI avec historique ─────────────────────────── */
+async function _visionCallPuter(prefix, userText, imageDataUrl) {
+  var sysPrompt = prefix === 'vr' ? _VR_SYSTEM : _VA_SYSTEM;
+  var history = _VS[prefix].messages;
+  var messages = [{ role: 'system', content: sysPrompt }];
+  /* Ajouter l'historique (texte seulement pour les anciens messages) */
+  for (var i = 0; i < history.length; i++) {
+    messages.push({ role: history[i].role, content: history[i].content });
+  }
+  /* Message courant avec ou sans image */
+  if (imageDataUrl) {
+    var res = await fetch(imageDataUrl);
+    var blob = await res.blob();
+    messages.push({
+      role: 'user',
+      content: [
+        { type: 'text', text: userText || 'Analyse cette image.' },
+        { type: 'image', image: blob }
+      ]
+    });
+  } else {
+    messages.push({ role: 'user', content: userText });
+  }
+  var result = await puter.ai.chat(messages, { model: 'gpt-4o' });
+  var reply = (result && result.message && result.message.content) ? result.message.content :
+              (result && result.toString ? result.toString() : 'Réponse vide');
+  return reply;
+}
+
+/* ── Envoyer un message texte seul ──────────────────────────── */
+async function visionSend(prefix) {
+  var state = _VS[prefix];
+  if (state.busy) return;
+  var inputId = prefix === 'vr' ? 'vrInput' : 'vaInput';
+  var inp = document.getElementById(inputId);
+  if (!inp) return;
+  var text = inp.value.trim();
+  if (!text) return;
+  /* Vérifier Puter */
+  var isPuter = (S.profile && S.profile.aiProvider === 'puter') || (S.config && S.config.aiProvider === 'puter');
+  if (!isPuter || typeof puter === 'undefined') {
+    toast('Module désactivé — activez Puter comme fournisseur IA', 'error');
+    visionCheckLock(prefix);
+    return;
+  }
+  inp.value = '';
+  state.busy = true;
+  _visionAppendMsg(prefix, 'user', text, null);
+  state.messages.push({ role: 'user', content: text });
+  var thinking = _visionShowThinking(prefix);
+  try {
+    var reply = await _visionCallPuter(prefix, text, null);
+    if (thinking) thinking.remove();
+    _visionAppendMsg(prefix, 'assistant', reply, null);
+    state.messages.push({ role: 'assistant', content: reply });
+    await visionAutoSaveSession(prefix, null);
+  } catch(e) {
+    if (thinking) thinking.remove();
+    console.error('[VISION] send:', e);
+    _visionAppendMsg(prefix, 'assistant', '❌ Erreur: ' + (e.message || e), null);
+  }
+  state.busy = false;
+}
+window.visionSend = visionSend;
+
+/* ── Capturer + envoyer avec image ──────────────────────────── */
+async function visionCaptureSend(prefix) {
+  var state = _VS[prefix];
+  if (state.busy) return;
+  var isPuter = (S.profile && S.profile.aiProvider === 'puter') || (S.config && S.config.aiProvider === 'puter');
+  if (!isPuter || typeof puter === 'undefined') {
+    toast('Module désactivé — activez Puter comme fournisseur IA', 'error');
+    visionCheckLock(prefix);
+    return;
+  }
+  var inputId = prefix === 'vr' ? 'vrInput' : 'vaInput';
+  var inp = document.getElementById(inputId);
+  var text = inp ? inp.value.trim() : '';
+  var imageDataUrl = visionCaptureFrame(prefix);
+  if (!imageDataUrl) {
+    toast('Aucun flux vidéo actif — démarrez la caméra ou le partage d\'écran', 'warning');
+    return;
+  }
+  if (inp) inp.value = '';
+  state.busy = true;
+  var displayText = text || (prefix === 'vr' ? 'Analyse ce matériel et aide-moi à diagnostiquer.' : 'Analyse ce que tu vois et aide-moi.');
+  _visionAppendMsg(prefix, 'user', displayText, imageDataUrl);
+  state.messages.push({ role: 'user', content: displayText + ' [image jointe]' });
+  var thinking = _visionShowThinking(prefix);
+  try {
+    var reply = await _visionCallPuter(prefix, displayText, imageDataUrl);
+    if (thinking) thinking.remove();
+    _visionAppendMsg(prefix, 'assistant', reply, null);
+    state.messages.push({ role: 'assistant', content: reply });
+    await visionAutoSaveSession(prefix, imageDataUrl);
+  } catch(e) {
+    if (thinking) thinking.remove();
+    console.error('[VISION] captureSend:', e);
+    _visionAppendMsg(prefix, 'assistant', '❌ Erreur: ' + (e.message || e), null);
+  }
+  state.busy = false;
+}
+window.visionCaptureSend = visionCaptureSend;
+
+/* ── Entrée clavier (Shift+Enter = nouvelle ligne, Enter = envoyer) */
+function visionInputKey(e, prefix) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    visionSend(prefix);
+  }
+}
+window.visionInputKey = visionInputKey;
+
+/* ── Sauvegarde automatique session Firestore ───────────────── */
+async function visionAutoSaveSession(prefix, firstImageDataUrl) {
+  if (!S.user) return;
+  var state = _VS[prefix];
+  var collName = prefix === 'vr' ? 'visionRepairSessions' : 'visionAssistSessions';
+  try {
+    /* Titre = premier message utilisateur (40 car max) */
+    var firstMsg = state.messages.find(function(m){ return m.role === 'user'; });
+    var title = firstMsg ? (firstMsg.content.substring(0, 50) + (firstMsg.content.length > 50 ? '…' : '')) : 'Session sans titre';
+    /* Miniature de la première image */
+    var thumb = null;
+    if (firstImageDataUrl && !state._thumbSaved) {
+      thumb = await _visionMakethumb(firstImageDataUrl);
+      state._thumbSaved = true;
+    }
+    var docData = {
+      title: title,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      messages: state.messages.slice(-40) /* 40 messages max */
+    };
+    if (thumb) docData.thumb = thumb;
+    if (!state.sessionId) {
+      docData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      var ref = await db.collection('users').doc(S.user.uid).collection(collName).add(docData);
+      state.sessionId = ref.id;
+    } else {
+      await db.collection('users').doc(S.user.uid).collection(collName).doc(state.sessionId).update(docData);
+    }
+    /* Recharger l'historique */
+    await visionLoadHistory(prefix);
+  } catch(e) { console.error('[VISION] autoSave:', e); }
+}
+
+/* ── Charger l'historique des sessions ──────────────────────── */
+async function visionLoadHistory(prefix) {
+  if (!S.user) return;
+  var collName = prefix === 'vr' ? 'visionRepairSessions' : 'visionAssistSessions';
+  var listId = prefix === 'vr' ? 'vrHistory' : 'vaHistory';
+  var list = document.getElementById(listId);
+  if (!list) return;
+  try {
+    var snap = await db.collection('users').doc(S.user.uid).collection(collName)
+      .orderBy('updatedAt', 'desc').limit(20).get();
+    if (snap.empty) {
+      list.innerHTML = '<div style="color:var(--text-dim);font-size:0.73em;padding:6px;">Aucune session enregistrée</div>';
+      return;
+    }
+    var html = '';
+    snap.forEach(function(d) {
+      var data = d.data();
+      var date = data.updatedAt ? new Date(data.updatedAt.toDate()).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+      var active = d.id === _VS[prefix].sessionId ? ' style="border-color:var(--cyan);"' : '';
+      html += '<div class="vision-session-card"' + active + ' onclick="visionRestoreSession(\'' + prefix + '\',\'' + d.id + '\')">';
+      if (data.thumb) {
+        html += '<img class="vision-session-thumb" src="' + data.thumb + '" alt="aperçu">';
+      } else {
+        html += '<div class="vision-session-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:1.4em;">' + (prefix === 'vr' ? '🔧' : '👁️') + '</div>';
+      }
+      html += '<div class="vision-session-title">' + esc(data.title || 'Session') + '</div>';
+      html += '<div class="vision-session-date">' + date + '</div>';
+      html += '</div>';
+    });
+    list.innerHTML = html;
+  } catch(e) { console.error('[VISION] loadHistory:', e); }
+}
+window.visionLoadHistory = visionLoadHistory;
+
+/* ── Restaurer une session ───────────────────────────────────── */
+async function visionRestoreSession(prefix, sessionId) {
+  if (!S.user) return;
+  var collName = prefix === 'vr' ? 'visionRepairSessions' : 'visionAssistSessions';
+  var listId = prefix === 'vr' ? 'vrMessages' : 'vaMessages';
+  var list = document.getElementById(listId);
+  try {
+    var doc = await db.collection('users').doc(S.user.uid).collection(collName).doc(sessionId).get();
+    if (!doc.exists) { toast('Session introuvable', 'error'); return; }
+    var data = doc.data();
+    _VS[prefix].sessionId = sessionId;
+    _VS[prefix].messages = data.messages || [];
+    _VS[prefix]._thumbSaved = !!data.thumb;
+    /* Reconstruire l'UI */
+    if (list) {
+      list.innerHTML = '';
+      _VS[prefix].messages.forEach(function(m) {
+        _visionAppendMsg(prefix, m.role, m.content, null);
+      });
+    }
+    toast('Session restaurée', 'success');
+    await visionLoadHistory(prefix);
+  } catch(e) {
+    console.error('[VISION] restoreSession:', e);
+    toast('Erreur restauration session', 'error');
+  }
+}
+window.visionRestoreSession = visionRestoreSession;
+
+/* ── Nouvelle session (effacer l'actuelle) ──────────────────── */
+function visionNewSession(prefix) {
+  var state = _VS[prefix];
+  state.sessionId = null;
+  state.messages = [];
+  state._thumbSaved = false;
+  var listId = prefix === 'vr' ? 'vrMessages' : 'vaMessages';
+  var list = document.getElementById(listId);
+  var welcomeMsg = prefix === 'vr' ?
+    '👋 Prête pour la réparation informatique. Démarrez la caméra et pointez-la vers le matériel, ou décrivez le problème.' :
+    '👋 Bonjour ! Montrez-moi ce dont vous avez besoin — caméra ou partage d\'écran — et je vous aide.';
+  if (list) {
+    list.innerHTML = '<div class="vision-msg assistant">' + welcomeMsg + '</div>';
+  }
+  visionLoadHistory(prefix);
+}
+window.visionNewSession = visionNewSession;
+
+function visionClearSession(prefix) { visionNewSession(prefix); }
+window.visionClearSession = visionClearSession;
+
+/* ── Override setView pour les modules vision ───────────────── */
+var _origSetViewVision = window.setView;
+window.setView = function(name) {
+  _origSetViewVision(name);
+  if (name === 'visionRepair') {
+    visionCheckLock('vr');
+    visionEnumerateCams('vrCamSelect');
+    visionLoadHistory('vr');
+  } else if (name === 'visionAssist') {
+    visionCheckLock('va');
+    visionEnumerateCams('vaCamSelect');
+    visionLoadHistory('va');
+  }
+};
+
+/* ── Appel depuis setupReportsAccess (profile chargé) ──────── */
+var _origSetupReportsAccess = window.setupReportsAccess || function(){};
+window.setupReportsAccess = function() {
+  if (typeof _origSetupReportsAccess === 'function') _origSetupReportsAccess();
+  initVisionModules();
+};
+
+/* ── Re-check lock quand les settings se ferment ───────────── */
+document.addEventListener('DOMContentLoaded', function() {
+  var closeBtn = document.getElementById('closeSettingsBtn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function() {
+      var cur = window._currentView;
+      if (cur === 'visionRepair') visionCheckLock('vr');
+      if (cur === 'visionAssist') visionCheckLock('va');
+    });
+  }
+});
 </script>
 
 </body>
