@@ -6133,46 +6133,49 @@ function _visionShowThinking(prefix) {
   return div;
 }
 
-/* ── Appel Puter AI avec historique ─────────────────────────── */
+/* ── Appel Puter AI — Vision (image) ou Texte (historique) ─── */
 async function _visionCallPuter(prefix, userText, imageDataUrl) {
   var sysPrompt = prefix === 'vr' ? _VR_SYSTEM : _VA_SYSTEM;
-  var history = _VS[prefix].messages;
-  /* Garder seulement les 12 derniers messages pour éviter les dépassements de tokens */
-  var recent = history.slice(-12);
-  var messages = [{ role: 'system', content: sysPrompt }];
-  for (var i = 0; i < recent.length; i++) {
-    messages.push({ role: recent[i].role, content: recent[i].content });
-  }
-  /* Message courant avec ou sans image */
+  var result;
+
   if (imageDataUrl) {
+    /* ── Appel VISION : format strict compatible Puter ─────────
+       - Pas de system role (non supporté en vision mode Puter)
+       - Un seul message user contenant texte + image blob
+       - vision:true obligatoire
+    ─────────────────────────────────────────────────────────── */
+    var fullPrompt = sysPrompt + '\n\n' + (userText || 'Analyse cette image et décris précisément ce que tu vois.');
     var res = await fetch(imageDataUrl);
     var blob = await res.blob();
-    messages.push({
-      role: 'user',
-      content: [
-        { type: 'text', text: userText || 'Analyse cette image et décris ce que tu vois.' },
-        { type: 'image', image: blob }
-      ]
-    });
+    result = await puter.ai.chat([
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: fullPrompt },
+          { type: 'image', image: blob }
+        ]
+      }
+    ], { model: 'gpt-4o', vision: true });
   } else {
+    /* ── Appel TEXTE : avec system message + historique ────────
+       - Support du contexte et de l'historique conversationnel
+       - Pas d'image → pas de vision:true
+    ─────────────────────────────────────────────────────────── */
+    var recent = (_VS[prefix].messages || []).slice(-12);
+    var messages = [{ role: 'system', content: sysPrompt }];
+    for (var i = 0; i < recent.length; i++) {
+      messages.push({ role: recent[i].role, content: String(recent[i].content) });
+    }
     messages.push({ role: 'user', content: userText });
+    result = await puter.ai.chat(messages, { model: 'gpt-4o' });
   }
-  /* vision:true est OBLIGATOIRE pour que Puter envoie les images à gpt-4o */
-  var result = await puter.ai.chat(messages, { model: 'gpt-4o', vision: true });
-  /* Parsing robuste de la réponse */
-  var reply = '';
-  if (result && result.message && result.message.content) {
-    reply = result.message.content;
-  } else if (result && result.choices && result.choices[0] && result.choices[0].message) {
-    reply = result.choices[0].message.content;
-  } else if (typeof result === 'string') {
-    reply = result;
-  } else if (result && result.text) {
-    reply = result.text;
-  } else {
-    reply = String(result || 'Aucune réponse');
-  }
-  return reply;
+
+  /* ── Parsing robuste de la réponse ─────────────────────────── */
+  if (result && result.message && result.message.content) return result.message.content;
+  if (result && result.choices && result.choices[0]) return result.choices[0].message.content;
+  if (typeof result === 'string') return result;
+  if (result && result.text) return result.text;
+  return String(result || 'Aucune réponse reçue');
 }
 
 /* ── Envoyer un message texte seul ──────────────────────────── */
@@ -6204,8 +6207,14 @@ async function visionSend(prefix) {
     await visionAutoSaveSession(prefix, null);
   } catch(e) {
     if (thinking) thinking.remove();
-    console.error('[VISION] send:', e);
-    _visionAppendMsg(prefix, 'assistant', '❌ Erreur: ' + (e.message || e), null);
+    console.error('[VISION] send error:', e);
+    var errMsg2 = 'Erreur inconnue';
+    if (typeof e === 'string') { errMsg2 = e; }
+    else if (e && typeof e.message === 'string') { errMsg2 = e.message; }
+    else if (e && typeof e.error === 'string') { errMsg2 = e.error; }
+    else if (e && e.error && e.error.message) { errMsg2 = e.error.message; }
+    else { try { errMsg2 = JSON.stringify(e); } catch(je) { errMsg2 = 'Erreur (voir console)'; } }
+    _visionAppendMsg(prefix, 'assistant', '❌ ' + errMsg2, null);
   }
   state.busy = false;
 }
@@ -6243,9 +6252,16 @@ async function visionCaptureSend(prefix) {
     await visionAutoSaveSession(prefix, imageDataUrl);
   } catch(e) {
     if (thinking) thinking.remove();
-    console.error('[VISION] captureSend:', e);
-    var errMsg = (e && e.message) ? e.message : (e && e.error) ? e.error : (typeof e === 'string' ? e : JSON.stringify(e) || 'Erreur inconnue');
-    _visionAppendMsg(prefix, 'assistant', '❌ Erreur: ' + errMsg, null);
+    console.error('[VISION] captureSend error:', e);
+    /* Extraire le message d'erreur peu importe le format de l'objet */
+    var errMsg = 'Erreur inconnue';
+    if (typeof e === 'string') { errMsg = e; }
+    else if (e && typeof e.message === 'string') { errMsg = e.message; }
+    else if (e && typeof e.error === 'string') { errMsg = e.error; }
+    else if (e && e.error && e.error.message) { errMsg = e.error.message; }
+    else if (e && typeof e.toString === 'function' && e.toString() !== '[object Object]') { errMsg = e.toString(); }
+    else { try { errMsg = JSON.stringify(e); } catch(je) { errMsg = 'Erreur Puter (voir console)'; } }
+    _visionAppendMsg(prefix, 'assistant', '❌ ' + errMsg, null);
   }
   state.busy = false;
 }
