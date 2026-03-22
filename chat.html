@@ -6139,23 +6139,22 @@ async function _visionCallPuter(prefix, userText, imageDataUrl) {
   var result;
 
   if (imageDataUrl) {
-    /* ── Appel VISION : format strict compatible Puter ─────────
-       - Pas de system role (non supporté en vision mode Puter)
-       - Un seul message user contenant texte + image blob
-       - vision:true obligatoire
+    /* ── Appel VISION : format OpenAI standard via Puter ───────
+       - type: 'image_url' (Puter délègue à OpenAI qui exige ce format)
+       - data URL base64 directe — pas de conversion en blob
+       - Pas de system role, pas de vision:true (non nécessaire)
     ─────────────────────────────────────────────────────────── */
     var fullPrompt = sysPrompt + '\n\n' + (userText || 'Analyse cette image et décris précisément ce que tu vois.');
-    var res = await fetch(imageDataUrl);
-    var blob = await res.blob();
+    /* Format OpenAI standard : image_url avec data URL base64 */
     result = await puter.ai.chat([
       {
         role: 'user',
         content: [
           { type: 'text', text: fullPrompt },
-          { type: 'image', image: blob }
+          { type: 'image_url', image_url: { url: imageDataUrl, detail: 'high' } }
         ]
       }
-    ], { model: 'gpt-4o', vision: true });
+    ], { model: 'gpt-4o' });
   } else {
     /* ── Appel TEXTE : avec system message + historique ────────
        - Support du contexte et de l'historique conversationnel
