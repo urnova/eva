@@ -6463,21 +6463,40 @@ function _visionSetWwBtn(gray) {
   }
 }
 
+/* ── Arrêter le mic vision si actif ─────────────────────────── */
+function _visionStopMic(prefix) {
+  var micBtnId = prefix === 'vr' ? 'vrMicBtn' : 'vaMicBtn';
+  var micBtn = document.getElementById(micBtnId);
+  if (micBtn && micBtn._recognition) {
+    micBtn._recognition.abort();
+    micBtn._recognition = null;
+    micBtn.classList.remove('listening');
+    micBtn.title = 'Wake word — Parler pour capturer et envoyer';
+  }
+}
+
 /* ── Override setView pour les modules vision ───────────────── */
 var _origSetViewVision = window.setView;
 window.setView = function(name) {
   _origSetViewVision(name);
   if (name === 'visionRepair') {
     _visionSetWwBtn(true);
+    /* Arrêter le mic de l'autre module vision si actif */
+    _visionStopMic('va');
     visionCheckLock('vr');
     visionEnumerateCams('vrCamSelect');
     visionLoadHistory('vr');
   } else if (name === 'visionAssist') {
     _visionSetWwBtn(true);
+    /* Arrêter le mic de l'autre module vision si actif */
+    _visionStopMic('vr');
     visionCheckLock('va');
     visionEnumerateCams('vaCamSelect');
     visionLoadHistory('va');
   } else {
+    /* Quitter les modules vision — arrêter tous les mics vision actifs */
+    _visionStopMic('vr');
+    _visionStopMic('va');
     _visionSetWwBtn(false);
   }
 };
