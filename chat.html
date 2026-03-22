@@ -1363,54 +1363,74 @@ body::before{
 .rp-empty-icon{font-size:2.5em;margin-bottom:10px;}
 .rp-loading{text-align:center;padding:20px;color:var(--text-muted);font-size:0.8em;}
 
-/* ═══════════════════════════════════════════════════
-   VISION MODULES — Réparation & Assistance
-═══════════════════════════════════════════════════ */
-.vision-view-wrap{position:relative;flex:1;display:flex;flex-direction:column;gap:10px;overflow:hidden;min-height:0;}
-.vision-lock-overlay{position:absolute;inset:0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);background:rgba(10,10,22,0.72);display:flex;align-items:center;justify-content:center;z-index:20;border-radius:0;}
-.vision-lock-card{background:var(--surface);border:1px solid var(--cyan);border-radius:18px;padding:30px 36px;text-align:center;max-width:360px;box-shadow:0 0 40px rgba(0,212,255,0.15);}
-.vision-lock-icon{font-size:2.4em;margin-bottom:12px;}
-.vision-lock-title{font-family:'Orbitron',monospace;font-size:0.82em;letter-spacing:3px;color:var(--cyan);margin-bottom:8px;}
-.vision-lock-msg{font-size:0.8em;color:var(--text-muted);line-height:1.6;margin-bottom:16px;}
-.vision-lock-badge{display:inline-block;background:rgba(0,212,255,0.08);border:1px solid var(--cyan);border-radius:8px;padding:4px 12px;font-family:'Space Mono',monospace;font-size:0.72em;color:var(--cyan);letter-spacing:1px;}
-.vision-top-grid{display:grid;grid-template-columns:minmax(260px,1fr) 1.6fr;gap:10px;min-height:0;flex:1;}
+/* ═══ VISION MODULES — Réparation & Assistance ═══════════════ */
+.vision-view-wrap{position:relative;flex:1;display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0;padding:10px;}
+/* Overlay de verrouillage Puter */
+.vision-lock-overlay{position:absolute;inset:0;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);background:rgba(10,10,22,0.78);display:flex;align-items:center;justify-content:center;z-index:30;}
+.vision-lock-card{background:var(--surface);border:1px solid var(--cyan);border-radius:18px;padding:30px 36px;text-align:center;max-width:380px;box-shadow:0 0 50px rgba(0,212,255,0.18);}
+.vision-lock-icon{font-size:2.6em;margin-bottom:12px;}
+.vision-lock-title{font-family:'Orbitron',monospace;font-size:0.82em;letter-spacing:3px;color:var(--cyan);margin-bottom:10px;}
+.vision-lock-msg{font-size:0.79em;color:var(--text-muted);line-height:1.7;margin-bottom:16px;}
+.vision-lock-badge{display:inline-block;background:rgba(0,212,255,0.08);border:1px solid var(--cyan);border-radius:8px;padding:4px 14px;font-family:'Space Mono',monospace;font-size:0.72em;color:var(--cyan);letter-spacing:1px;}
+/* Grille principale : vidéo 42% | chat 58% */
+.vision-top-grid{display:grid;grid-template-columns:42fr 58fr;gap:8px;flex:1;min-height:0;}
+/* Panel générique */
 .vision-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
-.vision-panel-hdr{padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:0.62em;font-family:'Orbitron',monospace;letter-spacing:2px;color:var(--text-muted);display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.vision-panel-hdr .live-dot{width:6px;height:6px;border-radius:50%;background:#ff4d6d;animation:livePulse 1.2s infinite;}
-@keyframes livePulse{0%,100%{opacity:1}50%{opacity:0.3}}
-.vision-video-wrap{flex:1;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0;}
-.vision-video-wrap video{width:100%;height:100%;object-fit:cover;}
-.vision-video-placeholder{color:var(--text-dim);font-size:0.75em;text-align:center;padding:20px;}
-.vision-cam-controls{padding:8px 12px;display:flex;gap:7px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--border);flex-shrink:0;}
-.vision-cam-controls select{flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 8px;font-size:0.75em;}
-.vision-btn{background:rgba(0,212,255,0.08);border:1px solid var(--cyan);color:var(--cyan);padding:5px 11px;border-radius:8px;font-size:0.73em;font-family:'Space Mono',monospace;cursor:pointer;white-space:nowrap;transition:all 0.15s;}
+/* Header panel */
+.vision-panel-hdr{padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:0.6em;font-family:'Orbitron',monospace;letter-spacing:2px;color:var(--text-muted);display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.vision-panel-hdr .live-dot{width:7px;height:7px;border-radius:50%;background:var(--text-dim);flex-shrink:0;transition:background 0.3s;}
+.vision-panel-hdr .live-dot.on{background:#ff4d6d;animation:livePulse 1.2s infinite;}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.85)}}
+/* Tabs caméra / écran dans le header */
+.vision-src-tabs{display:flex;gap:5px;margin-left:auto;}
+.vision-src-tab{padding:3px 11px;border:1px solid var(--border);border-radius:6px;font-size:0.95em;font-family:'Space Mono',monospace;color:var(--text-muted);cursor:pointer;text-align:center;transition:all 0.15s;background:transparent;white-space:nowrap;}
+.vision-src-tab.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,0.1);}
+/* Zone vidéo : remplit le panel, contenu entier visible */
+.vision-video-wrap{flex:1;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0;position:relative;}
+.vision-video-wrap video{width:100%;height:100%;object-fit:contain;display:block;}
+.vision-video-placeholder{color:var(--text-dim);font-size:0.78em;text-align:center;padding:24px;line-height:1.8;}
+/* Contrôles caméra */
+.vision-cam-controls{padding:8px 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface);}
+.vision-cam-controls select{flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 8px;font-size:0.72em;}
+/* Boutons vision */
+.vision-btn{background:rgba(0,212,255,0.07);border:1px solid var(--cyan);color:var(--cyan);padding:5px 12px;border-radius:8px;font-size:0.72em;font-family:'Space Mono',monospace;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0;}
 .vision-btn:hover{background:rgba(0,212,255,0.18);}
 .vision-btn.red{border-color:#ff4d6d;color:#ff4d6d;background:rgba(255,77,109,0.07);}
 .vision-btn.red:hover{background:rgba(255,77,109,0.18);}
 .vision-btn.green{border-color:#4ade80;color:#4ade80;background:rgba(74,222,128,0.07);}
 .vision-btn.green:hover{background:rgba(74,222,128,0.18);}
-.vision-chat-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px;min-height:0;}
-.vision-msg{max-width:92%;padding:9px 13px;border-radius:12px;font-size:0.82em;line-height:1.5;word-break:break-word;}
+/* Bouton mic wake-word dans l'input vision */
+.vision-mic-btn{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.4);color:rgba(0,212,255,0.8);padding:0;width:40px;height:40px;border-radius:50%;font-size:0.85em;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.vision-mic-btn:hover{background:rgba(0,212,255,0.14);border-color:var(--cyan);}
+.vision-mic-btn.listening{background:rgba(255,77,109,0.12);border-color:#ff4d6d;color:#ff4d6d;animation:micPulse 0.8s infinite;}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,109,0.4)}50%{box-shadow:0 0 0 6px rgba(255,77,109,0)}}
+/* Messages chat */
+.vision-chat-messages{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px;min-height:0;}
+.vision-chat-messages::-webkit-scrollbar{width:3px;}
+.vision-msg{max-width:88%;padding:9px 13px;border-radius:12px;font-size:0.82em;line-height:1.55;word-break:break-word;}
 .vision-msg.user{align-self:flex-end;background:rgba(0,212,255,0.09);border:1px solid rgba(0,212,255,0.25);}
 .vision-msg.assistant{align-self:flex-start;background:var(--surface2);border:1px solid var(--border);}
-.vision-msg-img{max-width:140px;border-radius:8px;margin-top:6px;display:block;cursor:pointer;}
-.vision-msg-thinking{color:var(--cyan);font-style:italic;font-size:0.8em;}
-.vision-chat-input-row{padding:9px 12px;border-top:1px solid var(--border);display:flex;gap:7px;align-items:flex-end;flex-shrink:0;}
-.vision-chat-input-row textarea{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 12px;font-size:0.82em;resize:none;height:52px;font-family:inherit;min-width:0;}
+.vision-msg-img{max-width:120px;border-radius:7px;margin-top:6px;display:block;cursor:pointer;border:1px solid var(--border);}
+.vision-msg-thinking{color:var(--cyan);font-style:italic;font-size:0.78em;}
+/* Input zone */
+.vision-chat-input-row{padding:8px 10px;border-top:1px solid var(--border);display:flex;gap:7px;align-items:center;flex-shrink:0;background:var(--surface);}
+.vision-chat-input-row textarea{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 12px;font-size:0.81em;resize:none;height:48px;font-family:inherit;min-width:0;line-height:1.4;}
 .vision-chat-input-row textarea:focus{outline:none;border-color:var(--cyan);}
-.vision-history-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;flex-shrink:0;max-height:150px;}
-.vision-history-hdr{font-size:0.6em;font-family:'Orbitron',monospace;letter-spacing:2px;color:var(--text-muted);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
-.vision-history-list{display:flex;gap:9px;overflow-x:auto;padding-bottom:4px;}
+/* Panel historique sessions */
+.vision-history-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;flex-shrink:0;overflow:hidden;}
+.vision-history-hdr{padding:8px 14px;font-size:0.58em;font-family:'Orbitron',monospace;letter-spacing:2px;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--surface2);}
+.vision-history-list{display:flex;gap:8px;overflow-x:auto;padding:10px 14px;min-height:120px;align-items:flex-start;}
 .vision-history-list::-webkit-scrollbar{height:3px;}
-.vision-session-card{min-width:130px;max-width:130px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px;cursor:pointer;transition:border-color 0.18s;flex-shrink:0;}
+.vision-history-list::-webkit-scrollbar-thumb{background:var(--border);}
+.vision-session-card{min-width:110px;max-width:110px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0;cursor:pointer;transition:border-color 0.18s;flex-shrink:0;overflow:hidden;display:flex;flex-direction:column;}
 .vision-session-card:hover{border-color:var(--cyan);}
-.vision-session-thumb{width:100%;height:52px;object-fit:cover;border-radius:6px;background:#0a0a14;display:block;margin-bottom:5px;}
-.vision-session-title{font-size:0.68em;color:var(--text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-.vision-session-date{font-size:0.58em;color:var(--text-muted);margin-top:3px;}
-.vision-screen-panel{margin-top:8px;}
-.vision-mode-tabs{display:flex;gap:6px;padding:0 12px 8px;}
-.vision-mode-tab{flex:1;padding:5px;border:1px solid var(--border);border-radius:8px;font-size:0.7em;font-family:'Space Mono',monospace;color:var(--text-muted);cursor:pointer;text-align:center;transition:all 0.15s;background:transparent;}
-.vision-mode-tab.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,0.07);}
+.vision-session-thumb{width:100%;height:48px;object-fit:cover;border-radius:0;display:block;}
+.vision-session-thumb.placeholder{height:48px;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:1.3em;background:#0a0a14;}
+.vision-session-info{padding:6px 8px;flex:1;}
+.vision-session-title{font-size:0.65em;color:var(--text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3;}
+.vision-session-date{font-size:0.55em;color:var(--text-muted);margin-top:2px;}
+.vision-session-del{width:100%;background:rgba(255,77,109,0.07);border:0;border-top:1px solid rgba(255,77,109,0.2);color:#ff4d6d;font-size:0.6em;padding:4px;cursor:pointer;font-family:'Space Mono',monospace;letter-spacing:0.5px;}
+.vision-session-del:hover{background:rgba(255,77,109,0.18);}
 </style>
 </head>
 <body>
@@ -1836,54 +1856,66 @@ body::before{
     <div class="view-header">
       <div>
         <div class="view-title" style="color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,0.35);">VISION RÉPARATION</div>
-        <div class="view-sub">Analyse visuelle IA pour la réparation informatique</div>
+        <div class="view-sub">Analyse visuelle IA — diagnostique &amp; réparation informatique</div>
       </div>
-      <button class="btn btn-primary" style="font-size:0.73em;padding:6px 14px;" onclick="visionNewSession('vr')">+ Nouvelle session</button>
+      <button class="btn btn-primary" style="font-size:0.72em;padding:6px 14px;" onclick="visionNewSession('vr')">+ Nouvelle session</button>
     </div>
     <div class="view-content" style="padding:0;overflow:hidden;display:flex;flex-direction:column;">
-      <div class="vision-view-wrap" id="vrWrap" style="padding:10px;">
+      <div class="vision-view-wrap" id="vrWrap">
+        <!-- Overlay verrouillage Puter -->
         <div class="vision-lock-overlay" id="vrLock" style="display:none;">
           <div class="vision-lock-card">
             <div class="vision-lock-icon">🔒</div>
             <div class="vision-lock-title">MODULE DÉSACTIVÉ</div>
-            <div class="vision-lock-msg">Ce module nécessite le fournisseur IA Puter (vision gpt-4o).<br>Pour l'activer, veuillez sélectionner :</div>
+            <div class="vision-lock-msg">Ce module nécessite le fournisseur IA <strong style="color:var(--cyan)">Puter</strong> avec la vision GPT-4o.<br>Sélectionnez-le dans les paramètres pour accéder à ce module.</div>
             <div class="vision-lock-badge">Puter Cloud (gpt-4o vision)</div><br>
-            <button class="vision-btn" style="margin-top:14px;" onclick="openSettings('ai')">⚙ Changer le fournisseur IA</button>
+            <button class="vision-btn" style="margin-top:16px;" onclick="openSettings('ai')">⚙ Changer le fournisseur IA</button>
           </div>
         </div>
+        <!-- Grille principale : [Caméra | Chat] -->
         <div class="vision-top-grid">
+          <!-- Panneau caméra -->
           <div class="vision-panel">
-            <div class="vision-panel-hdr"><span class="live-dot" id="vrLiveDot" style="background:var(--text-dim);animation:none;"></span>CAMÉRA LIVE</div>
+            <div class="vision-panel-hdr">
+              <span class="live-dot" id="vrLiveDot"></span>
+              CAMÉRA LIVE
+            </div>
             <div class="vision-video-wrap">
-              <video id="vrVideo" autoplay playsinline muted style="display:none;width:100%;height:100%;object-fit:cover;"></video>
-              <div id="vrVideoPlaceholder" class="vision-video-placeholder">📷<br>Sélectionnez une caméra<br>et démarrez le flux</div>
+              <video id="vrVideo" autoplay playsinline muted style="display:none;"></video>
+              <div id="vrVideoPlaceholder" class="vision-video-placeholder">
+                📷<br><strong>Aucune caméra active</strong><br>Choisissez une caméra et cliquez ▶ Démarrer
+              </div>
             </div>
             <div class="vision-cam-controls">
-              <select id="vrCamSelect" style="font-size:0.72em;"><option value="">Caméra par défaut</option></select>
-              <button class="vision-btn green" onclick="visionCamStart('vr')">▶ Start</button>
-              <button class="vision-btn red" onclick="visionCamStop('vr')">■ Stop</button>
+              <select id="vrCamSelect"><option value="">Caméra par défaut</option></select>
+              <button class="vision-btn green" onclick="visionCamStart('vr')">▶ Démarrer</button>
+              <button class="vision-btn red" onclick="visionCamStop('vr')">■ Arrêter</button>
             </div>
           </div>
+          <!-- Panneau chat -->
           <div class="vision-panel">
             <div class="vision-panel-hdr">🔧 CHAT — RÉPARATION INFORMATIQUE</div>
             <div class="vision-chat-messages" id="vrMessages">
-              <div class="vision-msg assistant">👋 Prête pour la réparation informatique. Démarrez la caméra et pointez-la vers le matériel, ou décrivez le problème.</div>
+              <div class="vision-msg assistant">👋 Prête à t'aider. Démarre la caméra et pointe-la vers le matériel défectueux, ou décris directement le problème.</div>
             </div>
             <div class="vision-chat-input-row">
               <textarea id="vrInput" placeholder="Décris le problème ou montre le matériel…" onkeydown="visionInputKey(event,'vr')"></textarea>
-              <button class="vision-btn" id="vrMicBtn" title="Parler — capture + envoi vocal" onclick="visionWakeCapture('vr')" style="font-size:1em;">🎤</button>
-              <button class="vision-btn" title="Capturer la caméra et analyser" onclick="visionCaptureSend('vr')">📷</button>
-              <button class="vision-btn" onclick="visionSend('vr')">➤</button>
+              <button class="vision-mic-btn" id="vrMicBtn" title="Wake word — Parler pour capturer et envoyer" onclick="visionWakeCapture('vr')">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </button>
+              <button class="vision-btn" title="Capturer l'image et analyser" onclick="visionCaptureSend('vr')" style="padding:0 10px;height:40px;">📷</button>
+              <button class="vision-btn" title="Envoyer le texte seul" onclick="visionSend('vr')" style="padding:0 10px;height:40px;">➤</button>
             </div>
           </div>
         </div>
+        <!-- Historique sessions -->
         <div class="vision-history-panel">
           <div class="vision-history-hdr">
             <span>SESSIONS SAUVEGARDÉES</span>
-            <button class="vision-btn" style="font-size:0.6em;padding:3px 9px;" onclick="visionClearSession('vr')">↺ Nouvelle session</button>
+            <button class="vision-btn" style="font-size:0.7em;padding:3px 10px;" onclick="visionClearSession('vr')">↺ Nouvelle session</button>
           </div>
           <div class="vision-history-list" id="vrHistory">
-            <div style="color:var(--text-dim);font-size:0.73em;padding:6px;">Aucune session enregistrée</div>
+            <div style="color:var(--text-dim);font-size:0.72em;padding:4px 0;align-self:center;">Aucune session enregistrée</div>
           </div>
         </div>
       </div>
@@ -1899,69 +1931,85 @@ body::before{
         <div class="view-title" style="color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,0.35);">VISION ASSISTANCE</div>
         <div class="view-sub">Analyse visuelle IA — aide universelle &amp; partage d'écran</div>
       </div>
-      <button class="btn btn-primary" style="font-size:0.73em;padding:6px 14px;" onclick="visionNewSession('va')">+ Nouvelle session</button>
+      <button class="btn btn-primary" style="font-size:0.72em;padding:6px 14px;" onclick="visionNewSession('va')">+ Nouvelle session</button>
     </div>
     <div class="view-content" style="padding:0;overflow:hidden;display:flex;flex-direction:column;">
-      <div class="vision-view-wrap" id="vaWrap" style="padding:10px;">
+      <div class="vision-view-wrap" id="vaWrap">
+        <!-- Overlay verrouillage Puter -->
         <div class="vision-lock-overlay" id="vaLock" style="display:none;">
           <div class="vision-lock-card">
             <div class="vision-lock-icon">🔒</div>
             <div class="vision-lock-title">MODULE DÉSACTIVÉ</div>
-            <div class="vision-lock-msg">Ce module nécessite le fournisseur IA Puter (vision gpt-4o).<br>Pour l'activer, veuillez sélectionner :</div>
+            <div class="vision-lock-msg">Ce module nécessite le fournisseur IA <strong style="color:var(--cyan)">Puter</strong> avec la vision GPT-4o.<br>Sélectionnez-le dans les paramètres pour accéder à ce module.</div>
             <div class="vision-lock-badge">Puter Cloud (gpt-4o vision)</div><br>
-            <button class="vision-btn" style="margin-top:14px;" onclick="openSettings('ai')">⚙ Changer le fournisseur IA</button>
+            <button class="vision-btn" style="margin-top:16px;" onclick="openSettings('ai')">⚙ Changer le fournisseur IA</button>
           </div>
         </div>
+        <!-- Grille principale : [Source vidéo | Chat] -->
         <div class="vision-top-grid">
+          <!-- Panneau source (caméra ou écran) -->
           <div class="vision-panel">
-            <div class="vision-mode-tabs">
-              <button class="vision-mode-tab active" id="vaTabCam" onclick="vaSwitchSource('cam')">📷 Caméra</button>
-              <button class="vision-mode-tab" id="vaTabScreen" onclick="vaSwitchSource('screen')">🖥️ Écran</button>
+            <div class="vision-panel-hdr">
+              <span class="live-dot" id="vaLiveDot"></span>
+              <span id="vaSourceLabel">CAMÉRA LIVE</span>
+              <!-- Tabs Caméra / Écran intégrés dans le header -->
+              <div class="vision-src-tabs">
+                <button class="vision-src-tab active" id="vaTabCam" onclick="vaSwitchSource('cam')">📷 Caméra</button>
+                <button class="vision-src-tab" id="vaTabScreen" onclick="vaSwitchSource('screen')">🖥 Écran</button>
+              </div>
             </div>
+            <!-- Source caméra -->
             <div id="vaCamSource" style="flex:1;display:flex;flex-direction:column;min-height:0;">
-              <div class="vision-panel-hdr"><span class="live-dot" id="vaLiveDot" style="background:var(--text-dim);animation:none;"></span>CAMÉRA LIVE</div>
               <div class="vision-video-wrap">
-                <video id="vaVideo" autoplay playsinline muted style="display:none;width:100%;height:100%;object-fit:cover;"></video>
-                <div id="vaVideoPlaceholder" class="vision-video-placeholder">📷<br>Sélectionnez une caméra</div>
+                <video id="vaVideo" autoplay playsinline muted style="display:none;"></video>
+                <div id="vaVideoPlaceholder" class="vision-video-placeholder">
+                  📷<br><strong>Aucune caméra active</strong><br>Choisissez une caméra et cliquez ▶ Démarrer
+                </div>
               </div>
               <div class="vision-cam-controls">
-                <select id="vaCamSelect" style="font-size:0.72em;"><option value="">Caméra par défaut</option></select>
-                <button class="vision-btn green" onclick="visionCamStart('va')">▶ Start</button>
-                <button class="vision-btn red" onclick="visionCamStop('va')">■ Stop</button>
+                <select id="vaCamSelect"><option value="">Caméra par défaut</option></select>
+                <button class="vision-btn green" onclick="visionCamStart('va')">▶ Démarrer</button>
+                <button class="vision-btn red" onclick="visionCamStop('va')">■ Arrêter</button>
               </div>
             </div>
+            <!-- Source écran -->
             <div id="vaScreenSource" style="display:none;flex:1;flex-direction:column;min-height:0;">
-              <div class="vision-panel-hdr"><span class="live-dot" id="vaScreenDot" style="background:var(--text-dim);animation:none;"></span>ÉCRAN PARTAGÉ</div>
               <div class="vision-video-wrap">
-                <video id="vaScreen" autoplay playsinline muted style="display:none;width:100%;height:100%;object-fit:cover;"></video>
-                <div id="vaScreenPlaceholder" class="vision-video-placeholder">🖥️<br>Cliquez pour partager<br>votre écran avec E.V.A</div>
+                <video id="vaScreen" autoplay playsinline muted style="display:none;"></video>
+                <div id="vaScreenPlaceholder" class="vision-video-placeholder">
+                  🖥️<br><strong>Partage d'écran inactif</strong><br>Cliquez ▶ Partager pour commencer
+                </div>
               </div>
               <div class="vision-cam-controls">
-                <button class="vision-btn green" onclick="vaStartScreen()">▶ Partager l'écran</button>
+                <button class="vision-btn green" style="flex:1;" onclick="vaStartScreen()">▶ Partager l'écran</button>
                 <button class="vision-btn red" onclick="vaStopScreen()">■ Arrêter</button>
               </div>
             </div>
           </div>
+          <!-- Panneau chat -->
           <div class="vision-panel">
             <div class="vision-panel-hdr">👁️ CHAT — ASSISTANCE UNIVERSELLE</div>
             <div class="vision-chat-messages" id="vaMessages">
-              <div class="vision-msg assistant">👋 Bonjour ! Montrez-moi ce dont vous avez besoin — caméra ou partage d'écran — et je vous aide. Documents, interfaces, matériel, tout ce que vous me montrez.</div>
+              <div class="vision-msg assistant">👋 Bonjour ! Activez la caméra ou partagez votre écran, puis posez votre question. Documents, interfaces, matériel — je peux tout analyser.</div>
             </div>
             <div class="vision-chat-input-row">
               <textarea id="vaInput" placeholder="Pose ta question ou décris ce que tu veux analyser…" onkeydown="visionInputKey(event,'va')"></textarea>
-              <button class="vision-btn" id="vaMicBtn" title="Parler — capture + envoi vocal" onclick="visionWakeCapture('va')" style="font-size:1em;">🎤</button>
-              <button class="vision-btn" title="Capturer la source active et analyser" onclick="visionCaptureSend('va')">📷</button>
-              <button class="vision-btn" onclick="visionSend('va')">➤</button>
+              <button class="vision-mic-btn" id="vaMicBtn" title="Wake word — Parler pour capturer et envoyer" onclick="visionWakeCapture('va')">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </button>
+              <button class="vision-btn" title="Capturer la source et analyser" onclick="visionCaptureSend('va')" style="padding:0 10px;height:40px;">📷</button>
+              <button class="vision-btn" title="Envoyer le texte seul" onclick="visionSend('va')" style="padding:0 10px;height:40px;">➤</button>
             </div>
           </div>
         </div>
+        <!-- Historique sessions -->
         <div class="vision-history-panel">
           <div class="vision-history-hdr">
             <span>SESSIONS SAUVEGARDÉES</span>
-            <button class="vision-btn" style="font-size:0.6em;padding:3px 9px;" onclick="visionClearSession('va')">↺ Nouvelle session</button>
+            <button class="vision-btn" style="font-size:0.7em;padding:3px 10px;" onclick="visionClearSession('va')">↺ Nouvelle session</button>
           </div>
           <div class="vision-history-list" id="vaHistory">
-            <div style="color:var(--text-dim);font-size:0.73em;padding:6px;">Aucune session enregistrée</div>
+            <div style="color:var(--text-dim);font-size:0.72em;padding:4px 0;align-self:center;">Aucune session enregistrée</div>
           </div>
         </div>
       </div>
@@ -5915,7 +5963,7 @@ async function visionCamStart(prefix) {
     if (vid) { vid.srcObject = stream; vid.style.display = ''; }
     if (ph) ph.style.display = 'none';
     var dot = document.getElementById(dotId);
-    if (dot) { dot.style.background = '#ff4d6d'; dot.style.animation = ''; }
+    if (dot) { dot.classList.add('on'); }
     /* Énumérer maintenant qu'on a la permission */
     await visionEnumerateCams(selectId);
     if (sel && sel.value && sel.options.length > 0) {
@@ -5947,7 +5995,7 @@ function visionCamStop(prefix) {
   if (vid) { vid.srcObject = null; vid.style.display = 'none'; }
   if (ph) ph.style.display = '';
   var dot = document.getElementById(dotId);
-  if (dot) { dot.style.background = 'var(--text-dim)'; dot.style.animation = 'none'; }
+  if (dot) { dot.classList.remove('on'); }
 }
 window.visionCamStop = visionCamStop;
 
@@ -5958,16 +6006,19 @@ function vaSwitchSource(src) {
   var tabScreen = document.getElementById('vaTabScreen');
   var camSrc = document.getElementById('vaCamSource');
   var scrSrc = document.getElementById('vaScreenSource');
+  var lbl = document.getElementById('vaSourceLabel');
   if (src === 'cam') {
     if (tabCam) tabCam.classList.add('active');
     if (tabScreen) tabScreen.classList.remove('active');
     if (camSrc) camSrc.style.display = 'flex';
     if (scrSrc) scrSrc.style.display = 'none';
+    if (lbl) lbl.textContent = 'CAMÉRA LIVE';
   } else {
     if (tabCam) tabCam.classList.remove('active');
     if (tabScreen) tabScreen.classList.add('active');
     if (camSrc) camSrc.style.display = 'none';
     if (scrSrc) scrSrc.style.display = 'flex';
+    if (lbl) lbl.textContent = 'ÉCRAN PARTAGÉ';
   }
 }
 window.vaSwitchSource = vaSwitchSource;
@@ -5980,10 +6031,10 @@ async function vaStartScreen() {
     _VS.va.screenStream = stream;
     var vid = document.getElementById('vaScreen');
     var ph = document.getElementById('vaScreenPlaceholder');
-    var dot = document.getElementById('vaScreenDot');
+    var dot = document.getElementById('vaLiveDot');
     if (vid) { vid.srcObject = stream; vid.style.display = ''; }
     if (ph) ph.style.display = 'none';
-    if (dot) { dot.style.background = '#ff4d6d'; dot.style.animation = ''; }
+    if (dot) dot.classList.add('on');
     stream.getVideoTracks()[0].addEventListener('ended', function(){ vaStopScreen(); });
   } catch(e) {
     if (e.name !== 'NotAllowedError') toast('Partage d\'écran échoué: ' + e.message, 'error');
@@ -5995,10 +6046,10 @@ function vaStopScreen() {
   if (_VS.va.screenStream) { _VS.va.screenStream.getTracks().forEach(function(t){ t.stop(); }); _VS.va.screenStream = null; }
   var vid = document.getElementById('vaScreen');
   var ph = document.getElementById('vaScreenPlaceholder');
-  var dot = document.getElementById('vaScreenDot');
+  var dot = document.getElementById('vaLiveDot');
   if (vid) { vid.srcObject = null; vid.style.display = 'none'; }
   if (ph) ph.style.display = '';
-  if (dot) { dot.style.background = 'var(--text-dim)'; dot.style.animation = 'none'; }
+  if (dot) dot.classList.remove('on');
 }
 window.vaStopScreen = vaStopScreen;
 
@@ -6259,15 +6310,18 @@ async function visionLoadHistory(prefix) {
     snap.forEach(function(d) {
       var data = d.data();
       var date = data.updatedAt ? new Date(data.updatedAt.toDate()).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-      var active = d.id === _VS[prefix].sessionId ? ' style="border-color:var(--cyan);"' : '';
-      html += '<div class="vision-session-card"' + active + '>';
-      var thumbEl = data.thumb
-        ? '<img class="vision-session-thumb" src="' + data.thumb + '" alt="aperçu" onclick="visionRestoreSession(\'' + prefix + '\',\'' + d.id + '\')">'
-        : '<div class="vision-session-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:1.4em;cursor:pointer;" onclick="visionRestoreSession(\'' + prefix + '\',\'' + d.id + '\')">' + (prefix === 'vr' ? '🔧' : '👁️') + '</div>';
-      html += thumbEl;
-      html += '<div class="vision-session-title" onclick="visionRestoreSession(\'' + prefix + '\',\'' + d.id + '\')" style="cursor:pointer;">' + esc(data.title || 'Session') + '</div>';
+      var isActive = d.id === _VS[prefix].sessionId;
+      html += '<div class="vision-session-card' + (isActive ? ' active' : '') + '" style="' + (isActive ? 'border-color:var(--cyan);' : '') + '">';
+      if (data.thumb) {
+        html += '<img class="vision-session-thumb" src="' + data.thumb + '" alt="aperçu" onclick="visionRestoreSession(\'' + prefix + '\',\'' + d.id + '\')">';
+      } else {
+        html += '<div class="vision-session-thumb placeholder" onclick="visionRestoreSession(\'' + prefix + '\',\'' + d.id + '\')">' + (prefix === 'vr' ? '🔧' : '👁️') + '</div>';
+      }
+      html += '<div class="vision-session-info" onclick="visionRestoreSession(\'' + prefix + '\',\'' + d.id + '\')">';
+      html += '<div class="vision-session-title">' + esc(data.title || 'Session') + '</div>';
       html += '<div class="vision-session-date">' + date + '</div>';
-      html += '<button onclick="visionDeleteSession(\'' + prefix + '\',\'' + d.id + '\')" style="margin-top:4px;width:100%;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.3);color:#ff4d6d;border-radius:6px;padding:2px 0;font-size:0.62em;cursor:pointer;" title="Supprimer cette session">🗑 Supprimer</button>';
+      html += '</div>';
+      html += '<button class="vision-session-del" onclick="visionDeleteSession(\'' + prefix + '\',\'' + d.id + '\')">🗑 Supprimer</button>';
       html += '</div>';
     });
     list.innerHTML = html;
@@ -6357,9 +6411,7 @@ function visionWakeCapture(prefix) {
   if (micBtn && micBtn._recognition) {
     micBtn._recognition.abort();
     micBtn._recognition = null;
-    micBtn.textContent = '🎤';
-    micBtn.style.color = '';
-    micBtn.style.borderColor = '';
+    micBtn.classList.remove('listening');
     return;
   }
   var recognition = new SR();
@@ -6369,15 +6421,13 @@ function visionWakeCapture(prefix) {
   recognition.continuous = false;
   if (micBtn) {
     micBtn._recognition = recognition;
-    micBtn.textContent = '🔴';
-    micBtn.style.color = '#ff4d6d';
-    micBtn.style.borderColor = '#ff4d6d';
+    micBtn.classList.add('listening');
     micBtn.title = 'Cliquer pour annuler';
   }
   recognition.onresult = function(e) {
     var transcript = e.results[0][0].transcript.trim();
     if (inp) inp.value = transcript;
-    if (micBtn) { micBtn._recognition = null; micBtn.textContent = '🎤'; micBtn.style.color = ''; micBtn.style.borderColor = ''; micBtn.title = 'Parler — capture + envoi vocal'; }
+    if (micBtn) { micBtn._recognition = null; micBtn.classList.remove('listening'); micBtn.title = 'Wake word — Parler pour capturer et envoyer'; }
     /* Déclencher capture si flux actif, sinon texte seul */
     var state = _VS[prefix];
     var hasVideo = (prefix === 'vr' && state.camStream) ||
@@ -6388,11 +6438,11 @@ function visionWakeCapture(prefix) {
     }, 150);
   };
   recognition.onerror = function(e) {
-    if (micBtn) { micBtn._recognition = null; micBtn.textContent = '🎤'; micBtn.style.color = ''; micBtn.style.borderColor = ''; }
+    if (micBtn) { micBtn._recognition = null; micBtn.classList.remove('listening'); }
     if (e.error !== 'aborted' && e.error !== 'no-speech') toast('Micro : ' + e.error, 'error');
   };
   recognition.onend = function() {
-    if (micBtn) { micBtn._recognition = null; micBtn.textContent = '🎤'; micBtn.style.color = ''; micBtn.style.borderColor = ''; }
+    if (micBtn) { micBtn._recognition = null; micBtn.classList.remove('listening'); }
   };
   recognition.start();
 }
