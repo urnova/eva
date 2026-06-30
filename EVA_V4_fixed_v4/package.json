@@ -1,0 +1,13 @@
+{
+  "name": "@workspace/eva",
+  "version": "1.0.0",
+  "description": "E.V.A - Evolutionary Virtual Assistant",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.7.0"
+  }
+}

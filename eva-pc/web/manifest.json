@@ -1,0 +1,38 @@
+{
+  "name": "E.V.A — Evolutionary Virtual Assistant",
+  "short_name": "E.V.A",
+  "description": "Votre assistante IA personnelle nouvelle génération par Astral Technologie",
+  "start_url": "/chat",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#060d1a",
+  "theme_color": "#00d4ff",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "assets/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

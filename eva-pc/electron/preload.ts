@@ -1,0 +1,114 @@
+import { contextBridge, ipcRenderer } from 'electron'
+
+// ─── API EVA exposée au renderer via contextBridge ───
+// Pas de nodeIntegration → sécurité maximale
+
+const evaAPI = {
+  // ── Window Controls ──
+  window: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    close: () => ipcRenderer.invoke('window:close'),
+    isMaximized: () => ipcRenderer.invoke('window:isMaximized')
+  },
+
+  // ── electron-store (config locale) ──
+  store: {
+    get: (key: string) => ipcRenderer.invoke('store:get', key),
+    set: (key: string, value: unknown) => ipcRenderer.invoke('store:set', key, value),
+    delete: (key: string) => ipcRenderer.invoke('store:delete', key),
+    getAll: () => ipcRenderer.invoke('store:getAll')
+  },
+
+  // ── Filesystem ──
+  fs: {
+    list: (dirPath: string) => ipcRenderer.invoke('fs:list', dirPath),
+    read: (filePath: string) => ipcRenderer.invoke('fs:read', filePath),
+    write: (filePath: string, content: string) => ipcRenderer.invoke('fs:write', filePath, content),
+    delete: (filePath: string) => ipcRenderer.invoke('fs:delete', filePath),
+    rename: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:rename', oldPath, newPath),
+    mkdir: (dirPath: string) => ipcRenderer.invoke('fs:mkdir', dirPath),
+    openDialog: (options: unknown) => ipcRenderer.invoke('fs:openDialog', options),
+    saveDialog: (options: unknown) => ipcRenderer.invoke('fs:saveDialog', options),
+    openPath: (filePath: string) => ipcRenderer.invoke('fs:openPath', filePath),
+    showInExplorer: (filePath: string) => ipcRenderer.invoke('fs:showInExplorer', filePath),
+    drives: () => ipcRenderer.invoke('fs:drives'),
+    homedir: () => ipcRenderer.invoke('fs:homedir')
+  },
+
+  // ── Terminal ──
+  terminal: {
+    create: (termId: string) => ipcRenderer.invoke('terminal:create', termId),
+    write: (termId: string, data: string) => ipcRenderer.invoke('terminal:write', termId, data),
+    resize: (termId: string, cols: number, rows: number) => ipcRenderer.invoke('terminal:resize', termId, cols, rows),
+    kill: (termId: string) => ipcRenderer.invoke('terminal:kill', termId),
+    onData: (termId: string, callback: (data: string) => void) => {
+      const channel = `terminal:data:${termId}`
+      const listener = (_: unknown, data: string) => callback(data)
+      ipcRenderer.on(channel, listener)
+      return () => ipcRenderer.removeListener(channel, listener)
+    },
+    onExit: (termId: string, callback: () => void) => {
+      const channel = `terminal:exit:${termId}`
+      const listener = () => callback()
+      ipcRenderer.on(channel, listener)
+      return () => ipcRenderer.removeListener(channel, listener)
+    }
+  },
+
+  // ── System ──
+  system: {
+    info: () => ipcRenderer.invoke('system:info'),
+    cpuLoad: () => ipcRenderer.invoke('system:cpuLoad'),
+    screenshot: () => ipcRenderer.invoke('system:screenshot'),
+    exec: (cmd: string) => ipcRenderer.invoke('system:exec', cmd),
+    sleep: () => ipcRenderer.invoke('system:sleep'),
+    shutdown: () => ipcRenderer.invoke('system:shutdown'),
+    restart: () => ipcRenderer.invoke('system:restart'),
+    lock: () => ipcRenderer.invoke('system:lock'),
+    processes: () => ipcRenderer.invoke('system:processes'),
+    killProcess: (pid: number) => ipcRenderer.invoke('system:killProcess', pid)
+  },
+
+  // ── Auto Launch ──
+  autoLaunch: {
+    get: () => ipcRenderer.invoke('autolaunch:get'),
+    set: (enabled: boolean) => ipcRenderer.invoke('autolaunch:set', enabled)
+  },
+
+  // ── App Info ──
+  app: {
+    version: () => ipcRenderer.invoke('app:version'),
+    platform: () => ipcRenderer.invoke('app:platform'),
+    name: () => ipcRenderer.invoke('app:name'),
+    path: () => ipcRenderer.invoke('app:path')
+  },
+
+  // ── Navigation (depuis tray/main) ──
+  onNavigate: (callback: (route: string) => void) => {
+    ipcRenderer.on('navigate', (_: unknown, route: string) => callback(route))
+  },
+  onNewChat: (callback: () => void) => {
+    ipcRenderer.on('new-chat', () => callback())
+  },
+
+  // ── Auth callback (depuis protocole eva-desktop://) ──
+  onAuthCallback: (callback: (data: { refreshToken?: string; hid?: string }) => void) => {
+    ipcRenderer.on('auth:callback', (_: unknown, data: { refreshToken?: string; hid?: string }) => callback(data))
+  },
+
+  // ── Ouvrir URL dans le navigateur système ──
+  openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
+
+  // ── Échange du refresh token via main process (Node.js, sans restriction CORS) ──
+  exchangeToken: (refreshToken: string, apiKey: string) =>
+    ipcRenderer.invoke('auth:exchangeToken', refreshToken, apiKey),
+
+  // ── Popup Auth (conservé pour fallback futur) ──
+  openAuthWindow: (url: string) => ipcRenderer.invoke('auth:openAuthWindow', url)
+}
+
+contextBridge.exposeInMainWorld('eva', evaAPI)
+
+// Type global pour TypeScript dans le renderer
+// Note: EvaAPI est déclaré dans src/types/index.ts via declare global

@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configuration — E.V.A</title>
+<link rel="icon" type="image/png" href="assets/images/eva-logo.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="var(--cyan)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="E.V.A">
+<link rel="apple-touch-icon" href="/assets/images/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+<style>
+:root {
+  --cyan: #7b8bf5;
+  --cyan-dim: rgba(123,139,245,0.09);
+  --cyan-glow: rgba(123,139,245,0.45);
+  --green: #4ade80;
+  --purple: #b794f6;
+  --red: #ff4d6d;
+  --bg: #111113;
+  --surface: #18181b;
+  --surface2: #222228;
+  --surface3: #2a2a33;
+  --border: rgba(123,139,245,0.12);
+  --text: #e2e2f0;
+  --text-muted: #71717a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(123,139,245,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.018) 1px,transparent 1px);
+  background-size:55px 55px;pointer-events:none;z-index:0;
+}
+.bg-orb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(120px);z-index:0;}
+.bg-orb-1{width:600px;height:600px;top:-200px;right:-200px;background:rgba(123,139,245,0.04);animation:orbDrift 16s ease-in-out infinite;}
+.bg-orb-2{width:500px;height:500px;bottom:-200px;left:-100px;background:rgba(183,148,246,0.03);animation:orbDrift 20s ease-in-out infinite reverse;}
+@keyframes orbDrift{0%,100%{transform:translate(0,0)}50%{transform:translate(25px,-25px)}}
+
+.page{
+  position:relative;z-index:1;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+}
+
+.ob-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:40px;max-width:520px;width:100%;
+  box-shadow:0 30px 80px rgba(0,0,0,0.6);
+  animation:cardIn 0.45s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(0.97)}to{opacity:1;transform:none}}
+
+.ob-header{text-align:center;margin-bottom:32px;}
+.ob-logo{display:flex;align-items:center;justify-content:center;margin:0 auto 18px;animation:logoFloat 3.5s ease-in-out infinite;}
+@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.ob-logo img{width:120px;height:auto;}
+.ob-title{font-family:'Orbitron',monospace;font-size:1.5em;font-weight:900;letter-spacing:3px;color:var(--cyan);margin-bottom:6px;}
+.ob-sub{font-size:0.82em;color:var(--text-muted);line-height:1.6;}
+
+.ob-progress{display:flex;gap:6px;margin-bottom:28px;}
+.ob-step{flex:1;height:4px;background:var(--surface3);border-radius:10px;transition:all 0.35s;}
+.ob-step.active{background:var(--cyan);box-shadow:0 0 8px var(--cyan-glow);}
+
+.ob-view{display:none;}
+.ob-view.active{display:block;animation:fadeUp 0.3s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.ava-wrap{display:flex;justify-content:center;margin-bottom:20px;}
+.ava-preview{
+  width:100px;height:100px;border-radius:50%;
+  background:var(--cyan-dim);border:2px solid var(--cyan);
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.4em;font-weight:700;color:var(--cyan);
+  cursor:pointer;transition:all 0.2s;overflow:hidden;
+}
+.ava-preview:hover{transform:scale(1.06);box-shadow:0 0 20px var(--cyan-glow);}
+.ava-preview img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.ava-hint{font-size:0.71em;color:var(--text-muted);text-align:center;margin-top:6px;}
+
+.field{margin-bottom:16px;}
+.field-label{display:block;font-size:0.76em;color:var(--text-muted);margin-bottom:6px;letter-spacing:0.5px;text-transform:uppercase;}
+.field-hint{font-size:0.72em;color:var(--text-muted);margin-top:4px;opacity:0.7;}
+.field-input{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:10px 13px;color:var(--text);
+  font-family:'Space Mono',monospace;font-size:0.85em;outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+.field-input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(123,139,245,0.08);}
+.field-input.error{border-color:var(--red);}
+
+.pass-strength{height:3px;border-radius:10px;margin-top:6px;transition:all 0.3s;background:var(--surface3);}
+.pass-strength.weak{background:var(--red);width:33%;}
+.pass-strength.medium{background:var(--orange,#ff9500);width:66%;}
+.pass-strength.strong{background:var(--green);width:100%;}
+.pass-strength-label{font-size:0.68em;color:var(--text-muted);margin-top:3px;}
+
+.pass-info-box{
+  background:rgba(123,139,245,0.05);border:1px solid rgba(123,139,245,0.12);
+  border-radius:10px;padding:12px 14px;margin-bottom:16px;
+  font-size:0.78em;color:var(--text-muted);line-height:1.6;
+}
+.pass-info-box strong{color:var(--cyan);}
+
+.voice-opt{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;border-radius:10px;
+  background:var(--surface2);border:1px solid var(--border);
+  cursor:pointer;transition:all 0.2s;margin-bottom:10px;
+}
+.voice-opt:hover,.voice-opt.selected{border-color:var(--cyan);background:var(--cyan-dim);}
+.voice-opt-info .voice-name{font-size:0.85em;font-weight:700;color:var(--text);}
+.voice-opt-info .voice-desc{font-size:0.72em;color:var(--text-muted);margin-top:2px;}
+.voice-test-btn{
+  background:transparent;border:1px solid var(--cyan);color:var(--cyan);
+  padding:5px 12px;border-radius:7px;font-size:0.75em;cursor:pointer;
+  transition:all 0.2s;font-family:'Space Mono',monospace;
+}
+.voice-test-btn:hover{background:var(--cyan);color:#000;}
+
+.ob-actions{display:flex;gap:10px;margin-top:24px;}
+.btn-skip{
+  flex:1;background:transparent;color:var(--text-muted);
+  border:1px solid var(--border);padding:12px;border-radius:10px;
+  font-family:'Space Mono',monospace;font-size:0.82em;font-weight:700;
+  cursor:pointer;transition:all 0.2s;
+}
+.btn-skip:hover{background:var(--surface2);color:var(--text);}
+.btn-next{
+  flex:2;background:linear-gradient(135deg,var(--cyan),#0099cc);color:#000;
+  border:none;padding:12px;border-radius:10px;
+  font-family:'Orbitron',monospace;font-size:0.82em;font-weight:700;
+  letter-spacing:2px;cursor:pointer;transition:all 0.2s;
+  box-shadow:0 0 20px rgba(123,139,245,0.3);
+}
+.btn-next:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(123,139,245,0.5);}
+.btn-next:active{transform:translateY(0);}
+.btn-next:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+
+.step-label{font-family:'Orbitron',monospace;font-size:0.72em;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+
+.finish-icon{font-size:3.5em;text-align:center;margin-bottom:16px;}
+.finish-title{font-family:'Orbitron',monospace;color:var(--cyan);font-size:1.2em;text-align:center;margin-bottom:10px;}
+.finish-text{color:var(--text-muted);text-align:center;font-size:0.82em;line-height:1.7;margin-bottom:24px;}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:10px}
+/* ── TV / Very large screens (≥1800px) ── */
+@media(min-width:1800px){
+  .ob-card{max-width:640px;padding:56px;}
+  .ob-title{font-size:1.8em;letter-spacing:5px;}
+  .ob-logo img{width:150px;}
+  .ob-sub{font-size:0.9em;}
+  .field-input{padding:13px 16px;font-size:0.9em;}
+  .btn-next,.btn-skip{padding:15px;font-size:0.88em;}
+  .voice-opt{padding:14px 18px;}
+  .ava-preview{width:120px;height:120px;font-size:2.8em;}
+}
+
+/* ── Tablet (640px – 1023px) ── */
+@media(min-width:560px) and (max-width:1023px){
+  .ob-card{max-width:480px;padding:36px 36px;}
+  .ob-title{font-size:1.4em;}
+  .ob-logo img{width:110px;}
+}
+
+/* ── Mobile (≤559px) ── */
+@media(max-width:559px){
+  .page{padding:14px;align-items:flex-start;padding-top:clamp(16px,6vh,48px);}
+  .ob-card{padding:26px 18px;border-radius:18px;margin:0;}
+  .ob-title{font-size:1.2em;letter-spacing:2px;}
+  .ob-logo img{width:88px;}
+  .ob-sub{font-size:0.78em;}
+  .ob-progress{margin-bottom:22px;}
+  .field-input{padding:10px 12px;font-size:0.84em;}
+  .field-label{font-size:0.73em;}
+  .voice-opt{padding:10px 12px;}
+  .voice-name{font-size:0.82em;}
+  .voice-desc{font-size:0.69em;}
+  .voice-test-btn{padding:4px 10px;font-size:0.72em;}
+  .btn-next{padding:12px;font-size:0.8em;letter-spacing:1.5px;}
+  .btn-skip{padding:12px;font-size:0.8em;}
+  .ob-actions{margin-top:18px;gap:8px;}
+  .ava-preview{width:88px;height:88px;font-size:2em;}
+  .finish-icon{font-size:3em;}
+  .finish-title{font-size:1.1em;}
+  .finish-text{font-size:0.79em;}
+  .pass-info-box{padding:10px 12px;font-size:0.75em;}
+}
+
+/* ── Small mobile (≤380px) ── */
+@media(max-width:380px){
+  .ob-card{padding:22px 14px;}
+  .ob-title{font-size:1.05em;}
+  .ob-logo img{width:76px;}
+  .btn-next,.btn-skip{padding:11px;font-size:0.76em;}
+}
+
+/* ── Toggle switch ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);margin-bottom:10px;gap:12px;}
+.toggle-row:hover{border-color:rgba(123,139,245,0.25);}
+.toggle-info .toggle-name{font-size:0.85em;font-weight:700;color:var(--text);}
+.toggle-info .toggle-desc{font-size:0.72em;color:var(--text-muted);margin-top:3px;line-height:1.4;}
+.toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--surface3);border-radius:24px;transition:0.25s;}
+.toggle-slider:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.25s;}
+.toggle-switch input:checked + .toggle-slider{background:var(--cyan);box-shadow:0 0 10px rgba(123,139,245,0.4);}
+.toggle-switch input:checked + .toggle-slider:before{transform:translateX(20px);}
+
+/* ── PC note ── */
+.pc-note{background:rgba(183,148,246,0.07);border:1px solid rgba(183,148,246,0.22);border-radius:10px;padding:13px 15px;margin:14px 0 0;}
+.pc-note-title{font-size:0.8em;font-weight:700;color:var(--purple);margin-bottom:5px;}
+.pc-note-body{font-size:0.76em;color:var(--text-muted);line-height:1.65;}
+.pc-note-body strong{color:var(--purple);}
+
+/* ── Legal acceptance ── */
+.legal-section{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:4px;}
+.legal-check{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:0.8em;color:var(--text-muted);line-height:1.55;}
+.legal-check:last-child{margin-bottom:0;}
+.legal-check input[type="checkbox"]{width:16px;height:16px;accent-color:var(--cyan);flex-shrink:0;margin-top:2px;cursor:pointer;}
+.legal-check label{cursor:pointer;}
+.legal-check a{color:var(--cyan);text-decoration:none;}
+.legal-check a:hover{text-decoration:underline;}
+.legal-required{color:var(--red);font-size:0.75em;margin-top:10px;display:none;}
+.legal-required.visible{display:block;}
+</style>
+</head>
+<body>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+
+<div class="page">
+  <div class="ob-card">
+
+    <div class="ob-header">
+      <div class="ob-logo">
+        <img src="/assets/images/eva-logo.png" alt="EVA">
+      </div>
+      <div class="ob-title">CONFIGURATION</div>
+      <div class="ob-sub">Personnalisez votre expérience EVA</div>
+    </div>
+
+    <div class="ob-progress">
+      <div class="ob-step active" id="step-bar-1"></div>
+      <div class="ob-step" id="step-bar-2"></div>
+      <div class="ob-step" id="step-bar-3"></div>
+      <div class="ob-step" id="step-bar-4"></div>
+      <div class="ob-step" id="step-bar-5"></div>
+      <div class="ob-step" id="step-bar-6"></div>
+      <div class="ob-step" id="step-bar-7"></div>
+      <div class="ob-step" id="step-bar-8"></div>
+    </div>
+
+    <!-- Step 1: Profil -->
+    <div class="ob-view active" id="ob1">
+      <div class="step-label">Étape 1 — Profil</div>
+      <div class="ava-wrap">
+        <div>
+          <div class="ava-preview" id="avaPreview" onclick="document.getElementById('avaFile').click()">
+            <span id="avaInitials">?</span>
+          </div>
+          <div class="ava-hint">Cliquer pour changer</div>
+        </div>
+      </div>
+      <input type="file" id="avaFile" accept="image/*" style="display:none" onchange="handleAvaFile(event)">
+      <div class="field">
+        <label class="field-label">Nom complet *</label>
+        <input type="text" class="field-input" id="displayName" placeholder="Jean Dupont">
+        <div class="field-hint">Votre identité dans E.V.A</div>
+      </div>
+      <div class="field">
+        <label class="field-label">Surnom</label>
+        <input type="text" class="field-input" id="nickname" placeholder="Jean">
+        <div class="field-hint">Comment E.V.A va vous appeler</div>
+      </div>
+      <div class="ob-actions">
+        <button class="btn-skip" onclick="skipAll()">Passer tout</button>
+        <button class="btn-next" onclick="goStep(2)">SUIVANT →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Mot de passe (Google uniquement) -->
+    <div class="ob-view" id="ob2">
+      <div class="step-label">Étape 2 — Sécurité</div>
+      <div class="pass-info-box" id="passInfoBox">
+        Vous êtes connecté via <strong>Google</strong>.<br>
+        Créez un mot de passe optionnel pour pouvoir aussi vous connecter directement avec votre email.
+      </div>
+      <div class="field">
+        <label class="field-label">Nouveau mot de passe</label>
+        <input type="password" class="field-input" id="obNewPass" placeholder="Minimum 6 caractères" oninput="checkPassStrength()">
+        <div class="pass-strength" id="passStrength"></div>
+        <div class="pass-strength-label" id="passStrengthLabel"></div>
+      </div>
+      <div class="field">
+        <label class="field-label">Confirmer le mot de passe</label>
+        <input type="password" class="field-input" id="obConfPass" placeholder="Idem ci-dessus">
+      </div>
+      <div class="ob-actions">
+        <button class="btn-skip" onclick="goStep(1)">← Retour</button>
+        <button class="btn-skip" onclick="goStep(3)" style="border-color:rgba(123,139,245,0.2);color:var(--text-muted)">Passer</button>
+        <button class="btn-next" onclick="savePasswordAndContinue()" id="obPassBtn">CRÉER →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Voix -->
+    <div class="ob-view" id="ob3">
+      <div class="step-label">Étape 3 — Synthèse vocale</div>
+      <div class="field">
+        <label class="field-label" style="margin-bottom:8px;display:block;">Service de voix</label>
+        <div class="field-hint" style="margin-bottom:14px;">Choisissez comment EVA vous parlera. Vous pourrez changer ce réglage à tout moment dans les paramètres.</div>
+
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;">
+          <div id="obttsc-native" onclick="obSelectTTS('native')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <div style="position:absolute;top:5px;right:5px;display:flex;flex-direction:column;gap:2px;align-items:flex-end;">
+              <span style="font-size:0.44em;font-weight:800;background:#4ade80;color:#fff;border-radius:4px;padding:1px 5px;">LOCAL</span>
+              <span style="font-size:0.44em;font-weight:800;background:#06b6d4;color:#000;border-radius:4px;padding:1px 5px;">GRATUIT</span>
+            </div>
+            <div id="obc-native" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">✓</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">🎙️</div>
+            <div style="font-weight:700;font-size:0.8em;margin-bottom:2px;">Navigateur</div>
+            <div style="font-size:0.63em;color:var(--text-muted);">Web Speech<br>Sans config</div>
+          </div>
+          <div id="obttsc-piper" onclick="obSelectTTS('piper')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid var(--cyan);background:rgba(123,139,245,0.07);text-align:center;position:relative;transition:all 0.2s;">
+            <div style="position:absolute;top:5px;right:5px;display:flex;flex-direction:column;gap:2px;align-items:flex-end;">
+              <span style="font-size:0.44em;font-weight:800;background:#4ade80;color:#000;border-radius:4px;padding:1px 5px;">LOCAL</span>
+              <span style="font-size:0.44em;font-weight:800;background:#06b6d4;color:#000;border-radius:4px;padding:1px 5px;">GRATUIT</span>
+            </div>
+            <div id="obc-piper" style="position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">✓</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">🇫🇷</div>
+            <div style="font-weight:700;font-size:0.8em;margin-bottom:2px;">Piper TTS</div>
+            <div style="font-size:0.63em;color:var(--text-muted);">Voix française féminine<br>100% local · sans clé</div>
+          </div>
+          <div id="obttsc-eva" onclick="obSelectTTS('eva')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <div style="position:absolute;top:5px;right:5px;display:flex;flex-direction:column;gap:2px;align-items:flex-end;">
+              <span style="font-size:0.44em;font-weight:800;background:#8b5cf6;color:#fff;border-radius:4px;padding:1px 5px;">LOCAL</span>
+              <span style="font-size:0.44em;font-weight:800;background:#06b6d4;color:#000;border-radius:4px;padding:1px 5px;">GRATUIT</span>
+            </div>
+            <div id="obc-eva" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">✓</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">🧠</div>
+            <div style="font-weight:700;font-size:0.8em;margin-bottom:2px;">Kokoro Neural</div>
+            <div style="font-size:0.63em;color:var(--text-muted);">TTS Neuronal<br>100% local</div>
+          </div>
+          <div id="obttsc-elevenlabs" onclick="obSelectTTS('elevenlabs')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.44em;font-weight:800;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
+            <div id="obc-elevenlabs" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">✓</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">⚡</div>
+            <div style="font-weight:700;font-size:0.8em;margin-bottom:2px;">ElevenLabs</div>
+            <div style="font-size:0.63em;color:var(--text-muted);">Ultra-réaliste<br>Clé API</div>
+          </div>
+          <div id="obttsc-openai" onclick="obSelectTTS('openai')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.44em;font-weight:800;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
+            <div id="obc-openai" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">✓</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">🤖</div>
+            <div style="font-weight:700;font-size:0.8em;margin-bottom:2px;">OpenAI TTS</div>
+            <div style="font-size:0.63em;color:var(--text-muted);">Voix GPT<br>Clé API</div>
+          </div>
+        </div>
+
+        <div id="obTTSDetail" style="background:rgba(123,139,245,0.04);border:1px solid rgba(123,139,245,0.15);border-radius:12px;padding:14px 16px;"></div>
+      </div>
+      <div class="ob-actions">
+        <button class="btn-skip" onclick="goStep(isGoogleOnlyUser ? 2 : 1)">← Retour</button>
+        <button class="btn-next" onclick="goStep(4)">SUIVANT →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: IA & Puter -->
+    <div class="ob-view" id="ob4">
+      <div class="step-label">Étape 4 — Intelligence artificielle</div>
+      <div class="field">
+        <div class="field-hint" style="margin-bottom:12px">Comment E.V.A va traiter vos conversations.</div>
+
+        <!-- RECOMMANDÉS -->
+        <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">⭐ Recommandés</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;">
+
+          <!-- Puter (RECOMMANDÉ : gratuit, sans clé API, GPT-4o + Claude) -->
+          <div id="obcard-puter" onclick="obSelectProvider('puter')" style="cursor:pointer;border-radius:12px;padding:14px 12px;border:2px solid var(--cyan);background:rgba(123,139,245,0.07);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.55em;font-weight:700;letter-spacing:0.06em;background:#06b6d4;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:8px;right:8px;">GRATUIT</span>
+            <div id="obcheck-puter" style="position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;">✓</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">☁️</div>
+            <div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">Puter Cloud</div>
+            <div style="font-size:0.65em;color:var(--text-muted);line-height:1.4;">Sans clé API<br>GPT-4o · Claude · Quota partagé</div>
+          </div>
+
+          <!-- Pollinations -->
+          <div id="obcard-pollinations" onclick="obSelectProvider('pollinations')" style="cursor:pointer;border-radius:12px;padding:14px 12px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.55em;font-weight:700;letter-spacing:0.06em;background:#06b6d4;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:8px;right:8px;">GRATUIT</span>
+            <div id="obcheck-pollinations" style="display:none;position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;">✓</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">🌸</div>
+            <div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">Pollinations</div>
+            <div style="font-size:0.65em;color:var(--text-muted);line-height:1.4;">Sans compte · Sans clé<br>GPT-4o · Gemini · DeepSeek</div>
+          </div>
+
+          <!-- Local -->
+          <div id="obcard-qwen" onclick="obSelectProvider('qwen')" style="cursor:pointer;border-radius:12px;padding:14px 12px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.55em;font-weight:700;letter-spacing:0.06em;background:#f59e0b;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:8px;right:8px;">LOCAL</span>
+            <div id="obcheck-qwen" style="display:none;position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;">✓</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">🖥️</div>
+            <div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">Local Privé</div>
+            <div style="font-size:0.65em;color:var(--text-muted);line-height:1.4;">100% privé<br>Limité</div>
+          </div>
+        </div>
+
+        <!-- AUTRES -->
+        <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Autres fournisseurs</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;">
+
+          <!-- OpenAI -->
+          <div id="obcard-openai" onclick="obSelectProvider('openai')" style="cursor:pointer;border-radius:12px;padding:12px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.52em;font-weight:700;letter-spacing:0.06em;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
+            <div id="obcheck-openai" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.85em;">✓</div>
+            <div style="font-size:1.2em;margin-bottom:4px;">🤖</div>
+            <div style="font-weight:700;font-size:0.76em;margin-bottom:2px;">OpenAI</div>
+            <div style="font-size:0.62em;color:var(--text-muted);">GPT-4o · Clé API</div>
+          </div>
+
+          <!-- Claude -->
+          <div id="obcard-claude" onclick="obSelectProvider('claude')" style="cursor:pointer;border-radius:12px;padding:12px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
+            <span style="font-size:0.52em;font-weight:700;letter-spacing:0.06em;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
+            <div id="obcheck-claude" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.85em;">✓</div>
+            <div style="font-size:1.2em;margin-bottom:4px;">🧠</div>
+            <div style="font-weight:700;font-size:0.76em;margin-bottom:2px;">Claude</div>
+            <div style="font-size:0.62em;color:var(--text-muted);">Anthropic · Clé API</div>
+          </div>
+
+        </div>
+
+        <!-- Puter connect (visible si Puter sélectionné) -->
+        <div id="obPuterSection" style="background:rgba(123,139,245,0.05);border:1px solid rgba(123,139,245,0.15);border-radius:10px;padding:12px 14px;">
+          <div id="obPuterStatus" style="font-size:0.74em;color:rgba(123,139,245,0.6);margin-bottom:8px;">Vérification du statut Puter...</div>
+          <button id="obPuterBtn" class="voice-test-btn" onclick="obConnectPuter(event)">🔗 Connexion Puter</button>
+        </div>
+      </div>
+      <div class="ob-actions">
+        <button class="btn-skip" onclick="goStep(3)">← Retour</button>
+        <button class="btn-next" onclick="goStep(5)">SUIVANT →</button>
+      </div>
+    </div>
+
+    <!-- Step 5: Préférences -->
+    <div class="ob-view" id="ob5">
+      <div class="step-label">Étape 5 — Préférences</div>
+
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-name">🎙️ Wake Word "Hey EVA"</div>
+          <div class="toggle-desc">E.V.A s'active automatiquement quand vous dites "Hey EVA"</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="prefWakeWord">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-name">⚡ Lancer E.V.A directement</div>
+          <div class="toggle-desc">Accéder automatiquement au chat après la connexion</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="prefAutoLaunch" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-name">🧠 Mémoire Évolutive</div>
+          <div class="toggle-desc">EVA apprend qui vous êtes au fil des conversations pour s'adapter de mieux en mieux à vous</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="prefAdaptation" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div style="height:1px;background:rgba(123,139,245,0.1);margin:10px 0 16px;"></div>
+      <div style="font-size:0.62em;letter-spacing:2px;color:rgba(123,139,245,0.5);text-transform:uppercase;margin-bottom:10px;font-family:'Orbitron',monospace;">⚗️ Expérimental</div>
+      <div class="toggle-row" style="border:1px solid rgba(123,139,245,0.14);border-radius:12px;padding:12px 14px;background:rgba(123,139,245,0.03);">
+        <div class="toggle-info">
+          <div class="toggle-name" style="color:var(--cyan);">☁️ Fonctions expérimentales</div>
+          <div class="toggle-desc">Active CloudWorks et d'autres modules en cours de développement. Modifiable à tout moment dans Paramètres → Expérimental.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="prefExperimental">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="ob-actions">
+        <button class="btn-skip" onclick="goStep(4)">← Retour</button>
+        <button class="btn-next" onclick="goStep(6)">SUIVANT →</button>
+      </div>
+    </div>
+
+    <!-- Step 6: Notifications push -->
+    <div class="ob-view" id="ob6">
+      <div class="step-label">Étape 6 — Notifications</div>
+
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:2.8em;margin-bottom:10px">🔔</div>
+        <div style="font-family:'Orbitron',monospace;font-size:1.05em;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:8px">NOTIFICATIONS PUSH</div>
+        <div style="font-size:0.82em;color:var(--text-muted);line-height:1.6;max-width:340px;margin:0 auto">
+          Recevez vos alarmes, rappels et événements calendrier <strong style="color:var(--cyan)">quand le site est ouvert</strong> dans votre navigateur.<br>Fonctionne sur PC et Android.
+        </div>
+      </div>
+
+      <div id="obNotifGranted" style="display:none;background:rgba(0,220,100,0.08);border:1px solid rgba(0,220,100,0.3);border-radius:14px;padding:16px;margin-bottom:16px;text-align:center">
+        <div style="font-size:1.5em;margin-bottom:6px">✅</div>
+        <div style="font-size:0.85em;color:#4ade80;font-weight:600">Push activé avec succès</div>
+        <div style="font-size:0.74em;color:var(--text-muted);margin-top:4px" id="obNotifTokenStatus">Enregistrement en cours…</div>
+      </div>
+
+      <div id="obNotifDenied" style="display:none;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.3);border-radius:14px;padding:16px;margin-bottom:16px;text-align:center">
+        <div style="font-size:1.5em;margin-bottom:6px">⚠️</div>
+        <div style="font-size:0.83em;color:#ff4d6d;font-weight:600">Notifications bloquées par le navigateur</div>
+        <div style="font-size:0.73em;color:var(--text-muted);margin-top:4px">Cliquez sur 🔒 dans la barre d'adresse → autoriser les notifications pour E.V.A</div>
+      </div>
+
+      <div id="obNotifDefault">
+        <button onclick="requestObNotifPermission()" style="
+          width:100%;padding:16px;border-radius:14px;
+          border:2px solid var(--cyan);background:rgba(123,139,245,0.07);
+          color:var(--cyan);font-family:'Orbitron',monospace;font-size:0.82em;
+          font-weight:700;letter-spacing:2px;cursor:pointer;
+          transition:all 0.25s;margin-bottom:12px;
+        ">🔔 ACTIVER LES NOTIFICATIONS PUSH</button>
+        <div style="font-size:0.72em;color:var(--text-dim);text-align:center;line-height:1.6">
+          Une fenêtre du navigateur va s'ouvrir pour demander votre permission.<br>
+          Vous pouvez désactiver à tout moment dans Paramètres → Notifications.
+        </div>
+      </div>
+
+      <div style="margin-top:18px;padding:14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.06)">
+        <div style="font-size:0.72em;color:var(--text-muted);line-height:1.75">
+          <div style="font-weight:600;color:var(--text-base);margin-bottom:6px">Compatibilité</div>
+          ✅ Chrome, Edge, Firefox, Opera — PC &amp; Android<br>
+          ✅ Safari iOS 16.4+ (iPhone &amp; iPad)<br>
+          ❌ Safari macOS — non supporté (limitation Apple)
+        </div>
+      </div>
+
+      <div class="ob-actions" style="margin-top:20px">
+        <button class="btn-skip" onclick="goStep(5)">← Retour</button>
+        <button class="btn-next" id="obNotifNextBtn" onclick="goStep(7)">SUIVANT →</button>
+      </div>
+    </div>
+
+    <!-- Step 7: Avatar / Personnage EVA (PC uniquement) -->
+    <div class="ob-view" id="ob7">
+      <div class="step-label">Étape 7 — Présence d'E.V.A</div>
+
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:2.8em;margin-bottom:10px">🔮</div>
+        <div style="font-family:'Orbitron',monospace;font-size:1.05em;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:8px">L'ORBE D'E.V.A</div>
+        <div style="font-size:0.82em;color:var(--text-muted);line-height:1.6;max-width:340px;margin:0 auto">
+          L'orbe holographique d'E.V.A est sa <strong style="color:var(--cyan)">présence visuelle à l'écran</strong> — une sphère lumineuse qui pulse et change de couleur selon son état. Vous pouvez la désactiver pour gagner en performance.
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+        <!-- Option: Activé -->
+        <div id="obAvatarOn" onclick="obSelectAvatar(true)" style="
+          border:2px solid var(--cyan);background:rgba(123,139,245,0.07);
+          border-radius:14px;padding:16px 18px;cursor:pointer;transition:all 0.2s;
+          display:flex;align-items:center;gap:14px;position:relative;
+        ">
+          <div style="font-size:2em;flex-shrink:0">🧊</div>
+          <div>
+            <div style="font-weight:700;font-size:0.88em;color:var(--cyan)">Avatar activé <span style="font-size:0.75em;color:var(--text-muted)">(recommandé)</span></div>
+            <div style="font-size:0.74em;color:var(--text-muted);margin-top:3px;line-height:1.5">E.V.A apparaît en haut à droite de l'écran. Expérience complète et immersive.</div>
+          </div>
+          <div id="obAvatarOnChk" style="position:absolute;top:10px;right:12px;color:var(--cyan);font-size:0.85em">✓</div>
+        </div>
+
+        <!-- Option: Désactivé -->
+        <div id="obAvatarOff" onclick="obSelectAvatar(false)" style="
+          border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);
+          border-radius:14px;padding:16px 18px;cursor:pointer;transition:all 0.2s;
+          display:flex;align-items:center;gap:14px;position:relative;
+        ">
+          <div style="font-size:2em;flex-shrink:0">⚡</div>
+          <div>
+            <div style="font-weight:700;font-size:0.88em;color:var(--text-base)">Avatar désactivé</div>
+            <div style="font-size:0.74em;color:var(--text-muted);margin-top:3px;line-height:1.5">Interface chat uniquement. Meilleures performances, moins de ressources CPU/GPU.</div>
+          </div>
+          <div id="obAvatarOffChk" style="display:none;position:absolute;top:10px;right:12px;color:var(--cyan);font-size:0.85em">✓</div>
+        </div>
+      </div>
+
+      <div style="font-size:0.71em;color:var(--text-dim);text-align:center;line-height:1.6">
+        Ce réglage peut être modifié à tout moment dans Paramètres → Apparence.
+      </div>
+
+      <div class="ob-actions" style="margin-top:20px">
+        <button class="btn-skip" onclick="goStep(6)">← Retour</button>
+        <button class="btn-next" onclick="goStep(8)">SUIVANT →</button>
+      </div>
+    </div>
+
+    <!-- Step 8: Terminé -->
+    <div class="ob-view" id="ob8">
+      <div class="finish-icon">🎉</div>
+      <div class="finish-title">Tout est prêt !</div>
+      <div class="finish-text">
+        Votre profil E.V.A a été configuré avec succès.<br>
+        Dernière étape avant d'entrer dans votre monde intelligent.
+      </div>
+
+      <div class="legal-section">
+        <div class="legal-check">
+          <input type="checkbox" id="acceptTerms">
+          <label for="acceptTerms">J'accepte les <a href="/conditions" target="_blank">Conditions d'utilisation</a> *</label>
+        </div>
+        <div class="legal-check">
+          <input type="checkbox" id="acceptPrivacy">
+          <label for="acceptPrivacy">J'ai lu et j'accepte la <a href="/privacy" target="_blank">Politique de confidentialité</a> *</label>
+        </div>
+        <div class="legal-check">
+          <input type="checkbox" id="acceptCookies">
+          <label for="acceptCookies">J'accepte l'utilisation des <a href="/cookies" target="_blank">Cookies</a> pour améliorer mon expérience</label>
+        </div>
+        <div class="legal-required" id="legalError">⚠ Veuillez accepter les conditions et la politique de confidentialité pour continuer.</div>
+      </div>
+
+      <button class="btn-next" style="width:100%;font-size:0.9em;margin-top:16px" onclick="finish()">
+        ⚡ ACCÉDER À E.V.A
+      </button>
+      <button class="btn-skip" style="width:100%;margin-top:8px" onclick="goStep(7)">← Retour</button>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://js.puter.com/v2/"></script>
+<script src="/js/core/firebase-config.js"></script>
+<script>
+var currentStep = 1;
+var selectedVoice       = 'auto';
+var selectedProvider    = 'puter';
+var selectedTTSProvider = 'piper';
+var currentUser = null;
+var isGoogleOnlyUser = false;
+
+auth.onAuthStateChanged(function(user) {
+  if (!user) { window.location.href = '/login'; return; }
+  currentUser = user;
+
+  // Detect Google-only account (no password linked)
+  isGoogleOnlyUser = user.providerData &&
+    user.providerData.some(function(p){ return p.providerId === 'google.com'; }) &&
+    !user.providerData.some(function(p){ return p.providerId === 'password'; });
+
+  // Pre-fill from Google data
+  if (user.displayName) {
+    document.getElementById('displayName').value = user.displayName;
+    var parts = user.displayName.split(' ');
+    document.getElementById('nickname').value = parts[0] || '';
+  }
+  if (user.photoURL) {
+    document.getElementById('avaPreview').innerHTML = '<img src="'+user.photoURL+'" alt="Avatar">';
+  } else {
+    updateAvaPreview();
+  }
+
+  // If not Google-only, hide step 2 from progress (collapse into 4 steps visually)
+  if (!isGoogleOnlyUser) {
+    document.getElementById('step-bar-2').style.display = 'none';
+  }
+
+  // Load extra data from Firestore
+  loadUserData(user.uid);
+});
+
+async function loadUserData(uid) {
+  try {
+    var doc = await db.collection('users').doc(uid).get();
+    if (doc.exists) {
+      var d = doc.data();
+      if (d.displayName && !document.getElementById('displayName').value) {
+        document.getElementById('displayName').value = d.displayName;
+      }
+      if (d.nickname && !document.getElementById('nickname').value) {
+        document.getElementById('nickname').value = d.nickname;
+      }
+      updateAvaPreview();
+    }
+  } catch(e) {}
+}
+
+document.getElementById('displayName').addEventListener('input', updateAvaPreview);
+
+function updateAvaPreview() {
+  var preview = document.getElementById('avaPreview');
+  if (preview.querySelector('img')) return;
+  var name = document.getElementById('displayName').value;
+  var initials = name.split(' ').map(function(n){ return n[0]||''; }).join('').toUpperCase().slice(0,2) || '?';
+  var el = document.getElementById('avaInitials');
+  if (el) el.textContent = initials;
+}
+
+var _obPhotoDataURL = null;
+
+function _obCompressImage(file, maxSize, quality, callback) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else       { w = Math.round(w * maxSize / h); h = maxSize; }
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleAvaFile(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  _obCompressImage(file, 260, 0.80, function(dataURL) {
+    _obPhotoDataURL = dataURL;
+    document.getElementById('avaPreview').innerHTML = '<img src="'+dataURL+'" alt="Avatar">';
+  });
+}
+
+function checkPassStrength() {
+  var pass = document.getElementById('obNewPass').value;
+  var bar = document.getElementById('passStrength');
+  var label = document.getElementById('passStrengthLabel');
+  if (!pass) { bar.className = 'pass-strength'; label.textContent = ''; return; }
+  var score = 0;
+  if (pass.length >= 6) score++;
+  if (pass.length >= 10) score++;
+  if (/[A-Z]/.test(pass) && /[0-9]/.test(pass)) score++;
+  if (score === 1) { bar.className = 'pass-strength weak'; label.textContent = 'Faible'; }
+  else if (score === 2) { bar.className = 'pass-strength medium'; label.textContent = 'Moyen'; }
+  else { bar.className = 'pass-strength strong'; label.textContent = 'Fort'; }
+}
+
+async function savePasswordAndContinue() {
+  var newPass = document.getElementById('obNewPass').value;
+  var confPass = document.getElementById('obConfPass').value;
+  if (!newPass && !confPass) { goStep(3); return; }
+  if (!newPass) { showFieldError('obNewPass', 'Entrez un mot de passe'); return; }
+  if (newPass.length < 6) { showFieldError('obNewPass', 'Minimum 6 caractères'); return; }
+  if (newPass !== confPass) { showFieldError('obConfPass', 'Les mots de passe ne correspondent pas'); return; }
+
+  var btn = document.getElementById('obPassBtn');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    var cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, newPass);
+    await currentUser.linkWithCredential(cred);
+    goStep(3);
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'CRÉER →';
+    if (e.code === 'auth/provider-already-linked') {
+      goStep(3);
+    } else if (e.code === 'auth/weak-password') {
+      showFieldError('obNewPass', 'Mot de passe trop faible');
+    } else {
+      showFieldError('obConfPass', 'Erreur : ' + e.message);
+    }
+  }
+}
+
+function showFieldError(id, msg) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('error');
+  el.placeholder = msg;
+  el.value = '';
+  setTimeout(function(){ el.classList.remove('error'); el.placeholder = id === 'obNewPass' ? 'Minimum 6 caractères' : 'Idem ci-dessus'; }, 2500);
+}
+
+var obAvatarEnabled = true;
+var _obIsMobile = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) && window.innerWidth < 900;
+
+/* Sur mobile : masquer l'indicateur de l'étape Avatar (étape 7) */
+if (_obIsMobile) {
+  var _sb7 = document.getElementById('step-bar-7');
+  if (_sb7) _sb7.style.display = 'none';
+}
+
+async function requestObNotifPermission() {
+  if (!('Notification' in window)) {
+    _obNotifShowState('unavailable');
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    _obNotifShowState('granted');
+    _obRegisterFCMToken();
+    return;
+  }
+  var perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    _obNotifShowState('granted');
+    _obRegisterFCMToken();
+  } else {
+    _obNotifShowState('denied');
+  }
+}
+window.requestObNotifPermission = requestObNotifPermission;
+
+async function _obRegisterFCMToken() {
+  var statusEl = document.getElementById('obNotifTokenStatus');
+  try {
+    if (!('serviceWorker' in navigator)) return;
+    var _VAPID_KEY = 'BJvMsuUPHrTyTy6hXtZwEQLdD6Mjuolw_4x9ycVwoPTnNVx5Kp7XEV1eZPH8dspmv8PlqU2lsOqAVzPItpdZm7w';
+    var firebase = window.firebase;
+    if (!firebase) return;
+    var swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    var messaging = firebase.messaging();
+    var token = await messaging.getToken({ vapidKey: _VAPID_KEY, serviceWorkerRegistration: swReg });
+    if (token && currentUser && window.db) {
+      var clientIp = 'inconnue';
+      var ua = navigator.userAgent;
+      var browser = 'Navigateur';
+      if (/Edg\//.test(ua)) browser = 'Edge';
+      else if (/OPR\//.test(ua)) browser = 'Opera';
+      else if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) browser = 'Chrome';
+      else if (/Firefox\//.test(ua)) browser = 'Firefox';
+      else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+      var os = '';
+      if (/Android/.test(ua)) os = 'Android';
+      else if (/iPhone/.test(ua)) os = 'iPhone';
+      else if (/iPad/.test(ua)) os = 'iPad';
+      else if (/Windows/.test(ua)) os = 'Windows';
+      else if (/Mac/.test(ua)) os = 'macOS';
+      else if (/Linux/.test(ua)) os = 'Linux';
+      var deviceName = browser + (os ? ' sur ' + os : '');
+      var deviceObj = { token: token, name: deviceName, ip: clientIp, registeredAt: new Date().toISOString(), userAgent: ua.substring(0, 200) };
+      var userSnap2 = await window.db.collection('users').doc(currentUser.uid).get();
+      var existDev = (userSnap2.exists && Array.isArray(userSnap2.data().fcmDevices)) ? userSnap2.data().fcmDevices.filter(function(d){ return d.token !== token; }) : [];
+      existDev.push(deviceObj);
+      await window.db.collection('users').doc(currentUser.uid).set({
+        fcmDevices:      existDev,
+        fcmTokens:       firebase.firestore.FieldValue.arrayUnion(token),
+        fcmTokenUpdated: new Date().toISOString(),
+        timezoneOffset:  new Date().getTimezoneOffset()
+      }, { merge: true });
+      if (statusEl) statusEl.textContent = '✅ Notifications enregistrées — actives quand le site est ouvert';
+    } else {
+      if (statusEl) statusEl.textContent = '⚠ Token non obtenu — vérifiez le navigateur';
+    }
+  } catch(e) {
+    console.warn('[FCM onboarding]', e);
+    if (statusEl) statusEl.textContent = '⚠ Erreur d\'enregistrement FCM';
+  }
+}
+
+function _obNotifShowState(state) {
+  var granted  = document.getElementById('obNotifGranted');
+  var denied   = document.getElementById('obNotifDenied');
+  var dflt     = document.getElementById('obNotifDefault');
+  if (!granted) return;
+  if (state === 'granted') {
+    granted.style.display = ''; denied.style.display = 'none'; dflt.style.display = 'none';
+  } else if (state === 'denied' || state === 'unavailable') {
+    granted.style.display = 'none'; denied.style.display = ''; dflt.style.display = 'none';
+    if (state === 'unavailable') {
+      var d = document.getElementById('obNotifDenied');
+      if (d) d.querySelector('div:nth-child(2)').textContent = '⚠ Votre navigateur ne supporte pas les notifications push';
+    }
+  } else {
+    granted.style.display = 'none'; denied.style.display = 'none'; dflt.style.display = '';
+  }
+}
+
+function updateObNotifState() {
+  if (!('Notification' in window)) { _obNotifShowState('unavailable'); return; }
+  var perm = Notification.permission;
+  if (perm === 'granted') { _obNotifShowState('granted'); _obRegisterFCMToken(); }
+  else if (perm === 'denied') { _obNotifShowState('denied'); }
+  else { _obNotifShowState('default'); }
+}
+
+function obSelectAvatar(enabled) {
+  obAvatarEnabled = enabled;
+  var onCard  = document.getElementById('obAvatarOn');
+  var offCard = document.getElementById('obAvatarOff');
+  var onChk   = document.getElementById('obAvatarOnChk');
+  var offChk  = document.getElementById('obAvatarOffChk');
+  if (!onCard) return;
+  if (enabled) {
+    onCard.style.border  = '2px solid var(--cyan)';
+    onCard.style.background = 'rgba(123,139,245,0.07)';
+    offCard.style.border = '2px solid rgba(255,255,255,0.08)';
+    offCard.style.background = 'rgba(255,255,255,0.02)';
+    onChk.style.display  = '';
+    offChk.style.display = 'none';
+  } else {
+    onCard.style.border  = '2px solid rgba(255,255,255,0.08)';
+    onCard.style.background = 'rgba(255,255,255,0.02)';
+    offCard.style.border = '2px solid var(--cyan)';
+    offCard.style.background = 'rgba(123,139,245,0.07)';
+    onChk.style.display  = 'none';
+    offChk.style.display = '';
+  }
+}
+window.obSelectAvatar = obSelectAvatar;
+
+function goStep(n) {
+  /* Sauter étape 2 pour comptes Google-only sans mot de passe */
+  if (!isGoogleOnlyUser && n === 2) { n = 3; }
+
+  /* Étape 7 (Avatar) — sauter automatiquement sur mobile */
+  if (n === 7 && _obIsMobile) {
+    n = (currentStep > 7) ? 6 : 8;
+  }
+
+  /* Hooks sur certaines étapes */
+  if (n === 3) { setTimeout(function(){ obSelectTTS(selectedTTSProvider); }, 50); }
+  if (n === 4) { setTimeout(checkObPuterStatus, 200); }
+  if (n === 6) { setTimeout(updateObNotifState, 100); }
+
+  /* Validation étape 1 avant d'avancer */
+  if (currentStep === 1 && n > 1) {
+    var name = document.getElementById('displayName').value.trim();
+    if (!name) {
+      var el = document.getElementById('displayName');
+      el.classList.add('error');
+      el.placeholder = 'Veuillez entrer votre nom';
+      setTimeout(function(){ el.classList.remove('error'); el.placeholder = 'Jean Dupont'; }, 2000);
+      return;
+    }
+    var nick = document.getElementById('nickname').value.trim() || name.split(' ')[0];
+    var profileData = { displayName: name, nickname: nick };
+    if (_obPhotoDataURL) {
+      profileData.photoURL = _obPhotoDataURL;
+    }
+    saveProfile(profileData);
+  }
+
+  /* Ajuster le bouton Retour de l'étape 8 si mobile (pas d'étape 7) */
+  if (n === 8) {
+    var backBtn = document.querySelector('#ob8 .btn-skip');
+    if (backBtn) backBtn.onclick = function(){ goStep(_obIsMobile ? 6 : 7); };
+  }
+
+  document.getElementById('ob'+currentStep).classList.remove('active');
+  document.getElementById('step-bar-'+currentStep).classList.remove('active');
+  currentStep = n;
+  document.getElementById('ob'+currentStep).classList.add('active');
+  document.getElementById('step-bar-'+currentStep).classList.add('active');
+}
+
+function obSelectProvider(prov) {
+  selectedProvider = prov;
+  var allCards = ['puter','pollinations','qwen','openai','claude'];
+  allCards.forEach(function(k) {
+    var card = document.getElementById('obcard-'+k);
+    var chk  = document.getElementById('obcheck-'+k);
+    if (!card) return;
+    var active = k === prov;
+    card.style.border  = '2px solid ' + (active ? 'var(--cyan)' : 'rgba(255,255,255,0.08)');
+    card.style.background = active ? 'rgba(123,139,245,0.07)' : 'rgba(255,255,255,0.02)';
+    if (chk) chk.style.display = active ? '' : 'none';
+  });
+  /* Bloc connexion Puter — visible seulement si Puter sélectionné */
+  var puterSec = document.getElementById('obPuterSection');
+  if (puterSec) puterSec.style.display = prov === 'puter' ? '' : 'none';
+}
+/* Alias pour compatibilité ancienne fonction */
+function selectProvider(prov, el) { obSelectProvider(prov); }
+
+async function checkObPuterStatus() {
+  var statusEl = document.getElementById('obPuterStatus');
+  var btnEl = document.getElementById('obPuterBtn');
+  if (!statusEl) return;
+  if (!window.puter) { statusEl.textContent = '⚠️ SDK Puter non chargé'; return; }
+  try {
+    var user = await puter.auth.getUser();
+    if (user && user.username) {
+      statusEl.style.color = 'var(--green)';
+      statusEl.textContent = '✓ Connecté : ' + user.username;
+      if (btnEl) { btnEl.textContent = '🔌 Déconnecter'; btnEl.onclick = function(e){e.stopPropagation();obDisconnectPuter();}; }
+    } else {
+      statusEl.style.color = 'rgba(123,139,245,0.6)';
+      statusEl.textContent = 'Non connecté à Puter';
+      if (btnEl) btnEl.textContent = '🔗 Connexion Puter';
+    }
+  } catch(e) { statusEl.textContent = 'Non connecté à Puter'; }
+}
+
+async function obConnectPuter(e) {
+  e.stopPropagation();
+  if (!window.puter) return;
+  try {
+    await window.evaSafePuterSignIn();
+    var user = await puter.auth.getUser();
+    if (user && user.username) {
+      if (currentUser) await db.collection('users').doc(currentUser.uid).set({puterUsername: user.username}, {merge:true});
+      checkObPuterStatus();
+    }
+  } catch(err) { console.error('Puter connect:', err); }
+}
+
+async function obDisconnectPuter() {
+  if (!window.puter) return;
+  try { await puter.auth.signOut(); } catch(e) {}
+  checkObPuterStatus();
+}
+
+function obSelectTTS(v) {
+  selectedTTSProvider = v;
+  var keys = ['native','eva','elevenlabs','openai','piper'];
+  keys.forEach(function(k) {
+    var card = document.getElementById('obttsc-'+k);
+    var chk  = document.getElementById('obc-'+k);
+    if (!card) return;
+    var active = k === v;
+    card.style.border     = '2px solid '+(active ? 'var(--cyan)' : 'rgba(255,255,255,0.08)');
+    card.style.background = active ? 'rgba(123,139,245,0.07)' : 'rgba(255,255,255,0.02)';
+    if (chk) chk.style.display = active ? '' : 'none';
+  });
+  var detail = document.getElementById('obTTSDetail');
+  if (!detail) return;
+  var panels = {
+    native:
+      '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;">'
+      +'<div><div style="font-weight:600;font-size:0.85em;color:var(--text);">Voix native du navigateur</div>'
+      +'<div style="font-size:0.72em;color:var(--text-muted);margin-top:4px;">Synthèse vocale intégrée — aucune configuration requise.</div></div>'
+      +'<button onclick="obTestTTS(\'native\')" class="voice-test-btn" style="flex-shrink:0;">▶ Tester</button>'
+      +'</div>',
+    eva:
+      '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;">'
+      +'<div><div style="font-weight:600;font-size:0.85em;color:var(--text);">Kokoro Neural — TTS neuronal local</div>'
+      +'<div style="font-size:0.72em;color:var(--text-muted);margin-top:4px;">Moteur neuronal MMS-TTS (Meta) — 100% local, ~30 Mo, mis en cache au premier lancement. Voix clairement différente du navigateur.</div></div>'
+      +'<button onclick="obTestTTS(\'eva\')" class="voice-test-btn" style="flex-shrink:0;">▶ Tester</button>'
+      +'</div>'
+      +'<div id="obEvaTestMsg" style="font-size:0.72em;margin-top:8px;display:none;"></div>',
+    elevenlabs:
+      '<div>'
+      +'<div style="font-weight:600;font-size:0.85em;color:var(--text);margin-bottom:10px;">Clé API ElevenLabs</div>'
+      +'<input id="obElKey" type="password" autocomplete="off" placeholder="sk-..." class="field-input" style="width:100%;box-sizing:border-box;margin-bottom:10px;">'
+      +'<div style="font-weight:600;font-size:0.78em;color:var(--text-muted);margin-bottom:6px;">Voice ID <span style="font-weight:400;opacity:0.7;">(optionnel — laissez vide pour la voix par défaut)</span></div>'
+      +'<input id="obElVoiceId" type="text" autocomplete="off" placeholder="21m00Tcm4TlvDq8ikWAM" class="field-input" style="width:100%;box-sizing:border-box;margin-bottom:10px;">'
+      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+      +'<button onclick="obTestTTS(\'elevenlabs\')" class="voice-test-btn">▶ Tester</button>'
+      +'<span id="obElTestMsg" style="font-size:0.72em;color:var(--text-muted);"></span></div></div>',
+    openai:
+      '<div>'
+      +'<div style="font-weight:600;font-size:0.85em;color:var(--text);margin-bottom:10px;">Clé API OpenAI</div>'
+      +'<input id="obOAIKey" type="password" autocomplete="off" placeholder="sk-..." class="field-input" style="width:100%;box-sizing:border-box;margin-bottom:10px;">'
+      +'<div style="font-weight:600;font-size:0.78em;color:var(--text-muted);margin-bottom:6px;">Voix</div>'
+      +'<select id="obOAIVoice" class="field-input" style="width:100%;box-sizing:border-box;background:#0d1117;color:var(--text);margin-bottom:10px;">'
+      +'<option value="nova">Nova (féminine — recommandée)</option>'
+      +'<option value="alloy">Alloy</option><option value="echo">Echo</option>'
+      +'<option value="fable">Fable</option><option value="onyx">Onyx</option>'
+      +'<option value="shimmer">Shimmer</option>'
+      +'</select>'
+      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+      +'<button onclick="obTestTTS(\'openai\')" class="voice-test-btn">▶ Tester</button>'
+      +'<span id="obOAITestMsg" style="font-size:0.72em;color:var(--text-muted);"></span></div></div>',
+    piper:
+      '<div>'
+      +'<div style="font-weight:600;font-size:0.85em;color:var(--text);margin-bottom:6px;">Piper TTS — Voix française neuronale 🇫🇷</div>'
+      +'<div style="font-size:0.72em;color:var(--text-muted);margin-bottom:10px;">Synthèse vocale neuronale 100 % locale (WebAssembly). Voix française féminine claire et naturelle. Aucune clé requise. Au premier usage, ~63 Mo se téléchargent et sont mis en cache, puis tout fonctionne hors-ligne.</div>'
+      +'<div style="font-weight:600;font-size:0.78em;color:var(--text-muted);margin-bottom:6px;">Voix française</div>'
+      +'<select id="obPiperVoice" class="field-input" style="width:100%;box-sizing:border-box;background:#0d1117;color:var(--text);margin-bottom:10px;">'
+      +'<option value="fr_FR-siwis-medium">Siwis (féminine, classique) ⭐</option>'
+      +'<option value="fr_FR-upmc-medium">UPMC (féminine, autre timbre)</option>'
+      +'</select>'
+      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+      +'<button onclick="obTestTTS(\'piper\')" class="voice-test-btn">▶ Tester</button>'
+      +'<span id="obPiperTestMsg" style="font-size:0.72em;color:var(--text-muted);"></span></div></div>'
+  };
+  detail.innerHTML = panels[v] || '';
+}
+
+async function obTestTTS(provider) {
+  var phrase = "Bonjour, je suis E.V.A, votre assistante virtuelle. Je suis ravie de vous parler.";
+  if (provider === 'native') {
+    if (typeof speechSynthesis === 'undefined') return;
+    speechSynthesis.cancel();
+    var utt = new SpeechSynthesisUtterance(phrase);
+    utt.lang = 'fr-FR'; utt.rate = 1.0; utt.pitch = 1.0;
+    speechSynthesis.speak(utt);
+    return;
+  }
+  if (provider === 'eva') {
+    var msgEl = document.getElementById('obEvaTestMsg');
+    function _showEvaMsg(color, txt) { if (msgEl){ msgEl.style.display=''; msgEl.style.color=color; msgEl.textContent=txt; } }
+    if (!window.KokoroTTS) {
+      /* Charger le module Kokoro à la demande */
+      _showEvaMsg('var(--text-muted)', '⏳ Chargement EVA Voice…');
+      var s = document.createElement('script');
+      s.src = '/js/voice/kokoro-tts.js';
+      s.onload = function(){ obTestTTS('eva'); };
+      s.onerror = function(){ _showEvaMsg('var(--red)', 'Impossible de charger EVA Voice — voix Navigateur utilisée à la place'); var u=new SpeechSynthesisUtterance(phrase); u.lang='fr-FR'; speechSynthesis.speak(u); };
+      document.head.appendChild(s);
+      return;
+    }
+    _showEvaMsg('var(--text-muted)', '⏳ Synthèse neurale en cours (premier démarrage : ~30 Mo à télécharger)…');
+    try {
+      await window.KokoroTTS.speak(phrase);
+      _showEvaMsg('#4ade80', '✓ Moteur neuronal prêt · ' + (window.KokoroTTS.modelName ? window.KokoroTTS.modelName() || 'MMS-TTS' : 'MMS-TTS'));
+    } catch(e) {
+      _showEvaMsg('var(--red)', 'EVA Voice indisponible — voix Navigateur utilisée à la place');
+      var u2 = new SpeechSynthesisUtterance(phrase);
+      u2.lang = 'fr-FR'; speechSynthesis.speak(u2);
+    }
+    return;
+  }
+  if (provider === 'piper') {
+    var pVoice = (document.getElementById('obPiperVoice')||{}).value || 'fr_FR-siwis-medium';
+    var pMsg   = document.getElementById('obPiperTestMsg');
+    function _pShow(c, t) { if (pMsg){ pMsg.style.color=c; pMsg.textContent=t; } }
+    if (!window.PiperTTS) {
+      _pShow('var(--text-muted)', '⏳ Chargement de Piper TTS…');
+      var ps = document.createElement('script');
+      ps.src = '/js/voice/piper-tts.js';
+      ps.onload  = function(){ obTestTTS('piper'); };
+      ps.onerror = function(){ _pShow('var(--red)', 'Impossible de charger Piper TTS.'); };
+      document.head.appendChild(ps);
+      return;
+    }
+    _pShow('var(--text-muted)', '⏳ Préparation de la voix française (téléchargement ~63 Mo au premier usage)…');
+    try {
+      var progressTimer = setInterval(function() {
+        if (window.PiperTTS && window.PiperTTS.getDownloadProgress) {
+          var p = window.PiperTTS.getDownloadProgress();
+          if (p && p.loaded > 0) {
+            _pShow('var(--text-muted)', '⏳ Téléchargement modèle français : ' + Math.round(p.percent || 0) + '%');
+          }
+        }
+      }, 400);
+      await window.PiperTTS.speak(phrase, { piperVoice: pVoice });
+      clearInterval(progressTimer);
+      _pShow('#4ade80', '✓ Voix française "' + pVoice + '" prête — 100% locale');
+    } catch(e) {
+      _pShow('var(--red)', 'Erreur : ' + (e && e.message ? e.message.slice(0, 120) : 'inconnue'));
+    }
+    return;
+  }
+  if (provider === 'elevenlabs') {
+    var key    = (document.getElementById('obElKey')||{}).value||'';
+    var vid    = (document.getElementById('obElVoiceId')||{}).value||'21m00Tcm4TlvDq8ikWAM';
+    var msgEl  = document.getElementById('obElTestMsg');
+    if (!key) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='Entrez votre clé API.';} return; }
+    if (msgEl){msgEl.style.color='var(--text-muted)';msgEl.textContent='⏳ Test en cours…';}
+    try {
+      var r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid+'/stream',{method:'POST',headers:{'Content-Type':'application/json','xi-api-key':key},body:JSON.stringify({text:phrase,model_id:'eleven_multilingual_v2',voice_settings:{stability:0.5,similarity_boost:0.75}})});
+      if (!r.ok) throw new Error('api_error');
+      new Audio(URL.createObjectURL(await r.blob())).play();
+      if (msgEl){msgEl.style.color='#4ade80';msgEl.textContent='✓ Clé valide — voix ElevenLabs active';}
+    } catch(e) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='Clé API invalide ou Voice ID introuvable.';} }
+    return;
+  }
+  if (provider === 'openai') {
+    var key   = (document.getElementById('obOAIKey')||{}).value||'';
+    var voice = (document.getElementById('obOAIVoice')||{}).value||'nova';
+    var msgEl = document.getElementById('obOAITestMsg');
+    if (!key) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='Entrez votre clé API.';} return; }
+    if (msgEl){msgEl.style.color='var(--text-muted)';msgEl.textContent='⏳ Test en cours…';}
+    try {
+      var r = await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'tts-1',input:phrase,voice:voice})});
+      if (!r.ok) throw new Error('api_error');
+      new Audio(URL.createObjectURL(await r.blob())).play();
+      if (msgEl){msgEl.style.color='#4ade80';msgEl.textContent='✓ Clé valide — voix OpenAI active';}
+    } catch(e) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='Clé API invalide.';} }
+    return;
+  }
+}
+
+async function saveProfile(data) {
+  if (!currentUser) return;
+  try { await db.collection('users').doc(currentUser.uid).set(data, { merge: true }); } catch(e) {}
+}
+
+async function finish() {
+  var termsOk = document.getElementById('acceptTerms').checked;
+  var privacyOk = document.getElementById('acceptPrivacy').checked;
+  if (!termsOk || !privacyOk) {
+    document.getElementById('legalError').classList.add('visible');
+    setTimeout(function(){ document.getElementById('legalError').classList.remove('visible'); }, 3000);
+    return;
+  }
+  if (!currentUser) return;
+  var wakeWord     = document.getElementById('prefWakeWord')     ? document.getElementById('prefWakeWord').checked     : false;
+  var autoLaunch   = document.getElementById('prefAutoLaunch')   ? document.getElementById('prefAutoLaunch').checked   : true;
+  var adaptation   = document.getElementById('prefAdaptation')   ? document.getElementById('prefAdaptation').checked   : true;
+  var experimental = document.getElementById('prefExperimental') ? document.getElementById('prefExperimental').checked : false;
+  try { if (experimental) localStorage.setItem('eva_experimental','1'); else localStorage.removeItem('eva_experimental'); } catch(e) {}
+  var cookies    = document.getElementById('acceptCookies')   ? document.getElementById('acceptCookies').checked   : false;
+  var elKey      = (document.getElementById('obElKey')||{}).value||'';
+  var elVoiceId  = (document.getElementById('obElVoiceId')||{}).value||'';
+  var oaiKey     = (document.getElementById('obOAIKey')||{}).value||'';
+  var oaiVoice   = (document.getElementById('obOAIVoice')||{}).value||'nova';
+  var piperVoice = (document.getElementById('obPiperVoice')||{}).value||'fr_FR-siwis-medium';
+  var extraKeys  = {};
+  if (elKey)     extraKeys.elevenLabsApiKey  = elKey;
+  if (elVoiceId) extraKeys.elevenLabsVoiceId = elVoiceId;
+  if (oaiKey)    extraKeys.openAIApiKey      = oaiKey;
+  if (selectedTTSProvider === 'openai') extraKeys.openAITTSVoice = oaiVoice;
+  if (selectedTTSProvider === 'piper')  extraKeys.piperVoice     = piperVoice;
+  try {
+    await db.collection('users').doc(currentUser.uid).set(Object.assign({
+      onboardingCompleted: true,
+      legalAccepted: {
+        terms: true,
+        privacy: true,
+        cookies: cookies,
+        date: new Date().toISOString()
+      },
+      adaptationEnabled: adaptation,
+      preferences: {
+        voiceProvider:   selectedTTSProvider,
+        selectedVoice:   selectedVoice,
+        voiceLang:       'fr-FR',
+        speechRate:      1.0,
+        aiProvider:      selectedProvider,
+        wakeWordEnabled: wakeWord,
+        autoLaunch:      autoLaunch,
+        showEvaPanel:        _obIsMobile ? false : obAvatarEnabled,
+        experimentalFeatures: experimental
+      }
+    }, extraKeys), { merge: true });
+    window.location.href = '/chat';
+  } catch(e) {
+    window.location.href = '/chat';
+  }
+}
+
+function skipAll() {
+  window.location.href = '/chat';
+}
+</script>
+</body>
+</html>

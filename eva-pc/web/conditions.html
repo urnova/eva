@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conditions d'utilisation — E.V.A</title>
+<link rel="icon" type="image/png" href="assets/images/eva-logo.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="var(--cyan,#7b8bf5)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="E.V.A">
+<link rel="apple-touch-icon" href="/assets/images/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+<style>
+:root{--cyan:#7b8bf5;--cyan-dim:rgba(123,139,245,0.09);--bg:#111113;--surface:#18181b;--surface2:#222228;--border:rgba(123,139,245,0.12);--text:#e2e2f0;--text-muted:#71717a;--purple:#b794f6;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(123,139,245,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.015) 1px,transparent 1px);background-size:52px 52px;pointer-events:none;z-index:0;}
+.page{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:60px 24px 80px;}
+.back{display:inline-flex;align-items:center;gap:8px;color:var(--text-muted);text-decoration:none;font-size:0.8em;margin-bottom:40px;transition:color 0.2s;}
+.back:hover{color:var(--cyan);}
+.doc-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.doc-logo img{height:28px;width:auto;}
+h1{font-family:'Orbitron',monospace;font-size:1.6em;font-weight:900;letter-spacing:3px;color:var(--cyan);margin-bottom:8px;}
+.doc-date{font-size:0.75em;color:var(--text-muted);margin-bottom:40px;border-bottom:1px solid var(--border);padding-bottom:20px;}
+h2{font-family:'Orbitron',monospace;font-size:0.95em;color:var(--text);letter-spacing:2px;margin:32px 0 12px;padding-left:12px;border-left:2px solid var(--cyan);}
+p{font-size:0.82em;color:var(--text-muted);line-height:1.9;margin-bottom:14px;}
+ul{padding-left:20px;margin-bottom:14px;}
+ul li{font-size:0.82em;color:var(--text-muted);line-height:1.8;margin-bottom:4px;}
+ul li::marker{color:var(--cyan);}
+a{color:var(--cyan);text-decoration:none;}
+a:hover{text-decoration:underline;}
+.highlight{background:rgba(123,139,245,0.06);border:1px solid rgba(123,139,245,0.15);border-radius:10px;padding:16px 20px;margin:24px 0;}
+.highlight p{margin-bottom:0;}
+@media(max-width:600px){
+  .page{padding:28px 16px 50px;}
+  h1{font-size:1.2em;letter-spacing:2px;}
+  h2{font-size:0.85em;margin:22px 0 10px;}
+  .back{margin-bottom:24px;}
+  .doc-logo{margin-bottom:20px;}
+  .doc-date{margin-bottom:24px;}
+  .highlight{padding:12px 14px;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <a href="/" class="back">← Retour à l'accueil</a>
+
+  <div class="doc-logo">
+    <img src="/assets/images/eva-logo.png" alt="EVA"><span style="color:rgba(123,139,245,0.2);font-size:1.2em;margin:0 4px;">×</span><img src="/assets/images/astral-logo.png" alt="Astral Technologie" style="height:22px;opacity:0.8;">
+  </div>
+
+  <h1>CONDITIONS D'UTILISATION</h1>
+  <div class="doc-date">Beta V4 — Dernière mise à jour : Mai 2026 · Astral Technologie</div>
+
+  <div class="highlight">
+    <p>En utilisant E.V.A, vous acceptez les présentes conditions. Veuillez les lire attentivement. E.V.A est actuellement en Beta V4 — des évolutions sont à prévoir.</p>
+  </div>
+
+  <h2>1. ACCEPTATION DES CONDITIONS</h2>
+  <p>L'accès et l'utilisation de E.V.A (Evolutionary Virtual Assistant), disponible sur cette plateforme, impliquent l'acceptation pleine et entière des présentes conditions d'utilisation. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser le service.</p>
+
+  <h2>2. DESCRIPTION DU SERVICE</h2>
+  <p>E.V.A est un assistant virtuel intelligent propulsé par l'intelligence artificielle, développé par Astral Technologie. La version Beta V4 comprend notamment :</p>
+  <ul>
+    <li>Conversations intelligentes via plusieurs fournisseurs d'IA (Puter AI, OpenAI GPT-4o, Claude Anthropic, Qwen 3, LM Studio, Ollama)</li>
+    <li>Fonctionnalités vocales avancées — synthèse vocale (TTS) et reconnaissance vocale (STT), incluant Kokoro TTS, Piper TTS et voix personnalisées</li>
+    <li>Gestion de notes, alarmes, rappels et agenda intégrés</li>
+    <li>Génération de fichiers : PDF, PPTX, DOCX, XLSX directement depuis le chat</li>
+    <li>Module CloudWorks pour la gestion de tâches et projets</li>
+    <li>Rapports et statistiques d'utilisation (accès selon rôle utilisateur)</li>
+    <li>Système de clés développeur permettant l'attribution de rôles spéciaux (Créateur, Épouse du Créateur, Développeur)</li>
+    <li>Recherche web intégrée depuis l'interface de chat</li>
+    <li>Analyse et interprétation d'images (vision IA)</li>
+    <li>Orbe holographique 3D interactif basé sur Three.js / VRM</li>
+    <li>Mode expérimental avec fonctionnalités avancées en preview</li>
+    <li>Tutoriel interactif d'onboarding</li>
+    <li>Interface progressive web app (PWA) installable sur tous les appareils</li>
+  </ul>
+
+  <h2>3. COMPTE UTILISATEUR</h2>
+  <p>La création d'un compte est nécessaire pour accéder à E.V.A. Vous êtes responsable de la confidentialité de vos identifiants. Toute activité effectuée depuis votre compte est sous votre responsabilité. Vous devez fournir des informations exactes lors de l'inscription.</p>
+
+  <h2>4. CLÉS DÉVELOPPEUR ET RÔLES</h2>
+  <p>E.V.A Beta V4 intègre un système de clés développeur permettant d'accéder à des fonctionnalités avancées et d'attribuer des rôles spéciaux. Les rôles disponibles sont :</p>
+  <ul>
+    <li><strong>Utilisateur</strong> — accès aux fonctionnalités standard</li>
+    <li><strong>Développeur — Équipe Astral</strong> — accès aux rapports et à l'interface d'administration</li>
+    <li><strong>Épouse du Créateur</strong> — accès VIP avec personnalisation du comportement d'E.V.A</li>
+    <li><strong>Créateur — PDG Astral</strong> — accès complet à toutes les fonctionnalités et paramètres</li>
+  </ul>
+  <p>Les clés développeur sont personnelles et confidentielles. Leur partage non autorisé est strictement interdit. Astral Technologie se réserve le droit de révoquer toute clé en cas d'utilisation abusive.</p>
+
+  <h2>5. UTILISATION ACCEPTABLE</h2>
+  <p>Vous vous engagez à ne pas utiliser E.V.A pour :</p>
+  <ul>
+    <li>Générer du contenu illégal, offensant ou frauduleux</li>
+    <li>Tenter de contourner les mécanismes de sécurité ou les règles Firestore</li>
+    <li>Usurper l'identité d'une tierce personne</li>
+    <li>Perturber le fonctionnement du service</li>
+    <li>Collecter des données sur d'autres utilisateurs sans consentement</li>
+    <li>Reproduire, décompiler ou distribuer le code source sans autorisation</li>
+    <li>Utiliser les fonctionnalités de génération de fichiers à des fins malveillantes</li>
+  </ul>
+
+  <h2>6. FOURNISSEURS D'IA TIERS</h2>
+  <p>E.V.A s'appuie sur des fournisseurs d'intelligence artificielle tiers : Puter.com, OpenAI, Anthropic, Alibaba Cloud (Qwen), ainsi que des modèles locaux via LM Studio et Ollama. Leurs conditions d'utilisation respectives s'appliquent également. Astral Technologie n'est pas responsable des contenus générés par ces services ni de leur disponibilité.</p>
+
+  <h2>7. GÉNÉRATION DE FICHIERS</h2>
+  <p>E.V.A Beta V4 permet la génération de documents (PDF, présentations, tableurs, documents Word) depuis l'interface de chat. Ces fichiers sont produits à titre de service et leur exactitude dépend des informations fournies par l'utilisateur. Astral Technologie décline toute responsabilité quant à l'utilisation faite de ces fichiers générés.</p>
+
+  <h2>8. PROPRIÉTÉ INTELLECTUELLE</h2>
+  <p>L'ensemble des éléments constituant E.V.A (interface, logo, architecture logicielle, personnage EVA, orbe holographique) sont la propriété d'Astral Technologie et sont protégés par les lois en vigueur sur la propriété intellectuelle. Toute reproduction sans autorisation écrite est interdite.</p>
+
+  <h2>9. LIMITATION DE RESPONSABILITÉ</h2>
+  <p>E.V.A est fourni « tel quel », en particulier dans sa phase bêta. Nous ne garantissons pas une disponibilité continue du service. Astral Technologie ne saurait être tenu responsable de pertes de données, interruptions de service ou dommages indirects liés à l'utilisation du service ou des fichiers générés.</p>
+
+  <h2>10. MODIFICATIONS</h2>
+  <p>Nous nous réservons le droit de modifier ces conditions à tout moment. Les utilisateurs seront informés des changements significatifs. La continuité d'utilisation du service vaut acceptation des nouvelles conditions.</p>
+
+  <h2>11. CONTACT</h2>
+  <p>Pour toute question relative à ces conditions, contactez-nous via l'interface E.V.A ou à travers nos canaux de support officiels Astral Technologie.</p>
+</div>
+</body>
+</html>

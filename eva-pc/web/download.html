@@ -1,0 +1,466 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E.V.A — Téléchargement</title>
+<link rel="icon" type="image/png" href="/assets/images/eva-logo.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#7b8bf5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="E.V.A">
+<link rel="apple-touch-icon" href="/assets/images/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --cyan:#7b8bf5;--cyan-dim:rgba(123,139,245,0.1);--cyan-glow:rgba(123,139,245,0.5);
+  --green:#00ff88;--purple:#b794f6;--red:#ff4d6d;
+  --bg:#111113;--surface:#18181b;--surface2:#222228;
+  --border:rgba(123,139,245,0.15);--text:#e4e4ef;--text-muted:#88889a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);overflow-x:hidden;}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(123,139,245,0.2);border-radius:10px}
+
+/* Background — identical to index.html */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(123,139,245,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.02) 1px,transparent 1px);
+  background-size:50px 50px;pointer-events:none;z-index:0;
+  animation:gridAnim 30s ease-in-out infinite;
+}
+@keyframes gridAnim{0%,100%{transform:translate(0,0)}50%{transform:translate(-10px,-5px)}}
+.bg-orb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(100px);z-index:0;}
+.bg-orb-1{width:700px;height:700px;background:rgba(123,139,245,0.06);top:-200px;right:-200px;animation:orbFloat 15s ease-in-out infinite;}
+.bg-orb-2{width:600px;height:600px;background:rgba(183,148,246,0.05);bottom:-200px;left:-100px;animation:orbFloat 20s ease-in-out infinite reverse;}
+.bg-orb-3{width:400px;height:400px;background:rgba(0,255,136,0.03);top:50%;left:50%;transform:translate(-50%,-50%);animation:orbFloat 12s ease-in-out infinite;}
+@keyframes orbFloat{0%,100%{transform:translate(0,0)}33%{transform:translate(20px,-30px)}66%{transform:translate(-15px,20px)}}
+
+/* NAV — identical to index.html */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  padding:16px 40px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(15,15,18,0.88);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(123,139,245,0.08);
+  transition:all 0.3s;
+}
+nav.scrolled{background:rgba(15,15,18,0.97);border-bottom-color:var(--border);}
+.nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none;}
+.nav-brand-logo{height:32px;width:auto;}
+.nav-links{display:flex;align-items:center;gap:24px;}
+.nav-link{color:var(--text-muted);text-decoration:none;font-size:0.8em;transition:color 0.2s;}
+.nav-link:hover,.nav-link.active{color:var(--cyan);}
+.nav-cta{
+  background:var(--cyan);color:#000;text-decoration:none;
+  padding:8px 20px;border-radius:8px;font-weight:700;
+  font-size:0.8em;letter-spacing:1px;transition:all 0.2s;
+  font-family:'Orbitron',monospace;
+}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 5px 20px rgba(123,139,245,0.4);}
+.nav-user{display:flex;align-items:center;gap:10px;}
+.nav-user-btn{
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);text-decoration:none;padding:7px 16px;
+  border-radius:8px;font-size:0.78em;transition:all 0.2s;
+}
+.nav-user-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.nav-profile{position:relative;}
+.nav-profile-avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:0.85em;color:#000;
+  border:2px solid transparent;transition:border-color 0.2s;
+  overflow:hidden;cursor:pointer;flex-shrink:0;
+}
+.nav-profile-avatar:hover{border-color:var(--cyan);}
+.nav-profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.nav-profile-menu{
+  position:absolute;top:calc(100% + 10px);right:0;
+  background:rgba(6,11,18,0.98);border:1px solid var(--border);
+  border-radius:12px;min-width:220px;padding:6px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  opacity:0;pointer-events:none;transform:translateY(-6px);
+  transition:all 0.18s ease;backdrop-filter:blur(20px);
+  z-index:200;
+}
+.nav-profile-menu.open{opacity:1;pointer-events:all;transform:translateY(0);}
+.nav-profile-info{padding:8px 10px 6px;font-family:'Space Mono',monospace;}
+.nav-profile-item{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 12px;border-radius:8px;
+  text-decoration:none;color:var(--text);
+  font-size:0.8em;font-family:'Space Mono',monospace;
+  transition:background 0.15s;cursor:pointer;
+  background:none;border:none;width:100%;text-align:left;
+}
+.nav-profile-item:hover{background:rgba(123,139,245,0.08);color:var(--cyan);}
+.nav-profile-item.danger:hover{background:rgba(255,77,109,0.1);color:#ff4d6d;}
+
+/* FOOTER — identical to index.html */
+footer{
+  position:relative;z-index:1;
+  padding:30px 40px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
+}
+.footer-brand{font-family:'Orbitron',monospace;font-size:0.85em;letter-spacing:3px;color:var(--cyan);}
+.footer-copy{font-size:0.72em;color:var(--text-muted);}
+.footer-links{display:flex;gap:20px;}
+.footer-link{font-size:0.75em;color:var(--text-muted);text-decoration:none;transition:color 0.2s;}
+.footer-link:hover{color:var(--cyan);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+
+/* PAGE CONTENT */
+.page-wrap{
+  position:relative;z-index:1;
+  max-width:960px;margin:0 auto;
+  padding:130px 24px 80px;
+  min-height:calc(100vh - 130px);
+}
+
+/* PAGE HEADER */
+.dl-header{
+  text-align:center;
+  margin-bottom:72px;
+  animation:fadeUp 0.6s ease both;
+}
+.dl-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:5px 16px;border-radius:20px;
+  background:rgba(255,140,0,0.12);border:1px solid rgba(255,140,0,0.4);
+  font-size:0.72em;color:#ffaa44;letter-spacing:2px;text-transform:uppercase;
+  margin-bottom:24px;
+}
+.dl-badge-dot{width:6px;height:6px;border-radius:50%;background:#ff9900;animation:dotPulse 1.5s ease-in-out infinite;}
+@keyframes dotPulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.dl-title{
+  font-family:'Orbitron',monospace;
+  font-size:clamp(1.8em,5vw,3em);
+  font-weight:900;letter-spacing:3px;
+  color:var(--text);margin-bottom:16px;
+  text-shadow:0 0 60px rgba(123,139,245,0.15);
+}
+.dl-title span{color:var(--cyan);}
+.dl-subtitle{
+  font-size:0.88em;color:var(--text-muted);
+  line-height:1.9;max-width:500px;margin:0 auto;
+}
+
+/* APP CARDS */
+.dl-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:24px;
+  animation:fadeUp 0.6s 0.1s ease both;
+}
+
+/* APP CARD */
+.dl-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:36px;
+  position:relative;overflow:hidden;
+  transition:border-color 0.3s,transform 0.3s,box-shadow 0.3s;
+}
+.dl-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+  opacity:0;transition:opacity 0.3s;
+}
+.dl-card:hover{
+  border-color:rgba(123,139,245,0.4);
+  transform:translateY(-4px);
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.dl-card:hover::before{opacity:1;}
+
+.dl-card-icon{
+  width:64px;height:64px;border-radius:16px;
+  background:linear-gradient(135deg,rgba(123,139,245,0.15),rgba(123,139,245,0.04));
+  border:1px solid rgba(123,139,245,0.25);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:24px;
+}
+.dl-card-icon svg{width:30px;height:30px;stroke:var(--cyan);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.dl-card-title{
+  font-family:'Orbitron',monospace;
+  font-size:1.05em;font-weight:900;letter-spacing:2px;
+  color:var(--text);margin-bottom:6px;
+}
+.dl-card-sub{
+  font-size:0.72em;color:var(--text-muted);
+  margin-bottom:22px;letter-spacing:0.5px;
+}
+.dl-card-features{
+  display:flex;flex-direction:column;gap:9px;
+  margin-bottom:32px;
+}
+.dl-card-feature{
+  display:flex;align-items:center;gap:10px;
+  font-size:0.75em;color:var(--text-muted);
+}
+.dl-card-feature::before{
+  content:'';width:5px;height:5px;border-radius:50%;
+  background:var(--cyan);flex-shrink:0;opacity:0.5;
+}
+
+/* Download button */
+.dl-btn{
+  display:flex;align-items:center;gap:14px;
+  padding:15px 20px;border-radius:14px;
+  border:1px solid rgba(123,139,245,0.22);
+  background:rgba(123,139,245,0.05);
+  cursor:not-allowed;
+  transition:all 0.2s;
+  text-decoration:none;
+  width:100%;
+}
+.dl-btn-icon{font-size:1.5em;flex-shrink:0;}
+.dl-btn-info{display:flex;flex-direction:column;flex:1;}
+.dl-btn-name{font-size:0.82em;font-weight:700;color:var(--text);font-family:'Orbitron',monospace;letter-spacing:1px;}
+.dl-btn-format{font-size:0.64em;color:var(--text-muted);margin-top:2px;}
+.dl-btn-soon{
+  font-size:0.6em;padding:3px 10px;border-radius:20px;
+  background:rgba(255,140,0,0.12);border:1px solid rgba(255,140,0,0.35);
+  color:#ffaa44;letter-spacing:1px;text-transform:uppercase;font-weight:700;
+  flex-shrink:0;white-space:nowrap;
+}
+
+/* WEB CTA */
+.dl-cta{
+  margin-top:48px;
+  text-align:center;
+  padding:44px 32px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  animation:fadeUp 0.6s 0.2s ease both;
+}
+.dl-cta-label{
+  font-size:0.62em;letter-spacing:3px;text-transform:uppercase;
+  color:var(--cyan);margin-bottom:14px;
+}
+.dl-cta-title{
+  font-family:'Orbitron',monospace;font-size:1.3em;font-weight:900;
+  color:var(--text);letter-spacing:2px;margin-bottom:12px;
+}
+.dl-cta-desc{
+  font-size:0.82em;color:var(--text-muted);line-height:1.8;
+  max-width:460px;margin:0 auto 28px;
+}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:14px 32px;border-radius:12px;
+  background:linear-gradient(135deg,var(--cyan),#0099cc);
+  color:#000;font-family:'Orbitron',monospace;
+  font-weight:700;font-size:0.85em;letter-spacing:2px;
+  text-decoration:none;transition:all 0.3s;
+  box-shadow:0 0 28px rgba(123,139,245,0.3);
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(123,139,245,0.5);}
+.btn-primary svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* Responsive */
+@media(min-width:1800px){nav{padding:20px 80px;}footer{padding:36px 80px;}}
+@media(min-width:1200px) and (max-width:1799px){nav{padding:16px 60px;}}
+@media(min-width:768px) and (max-width:1023px){
+  nav{padding:14px 28px;}
+  footer{padding:24px 28px;}
+}
+@media(max-width:767px){
+  nav{padding:12px 16px;}
+  .nav-links .nav-link{display:none;}
+  .nav-cta{padding:7px 14px;font-size:0.75em;}
+  .nav-user-btn{padding:6px 12px;font-size:0.75em;}
+  footer{flex-direction:column;text-align:center;gap:10px;padding:20px 16px;}
+  .footer-links{justify-content:center;}
+  .dl-grid{grid-template-columns:1fr;}
+  .dl-card{padding:24px;}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+<div class="bg-orb bg-orb-3"></div>
+
+<!-- NAV -->
+<nav id="mainNav">
+  <a href="/" class="nav-brand">
+    <img src="/assets/images/eva-logo.png" alt="EVA" class="nav-brand-logo">
+  </a>
+  <div class="nav-links">
+    <a href="/#features" class="nav-link">Fonctionnalités</a>
+    <a href="/#providers" class="nav-link">Providers IA</a>
+    <a href="/download" class="nav-link active">Téléchargement</a>
+  </div>
+  <div class="nav-user" id="navUser">
+    <a href="/login" target="_top" class="nav-user-btn">Connexion</a>
+    <a href="/login" target="_top" class="nav-cta">Essayer gratuitement</a>
+  </div>
+</nav>
+
+<!-- CONTENT -->
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="dl-header">
+    <div class="dl-badge">
+      <div class="dl-badge-dot"></div>
+      Téléchargement
+    </div>
+    <h1 class="dl-title">EVA — <span>Partout.</span></h1>
+    <p class="dl-subtitle">Retrouvez votre assistante IA sur tous vos appareils. Application mobile et application desktop bientôt disponibles.</p>
+  </div>
+
+  <!-- App Cards -->
+  <div class="dl-grid">
+
+    <!-- Mobile -->
+    <div class="dl-card">
+      <div class="dl-card-icon">
+        <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      </div>
+      <div class="dl-card-title">EVA MOBILE</div>
+      <div class="dl-card-sub">Application Android</div>
+      <div class="dl-card-features">
+        <div class="dl-card-feature">Toutes les fonctionnalités EVA dans votre poche</div>
+        <div class="dl-card-feature">Notifications push pour alarmes et rappels</div>
+        <div class="dl-card-feature">Interface optimisée tactile</div>
+        <div class="dl-card-feature">Wake Word "Hey EVA" toujours actif</div>
+        <div class="dl-card-feature">Mode hors-ligne avec modèle IA local</div>
+      </div>
+      <div class="dl-btn">
+        <div class="dl-btn-icon">📦</div>
+        <div class="dl-btn-info">
+          <div class="dl-btn-name">Télécharger l'APK</div>
+          <div class="dl-btn-format">Android — fichier .apk</div>
+        </div>
+        <span class="dl-btn-soon">Bientôt</span>
+      </div>
+    </div>
+
+    <!-- Desktop -->
+    <div class="dl-card">
+      <div class="dl-card-icon">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <div class="dl-card-title">EVA DESKTOP</div>
+      <div class="dl-card-sub">Application Windows</div>
+      <div class="dl-card-features">
+        <div class="dl-card-feature">Application native légère et rapide</div>
+        <div class="dl-card-feature">Accès depuis la barre des tâches</div>
+        <div class="dl-card-feature">Modèles IA locaux (Ollama, LM Studio)</div>
+        <div class="dl-card-feature">Raccourci clavier global pour invoquer EVA</div>
+        <div class="dl-card-feature">Génération et gestion de fichiers en local</div>
+      </div>
+      <div class="dl-btn">
+        <div class="dl-btn-icon">🪟</div>
+        <div class="dl-btn-info">
+          <div class="dl-btn-name">Télécharger pour Windows</div>
+          <div class="dl-btn-format">Windows 10/11 — fichier .exe</div>
+        </div>
+        <span class="dl-btn-soon">Bientôt</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Web CTA -->
+  <div class="dl-cta">
+    <div class="dl-cta-label">Disponible dès maintenant</div>
+    <div class="dl-cta-title">Interface Web</div>
+    <p class="dl-cta-desc">Accédez à toutes les fonctionnalités EVA directement depuis votre navigateur, sans rien installer. Gratuit, rapide et toujours à jour.</p>
+    <a href="/login" target="_top" class="btn-primary">
+      <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Commencer gratuitement
+    </a>
+  </div>
+
+</div>
+
+<!-- FOOTER — identical to index.html -->
+<footer>
+  <div class="footer-brand" style="display:flex;align-items:center;gap:16px;">
+    <img src="/assets/images/eva-logo.png" alt="EVA" style="height:28px;width:auto;">
+    <span style="color:rgba(123,139,245,0.2);font-size:1.2em;">×</span>
+    <img src="/assets/images/astral-logo.png" alt="Astral Technologie" style="height:22px;width:auto;opacity:0.85;">
+  </div>
+  <div class="footer-copy">© 2026 Astral Technologie — Evolutionary Virtual Assistant — Beta V4</div>
+  <div class="footer-links">
+    <a href="/login" target="_top" class="footer-link">Connexion</a>
+    <a href="/conditions" class="footer-link">Conditions d'utilisation</a>
+    <a href="/privacy" class="footer-link">Confidentialité</a>
+    <a href="/cookies" class="footer-link">Cookies</a>
+  </div>
+</footer>
+
+<script src="/js/core/firebase-config.js"></script>
+<script>
+// Scroll nav — same as index.html
+window.addEventListener('scroll', function() {
+  document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 50);
+});
+
+// Auth state — same logic as index.html
+function _buildNavUser(user, photoURL) {
+  var navUser = document.getElementById('navUser');
+  var initial = (user.displayName || user.email || 'U')[0].toUpperCase();
+  var avatarContent = photoURL
+    ? '<img src="'+photoURL+'" alt="Avatar" onerror="this.style.display=\'none\';this.parentElement.textContent=\''+initial+'\'">'
+    : initial;
+  if (navUser) {
+    navUser.innerHTML =
+      '<div class="nav-profile" id="navProfile">' +
+        '<div class="nav-profile-avatar" id="navProfileAvatar" onclick="document.getElementById(\'navProfileMenu\').classList.toggle(\'open\')">'+avatarContent+'</div>' +
+        '<div class="nav-profile-menu" id="navProfileMenu">' +
+          '<div class="nav-profile-info"><div style="font-weight:700;font-size:0.85em">'+(user.displayName||user.email)+'</div><div style="font-size:0.72em;color:rgba(123,139,245,0.6)">'+user.email+'</div></div>' +
+          '<div style="height:1px;background:rgba(123,139,245,0.1);margin:4px 0"></div>' +
+          '<a href="/chat" target="_top" class="nav-profile-item"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Accéder à EVA</a>' +
+          '<a href="/chat/settings/profile" target="_top" class="nav-profile-item"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>Paramètres</a>' +
+          '<div style="height:1px;background:rgba(123,139,245,0.1);margin:4px 0"></div>' +
+          '<button class="nav-profile-item danger" onclick="auth.signOut().then(function(){window.location.reload();})"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Déconnexion</button>' +
+        '</div>' +
+      '</div>';
+    document.addEventListener('click', function(e) {
+      var prof = document.getElementById('navProfile');
+      if (prof && !prof.contains(e.target)) {
+        var m = document.getElementById('navProfileMenu');
+        if (m) m.classList.remove('open');
+      }
+    });
+  }
+}
+
+auth.onAuthStateChanged(function(user) {
+  var navUser = document.getElementById('navUser');
+  if (!navUser) return;
+  if (user) {
+    _buildNavUser(user, user.photoURL || null);
+    if (window.db) {
+      window.db.collection('users').doc(user.uid).get().then(function(doc) {
+        if (doc.exists) {
+          var fp = doc.data().photoURL || null;
+          if (fp && fp !== user.photoURL) _buildNavUser(user, fp);
+        }
+      }).catch(function(){});
+    }
+  } else {
+    navUser.innerHTML = '<a href="/login" target="_top" class="nav-user-btn">Connexion</a><a href="/login" target="_top" class="nav-cta">Essayer gratuitement</a>';
+  }
+});
+</script>
+</body>
+</html>

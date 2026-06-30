@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>E.V.A - Chargement</title>
+  <style>
+    :root {
+      --cyan: #7b8bf5;
+      --bg: #111113;
+      --surface: rgba(24, 24, 27, 0.97);
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: #fff;
+      font-family: 'Space Mono', monospace, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      border: 1px solid rgba(123, 139, 245, 0.2);
+      border-radius: 12px;
+      -webkit-app-region: drag; /* Permet de déplacer le splash screen */
+    }
+    
+    .logo-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .logo-container img {
+      width: 80px;
+      height: 80px;
+      z-index: 2;
+    }
+
+    /* Animation d'anneau */
+    .ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-top-color: var(--cyan);
+      animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+    }
+
+    .ring::before {
+      content: "";
+      position: absolute;
+      top: 5px; right: 5px; bottom: 5px; left: 5px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-left-color: rgba(167, 139, 250, 0.8);
+      animation: spin 2s linear infinite reverse;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    h1 {
+      font-family: 'Orbitron', monospace, sans-serif;
+      font-size: 1.5em;
+      letter-spacing: 4px;
+      margin: 0 0 10px 0;
+      color: var(--cyan);
+      text-shadow: 0 0 15px rgba(123, 139, 245, 0.5);
+    }
+
+    #status-text {
+      font-size: 0.8em;
+      color: #88889a;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      animation: pulseText 2s infinite;
+    }
+
+    @keyframes pulseText {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-container">
+    <div class="ring"></div>
+    <img src="eva-icon.png" alt="EVA Logo">
+  </div>
+  <h1>E.V.A</h1>
+  <div id="status-text">Lancement du système...</div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    ipcRenderer.on('splash:status', (event, text) => {
+      document.getElementById('status-text').innerText = text;
+    });
+  </script>
+</body>
+</html>

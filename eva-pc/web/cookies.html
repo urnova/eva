@@ -1,0 +1,139 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Politique de cookies — E.V.A</title>
+<link rel="icon" type="image/png" href="assets/images/eva-logo.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="var(--cyan,#7b8bf5)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="E.V.A">
+<link rel="apple-touch-icon" href="/assets/images/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+<style>
+:root{--cyan:#7b8bf5;--cyan-dim:rgba(123,139,245,0.09);--bg:#111113;--surface:#18181b;--surface2:#222228;--border:rgba(123,139,245,0.12);--text:#e2e2f0;--text-muted:#71717a;--purple:#b794f6;--green:#4ade80;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(123,139,245,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.015) 1px,transparent 1px);background-size:52px 52px;pointer-events:none;z-index:0;}
+.page{position:relative;z-index:1;max-width:780px;margin:0 auto;padding:60px 24px 80px;}
+.back{display:inline-flex;align-items:center;gap:8px;color:var(--text-muted);text-decoration:none;font-size:0.8em;margin-bottom:40px;transition:color 0.2s;}
+.back:hover{color:var(--cyan);}
+.doc-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.doc-logo img{height:28px;width:auto;}
+h1{font-family:'Orbitron',monospace;font-size:1.6em;font-weight:900;letter-spacing:3px;color:var(--cyan);margin-bottom:8px;}
+.doc-date{font-size:0.75em;color:var(--text-muted);margin-bottom:40px;border-bottom:1px solid var(--border);padding-bottom:20px;}
+h2{font-family:'Orbitron',monospace;font-size:0.95em;color:var(--text);letter-spacing:2px;margin:32px 0 12px;padding-left:12px;border-left:2px solid var(--cyan);}
+p{font-size:0.82em;color:var(--text-muted);line-height:1.9;margin-bottom:14px;}
+ul{padding-left:20px;margin-bottom:14px;}
+ul li{font-size:0.82em;color:var(--text-muted);line-height:1.8;margin-bottom:4px;}
+ul li::marker{color:var(--cyan);}
+a{color:var(--cyan);text-decoration:none;}
+a:hover{text-decoration:underline;}
+.highlight{background:rgba(123,139,245,0.06);border:1px solid rgba(123,139,245,0.15);border-radius:10px;padding:16px 20px;margin:24px 0;}
+.highlight p{margin-bottom:0;}
+.cookie-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:12px;}
+.cookie-card-title{font-family:'Orbitron',monospace;font-size:0.8em;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.cookie-badge{font-size:0.7em;padding:2px 8px;border-radius:10px;font-family:'Space Mono',monospace;font-weight:700;letter-spacing:1px;}
+.badge-essential{background:rgba(0,255,136,0.12);color:var(--green);border:1px solid rgba(0,255,136,0.3);}
+.badge-optional{background:rgba(123,139,245,0.1);color:var(--cyan);border:1px solid rgba(123,139,245,0.3);}
+@media(max-width:600px){
+  .page{padding:28px 16px 50px;}
+  h1{font-size:1.2em;letter-spacing:2px;}
+  h2{font-size:0.85em;margin:22px 0 10px;}
+  .back{margin-bottom:24px;}
+  .doc-logo{margin-bottom:20px;}
+  .doc-date{margin-bottom:24px;}
+  .highlight{padding:12px 14px;}
+  .cookie-card{padding:12px 14px;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <a href="/" class="back">← Retour à l'accueil</a>
+
+  <div class="doc-logo">
+    <img src="/assets/images/eva-logo.png" alt="EVA"><span style="color:rgba(123,139,245,0.2);font-size:1.2em;margin:0 4px;">×</span><img src="/assets/images/astral-logo.png" alt="Astral Technologie" style="height:22px;opacity:0.8;">
+  </div>
+
+  <h1>POLITIQUE DE COOKIES</h1>
+  <div class="doc-date">Beta V4 — Dernière mise à jour : Mai 2026 · Astral Technologie</div>
+
+  <div class="highlight">
+    <p>E.V.A utilise des cookies et des technologies de stockage local pour vous offrir une expérience personnalisée et sécurisée. Voici tout ce que vous devez savoir sur les données stockées dans le cadre de la Beta V4.</p>
+  </div>
+
+  <h2>1. QU'EST-CE QU'UN COOKIE ?</h2>
+  <p>Un cookie est un petit fichier texte stocké sur votre appareil lorsque vous visitez un site web. Il permet de mémoriser vos préférences, de maintenir votre session active et d'améliorer votre expérience.</p>
+  <p>E.V.A utilise principalement le stockage local du navigateur (localStorage), Firebase Firestore et Firebase Auth pour gérer votre session et vos préférences, en complément des cookies traditionnels.</p>
+
+  <h2>2. COOKIES ESSENTIELS</h2>
+  <p>Ces cookies sont indispensables au fonctionnement du service. Ils ne peuvent pas être désactivés.</p>
+
+  <div class="cookie-card">
+    <div class="cookie-card-title">Session Firebase Auth <span class="cookie-badge badge-essential">ESSENTIEL</span></div>
+    <div class="cookie-card-desc">Maintient votre session de connexion active et sécurisée. Généré par Firebase Authentication (Google). Nécessaire pour accéder à toutes les fonctionnalités d'E.V.A.</div>
+  </div>
+  <div class="cookie-card">
+    <div class="cookie-card-title">Profil Firestore (rôle & clé développeur) <span class="cookie-badge badge-essential">ESSENTIEL</span></div>
+    <div class="cookie-card-desc">Stocke votre rôle utilisateur (Utilisateur, Développeur, Épouse du Créateur, Créateur) et la clé développeur activée. Ces données sont nécessaires pour adapter les fonctionnalités disponibles à votre profil.</div>
+  </div>
+  <div class="cookie-card">
+    <div class="cookie-card-title">Préférences E.V.A (localStorage) <span class="cookie-badge badge-essential">ESSENTIEL</span></div>
+    <div class="cookie-card-desc">Mémorise vos paramètres : fournisseur IA sélectionné, voix TTS choisie, thème visuel, configuration audio et autres préférences de personnalisation.</div>
+  </div>
+
+  <h2>3. COOKIES FONCTIONNELS</h2>
+  <p>Ces cookies améliorent votre expérience mais ne sont pas obligatoires au fonctionnement de base.</p>
+
+  <div class="cookie-card">
+    <div class="cookie-card-title">Historique de conversations (Firestore) <span class="cookie-badge badge-optional">FONCTIONNEL</span></div>
+    <div class="cookie-card-desc">Stocke vos conversations avec E.V.A dans Firestore pour assurer la continuité entre les sessions et sur tous vos appareils.</div>
+  </div>
+  <div class="cookie-card">
+    <div class="cookie-card-title">Notes, alarmes et rappels (Firestore) <span class="cookie-badge badge-optional">FONCTIONNEL</span></div>
+    <div class="cookie-card-desc">Conserve vos notes personnelles, alarmes et rappels créés depuis l'interface E.V.A. Ces données sont associées à votre compte Firebase.</div>
+  </div>
+  <div class="cookie-card">
+    <div class="cookie-card-title">CloudWorks — tâches et projets (Firestore) <span class="cookie-badge badge-optional">FONCTIONNEL</span></div>
+    <div class="cookie-card-desc">Sauvegarde vos tâches et projets gérés via le module CloudWorks d'E.V.A Beta V4.</div>
+  </div>
+  <div class="cookie-card">
+    <div class="cookie-card-title">Puter.com (IA Cloud) <span class="cookie-badge badge-optional">FONCTIONNEL</span></div>
+    <div class="cookie-card-desc">Si vous utilisez le fournisseur Puter AI (accès gratuit), ce service gère sa propre session de connexion. Soumis à la politique de confidentialité de Puter.com.</div>
+  </div>
+  <div class="cookie-card">
+    <div class="cookie-card-title">Tutoriel & onboarding (localStorage) <span class="cookie-badge badge-optional">FONCTIONNEL</span></div>
+    <div class="cookie-card-desc">Mémorise votre progression dans le tutoriel interactif d'E.V.A afin de ne pas le réafficher à chaque connexion.</div>
+  </div>
+  <div class="cookie-card">
+    <div class="cookie-card-title">Mode expérimental (localStorage) <span class="cookie-badge badge-optional">FONCTIONNEL</span></div>
+    <div class="cookie-card-desc">Retient vos préférences concernant les fonctionnalités expérimentales activées dans E.V.A Beta V4.</div>
+  </div>
+
+  <h2>4. DURÉE DE CONSERVATION</h2>
+  <ul>
+    <li>Cookies de session Firebase — durée de vie configurable, en général 30 jours</li>
+    <li>Données Firestore — conservées jusqu'à suppression manuelle du compte</li>
+    <li>Stockage local (localStorage) — conservé jusqu'à suppression manuelle ou désinstallation de l'app PWA</li>
+    <li>Cookies tiers (Puter.com) — selon leur politique propre</li>
+  </ul>
+
+  <h2>5. GÉRER VOS COOKIES</h2>
+  <p>Vous pouvez contrôler les cookies via les paramètres de votre navigateur :</p>
+  <ul>
+    <li><strong>Chrome</strong> — Paramètres › Confidentialité et sécurité › Cookies</li>
+    <li><strong>Firefox</strong> — Options › Vie privée et sécurité › Cookies</li>
+    <li><strong>Safari</strong> — Préférences › Confidentialité</li>
+    <li><strong>Edge</strong> — Paramètres › Confidentialité, recherche et services</li>
+  </ul>
+  <p>Vous pouvez également supprimer vos données Firestore directement depuis les paramètres de votre compte dans l'application E.V.A.</p>
+  <p>Attention : désactiver les cookies essentiels empêchera le bon fonctionnement d'E.V.A, notamment la connexion et l'accès aux fonctionnalités liées à votre rôle.</p>
+
+  <h2>6. CONTACT</h2>
+  <p>Pour toute question sur notre utilisation des cookies, contactez-nous via l'application E.V.A ou consultez notre <a href="/privacy">politique de confidentialité</a>.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#7b8bf5"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="#111113"/>
+  <polygon points="16,4 26,9.5 26,22.5 16,28 6,22.5 6,9.5" fill="none" stroke="url(#g)" stroke-width="1.5"/>
+  <text x="16" y="20" font-family="monospace" font-size="8" font-weight="900" fill="url(#g)" text-anchor="middle">EVA</text>
+</svg>

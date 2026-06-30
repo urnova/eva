@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40">
+  <defs>
+    <linearGradient id="ag" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b794f6"/>
+      <stop offset="100%" stop-color="#7b8bf5"/>
+    </linearGradient>
+  </defs>
+  <text x="0" y="28" font-family="'Orbitron',monospace,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="url(#ag)">ASTRAL</text>
+  <text x="0" y="38" font-family="monospace,sans-serif" font-size="7" letter-spacing="3" fill="#7b8bf5" opacity="0.6">TECHNOLOGIE</text>
+</svg>
