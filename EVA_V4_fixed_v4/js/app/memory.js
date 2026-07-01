@@ -14,30 +14,28 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     }
     if (!recentMsgs) return;
 
-    var existingMemory = (S.evaMemory && S.evaMemory.resume) ? S.evaMemory.resume : '';
+    var existingMemory = S.evaMemory && S.evaMemory.nodes ? JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links}) : '{"nodes":[],"links":[]}';
     var nick = (S.profile && (S.profile.nickname || S.profile.displayName)) || 'l\'utilisateur';
 
-    var extractPrompt = 'Tu es un assistant spécialisé dans l\'analyse de profil utilisateur. ' +
-      'À partir de la conversation ci-dessous et des informations déjà connues, ' +
-      'mets à jour et enrichis le résumé du profil de ' + nick + '. ' +
-      'Inclus uniquement des faits concrets : profession, centres d\'intérêt, habitudes, projets en cours, personnalité, préférences de communication, relations importantes. ' +
-      'Sois factuel et concis (3-5 phrases maximum). Ne mentionne pas cette analyse dans ta réponse. ' +
-      'Réponds UNIQUEMENT avec le résumé mis à jour, sans introduction ni conclusion.\n\n' +
-      (existingMemory ? 'PROFIL ACTUEL :\n' + existingMemory + '\n\n' : '') +
+    var extractPrompt = 'Tu es le Cerveau Neuronal (Graphe de Connaissances) de l\'IA EVA. Ton but est de modéliser ce que tu sais sur ' + nick + ' sous forme de graphe strict.\n' +
+      'À partir de la conversation ci-dessous et du graphe actuel, renvoie UNIQUEMENT un objet JSON (sans markdown, sans texte autour) représentant le graphe mis à jour.\n' +
+      'RÈGLES ABSOLUES :\n' +
+      '1. Le JSON doit avoir la structure exacte : {"nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference"}], "links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
+      '2. "source" et "target" dans links doivent correspondre EXACTEMENT à un "id" existant dans "nodes".\n' +
+      '3. Fusionne, corrige ou supprime les nœuds si la nouvelle conversation contredit l\'ancienne (ex: s\'il dit qu\'il est PDG, remplace l\'ancien métier).\n' +
+      '4. Ne retiens QUE les faits permanents et importants. Ignore le bavardage.\n\n' +
+      'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
     var newMemoryText = null;
 
-    /* Tentative 1 : Puter AI — utilisé si connecté (peu importe le provider actif) */
+    /* Tentative 1 : Puter AI */
     if (window.puter && S.config && S.config.puterUsername) {
       try {
-        var puterResp = await puter.ai.chat(extractPrompt, { model: 'gpt-4o-mini' });
+        var puterResp = await puter.ai.chat(extractPrompt, { model: 'gpt-4o-mini', response_format: { type: 'json_object' } });
         var puterContent = typeof puterResp === 'string' ? puterResp
-          : (puterResp && puterResp.message && puterResp.message.content)
-          || (puterResp && puterResp.content)
-          || '';
+          : (puterResp && puterResp.message && puterResp.message.content) || (puterResp && puterResp.content) || '';
         newMemoryText = puterContent.trim();
-        if (newMemoryText) console.log('[Mémoire Évolutive] Extraction Puter OK');
       } catch(e) { console.warn('[Mémoire] Puter extraction failed:', e); }
     }
 
@@ -47,7 +45,12 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
         var oaiResp = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + S.config.openaiApiKey },
-          body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: extractPrompt }], max_tokens: 300 })
+          body: JSON.stringify({ 
+            model: 'gpt-4o-mini', 
+            messages: [{ role: 'user', content: extractPrompt }], 
+            response_format: { type: 'json_object' },
+            max_tokens: 800 
+          })
         });
         if (oaiResp.ok) {
           var oaiData = await oaiResp.json();
@@ -56,36 +59,49 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       } catch(e) { console.warn('[Mémoire] OpenAI extraction failed:', e); }
     }
 
-    /* Tentative 3 : Provider actif (Claude, Pollinations, Ollama, etc.) — fallback universel */
+    /* Tentative 3 : Provider actif — fallback universel */
     if (!newMemoryText && window.EVAChatHandler) {
       try {
         var origSys = window.EVA_SYSTEM_PROMPT;
-        window.EVA_SYSTEM_PROMPT = 'Tu es un assistant spécialisé en analyse de profil utilisateur. Réponds uniquement avec le résumé demandé, sans introduction ni conclusion.';
+        window.EVA_SYSTEM_PROMPT = 'Tu es un parseur JSON. Renvoie uniquement du JSON valide sans aucun formatage markdown.';
         var chatResp = await window.EVAChatHandler.sendMessage(extractPrompt, {});
         window.EVA_SYSTEM_PROMPT = origSys;
         if (chatResp && chatResp.success && chatResp.content) {
-          newMemoryText = chatResp.content.trim().slice(0, 800);
-          if (newMemoryText) console.log('[Mémoire Évolutive] Extraction via provider actif OK');
+          newMemoryText = chatResp.content.trim();
         }
-      } catch(e) {
-        console.warn('[Mémoire] Provider actif extraction failed:', e);
-      }
+      } catch(e) { console.warn('[Mémoire] Provider actif extraction failed:', e); }
     }
 
-    if (!newMemoryText || newMemoryText.length < 10) return;
+    if (!newMemoryText) return;
+    
+    /* Nettoyage du markdown potentiel au cas où l'IA a quand même renvoyé ```json */
+    newMemoryText = newMemoryText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+    var parsedMemory = JSON.parse(newMemoryText);
+    
+    if (!parsedMemory.nodes || !Array.isArray(parsedMemory.nodes) || !parsedMemory.links || !Array.isArray(parsedMemory.links)) {
+      throw new Error("Structure JSON invalide");
+    }
 
     /* Sauvegarder en Firebase */
     var memoryData = {
-      resume: newMemoryText.slice(0, 800),
+      nodes: parsedMemory.nodes,
+      links: parsedMemory.links,
       lastUpdated: new Date().toISOString(),
       version: ((S.evaMemory && S.evaMemory.version) || 0) + 1
     };
+    
     await db.collection('users').doc(S.user.uid).set({ evaMemory: memoryData }, { merge: true });
     S.evaMemory = memoryData;
     if (S.profile) S.profile.evaMemory = memoryData;
-    console.log('[Mémoire Évolutive] Mise à jour — v' + memoryData.version);
+    console.log('[Mémoire Évolutive] Cerveau mis à jour — v' + memoryData.version, memoryData);
+    
+    // Si la page des paramètres est ouverte sur Cerveau, rafraîchir
+    if (window.renderBrainMap && document.getElementById('brainCanvas')) {
+      setTimeout(window.renderBrainMap, 100);
+    }
+
   } catch(e) {
-    console.warn('[Mémoire Évolutive] Erreur extraction:', e);
+    console.warn('[Mémoire Évolutive] Erreur extraction (JSON attendu):', e);
   }
 }
 window.extractUserInsights = extractUserInsights;

@@ -516,8 +516,8 @@ async function handleSend() {
   }
   if (window._userBio) userCtx += '\nNote personnelle : ' + window._userBio;
   /* Mémoire Évolutive — injectée si activée et non vide */
-  if (S.adaptationEnabled && S.evaMemory && S.evaMemory.resume) {
-    userCtx += '\n\nMÉMOIRE ÉVOLUTIVE (apprise lors des conversations précédentes) :\n' + S.evaMemory.resume;
+  if (S.adaptationEnabled && S.evaMemory && S.evaMemory.nodes) {
+    userCtx += '\n\nMÉMOIRE ÉVOLUTIVE (Graphe de Connaissances) :\n' + JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links});
   }
 
   // Injection date/heure courante — EVA connaît ainsi l'heure pour créer alarmes/rappels

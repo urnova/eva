@@ -669,12 +669,8 @@ function renderSettings(section) {
         '<div class="settings-row-sub">Activer la mémorisation automatique des préférences</div></div>' +
         '<label class="alarm-toggle"><input type="checkbox" id="sAdaptation"' + (S.adaptationEnabled ? ' checked' : '') + ' onchange="toggleAdaptation(this.checked)"><span class="alarm-slider"></span></label>' +
       '</div>' +
-      (S.evaMemory && S.evaMemory.resume ?
-        '<div style="margin-top:10px;background:rgba(123,139,245,0.06);border:1px solid rgba(123,139,245,0.18);border-radius:10px;padding:12px">' +
-        '<div style="font-size:0.68em;letter-spacing:1.5px;color:var(--cyan);text-transform:uppercase;margin-bottom:6px">Synthèse mémorielle</div>' +
-        '<div style="font-size:0.78em;color:var(--text);line-height:1.7">' + esc(S.evaMemory.resume) + '</div>' +
-        '<div style="font-size:0.66em;color:var(--text-dim);margin-top:8px">Mise à jour n°' + (S.evaMemory.version||1) + ' — ' + (S.evaMemory.lastUpdated ? new Date(S.evaMemory.lastUpdated).toLocaleDateString('fr-FR') : '') + '</div>' +
-        '</div>'
+      (S.evaMemory && S.evaMemory.nodes && S.evaMemory.nodes.length > 0 ?
+        '<div style="font-size:0.74em;color:var(--text-muted);margin-top:8px;"><strong>' + S.evaMemory.nodes.length + '</strong> nœuds et <strong>' + (S.evaMemory.links ? S.evaMemory.links.length : 0) + '</strong> connexions.<br><span style="font-size:0.8em;color:var(--text-dim)">Dernière mise à jour: ' + (S.evaMemory.lastUpdated ? new Date(S.evaMemory.lastUpdated).toLocaleDateString('fr-FR') : '') + '</span></div>'
       : '<div style="font-size:0.74em;color:var(--text-muted);margin-top:8px;font-style:italic">Le réseau neuronal est vide. Il se construira en conversant avec EVA.</div>') +
       '</div>' +
       '<div class="settings-section">' +
@@ -1484,7 +1480,7 @@ window.importEvaMemory = function(event) {
   reader.onload = function(e) {
     try {
       var data = JSON.parse(e.target.result);
-      if (!data || !data.resume) throw new Error("Fichier invalide");
+      if (!data || !data.nodes || !Array.isArray(data.nodes)) throw new Error("Fichier invalide");
       if (confirm('Voulez-vous remplacer la mémoire actuelle par celle de ce fichier ?')) {
         S.evaMemory = data;
         if (S.user && typeof db !== 'undefined') {
@@ -1508,67 +1504,171 @@ function renderBrainMap() {
   var w = canvas.width = canvas.offsetWidth;
   var h = canvas.height = canvas.offsetHeight;
 
-  var nodeCount = 5;
-  var connections = 3;
-  if (S.evaMemory && S.evaMemory.resume) {
-    nodeCount = Math.min(40, 10 + Math.floor(S.evaMemory.resume.length / 15));
-    connections = 2;
-  }
+  var nodesData = (S.evaMemory && S.evaMemory.nodes) ? S.evaMemory.nodes : [];
+  var linksData = (S.evaMemory && S.evaMemory.links) ? S.evaMemory.links : [];
 
-  var nodes = [];
-  for (var i = 0; i < nodeCount; i++) {
-    nodes.push({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      r: Math.random() * 3 + 1,
-      vx: (Math.random() - 0.5) * 0.7,
-      vy: (Math.random() - 0.5) * 0.7,
-      active: Math.random() > 0.7
+  var simNodes = [];
+  var nodeMap = {};
+
+  if (nodesData.length === 0) {
+    // Fake nodes if empty
+    for (var i = 0; i < 5; i++) {
+      simNodes.push({ id: 'fake'+i, label: '???', x: Math.random()*w, y: Math.random()*h, vx: 0, vy: 0, r: 3 });
+    }
+  } else {
+    nodesData.forEach(function(n) {
+      var sn = {
+        id: n.id,
+        label: n.label,
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: 0, vy: 0,
+        r: n.id.toLowerCase() === 'utilisateur' || n.id.toLowerCase() === 'user' ? 8 : 4
+      };
+      simNodes.push(sn);
+      nodeMap[n.id] = sn;
     });
   }
+
+  var simLinks = [];
+  linksData.forEach(function(l) {
+    if (nodeMap[l.source] && nodeMap[l.target]) {
+      simLinks.push({ source: nodeMap[l.source], target: nodeMap[l.target], label: l.label });
+    }
+  });
+
+  var isDragging = false;
+  var dragNode = null;
+
+  canvas.onmousedown = function(e) {
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left;
+    var my = e.clientY - rect.top;
+    for (var i=0; i<simNodes.length; i++) {
+      var n = simNodes[i];
+      var dist = Math.hypot(n.x - mx, n.y - my);
+      if (dist < n.r + 10) {
+        isDragging = true;
+        dragNode = n;
+        break;
+      }
+    }
+  };
+  canvas.onmousemove = function(e) {
+    if (isDragging && dragNode) {
+      var rect = canvas.getBoundingClientRect();
+      dragNode.x = e.clientX - rect.left;
+      dragNode.y = e.clientY - rect.top;
+      dragNode.vx = 0;
+      dragNode.vy = 0;
+    }
+  };
+  canvas.onmouseup = canvas.onmouseleave = function() {
+    isDragging = false;
+    dragNode = null;
+  };
 
   function draw() {
     if (!document.getElementById('brainCanvas')) return;
-    ctx.clearRect(0, 0, w, h);
     
-    nodes.forEach(function(n) {
-      n.x += n.vx;
-      n.y += n.vy;
-      if (n.x < 0 || n.x > w) n.vx *= -1;
-      if (n.y < 0 || n.y > h) n.vy *= -1;
-    });
+    // Physics step
+    var k = 0.05; // spring constant
+    var repulsion = 1500;
+    var damping = 0.85;
 
-    ctx.lineWidth = 1;
-    for (var i = 0; i < nodes.length; i++) {
-      for (var j = i + 1; j < nodes.length; j++) {
-        var dx = nodes[i].x - nodes[j].x;
-        var dy = nodes[i].y - nodes[j].y;
-        var dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist < (w / connections)) {
-          ctx.beginPath();
-          ctx.moveTo(nodes[i].x, nodes[i].y);
-          ctx.lineTo(nodes[j].x, nodes[j].y);
-          var alpha = 1 - (dist / (w / connections));
-          ctx.strokeStyle = nodes[i].active || nodes[j].active 
-            ? 'rgba(6, 182, 212, ' + (alpha * 0.8) + ')' 
-            : 'rgba(123, 139, 245, ' + (alpha * 0.3) + ')'; 
-          ctx.stroke();
-        }
+    // Repulsion
+    for (var i = 0; i < simNodes.length; i++) {
+      for (var j = i + 1; j < simNodes.length; j++) {
+        var n1 = simNodes[i], n2 = simNodes[j];
+        var dx = n1.x - n2.x;
+        var dy = n1.y - n2.y;
+        var dist = Math.sqrt(dx*dx + dy*dy) || 1;
+        var force = repulsion / (dist * dist);
+        var fx = (dx / dist) * force;
+        var fy = (dy / dist) * force;
+        n1.vx += fx; n1.vy += fy;
+        n2.vx -= fx; n2.vy -= fy;
       }
     }
 
-    nodes.forEach(function(n) {
+    // Attraction (Links)
+    simLinks.forEach(function(l) {
+      var dx = l.target.x - l.source.x;
+      var dy = l.target.y - l.source.y;
+      var dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      var targetDist = 80;
+      var force = (dist - targetDist) * k;
+      var fx = (dx / dist) * force;
+      var fy = (dy / dist) * force;
+      l.source.vx += fx; l.source.vy += fy;
+      l.target.vx -= fx; l.target.vy -= fy;
+    });
+
+    // Center gravity
+    simNodes.forEach(function(n) {
+      var dx = (w/2) - n.x;
+      var dy = (h/2) - n.y;
+      n.vx += dx * 0.01;
+      n.vy += dy * 0.01;
+      
+      if (n !== dragNode) {
+        n.x += n.vx;
+        n.y += n.vy;
+      }
+      n.vx *= damping;
+      n.vy *= damping;
+    });
+
+    // Render
+    ctx.clearRect(0, 0, w, h);
+    
+    // Edges
+    ctx.lineWidth = 1.5;
+    simLinks.forEach(function(l) {
+      ctx.beginPath();
+      ctx.moveTo(l.source.x, l.source.y);
+      ctx.lineTo(l.target.x, l.target.y);
+      ctx.strokeStyle = 'rgba(123, 139, 245, 0.4)';
+      ctx.stroke();
+
+      // Label
+      if (l.label) {
+        var mx = (l.source.x + l.target.x) / 2;
+        var my = (l.source.y + l.target.y) / 2;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.font = '9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(l.label, mx, my);
+      }
+    });
+
+    // Nodes
+    simNodes.forEach(function(n) {
       ctx.beginPath();
       ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-      ctx.fillStyle = n.active ? '#06b6d4' : '#7b8bf5';
-      if (n.active) {
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = '#06b6d4';
-      } else {
-        ctx.shadowBlur = 0;
-      }
+      ctx.fillStyle = n.r > 4 ? '#06b6d4' : '#7b8bf5';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = ctx.fillStyle;
       ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Node Label
+      if (n.label) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(n.label, n.x, n.y - n.r - 4);
+      }
     });
+
+    if (!S.adaptationEnabled) {
+      ctx.fillStyle = 'rgba(10, 15, 30, 0.7)';
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '14px Orbitron';
+      ctx.textAlign = 'center';
+      ctx.fillText('APPRENTISSAGE DÉSACTIVÉ', w/2, h/2);
+    }
 
     requestAnimationFrame(draw);
   }
