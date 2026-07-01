@@ -1552,54 +1552,57 @@ function renderBrainMap() {
     }
   });
 
-  var isDragging = false;
-  var dragNode = null;
+  var isPanning = false;
   var hasMoved = false;
+  var lastX = 0;
+  var lastY = 0;
+  var offsetX = 0;
+  var offsetY = 0;
 
   canvas.onmousedown = function(e) {
     var rect = canvas.getBoundingClientRect();
-    var mx = e.clientX - rect.left;
-    var my = e.clientY - rect.top;
+    lastX = e.clientX - rect.left;
+    lastY = e.clientY - rect.top;
+    isPanning = true;
     hasMoved = false;
-    for (var i=0; i<simNodes.length; i++) {
-      var n = simNodes[i];
-      if (Math.hypot(n.x - mx, n.y - my) < n.r + 20) {
-        isDragging = true;
-        dragNode = n;
-        break;
-      }
-    }
   };
+  
   canvas.onmousemove = function(e) {
     var rect = canvas.getBoundingClientRect();
     var mx = e.clientX - rect.left;
     var my = e.clientY - rect.top;
     
-    // Hover effect
+    // Hover effect (en tenant compte de l'offset)
     var hovering = false;
     for (var i=0; i<simNodes.length; i++) {
-      if (Math.hypot(simNodes[i].x - mx, simNodes[i].y - my) < simNodes[i].r + 15) {
+      if (Math.hypot(simNodes[i].x - (mx - offsetX), simNodes[i].y - (my - offsetY)) < simNodes[i].r + 15) {
         hovering = true; break;
       }
     }
-    canvas.style.cursor = hovering ? 'pointer' : 'default';
+    canvas.style.cursor = isPanning && hasMoved ? 'grabbing' : (hovering ? 'pointer' : 'grab');
 
-    if (isDragging && dragNode) {
-      hasMoved = true;
-      dragNode.x = mx;
-      dragNode.y = my;
-      dragNode.vx = 0;
-      dragNode.vy = 0;
+    if (isPanning) {
+      var dx = mx - lastX;
+      var dy = my - lastY;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+        hasMoved = true;
+      }
+      offsetX += dx;
+      offsetY += dy;
+      lastX = mx;
+      lastY = my;
     }
   };
+  
   canvas.onmouseup = function(e) {
-    if (!hasMoved && !isDragging) {
+    if (!hasMoved) {
+      // C'est un clic !
       var rect = canvas.getBoundingClientRect();
       var mx = e.clientX - rect.left;
       var my = e.clientY - rect.top;
       for (var i=0; i<simNodes.length; i++) {
         var n = simNodes[i];
-        if (Math.hypot(n.x - mx, n.y - my) < n.r + 20) {
+        if (Math.hypot(n.x - (mx - offsetX), n.y - (my - offsetY)) < n.r + 20) {
           document.getElementById('brainPopupTitle').innerText = n.label || n.id;
           document.getElementById('brainPopupDesc').innerText = n.details || "Aucune information supplémentaire enregistrée.";
           popup.style.display = 'flex';
@@ -1607,13 +1610,17 @@ function renderBrainMap() {
         }
       }
     }
-    isDragging = false;
-    dragNode = null;
+    isPanning = false;
+    canvas.style.cursor = 'grab';
   };
+  
   canvas.onmouseleave = function() {
-    isDragging = false;
-    dragNode = null;
+    isPanning = false;
+    canvas.style.cursor = 'grab';
   };
+  
+  // Set default cursor
+  canvas.style.cursor = 'grab';
 
   var time = 0;
 
@@ -1667,6 +1674,9 @@ function renderBrainMap() {
 
     // Render
     ctx.clearRect(0, 0, w, h);
+    
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
     
     // Edges
     ctx.lineWidth = 2;
@@ -1735,6 +1745,8 @@ function renderBrainMap() {
         ctx.fillText(n.label, n.x, n.y - rPulse - 6);
       }
     });
+
+    ctx.restore();
 
     if (!S.adaptationEnabled) {
       ctx.fillStyle = 'rgba(10, 15, 30, 0.7)';
