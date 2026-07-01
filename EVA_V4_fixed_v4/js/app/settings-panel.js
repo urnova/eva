@@ -1526,7 +1526,7 @@ function renderBrainMap() {
 
   if (nodesData.length === 0) {
     for (var i = 0; i < 5; i++) {
-      simNodes.push({ id: 'fake'+i, label: '???', details: 'Mémoire vide.', x: Math.random()*w, y: Math.random()*h, vx: 0, vy: 0, r: 3, phase: Math.random()*Math.PI*2 });
+      simNodes.push({ id: 'fake'+i, label: '???', details: 'Mémoire vide.', x: Math.random()*w, y: Math.random()*h, vx: 0, vy: 0, r: 6, phase: Math.random()*Math.PI*2 });
     }
   } else {
     nodesData.forEach(function(n) {
@@ -1537,7 +1537,7 @@ function renderBrainMap() {
         x: Math.random() * w,
         y: Math.random() * h,
         vx: 0, vy: 0,
-        r: n.id.toLowerCase() === 'utilisateur' || n.id.toLowerCase() === 'user' ? 8 : 4,
+        r: n.id.toLowerCase() === 'utilisateur' || n.id.toLowerCase() === 'user' ? 14 : 9,
         phase: Math.random() * Math.PI * 2
       };
       simNodes.push(sn);
@@ -1563,7 +1563,7 @@ function renderBrainMap() {
     hasMoved = false;
     for (var i=0; i<simNodes.length; i++) {
       var n = simNodes[i];
-      if (Math.hypot(n.x - mx, n.y - my) < n.r + 15) {
+      if (Math.hypot(n.x - mx, n.y - my) < n.r + 20) {
         isDragging = true;
         dragNode = n;
         break;
@@ -1571,24 +1571,35 @@ function renderBrainMap() {
     }
   };
   canvas.onmousemove = function(e) {
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left;
+    var my = e.clientY - rect.top;
+    
+    // Hover effect
+    var hovering = false;
+    for (var i=0; i<simNodes.length; i++) {
+      if (Math.hypot(simNodes[i].x - mx, simNodes[i].y - my) < simNodes[i].r + 15) {
+        hovering = true; break;
+      }
+    }
+    canvas.style.cursor = hovering ? 'pointer' : 'default';
+
     if (isDragging && dragNode) {
       hasMoved = true;
-      var rect = canvas.getBoundingClientRect();
-      dragNode.x = e.clientX - rect.left;
-      dragNode.y = e.clientY - rect.top;
+      dragNode.x = mx;
+      dragNode.y = my;
       dragNode.vx = 0;
       dragNode.vy = 0;
     }
   };
   canvas.onmouseup = function(e) {
     if (!hasMoved && !isDragging) {
-      // It's a click without drag
       var rect = canvas.getBoundingClientRect();
       var mx = e.clientX - rect.left;
       var my = e.clientY - rect.top;
       for (var i=0; i<simNodes.length; i++) {
         var n = simNodes[i];
-        if (Math.hypot(n.x - mx, n.y - my) < n.r + 15) {
+        if (Math.hypot(n.x - mx, n.y - my) < n.r + 20) {
           document.getElementById('brainPopupTitle').innerText = n.label || n.id;
           document.getElementById('brainPopupDesc').innerText = n.details || "Aucune information supplémentaire enregistrée.";
           popup.style.display = 'flex';
@@ -1608,12 +1619,12 @@ function renderBrainMap() {
 
   function draw() {
     if (!document.getElementById('brainCanvas')) return;
-    time += 0.02; // Ralenti
+    time += 0.05; 
     
     // Physics
-    var k = 0.05; 
-    var repulsion = 1000; // Ralenti
-    var damping = 0.85;
+    var k = 0.08; 
+    var repulsion = 4000; 
+    var damping = 0.7; // Fort freinage pour stabiliser rapidement
 
     for (var i = 0; i < simNodes.length; i++) {
       for (var j = i + 1; j < simNodes.length; j++) {
@@ -1633,7 +1644,7 @@ function renderBrainMap() {
       var dx = l.target.x - l.source.x;
       var dy = l.target.y - l.source.y;
       var dist = Math.sqrt(dx*dx + dy*dy) || 1;
-      var targetDist = 80;
+      var targetDist = 100;
       var force = (dist - targetDist) * k;
       var fx = (dx / dist) * force;
       var fy = (dy / dist) * force;
@@ -1643,11 +1654,8 @@ function renderBrainMap() {
 
     simNodes.forEach(function(n) {
       // Center gravity
-      n.vx += ((w/2) - n.x) * 0.01;
-      n.vy += ((h/2) - n.y) * 0.01;
-      // Constant drift (organic movement) - Ralenti
-      n.vx += Math.sin(time + n.phase) * 0.03;
-      n.vy += Math.cos(time + n.phase * 2) * 0.03;
+      n.vx += ((w/2) - n.x) * 0.02;
+      n.vy += ((h/2) - n.y) * 0.02;
       
       if (n !== dragNode) {
         n.x += n.vx;
@@ -1661,41 +1669,45 @@ function renderBrainMap() {
     ctx.clearRect(0, 0, w, h);
     
     // Edges
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     simLinks.forEach(function(l) {
       ctx.beginPath();
       ctx.moveTo(l.source.x, l.source.y);
       ctx.lineTo(l.target.x, l.target.y);
-      var pulse = (Math.sin(time + l.source.phase) + 1) / 2; // 0 to 1
-      ctx.strokeStyle = 'rgba(123, 139, 245, ' + (0.2 + pulse * 0.3) + ')';
+      var pulse = (Math.sin(time + l.source.phase) + 1) / 2;
+      ctx.strokeStyle = 'rgba(123, 139, 245, ' + (0.3 + pulse * 0.3) + ')';
       ctx.stroke();
 
       if (l.label) {
         var mx = (l.source.x + l.target.x) / 2;
         var my = (l.source.y + l.target.y) / 2;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.font = '9px sans-serif';
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.8)';
+        var textW = ctx.measureText(l.label).width;
+        ctx.fillRect(mx - textW/2 - 4, my - 6, textW + 8, 12);
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.font = '10px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(l.label, mx, my);
+        ctx.fillText(l.label, mx, my + 3);
       }
     });
 
     // Nodes
     simNodes.forEach(function(n) {
       ctx.beginPath();
-      var rPulse = n.r + Math.sin(time * 2 + n.phase) * 1;
+      var rPulse = n.r + Math.sin(time * 2 + n.phase) * 1.5;
       ctx.arc(n.x, n.y, Math.max(1, rPulse), 0, Math.PI * 2);
-      ctx.fillStyle = n.r > 4 ? '#06b6d4' : '#7b8bf5';
-      ctx.shadowBlur = 10 + Math.sin(time * 3 + n.phase) * 5;
+      ctx.fillStyle = n.r > 9 ? '#06b6d4' : '#7b8bf5';
+      ctx.shadowBlur = 12 + Math.sin(time * 3 + n.phase) * 8;
       ctx.shadowColor = ctx.fillStyle;
       ctx.fill();
       ctx.shadowBlur = 0;
 
       if (n.label) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.font = '10px sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.font = 'bold 11px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(n.label, n.x, n.y - rPulse - 5);
+        ctx.fillText(n.label, n.x, n.y - rPulse - 6);
       }
     });
 
