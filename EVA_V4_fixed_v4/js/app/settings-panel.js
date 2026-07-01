@@ -1608,11 +1608,11 @@ function renderBrainMap() {
 
   function draw() {
     if (!document.getElementById('brainCanvas')) return;
-    time += 0.05;
+    time += 0.02; // Ralenti
     
     // Physics
     var k = 0.05; 
-    var repulsion = 1500;
+    var repulsion = 1000; // Ralenti
     var damping = 0.85;
 
     for (var i = 0; i < simNodes.length; i++) {
@@ -1645,9 +1645,9 @@ function renderBrainMap() {
       // Center gravity
       n.vx += ((w/2) - n.x) * 0.01;
       n.vy += ((h/2) - n.y) * 0.01;
-      // Constant drift (organic movement)
-      n.vx += Math.sin(time + n.phase) * 0.15;
-      n.vy += Math.cos(time + n.phase * 2) * 0.15;
+      // Constant drift (organic movement) - Ralenti
+      n.vx += Math.sin(time + n.phase) * 0.03;
+      n.vy += Math.cos(time + n.phase * 2) * 0.03;
       
       if (n !== dragNode) {
         n.x += n.vx;
