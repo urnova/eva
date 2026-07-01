@@ -1518,8 +1518,8 @@ function renderBrainMap() {
     popup.style.display = 'none';
   };
 
-  var nodesData = (S.evaMemory && S.evaMemory.nodes) ? S.evaMemory.nodes : [];
-  var linksData = (S.evaMemory && S.evaMemory.links) ? S.evaMemory.links : [];
+  var nodesData = (S.evaMemory && Array.isArray(S.evaMemory.nodes)) ? S.evaMemory.nodes : [];
+  var linksData = (S.evaMemory && Array.isArray(S.evaMemory.links)) ? S.evaMemory.links : [];
 
   var simNodes = [];
   var nodeMap = {};
@@ -1537,7 +1537,7 @@ function renderBrainMap() {
         x: Math.random() * w,
         y: Math.random() * h,
         vx: 0, vy: 0,
-        r: n.id.toLowerCase() === 'utilisateur' || n.id.toLowerCase() === 'user' ? 14 : 9,
+        r: (n.id && String(n.id).toLowerCase() === 'utilisateur') || (n.id && String(n.id).toLowerCase() === 'user') ? 14 : 9,
         phase: Math.random() * Math.PI * 2
       };
       simNodes.push(sn);
