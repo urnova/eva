@@ -95,23 +95,6 @@ self.addEventListener('notificationclick', function(event) {
 });
 
 /* ─── Firebase SDK en complément (déchiffrement FCM) ─── */
-try {
-  importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
-  importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
-
-  firebase.initializeApp({
-    apiKey:            "AIzaSyDrXk8X9Ow7CcOc0Sr-yv3mXvzatNxpj3o",
-    authDomain:        "eva-assistant-a4fdf.firebaseapp.com",
-    projectId:         "eva-assistant-a4fdf",
-    storageBucket:     "eva-assistant-a4fdf.firebasestorage.app",
-    messagingSenderId: "594189556810",
-    appId:             "1:594189556810:web:0d72c2110245af92099ab3"
-  });
-
-  /* onBackgroundMessage ne fait rien — le raw push handler ci-dessus gère déjà l'affichage */
-  firebase.messaging().onBackgroundMessage(function(payload) {});
-
-} catch(e) {
-  /* Firebase SDK non disponible — le raw push handler suffit */
-  console.warn('[EVA SW] Firebase SDK non chargé, raw handler actif :', e.message);
-}
+/* Supprimé pour des raisons de sécurité : le raw handler ci-dessus suffit 
+   pour intercepter et afficher les notifications push, pas besoin d'exposer 
+   les clés Firebase en dur dans le Service Worker ! */
