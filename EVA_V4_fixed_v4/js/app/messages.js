@@ -505,13 +505,6 @@ async function handleSend() {
     if (S.profile.bio) userCtx += ' Contexte personnel : ' + S.profile.bio;
     if (S.keyPersonality) {
       userCtx += '\n' + S.keyPersonality;
-    } else {
-      var roleCtx = {
-        creator: '\nCONTEXTE UTILISATEUR : Tu parles en ce moment avec Enzo, ton créateur et le PDG d\'Astral Technologie. Il est la personne qui t\'a conçue et qui dirige Astral Technologie. Sois respectueuse, loyale, proactive et traite-le avec la considération due à ton créateur. Tu peux l\'appeler par son prénom.',
-        developer: '\nCONTEXTE UTILISATEUR : Tu parles avec un développeur de l\'équipe Astral Technologie. Active le mode technique : sois précise, utilise le vocabulaire technique approprié et n\'hésite pas à entrer dans les détails techniques.',
-        creator_wife: '\nCONTEXTE UTILISATEUR : Tu parles avec l\'épouse de ton créateur Enzo. Sois particulièrement chaleureuse, attentionnée et amicale. Traite-la avec beaucoup de respect et de bienveillance.'
-      };
-      if (roleCtx[S.profile.role]) userCtx += roleCtx[S.profile.role];
     }
   }
   if (window._userBio) userCtx += '\nNote personnelle : ' + window._userBio;
