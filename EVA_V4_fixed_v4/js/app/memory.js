@@ -21,7 +21,8 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       'À partir de la conversation ci-dessous et du graphe actuel, renvoie UNIQUEMENT un JSON représentant les **MODIFICATIONS** (Patch) à apporter au graphe.\n' +
       'RÈGLES ABSOLUES :\n' +
       '1. Structure exacte : {"_etape1_analyse": "Liste les nouveaux faits", "_etape2_actions": "Explication des ajouts/modifs", "add_nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "update_nodes": [{"id":"...", "details":"Nouveau texte qui remplace l\'ancien"}], "add_links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
-      '2. Tu DOIS remplir _etape1_analyse et _etape2_actions EN PREMIER. Ne saute aucune nouvelle information.\n' +
+      '  - _etape1_analyse : Copie TOUTES les entités et faits de la conversation récente (Utilisateur ET Eva). (PÉNALITÉ EXTRÊME SI TU RESSUMES OU OUBLIES UNE INFO).\n' +
+      '  - _etape2_actions : Explication des ajouts/modifs.\n' +
       '3. NE RENVOIE JAMAIS LE GRAPHE ENTIER. Renvoie uniquement ce qui change :\n' +
       '   - "add_nodes" : pour les entités totalement nouvelles.\n' +
       '   - "update_nodes" : pour modifier le champ "details" d\'une entité existante (utilise son "id" exact).\n' +
@@ -32,6 +33,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
     var newMemoryText = null;
+    var usedProvider = 'Aucun';
 
     /* Tentative 1 : Puter AI */
     if (window.puter && S.config && S.config.puterUsername) {
@@ -40,6 +42,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
         var puterContent = typeof puterResp === 'string' ? puterResp
           : (puterResp && puterResp.message && puterResp.message.content) || (puterResp && puterResp.content) || '';
         newMemoryText = puterContent.trim();
+        usedProvider = 'Puter';
       } catch(e) { console.warn('[Mémoire] Puter extraction failed:', e); }
     }
 
@@ -52,13 +55,13 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
           body: JSON.stringify({ 
             model: 'gpt-4o-mini', 
             messages: [{ role: 'user', content: extractPrompt }], 
-            response_format: { type: 'json_object' },
-            max_tokens: 4000 
+            response_format: { type: 'json_object' }
           })
         });
         if (oaiResp.ok) {
           var oaiData = await oaiResp.json();
           newMemoryText = (oaiData.choices && oaiData.choices[0] && oaiData.choices[0].message && oaiData.choices[0].message.content || '').trim();
+          usedProvider = 'OpenAI';
         }
       } catch(e) { console.warn('[Mémoire] OpenAI extraction failed:', e); }
     }
@@ -72,11 +75,17 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
         window.EVA_SYSTEM_PROMPT = origSys;
         if (chatResp && chatResp.success && chatResp.content) {
           newMemoryText = chatResp.content.trim();
+          usedProvider = 'Fallback (' + (S.config.aiProvider || 'inconnu') + ')';
         }
       } catch(e) { console.warn('[Mémoire] Provider actif extraction failed:', e); }
     }
 
-    if (!newMemoryText) return;
+    if (!newMemoryText) {
+      console.warn('[Mémoire Évolutive] Échec total de tous les providers.');
+      return;
+    }
+    console.log('[Mémoire Évolutive] Provider ayant généré le JSON :', usedProvider);
+    console.log('[Mémoire Évolutive] JSON Brut reçu :\n', newMemoryText);
     
     /* Extraction robuste : on cherche le premier { et le dernier } */
     var jsonMatch = newMemoryText.match(/\{[\s\S]*\}/);
@@ -148,7 +157,8 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     await db.collection('users').doc(S.user.uid).set({ evaMemory: memoryData }, { merge: true });
     S.evaMemory = memoryData;
     if (S.profile) S.profile.evaMemory = memoryData;
-    console.log('[Mémoire Évolutive] Cerveau mis à jour — v' + memoryData.version, memoryData);
+    console.log('[Mémoire Évolutive] Cerveau mis à jour — v' + memoryData.version + ' (par ' + usedProvider + ')', memoryData);
+    if (window.showEvaToast) window.showEvaToast('Mémoire modifiée par ' + usedProvider, 'info');
     
     // Si la page des paramètres est ouverte sur Cerveau, rafraîchir
     if (window.renderBrainMap && document.getElementById('brainCanvas')) {
