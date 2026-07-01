@@ -680,7 +680,7 @@ function renderSettings(section) {
       '<button class="btn btn-secondary" onclick="document.getElementById(\'importMemoryInput\').click()" style="flex:1">📂 Importer</button>' +
       '<input type="file" id="importMemoryInput" accept=".json" style="display:none" onchange="importEvaMemory(event)">' +
       '</div>' +
-      '<button class="btn btn-danger" onclick="resetEvaMemory()" style="width:100%;margin-top:5px" '+(S.evaMemory && S.evaMemory.resume ? '':'disabled')+'>🗑️ Effacer la mémoire neuronale</button>' +
+      '<button class="btn btn-danger" onclick="resetEvaMemory()" style="width:100%;margin-top:5px" '+(S.evaMemory && S.evaMemory.nodes ? '':'disabled')+'>🗑️ Effacer la mémoire neuronale</button>' +
       '</div>';
       setTimeout(renderBrainMap, 100);
 
@@ -1678,15 +1678,40 @@ function renderBrainMap() {
       ctx.strokeStyle = 'rgba(123, 139, 245, ' + (0.3 + pulse * 0.3) + ')';
       ctx.stroke();
 
+      var dx = l.target.x - l.source.x;
+      var dy = l.target.y - l.source.y;
+      var angle = Math.atan2(dy, dx);
+      var targetR = l.target.r + 6;
+      var arrowX = l.target.x - targetR * Math.cos(angle);
+      var arrowY = l.target.y - targetR * Math.sin(angle);
+      
+      ctx.beginPath();
+      ctx.moveTo(arrowX, arrowY);
+      ctx.lineTo(arrowX - 8 * Math.cos(angle - Math.PI/7), arrowY - 8 * Math.sin(angle - Math.PI/7));
+      ctx.lineTo(arrowX - 8 * Math.cos(angle + Math.PI/7), arrowY - 8 * Math.sin(angle + Math.PI/7));
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.fill();
+
       if (l.label) {
-        var mx = (l.source.x + l.target.x) / 2;
-        var my = (l.source.y + l.target.y) / 2;
-        ctx.fillStyle = 'rgba(10, 15, 30, 0.8)';
-        var textW = ctx.measureText(l.label).width;
-        ctx.fillRect(mx - textW/2 - 4, my - 6, textW + 8, 12);
+        var mx = l.source.x + dx * 0.4;
+        var my = l.source.y + dy * 0.4;
         
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.font = '10px sans-serif';
+        var textW = ctx.measureText(l.label).width;
+        
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.85)';
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(mx - textW/2 - 6, my - 8, textW + 12, 16, 8);
+        } else {
+            ctx.fillRect(mx - textW/2 - 6, my - 8, textW + 12, 16);
+        }
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(123, 139, 245, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.textAlign = 'center';
         ctx.fillText(l.label, mx, my + 3);
       }
