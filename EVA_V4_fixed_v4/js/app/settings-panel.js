@@ -1285,30 +1285,39 @@ async function getPuterStatus() {
   if (!window.puter) return null;
   try { return await puter.auth.getUser(); } catch(e) { return null; }
 }
-async function connectPuter() {
+function connectPuter() {
   if (!window.puter) { toast('Puter non disponible','error'); return; }
-  /* puter.auth.signIn() peut lancer une exception même quand l'auth réussit
-     (popup fermée par Puter après login, ou utilisateur déjà connecté).
-     On appelle getUser() dans tous les cas pour vérifier l'état réel. */
-  try { await window.evaSafePuterSignIn(); } catch(err) { console.error('[EVA] puter.auth.signIn() error:', err); }
+  
+  // Appel 100% synchrone pour contourner les bloqueurs de pop-up d'Edge
+  var authPromise;
   try {
-    var user = await puter.auth.getUser();
+    authPromise = puter.auth.signIn();
+  } catch(err) {
+    console.error('[EVA] puter.auth.signIn() error immédiate:', err);
+    toast('Impossible d\\'ouvrir la fenêtre Puter','error');
+    return;
+  }
+
+  // On gère la suite de manière asynchrone
+  authPromise.then(function() {
+    return puter.auth.getUser();
+  }).then(function(user) {
     if (user && user.username) {
       S.config.puterUsername = user.username;
       saveCfg();
       if (S.user) {
-        await db.collection('users').doc(S.user.uid).set({puterUsername: user.username}, {merge:true}).catch(function(){});
+        db.collection('users').doc(S.user.uid).set({puterUsername: user.username}, {merge:true}).catch(function(){});
       }
       toast('Puter connecté : ' + user.username, 'success');
       renderSettings('ai');
     } else {
       toast('Connexion Puter annulée','error');
     }
-  } catch(e) { 
-    console.error('[EVA] Erreur détaillée connexion Puter:', e); 
-    var msg = (e && e.message) ? e.message : 'inconnue';
+  }).catch(function(err) {
+    console.error('[EVA] Erreur détaillée connexion Puter:', err); 
+    var msg = (err && err.message) ? err.message : (err && err.error) ? err.error : 'inconnue';
     toast('Connexion Puter échouée (' + msg + ')','error'); 
-  }
+  });
 }
 async function refreshPuterStatusUI() {
   var statusEl = document.getElementById('puterConnectStatus');
