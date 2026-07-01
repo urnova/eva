@@ -1494,7 +1494,7 @@ window.importEvaMemory = function(event) {
         renderSettings('brain');
       }
     } catch(err) {
-      toast('Erreur d\\'importation : fichier invalide', 'error');
+      toast("Erreur d'importation : fichier invalide", 'error');
     }
     event.target.value = '';
   };
