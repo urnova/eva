@@ -83,8 +83,14 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
 
     if (!newMemoryText) return;
     
-    /* Nettoyage du markdown potentiel au cas où l'IA a quand même renvoyé ```json */
-    newMemoryText = newMemoryText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+    /* Extraction robuste : on cherche le premier { et le dernier } */
+    var jsonMatch = newMemoryText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      newMemoryText = jsonMatch[0];
+    } else {
+      throw new Error("Aucun objet JSON trouvé dans la réponse");
+    }
+    
     var parsedMemory = JSON.parse(newMemoryText);
     
     if (!parsedMemory.nodes || !Array.isArray(parsedMemory.nodes) || !parsedMemory.links || !Array.isArray(parsedMemory.links)) {
