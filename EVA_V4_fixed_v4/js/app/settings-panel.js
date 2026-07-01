@@ -712,6 +712,13 @@ function renderSettings(section) {
       '<canvas id="brainCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>' +
       '</div>' +
       '<div class="settings-row">' +
+        '<div><div class="settings-row-label">Mode Édition</div>' +
+        '<div class="settings-row-sub">Autoriser la modification manuelle de la carte</div></div>' +
+        '<label class="alarm-toggle"><input type="checkbox" id="sBrainEditMode" ' + (window._brainEditMode ? 'checked' : '') + ' onchange="toggleBrainEditMode(this.checked)"><span class="alarm-slider"></span></label>' +
+      '</div>' +
+      '<div id="brainEditWarning" style="display:' + (window._brainEditMode ? 'block' : 'none') + ';background:rgba(255,165,0,0.1);border:1px solid rgba(255,165,0,0.5);color:#ffb703;padding:10px;border-radius:8px;margin-bottom:15px;font-size:0.8em;line-height:1.4;">' +
+      '<strong>⚠️ RÈGLE IMPORTANTE :</strong> Rédigez toujours à la <strong>3ème personne</strong>. N\'utilisez jamais "Je" ou "Mon".<br>Ex: "L\'utilisateur aime le cinéma" (et non "J\'aime le cinéma").</div>' +
+      '<div class="settings-row">' +
         '<div><div class="settings-row-label">Apprentissage adaptatif</div>' +
         '<div class="settings-row-sub">Activer la mémorisation automatique des préférences</div></div>' +
         '<label class="alarm-toggle"><input type="checkbox" id="sAdaptation"' + (S.adaptationEnabled ? ' checked' : '') + ' onchange="toggleAdaptation(this.checked)"><span class="alarm-slider"></span></label>' +
@@ -1482,6 +1489,15 @@ async function changePassword() {
   }
 }
 
+window._brainEditMode = false;
+window.toggleBrainEditMode = function(checked) {
+  window._brainEditMode = checked;
+  var warn = document.getElementById('brainEditWarning');
+  if(warn) warn.style.display = checked ? 'block' : 'none';
+  var tb = document.getElementById('brainToolbar');
+  if(tb) tb.style.display = checked ? 'flex' : 'none';
+};
+
 /* ── Mémoire Évolutive : toggle & reset ── */
 async function toggleAdaptation(enabled) {
   if (!S.user) return;
@@ -1574,6 +1590,7 @@ function renderBrainMap() {
   
   toolbar.appendChild(btnAddNode);
   toolbar.appendChild(btnAddLink);
+  toolbar.style.display = window._brainEditMode ? 'flex' : 'none';
   container.appendChild(toolbar);
 
   // Popup edition contextuelle
@@ -1589,7 +1606,7 @@ function renderBrainMap() {
       '<button id="bpClose" style="background:none;border:none;color:var(--text-muted);font-size:1.2em;cursor:pointer;">✕</button>' +
     '</div>' +
     '<div id="bpDesc" style="font-size:0.82em;color:var(--text);line-height:1.6;margin-bottom:15px;max-height:80px;overflow-y:auto;"></div>' +
-    '<div style="display:flex;gap:10px;margin-top:auto;">' +
+    '<div style="display:flex;gap:10px;margin-top:auto;" id="bpActions">' +
       '<button id="bpEdit" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px;cursor:pointer;">✏️ Éditer</button>' +
       '<button id="bpDel" style="flex:1;background:rgba(255,77,109,0.1);border:1px solid #ff4d6d;color:#ff4d6d;padding:6px;border-radius:6px;cursor:pointer;">🗑️ Suppr</button>' +
     '</div>';
@@ -1667,34 +1684,29 @@ function renderBrainMap() {
   function initSimulation() {
     simNodes = [];
     nodeMap = {};
-    if (nodesData.length === 0) {
-      for (var i = 0; i < 5; i++) {
-        var fake = {id: 'fake'+i, label: '???', details: 'Mémoire vide.'};
-        var sn = {
-          data: fake, id: fake.id, label: fake.label,
-          x: Math.random() * w, y: Math.random() * h,
-          vx: 0, vy: 0, r: 10, phase: Math.random() * Math.PI * 2, fixed: false
-        };
-        simNodes.push(sn);
-        nodeMap[sn.id] = sn;
-      }
-    } else {
-      nodesData.forEach(function(n) {
-        var sn = {
-          data: n,
-          id: n.id,
-          label: n.label,
-          x: n.x !== undefined ? n.x : Math.random() * w,
-          y: n.y !== undefined ? n.y : Math.random() * h,
-          vx: 0, vy: 0,
-          r: (n.id && (n.id.toLowerCase()==='utilisateur' || n.id.toLowerCase()==='user')) ? 16 : 10,
-          phase: Math.random() * Math.PI * 2,
-          fixed: false
-        };
-        simNodes.push(sn);
-        nodeMap[n.id] = sn;
-      });
+    
+    // Forcer le noeud central "utilisateur"
+    if (!nodesData.some(function(n) { return n.id === 'utilisateur' || n.id === 'user'; })) {
+        var uName = (S.profile && S.profile.name) || (S.user && S.user.displayName) || 'Utilisateur';
+        nodesData.push({id: 'utilisateur', label: uName, details: 'L\'utilisateur du compte.', x: w/2, y: h/2, group: 1, type: 'user'});
+        saveChanges();
     }
+
+    nodesData.forEach(function(n) {
+      var sn = {
+        data: n,
+        id: n.id,
+        label: n.label,
+        x: n.x !== undefined ? n.x : Math.random() * w,
+        y: n.y !== undefined ? n.y : Math.random() * h,
+        vx: 0, vy: 0,
+        r: (n.id && (n.id.toLowerCase()==='utilisateur' || n.id.toLowerCase()==='user')) ? 16 : 10,
+        phase: Math.random() * Math.PI * 2,
+        fixed: false
+      };
+      simNodes.push(sn);
+      nodeMap[n.id] = sn;
+    });
   }
   initSimulation();
 
@@ -1718,6 +1730,7 @@ function renderBrainMap() {
   
   var draggedNode = null;
   var selectedNode = null;
+  var selectedLink = null;
   
   var interactionMode = 'default'; // 'default', 'add_node', 'add_link'
   var linkModeStep = 0; // 0 = wait source, 1 = wait target
@@ -1737,6 +1750,27 @@ function renderBrainMap() {
     btnAddNode.style.color = 'var(--text)';
     btnAddLink.style.background = 'rgba(10,15,30,0.9)';
     btnAddLink.style.color = 'var(--text)';
+  }
+
+  function showPopupForNode(node) {
+      selectedNode = node;
+      selectedLink = null;
+      document.getElementById('bpTitle').innerText = node.label || node.id;
+      document.getElementById('bpDesc').innerText = node.data.details || 'Aucune information.';
+      document.getElementById('bpActions').style.display = window._brainEditMode ? 'flex' : 'none';
+      popup.style.display = 'flex';
+  }
+
+  function showPopupForLink(linkData) {
+      selectedNode = null;
+      selectedLink = linkData;
+      var src = nodeMap[linkData.source];
+      var tgt = nodeMap[linkData.target];
+      if(!src || !tgt) return;
+      document.getElementById('bpTitle').innerText = 'Connexion : ' + src.label + ' ➔ ' + tgt.label;
+      document.getElementById('bpDesc').innerText = 'Label actuel : ' + linkData.label;
+      document.getElementById('bpActions').style.display = window._brainEditMode ? 'flex' : 'none';
+      popup.style.display = 'flex';
   }
 
   btnAddNode.onclick = function() {
@@ -1762,31 +1796,55 @@ function renderBrainMap() {
   };
 
   linkModeBanner.onclick = resetMode;
-  document.getElementById('bpClose').onclick = function() { popup.style.display = 'none'; selectedNode = null; };
+  document.getElementById('bpClose').onclick = function() { popup.style.display = 'none'; selectedNode = null; selectedLink = null; };
   
   document.getElementById('bpDel').onclick = function() {
-    if(confirm('Supprimer ce nœud et ses connexions ?')) {
-      nodesData = nodesData.filter(function(n) { return n.id !== selectedNode.id; });
-      linksData = linksData.filter(function(l) { return l.source !== selectedNode.id && l.target !== selectedNode.id; });
-      saveChanges();
-      popup.style.display = 'none';
-      selectedNode = null;
-      initSimulation();
+    if (selectedNode) {
+        if (selectedNode.id.toLowerCase() === 'utilisateur' || selectedNode.id.toLowerCase() === 'user') {
+            return alert("Vous ne pouvez pas supprimer le nœud central utilisateur.");
+        }
+        if(confirm('Supprimer ce nœud et ses connexions ?')) {
+          nodesData = nodesData.filter(function(n) { return n.id !== selectedNode.id; });
+          linksData = linksData.filter(function(l) { return l.source !== selectedNode.id && l.target !== selectedNode.id; });
+          saveChanges();
+          popup.style.display = 'none';
+          selectedNode = null;
+          initSimulation();
+        }
+    } else if (selectedLink) {
+        if(confirm('Supprimer ce lien ?')) {
+            linksData = linksData.filter(function(l) { return l !== selectedLink; });
+            saveChanges();
+            popup.style.display = 'none';
+            selectedLink = null;
+        }
     }
   };
 
   document.getElementById('bpEdit').onclick = function() {
     popup.style.display = 'none';
-    openModal("Éditer le nœud", [
-      {label: "Nom du nœud", value: selectedNode.data.label, placeholder: "Ex: Maison de vacances"},
-      {label: "Description (3ème personne)", type: "textarea", value: selectedNode.data.details, placeholder: "Ex: L'utilisateur possède une..."}
-    ], function(res) {
-      if(!res[0]) return toast('Le titre est requis', 'warning');
-      selectedNode.data.label = res[0];
-      selectedNode.label = res[0];
-      selectedNode.data.details = res[1] || '';
-      saveChanges();
-    });
+    if (selectedNode) {
+        openModal("Éditer le nœud", [
+          {label: "Nom du nœud", value: selectedNode.data.label, placeholder: "Ex: Maison de vacances"},
+          {label: "Description (3ème personne)", type: "textarea", value: selectedNode.data.details, placeholder: "Ex: L'utilisateur possède une..."}
+        ], function(res) {
+          if(!res[0]) return toast('Le titre est requis', 'warning');
+          selectedNode.data.label = res[0];
+          selectedNode.label = res[0];
+          selectedNode.data.details = res[1] || '';
+          saveChanges();
+          showPopupForNode(selectedNode);
+        });
+    } else if (selectedLink) {
+        openModal("Éditer la connexion", [
+          {label: "Nouveau label du lien", value: selectedLink.label, placeholder: "Ex: possède, ami avec"}
+        ], function(res) {
+          if(!res[0]) return toast('Le label est requis', 'warning');
+          selectedLink.label = res[0];
+          saveChanges();
+          showPopupForLink(selectedLink);
+        });
+    }
   };
 
   // --- EVENTS MOUSE & TOUCH ---
@@ -1829,6 +1887,28 @@ function renderBrainMap() {
       }
     }
 
+    // Test link collision if no node hit
+    var hitLink = null;
+    if(!hitNode && interactionMode === 'default') {
+        for(var j=0; j<linksData.length; j++) {
+            var l = linksData[j];
+            var s = nodeMap[l.source], t = nodeMap[l.target];
+            if(s && t) {
+                // Dist to segment
+                var l2 = Math.pow(t.x - s.x, 2) + Math.pow(t.y - s.y, 2);
+                var tt = l2 === 0 ? 0 : ((mx - s.x) * (t.x - s.x) + (my - s.y) * (t.y - s.y)) / l2;
+                tt = Math.max(0, Math.min(1, tt));
+                var projX = s.x + tt * (t.x - s.x);
+                var projY = s.y + tt * (t.y - s.y);
+                var distSq = Math.pow(mx - projX, 2) + Math.pow(my - projY, 2);
+                if (distSq < 100) { // < 10px tolerance
+                    hitLink = l;
+                    break;
+                }
+            }
+        }
+    }
+
     if (interactionMode === 'add_link') {
         if(hitNode) {
             if(linkModeStep === 0) {
@@ -1857,9 +1937,19 @@ function renderBrainMap() {
     }
     
     if(hitNode) {
-        draggedNode = hitNode;
-        hitNode.fixed = true;
+        if(window._brainEditMode) {
+            draggedNode = hitNode;
+            hitNode.fixed = true;
+        } else {
+            selectedNode = hitNode;
+            hasMoved = false;
+        }
         hasMoved = false;
+        return;
+    }
+    
+    if(hitLink) {
+        showPopupForLink(hitLink);
         return;
     }
 
@@ -1912,14 +2002,15 @@ function renderBrainMap() {
     if(draggedNode) {
       draggedNode.fixed = false;
       if(!hasMoved) {
-        selectedNode = draggedNode;
-        document.getElementById('bpTitle').innerText = selectedNode.label || selectedNode.id;
-        document.getElementById('bpDesc').innerText = selectedNode.data.details || 'Aucune information.';
-        popup.style.display = 'flex';
+        showPopupForNode(draggedNode);
       } else {
         saveChanges();
       }
       draggedNode = null;
+    } else if (selectedNode && !isPanning && !hasMoved && !window._brainEditMode) {
+      // Pour le mode lecture seule
+      showPopupForNode(selectedNode);
+      selectedNode = null;
     }
     isPanning = false;
     if(interactionMode === 'default') canvas.style.cursor = 'grab';
