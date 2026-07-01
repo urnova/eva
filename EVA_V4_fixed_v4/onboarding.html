@@ -259,6 +259,7 @@ body::before{
       <div class="ob-step" id="step-bar-6"></div>
       <div class="ob-step" id="step-bar-7"></div>
       <div class="ob-step" id="step-bar-8"></div>
+      <div class="ob-step" id="step-bar-9"></div>
     </div>
 
     <!-- Step 1: Profil -->
@@ -505,9 +506,45 @@ body::before{
       </div>
     </div>
 
-    <!-- Step 6: Notifications push -->
+    <!-- Step 6: Cerveau Neuronal (Optionnel) -->
     <div class="ob-view" id="ob6">
-      <div class="step-label">Étape 6 — Notifications</div>
+      <div class="step-label">Étape 6 — Cerveau Initial</div>
+      
+      <div style="text-align:center;margin-bottom:15px">
+        <div style="font-size:2.8em;margin-bottom:10px">🧠</div>
+        <div style="font-family:'Orbitron',monospace;font-size:1.05em;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:8px">BASE DE CONNAISSANCES</div>
+        <div style="font-size:0.75em;color:var(--text-muted);line-height:1.6;max-width:380px;margin:0 auto">
+          La configuration du cerveau d'E.V.A <strong>n'est pas obligatoire</strong>, elle le construira seule au fil de vos conversations. Mais si vous voulez lui donner beaucoup d'informations d'un coup, il vaut mieux le faire manuellement ici car la création automatique consomme énormément de tokens.
+        </div>
+      </div>
+
+      <div class="pass-info-box" style="border-color:#ff4d6d;background:rgba(255,77,109,0.05);color:#ff4d6d;padding:10px;font-size:0.75em;margin-bottom:12px;">
+        <strong>⚠️ Règle d'or de Perspective (3ème Personne) :</strong><br>
+        N'utilisez jamais "je", "mon" ou "ma". Si vous écrivez <i>"Luna est ma meilleure amie"</i>, l'IA pensera que c'est <b>sa</b> meilleure amie à elle.<br>
+        Écrivez toujours : <i>"Luna est la meilleure amie de l'utilisateur"</i>.
+      </div>
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:15px;">
+        <div style="display:flex;gap:10px;margin-bottom:10px;">
+          <button onclick="obSwitchBrainTab('nodes')" id="obBtnNodes" style="flex:1;background:var(--cyan-dim);color:var(--cyan);border:1px solid var(--cyan);padding:8px;border-radius:8px;cursor:pointer;font-family:'Space Mono';font-size:0.8em;transition:all 0.2s;">Nœuds</button>
+          <button onclick="obSwitchBrainTab('links')" id="obBtnLinks" style="flex:1;background:transparent;color:var(--text-muted);border:1px solid var(--border);padding:8px;border-radius:8px;cursor:pointer;font-family:'Space Mono';font-size:0.8em;transition:all 0.2s;">Connexions</button>
+        </div>
+        
+        <div id="obBrainNodesList" style="max-height:150px;overflow-y:auto;font-size:0.8em;color:var(--text);margin-bottom:10px;padding-right:4px;"></div>
+        <div id="obBrainLinksList" style="display:none;max-height:150px;overflow-y:auto;font-size:0.8em;color:var(--text);margin-bottom:10px;padding-right:4px;"></div>
+
+        <button onclick="obAddBrainItem()" style="width:100%;padding:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--text);cursor:pointer;font-size:0.85em;transition:all 0.2s;">+ Ajouter</button>
+      </div>
+
+      <div class="ob-actions">
+        <button class="btn-skip" onclick="goStep(5)">← Retour</button>
+        <button class="btn-next" onclick="goStep(7)">SUIVANT →</button>
+      </div>
+    </div>
+
+    <!-- Step 7: Notifications push -->
+    <div class="ob-view" id="ob7">
+      <div class="step-label">Étape 7 — Notifications</div>
 
       <div style="text-align:center;margin-bottom:20px">
         <div style="font-size:2.8em;margin-bottom:10px">🔔</div>
@@ -553,14 +590,14 @@ body::before{
       </div>
 
       <div class="ob-actions" style="margin-top:20px">
-        <button class="btn-skip" onclick="goStep(5)">← Retour</button>
-        <button class="btn-next" id="obNotifNextBtn" onclick="goStep(7)">SUIVANT →</button>
+        <button class="btn-skip" onclick="goStep(6)">← Retour</button>
+        <button class="btn-next" id="obNotifNextBtn" onclick="goStep(8)">SUIVANT →</button>
       </div>
     </div>
 
-    <!-- Step 7: Avatar / Personnage EVA (PC uniquement) -->
-    <div class="ob-view" id="ob7">
-      <div class="step-label">Étape 7 — Présence d'E.V.A</div>
+    <!-- Step 8: Avatar / Personnage EVA (PC uniquement) -->
+    <div class="ob-view" id="ob8">
+      <div class="step-label">Étape 8 — Présence d'E.V.A</div>
 
       <div style="text-align:center;margin-bottom:20px">
         <div style="font-size:2.8em;margin-bottom:10px">🔮</div>
@@ -605,13 +642,13 @@ body::before{
       </div>
 
       <div class="ob-actions" style="margin-top:20px">
-        <button class="btn-skip" onclick="goStep(6)">← Retour</button>
-        <button class="btn-next" onclick="goStep(8)">SUIVANT →</button>
+        <button class="btn-skip" onclick="goStep(7)">← Retour</button>
+        <button class="btn-next" onclick="goStep(9)">SUIVANT →</button>
       </div>
     </div>
 
-    <!-- Step 8: Terminé -->
-    <div class="ob-view" id="ob8">
+    <!-- Step 9: Terminé -->
+    <div class="ob-view" id="ob9">
       <div class="finish-icon">🎉</div>
       <div class="finish-title">Tout est prêt !</div>
       <div class="finish-text">
@@ -638,7 +675,7 @@ body::before{
       <button class="btn-next" style="width:100%;font-size:0.9em;margin-top:16px" onclick="finish()">
         ⚡ ACCÉDER À E.V.A
       </button>
-      <button class="btn-skip" style="width:100%;margin-top:8px" onclick="goStep(7)">← Retour</button>
+      <button class="btn-skip" style="width:100%;margin-top:8px" onclick="goStep(8)">← Retour</button>
     </div>
 
   </div>
@@ -653,6 +690,83 @@ var selectedProvider    = 'puter';
 var selectedTTSProvider = 'piper';
 var currentUser = null;
 var isGoogleOnlyUser = false;
+
+/* Initialisation Cerveau */
+var obBrainTab = 'nodes';
+var obBrainNodes = [];
+var obBrainLinks = [];
+
+function _obInitBrainUI() {
+  if (obBrainNodes.length === 0) {
+    var uname = document.getElementById('displayName').value.trim() || 'Utilisateur';
+    obBrainNodes.push({ id: 'utilisateur', label: uname, type: 'user', group: 1, details: 'L\'utilisateur principal du système E.V.A.' });
+    obBrainNodes.push({ id: 'eva', label: 'E.V.A', type: 'concept', group: 1, details: 'L\'assistante virtuelle de l\'utilisateur.' });
+    obBrainLinks.push({ source: 'utilisateur', target: 'eva', label: 'possède' });
+  }
+  obRenderBrainList();
+}
+
+function obSwitchBrainTab(tab) {
+  obBrainTab = tab;
+  document.getElementById('obBtnNodes').style.background = tab === 'nodes' ? 'var(--cyan-dim)' : 'transparent';
+  document.getElementById('obBtnNodes').style.color = tab === 'nodes' ? 'var(--cyan)' : 'var(--text-muted)';
+  document.getElementById('obBtnNodes').style.borderColor = tab === 'nodes' ? 'var(--cyan)' : 'var(--border)';
+  document.getElementById('obBtnLinks').style.background = tab === 'links' ? 'var(--cyan-dim)' : 'transparent';
+  document.getElementById('obBtnLinks').style.color = tab === 'links' ? 'var(--cyan)' : 'var(--text-muted)';
+  document.getElementById('obBtnLinks').style.borderColor = tab === 'links' ? 'var(--cyan)' : 'var(--border)';
+  
+  document.getElementById('obBrainNodesList').style.display = tab === 'nodes' ? 'block' : 'none';
+  document.getElementById('obBrainLinksList').style.display = tab === 'links' ? 'block' : 'none';
+  obRenderBrainList();
+}
+
+function obRenderBrainList() {
+  var nList = document.getElementById('obBrainNodesList');
+  var lList = document.getElementById('obBrainLinksList');
+  if (!nList || !lList) return;
+  
+  nList.innerHTML = obBrainNodes.length ? obBrainNodes.map(function(n, i) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">' +
+           '<div><strong style="color:var(--cyan)">' + (n.id || '') + '</strong> : ' + (n.label || '') + '</div>' +
+           '<button onclick="obDeleteBrainItem(\'nodes\','+i+')" style="background:none;border:none;color:#ff4d6d;cursor:pointer;">✕</button></div>';
+  }).join('') : '<div style="color:var(--text-muted);text-align:center;padding:10px;">Aucun nœud</div>';
+  
+  lList.innerHTML = obBrainLinks.length ? obBrainLinks.map(function(l, i) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">' +
+           '<div><strong style="color:var(--cyan)">' + (l.source || '') + '</strong> ⭢ ' + (l.label || '') + ' ⭢ <strong style="color:var(--cyan)">' + (l.target || '') + '</strong></div>' +
+           '<button onclick="obDeleteBrainItem(\'links\','+i+')" style="background:none;border:none;color:#ff4d6d;cursor:pointer;">✕</button></div>';
+  }).join('') : '<div style="color:var(--text-muted);text-align:center;padding:10px;">Aucune connexion</div>';
+}
+
+function obAddBrainItem() {
+  if (obBrainTab === 'nodes') {
+    var nId = prompt("ID du nœud (ex: maison, chien, thomas) :");
+    if (!nId) return;
+    var nLabel = prompt("Nom d'affichage (ex: Maison de campagne) :");
+    if (!nLabel) return;
+    var nDesc = prompt("Description complète (3ème personne, ex: 'Thomas est le frère de l'utilisateur') :");
+    obBrainNodes.push({ id: nId.toLowerCase().replace(/[^a-z0-9_]/g, ''), label: nLabel, details: nDesc || '', group: 2, type: 'concept' });
+  } else {
+    var src = prompt("ID du nœud source :");
+    if (!src) return;
+    var tgt = prompt("ID du nœud cible :");
+    if (!tgt) return;
+    var lbl = prompt("Label du lien (ex: 'frère de', 1 à 3 mots) :");
+    obBrainLinks.push({ source: src.toLowerCase().replace(/[^a-z0-9_]/g, ''), target: tgt.toLowerCase().replace(/[^a-z0-9_]/g, ''), label: lbl || 'lié à' });
+  }
+  obRenderBrainList();
+}
+
+function obDeleteBrainItem(type, index) {
+  if (type === 'nodes') {
+    var n = obBrainNodes[index];
+    obBrainNodes.splice(index, 1);
+    obBrainLinks = obBrainLinks.filter(function(l){ return l.source !== n.id && l.target !== n.id; });
+  } else {
+    obBrainLinks.splice(index, 1);
+  }
+  obRenderBrainList();
+}
 
 auth.onAuthStateChanged(function(user) {
   if (!user) { window.location.href = '/login'; return; }
@@ -797,10 +911,10 @@ function showFieldError(id, msg) {
 var obAvatarEnabled = true;
 var _obIsMobile = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) && window.innerWidth < 900;
 
-/* Sur mobile : masquer l'indicateur de l'étape Avatar (étape 7) */
+/* Sur mobile : masquer l'indicateur de l'étape Avatar (étape 8) */
 if (_obIsMobile) {
-  var _sb7 = document.getElementById('step-bar-7');
-  if (_sb7) _sb7.style.display = 'none';
+  var _sb8 = document.getElementById('step-bar-8');
+  if (_sb8) _sb8.style.display = 'none';
 }
 
 async function requestObNotifPermission() {
@@ -925,15 +1039,23 @@ function goStep(n) {
   /* Sauter étape 2 pour comptes Google-only sans mot de passe */
   if (!isGoogleOnlyUser && n === 2) { n = 3; }
 
-  /* Étape 7 (Avatar) — sauter automatiquement sur mobile */
-  if (n === 7 && _obIsMobile) {
-    n = (currentStep > 7) ? 6 : 8;
+  /* Sauter étape 6 (Cerveau) si apprentissage désactivé */
+  if (n === 6 && !document.getElementById('prefAdaptation').checked) {
+    n = (currentStep === 5) ? 7 : 5;
+  }
+  if (n === 6 && currentStep === 5) {
+    setTimeout(obRenderBrainList, 50);
+  }
+
+  /* Étape 8 (Avatar) — sauter automatiquement sur mobile */
+  if (n === 8 && _obIsMobile) {
+    n = (currentStep > 8) ? 7 : 9;
   }
 
   /* Hooks sur certaines étapes */
   if (n === 3) { setTimeout(function(){ obSelectTTS(selectedTTSProvider); }, 50); }
   if (n === 4) { setTimeout(checkObPuterStatus, 200); }
-  if (n === 6) { setTimeout(updateObNotifState, 100); }
+  if (n === 7) { setTimeout(updateObNotifState, 100); }
 
   /* Validation étape 1 avant d'avancer */
   if (currentStep === 1 && n > 1) {
@@ -953,10 +1075,10 @@ function goStep(n) {
     saveProfile(profileData);
   }
 
-  /* Ajuster le bouton Retour de l'étape 8 si mobile (pas d'étape 7) */
-  if (n === 8) {
-    var backBtn = document.querySelector('#ob8 .btn-skip');
-    if (backBtn) backBtn.onclick = function(){ goStep(_obIsMobile ? 6 : 7); };
+  /* Ajuster le bouton Retour de l'étape 9 si mobile (pas d'étape 8) */
+  if (n === 9) {
+    var backBtn = document.querySelector('#ob9 .btn-skip');
+    if (backBtn) backBtn.onclick = function(){ goStep(_obIsMobile ? 7 : 8); };
   }
 
   document.getElementById('ob'+currentStep).classList.remove('active');
@@ -1234,10 +1356,20 @@ async function finish() {
         aiProvider:      selectedProvider,
         wakeWordEnabled: wakeWord,
         autoLaunch:      autoLaunch,
-        showEvaPanel:        _obIsMobile ? false : obAvatarEnabled,
+        showEvaPanel:    _obIsMobile ? false : obAvatarEnabled,
         experimentalFeatures: experimental
       }
     }, extraKeys), { merge: true });
+
+    // Save initial brain map if user modified it
+    if (adaptation && obBrainNodes && obBrainNodes.length > 0) {
+      await db.collection('users').doc(currentUser.uid).collection('brain').doc('map').set({
+        nodes: obBrainNodes,
+        links: obBrainLinks,
+        last_update: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+
     window.location.href = '/chat';
   } catch(e) {
     window.location.href = '/chat';

@@ -24,14 +24,14 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     var extractPrompt = 'Tu es l\'ARCHIVISTE STRICT du Cerveau Neuronal de l\'IA EVA. Ton but est de modéliser la vie de ' + nick + ' sous forme de graphe.\n' +
       'À partir de la conversation ci-dessous et du graphe actuel, renvoie UNIQUEMENT un JSON représentant les **MODIFICATIONS** (Patch) à apporter au graphe.\n' +
       'RÈGLES ABSOLUES :\n' +
-      '1. Structure exacte : {"_etape1_analyse": "Liste les nouveaux faits", "_etape2_actions": "Explication des ajouts/modifs", "add_nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "update_nodes": [{"id":"...", "details":"Nouveau texte qui remplace l\'ancien"}], "remove_nodes": ["id_du_noeud_a_supprimer"], "add_links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
+      '1. Structure exacte : {"_etape1_analyse": "Liste les nouveaux faits", "_etape2_actions": "Explication des ajouts/modifs", "add_nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "update_nodes": [{"id":"...", "label":"Nouveau nom optionnel", "details":"Nouveau texte qui remplace l\'ancien"}], "remove_nodes": ["id_du_noeud_a_supprimer"], "add_links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
       '  - _etape1_analyse : Copie TOUTES les entités et faits de la conversation récente (Utilisateur ET Eva). (PÉNALITÉ EXTRÊME SI TU RESSUMES OU OUBLIES UNE INFO).\n' +
       '  - _etape2_actions : Explication des ajouts/modifs/suppressions.\n' +
       '3. NE RENVOIE JAMAIS LE GRAPHE ENTIER. Renvoie uniquement ce qui change :\n' +
       '   - "add_nodes" : pour les entités totalement nouvelles.\n' +
-      '   - "update_nodes" : pour modifier le champ "details" d\'une entité existante (utilise son "id" exact).\n' +
+      '   - "update_nodes" : pour modifier le champ "details" ou renommer ("label") d\'une entité existante (utilise son "id" exact).\n' +
       '   - "remove_nodes" : pour SUPPRIMER DÉFINITIVEMENT un nœud (ex: si l\'utilisateur demande de l\'oublier ou de le fusionner et détruire l\'ancien). Mets juste les IDs dans un tableau.\n' +
-      '   - "add_links" : pour lier de nouvelles choses.\n' +
+      '   - "add_links" : pour lier de nouvelles choses. RÈGLE CRUCIALE : Le "label" d\'un lien DOIT FAIRE ENTRE 1 ET 3 MOTS MAXIMUM (ex: "aime", "travaille pour", "déteste"). Les explications longues vont dans "details" du nœud.\n' +
       '4. DÉDUPLICATION OBLIGATOIRE : Avant de créer dans "add_nodes", vérifie si ça n\'existe pas déjà. Si oui, utilise "update_nodes".\n' +
       '5. SUPPRESSION : Si tu dois regrouper deux nœuds, copie les infos du mauvais dans le bon via "update_nodes", puis mets l\'ID du mauvais dans "remove_nodes".\n' +
       '6. HIÉRARCHIE DES LIENS : Ne relie pas tout à l\'utilisateur central. Crée des chaînes logiques (L\'utilisateur dirige Entreprise X -> Entreprise X gère Projet Z).\n\n' +
@@ -126,10 +126,11 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     // 2. Mettre à jour les noeuds existants
     if (patch.update_nodes && Array.isArray(patch.update_nodes)) {
       patch.update_nodes.forEach(function(un) {
-        if (un && un.id && un.details) {
+        if (un && un.id) {
           var target = currentMem.nodes.find(function(ex){ return ex.id === un.id; });
           if (target) {
-            target.details = un.details;
+            if (un.details) target.details = un.details;
+            if (un.label) target.label = un.label;
             updated = true;
           }
         }
@@ -189,6 +190,38 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       window.setEvaStatusHeader('🧠 CERVEAU MIS À JOUR', 'action');
       setTimeout(function(){ window.setEvaStatusHeader(null); }, 3000);
     }
+    
+    /* Injecter l'étape dans la boîte de réflexion du dernier message */
+    try {
+      var chatList = document.getElementById('chatList');
+      if (chatList) {
+        var evaMsgs = chatList.querySelectorAll('.msg.eva .msg-thought-wrap');
+        if (evaMsgs.length > 0) {
+          var lastThoughtWrap = evaMsgs[evaMsgs.length - 1];
+          var listEl = lastThoughtWrap.querySelector('.msg-thought-list');
+          var hdrArrow = lastThoughtWrap.querySelector('.msg-thought-hdr span:last-child');
+          if (listEl) {
+            var stepIdx = listEl.children.length + 1;
+            var newStep = document.createElement('div');
+            newStep.className = 'msg-thought-item';
+            
+            var addC = patch.add_nodes ? patch.add_nodes.length : 0;
+            var upC = patch.update_nodes ? patch.update_nodes.length : 0;
+            var rmC = patch.remove_nodes ? patch.remove_nodes.length : 0;
+            var lnkC = patch.add_links ? patch.add_links.length : 0;
+            
+            newStep.innerHTML = '<span style="color:rgba(123,139,245,0.4);min-width:14px;">' + stepIdx + '.</span>' +
+                                '<div><span style="color:rgba(200,205,230,0.6);">Mémoire (Arrière-plan)</span>' +
+                                '<span style="margin-left:5px;opacity:0.5;">Cerveau mis à jour : ' + addC + ' ajout(s), ' + upC + ' modif(s), ' + rmC + ' suppr(s), ' + lnkC + ' lien(s)</span></div>';
+            listEl.appendChild(newStep);
+            if (hdrArrow) {
+               var open = lastThoughtWrap.classList.contains('open');
+               hdrArrow.textContent = stepIdx + ' étape(s) ' + (open ? '▲' : '▼');
+            }
+          }
+        }
+      }
+    } catch(e) { console.warn('Erreur injection réflexion:', e); }
     
     // Si la page des paramètres est ouverte sur Cerveau, rafraîchir
     if (window.renderBrainMap && document.getElementById('brainCanvas')) {

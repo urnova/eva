@@ -555,6 +555,12 @@ function renderSettings(section) {
           'Vos statistiques d\'utilisation sont désormais synchronisées de manière sécurisée et globale via votre compte CloudWorks/Firebase.' +
         '</div>' +
 
+        '</div>' +
+        '<div class="settings-section" style="margin-top:20px;">' +
+        '<div class="settings-section-title">Anciens Rapports</div>' +
+        '<div id="usageHistoryList">' +
+        '<div style="text-align:center;padding:10px;"><div class="loader" style="margin:0 auto;width:20px;height:20px;border-width:2px;"></div></div>' +
+        '</div></div>' +
         '</div>';
 
       c.innerHTML = html;
@@ -651,6 +657,47 @@ function renderSettings(section) {
         });
       }
 
+      /* FETCH ALL HISTORY FOR PREVIOUS PERIODS */
+      db.collection('users').doc(S.user.uid).collection('stats').get().then(function(snap) {
+        var monthMap = {};
+        snap.forEach(function(doc) {
+          if (doc.id === 'global') return;
+          var d = doc.data();
+          if (!d.date) return; // Format YYYY-MM-DD
+          var parts = d.date.split('-');
+          if (parts.length >= 2) {
+             var mKey = parts[0] + '-' + parts[1];
+             if (!monthMap[mKey]) monthMap[mKey] = { msg:0, tok:0, d: new Date(parts[0], parseInt(parts[1])-1, 1) };
+             monthMap[mKey].msg += (d.msgCount || 0);
+             monthMap[mKey].tok += (d.tokensEst || 0);
+          }
+        });
+        var mKeys = Object.keys(monthMap).sort().reverse();
+        var listEl = document.getElementById('usageHistoryList');
+        if (!listEl) return;
+        if (mKeys.length === 0) {
+           listEl.innerHTML = '<div style="font-size:0.75em;color:var(--text-muted);padding:10px 0;">Aucun historique précédent trouvé.</div>';
+           return;
+        }
+        var mNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+        var histHtml = '';
+        mKeys.forEach(function(k) {
+           var mObj = monthMap[k];
+           var lbl = mNames[mObj.d.getMonth()] + ' ' + mObj.d.getFullYear();
+           var tokStr = mObj.tok > 1000 ? (mObj.tok/1000).toFixed(1)+'K' : mObj.tok;
+           histHtml += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">' +
+                   '<div style="font-weight:700;color:var(--text);font-size:0.85em;">' + lbl + '</div>' +
+                   '<div style="display:flex;gap:15px;font-size:0.75em;color:var(--text-muted);">' +
+                   '<span>💬 ' + mObj.msg + ' msg</span>' +
+                   '<span style="color:var(--cyan);">🔤 ' + tokStr + ' tok</span>' +
+                   '</div></div>';
+        });
+        listEl.innerHTML = histHtml;
+      }).catch(function(e) {
+        var listEl = document.getElementById('usageHistoryList');
+        if (listEl) listEl.innerHTML = '<div style="font-size:0.75em;color:#ef4444;">Erreur de chargement de l\'historique.</div>';
+      });
+
     }).catch(function(e) {
       console.error('[EVA Stats] global fetch error:', e);
       c.innerHTML = '<div class="settings-section" style="color:var(--text-muted);text-align:center;padding:30px;">Erreur lors de la récupération des statistiques :<br><code style="font-size:0.8em;color:#ef4444;">' + e.message + '</code></div>';
@@ -664,6 +711,7 @@ function renderSettings(section) {
       '<div id="brainMapContainer" style="width:100%;height:220px;background:rgba(10,15,30,0.8);border:1px solid rgba(123,139,245,0.3);border-radius:12px;position:relative;overflow:hidden;margin-bottom:15px;box-shadow:inset 0 0 20px rgba(0,0,0,0.5);">' +
       '<canvas id="brainCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>' +
       '</div>' +
+      '<button class="btn btn-secondary" onclick="openBrainManager()" style="width:100%;margin-bottom:15px;font-family:\'Space Mono\',monospace;">🛠️ Gérer la cartographie manuellement</button>' +
       '<div class="settings-row">' +
         '<div><div class="settings-row-label">Apprentissage adaptatif</div>' +
         '<div class="settings-row-sub">Activer la mémorisation automatique des préférences</div></div>' +
@@ -1461,6 +1509,125 @@ async function resetEvaMemory() {
 }
 window.resetEvaMemory = resetEvaMemory;
 
+/* ── Gestionnaire Manuel (CRUD) ── */
+window.openBrainManager = function() {
+  if (!S.user) return;
+  if (!S.evaMemory) S.evaMemory = { nodes: [], links: [] };
+  if (!S.evaMemory.nodes) S.evaMemory.nodes = [];
+  if (!S.evaMemory.links) S.evaMemory.links = [];
+
+  var modal = document.getElementById('brainManagerModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'brainManagerModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(5px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    document.body.appendChild(modal);
+  }
+  
+  window._bmTab = 'nodes';
+
+  function renderBM() {
+    var nHTML = S.evaMemory.nodes.length ? S.evaMemory.nodes.map(function(n, i) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:1px solid rgba(123,139,245,0.1);">' +
+             '<div><strong style="color:var(--cyan)">' + (n.id||'') + '</strong> : ' + (n.label||'') + '<div style="font-size:0.8em;color:var(--text-muted);margin-top:4px;line-height:1.4;">' + (n.details||'') + '</div></div>' +
+             '<button onclick="_bmDel(\'nodes\','+i+')" style="background:none;border:none;color:#ff4d6d;cursor:pointer;padding:10px;flex-shrink:0;">✕</button></div>';
+    }).join('') : '<div style="text-align:center;color:var(--text-muted);padding:20px;">Aucun nœud</div>';
+
+    var lHTML = S.evaMemory.links.length ? S.evaMemory.links.map(function(l, i) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:1px solid rgba(123,139,245,0.1);">' +
+             '<div><strong style="color:var(--cyan)">' + (l.source||'') + '</strong> <span style="color:var(--text-muted);">⭢</span> ' + (l.label||'') + ' <span style="color:var(--text-muted);">⭢</span> <strong style="color:var(--cyan)">' + (l.target||'') + '</strong></div>' +
+             '<button onclick="_bmDel(\'links\','+i+')" style="background:none;border:none;color:#ff4d6d;cursor:pointer;padding:10px;flex-shrink:0;">✕</button></div>';
+    }).join('') : '<div style="text-align:center;color:var(--text-muted);padding:20px;">Aucune connexion</div>';
+
+    modal.innerHTML = 
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:15px;width:100%;max-width:560px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.5);">' +
+      '<div style="padding:15px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
+      '<div style="font-family:\'Orbitron\',monospace;color:var(--cyan);font-weight:700;">Gérer la Cartographie</div>' +
+      '<button onclick="_bmClose()" style="background:none;border:none;color:var(--text-muted);font-size:1.2em;cursor:pointer;">✕</button></div>' +
+      
+      '<div style="padding:15px 20px;overflow-y:auto;flex:1;">' +
+      '<div class="pass-info-box" style="border-color:#ff4d6d;background:rgba(255,77,109,0.05);color:#ff4d6d;padding:12px;font-size:0.85em;border-radius:10px;margin-bottom:15px;">' +
+      '<strong>⚠️ Règle d\'or de Perspective (3ème Personne) :</strong> N\'utilisez jamais "je" ou "mon". Écrivez <i>"Luna est l\'amie de l\'utilisateur"</i> pour qu\'EVA comprenne correctement.' +
+      '</div>' +
+      
+      '<div style="display:flex;gap:10px;margin-bottom:15px;">' +
+      '<button onclick="_bmSwitch(\'nodes\')" style="flex:1;padding:10px;border-radius:8px;cursor:pointer;background:' + (window._bmTab==='nodes'?'var(--cyan-dim)':'transparent') + ';color:' + (window._bmTab==='nodes'?'var(--cyan)':'var(--text-muted)') + ';border:1px solid ' + (window._bmTab==='nodes'?'var(--cyan)':'var(--border)') + ';transition:all 0.2s;font-family:\'Space Mono\';">Nœuds</button>' +
+      '<button onclick="_bmSwitch(\'links\')" style="flex:1;padding:10px;border-radius:8px;cursor:pointer;background:' + (window._bmTab==='links'?'var(--cyan-dim)':'transparent') + ';color:' + (window._bmTab==='links'?'var(--cyan)':'var(--text-muted)') + ';border:1px solid ' + (window._bmTab==='links'?'var(--cyan)':'var(--border)') + ';transition:all 0.2s;font-family:\'Space Mono\';">Connexions</button>' +
+      '</div>' +
+      
+      '<div style="background:var(--surface2);border-radius:10px;border:1px solid var(--border);padding:12px;">' +
+      '<div style="max-height:350px;overflow-y:auto;padding-right:5px;">' + (window._bmTab==='nodes' ? nHTML : lHTML) + '</div>' +
+      '<button onclick="_bmAdd()" style="width:100%;padding:12px;margin-top:10px;background:rgba(255,255,255,0.05);border:1px dashed var(--border);border-radius:8px;color:var(--text);cursor:pointer;transition:all 0.2s;">+ Ajouter ' + (window._bmTab==='nodes'?'un nœud':'une connexion') + '</button>' +
+      '</div>' +
+      '</div>' +
+      '<div style="padding:15px 20px;border-top:1px solid var(--border);text-align:right;">' +
+      '<button class="btn btn-primary" onclick="_bmSave()" style="padding:10px 20px;">Enregistrer les modifications</button>' +
+      '</div>' +
+      '</div>';
+  }
+
+  window._bmSwitch = function(tab) {
+    window._bmTab = tab;
+    renderBM();
+  };
+
+  window._bmAdd = function() {
+    if (window._bmTab === 'nodes') {
+      var nId = prompt("ID du nœud (minuscule, sans espace, ex: maison_vacances) :");
+      if (!nId) return;
+      var nLabel = prompt("Nom court (ex: Maison de vacances) :");
+      if (!nLabel) return;
+      var nDesc = prompt("Description complète (3ème personne, ex: 'L'utilisateur possède une maison') :");
+      S.evaMemory.nodes.push({ id: nId.toLowerCase().replace(/[^a-z0-9_]/g, ''), label: nLabel, details: nDesc || '', group: 2, type: 'concept' });
+    } else {
+      var src = prompt("ID du nœud source (ex: utilisateur) :");
+      if (!src) return;
+      var tgt = prompt("ID du nœud cible (ex: chat) :");
+      if (!tgt) return;
+      var lbl = prompt("Label du lien (ex: possède) :");
+      S.evaMemory.links.push({ source: src.toLowerCase().replace(/[^a-z0-9_]/g, ''), target: tgt.toLowerCase().replace(/[^a-z0-9_]/g, ''), label: lbl || 'lié à' });
+    }
+    renderBM();
+  };
+
+  window._bmDel = function(type, idx) {
+    if (confirm("Supprimer cet élément ?")) {
+      if (type === 'nodes') {
+        var n = S.evaMemory.nodes[idx];
+        S.evaMemory.nodes.splice(idx, 1);
+        S.evaMemory.links = S.evaMemory.links.filter(function(l){ return l.source !== n.id && l.target !== n.id; });
+      } else {
+        S.evaMemory.links.splice(idx, 1);
+      }
+      renderBM();
+    }
+  };
+
+  window._bmClose = function() {
+    modal.style.display = 'none';
+  };
+
+  window._bmSave = async function() {
+    modal.style.display = 'none';
+    S.evaMemory.lastUpdated = Date.now();
+    try {
+      await db.collection('users').doc(S.user.uid).collection('brain').doc('map').set({
+        nodes: S.evaMemory.nodes,
+        links: S.evaMemory.links,
+        last_update: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      await db.collection('users').doc(S.user.uid).set({ evaMemory: S.evaMemory }, { merge: true });
+      toast('Cartographie sauvegardée', 'success');
+      renderSettings('brain');
+    } catch(e) {
+      toast('Erreur de sauvegarde', 'error');
+    }
+  };
+
+  modal.style.display = 'flex';
+  renderBM();
+};
+
 window.exportEvaMemory = function() {
   if (!S.evaMemory) return toast('Aucune mémoire à exporter', 'warning');
   var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(S.evaMemory, null, 2));
@@ -1511,11 +1678,15 @@ function renderBrainMap() {
   var popup = document.createElement('div');
   popup.id = 'brainPopup';
   popup.style.cssText = 'position:absolute;top:10px;left:10px;right:10px;bottom:10px;background:rgba(10,15,30,0.95);border:1px solid var(--cyan);border-radius:10px;padding:15px;display:none;flex-direction:column;backdrop-filter:blur(5px);z-index:10;animation:fadeUp 0.3s;box-shadow:0 10px 30px rgba(0,0,0,0.8);';
-  popup.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid rgba(123,139,245,0.2);padding-bottom:5px;"><strong style="color:var(--cyan);font-family:\'Orbitron\',monospace;font-size:1.1em;letter-spacing:1px;" id="brainPopupTitle">Titre</strong><button id="brainPopupClose" style="background:none;border:none;color:var(--text-muted);font-size:1.2em;cursor:pointer;transition:color 0.2s;">✕</button></div><div id="brainPopupDesc" style="font-size:0.82em;color:var(--text);line-height:1.6;overflow-y:auto;flex:1;"></div>';
+  popup.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid rgba(123,139,245,0.2);padding-bottom:5px;"><strong style="color:var(--cyan);font-family:\'Orbitron\',monospace;font-size:1.1em;letter-spacing:1px;" id="brainPopupTitle">Titre</strong><button id="brainPopupClose" style="background:none;border:none;color:var(--text-muted);font-size:1.2em;cursor:pointer;transition:color 0.2s;">✕</button></div><div id="brainPopupDesc" style="font-size:0.82em;color:var(--text);line-height:1.6;overflow-y:auto;flex:1;"></div><div style="margin-top:10px;text-align:right;"><button id="brainPopupEditBtn" style="background:var(--cyan-dim);border:1px solid var(--cyan);color:var(--cyan);padding:5px 10px;border-radius:5px;cursor:pointer;font-family:\'Space Mono\';font-size:0.8em;transition:all 0.2s;">✏️ Éditer dans le gestionnaire</button></div>';
   container.appendChild(popup);
 
   document.getElementById('brainPopupClose').onclick = function() {
     popup.style.display = 'none';
+  };
+  document.getElementById('brainPopupEditBtn').onclick = function() {
+    popup.style.display = 'none';
+    if (window.openBrainManager) window.openBrainManager();
   };
 
   var nodesData = (S.evaMemory && Array.isArray(S.evaMemory.nodes)) ? S.evaMemory.nodes : [];

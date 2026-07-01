@@ -331,7 +331,7 @@ auth.onAuthStateChanged(async function(user) {
     if (doc.data().onboardingCompleted) {
       window.location.href = '/chat';
     } else {
-      window.location.href = '/onboarding.html';
+      window.location.href = '/onboarding';
     }
   } catch(e) {
     window.location.href = '/chat';
@@ -382,7 +382,7 @@ async function handleRegister(e) {
       createdAt: window.timestamp(), role: 'user', onboardingCompleted: false,
       preferences: { aiProvider: 'puter', voiceProvider: 'native', voiceLang: 'fr-FR', speechRate: 1.0, speechPitch: 1.1 }
     });
-    window.location.href = '/onboarding.html';
+    window.location.href = '/onboarding';
   } catch(err) {
     btn.disabled = false; btn.textContent = 'CRÉER MON COMPTE';
     showMsg(ERR[err.code] || 'Erreur : ' + err.message, 'error');
@@ -404,7 +404,7 @@ async function handleGoogle() {
         createdAt: window.timestamp(), role: 'user', onboardingCompleted: false,
         preferences: { aiProvider: 'puter', voiceProvider: 'native', voiceLang: 'fr-FR' }
       });
-      window.location.href = '/onboarding.html';
+      window.location.href = '/onboarding';
     } else {
       window.location.href = '/chat';
     }
