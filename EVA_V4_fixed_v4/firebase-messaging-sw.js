@@ -30,7 +30,7 @@ self.addEventListener('push', function(event) {
   var body  = d.body  || payload.body  || 'Nouvelle notification';
   var type  = d.type  || 'general';
   var icon  = '/assets/images/eva-icon.png';
-  var badge = '/assets/images/eva-badge.png';
+  var badge = '/assets/images/eva-icon.png';
 
   var actions = [];
   if (type === 'alarm') {
