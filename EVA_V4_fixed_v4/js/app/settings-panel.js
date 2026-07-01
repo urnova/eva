@@ -710,6 +710,7 @@ function renderSettings(section) {
       '<div style="font-size:0.74em;color:var(--text-muted);margin-bottom:12px;line-height:1.5">Visualisation de la mémoire adaptative d\'EVA. Les nœuds représentent les concepts et les préférences mémorisés au fil de vos conversations.</div>' +
       '<div id="brainMapContainer" style="width:100%;height:220px;background:rgba(10,15,30,0.8);border:1px solid rgba(123,139,245,0.3);border-radius:12px;position:relative;overflow:hidden;margin-bottom:15px;box-shadow:inset 0 0 20px rgba(0,0,0,0.5);">' +
       '<canvas id="brainCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>' +
+      '</div>' +
       '<div class="settings-row">' +
         '<div><div class="settings-row-label">Apprentissage adaptatif</div>' +
         '<div class="settings-row-sub">Activer la mémorisation automatique des préférences</div></div>' +
@@ -1561,8 +1562,18 @@ function renderBrainMap() {
   if (oldToolbar) oldToolbar.remove();
   var toolbar = document.createElement('div');
   toolbar.id = 'brainToolbar';
-  toolbar.style.cssText = 'position:absolute;top:10px;right:10px;z-index:5;pointer-events:none;color:var(--text-muted);font-size:0.75em;text-align:right;user-select:none;';
-  toolbar.innerHTML = '<strong>Double-clic</strong> : Nouveau nœud<br><strong>Glisser</strong> : Déplacer';
+  toolbar.style.cssText = 'position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;user-select:none;';
+  
+  var btnAddNode = document.createElement('button');
+  btnAddNode.innerHTML = '➕ Nœud';
+  btnAddNode.style.cssText = 'background:rgba(10,15,30,0.9);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:0.8em;font-family:\'Space Mono\';backdrop-filter:blur(5px);transition:0.2s;';
+  
+  var btnAddLink = document.createElement('button');
+  btnAddLink.innerHTML = '🔗 Lien';
+  btnAddLink.style.cssText = 'background:rgba(10,15,30,0.9);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:0.8em;font-family:\'Space Mono\';backdrop-filter:blur(5px);transition:0.2s;';
+  
+  toolbar.appendChild(btnAddNode);
+  toolbar.appendChild(btnAddLink);
   container.appendChild(toolbar);
 
   // Popup edition contextuelle
@@ -1580,19 +1591,75 @@ function renderBrainMap() {
     '<div id="bpDesc" style="font-size:0.82em;color:var(--text);line-height:1.6;margin-bottom:15px;max-height:80px;overflow-y:auto;"></div>' +
     '<div style="display:flex;gap:10px;margin-top:auto;">' +
       '<button id="bpEdit" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px;cursor:pointer;">✏️ Éditer</button>' +
-      '<button id="bpLink" style="flex:1;background:var(--cyan-dim);border:1px solid var(--cyan);color:var(--cyan);padding:6px;border-radius:6px;cursor:pointer;">🔗 Relier à...</button>' +
       '<button id="bpDel" style="flex:1;background:rgba(255,77,109,0.1);border:1px solid #ff4d6d;color:#ff4d6d;padding:6px;border-radius:6px;cursor:pointer;">🗑️ Suppr</button>' +
     '</div>';
   container.appendChild(popup);
 
-  // Link Mode UI
   var oldBanner = document.getElementById('linkModeBanner');
   if(oldBanner) oldBanner.remove();
   var linkModeBanner = document.createElement('div');
   linkModeBanner.id = 'linkModeBanner';
-  linkModeBanner.style.cssText = 'position:absolute;bottom:10px;left:10px;right:10px;background:var(--cyan);color:#000;padding:10px;border-radius:8px;text-align:center;font-weight:bold;display:none;z-index:20;cursor:pointer;animation:fadeUp 0.3s;';
-  linkModeBanner.innerHTML = '🔗 Cliquez sur un nœud cible (ou ici pour annuler)';
+  linkModeBanner.style.cssText = 'position:absolute;top:10px;left:10px;right:10px;background:var(--cyan);color:#000;padding:10px;border-radius:8px;text-align:center;font-weight:bold;display:none;z-index:20;cursor:pointer;animation:fadeDown 0.3s;font-size:0.8em;';
+  linkModeBanner.innerHTML = 'Cliquez sur le premier nœud... (Cliquez ici pour annuler)';
   container.appendChild(linkModeBanner);
+
+  // Custom Prompt Modal
+  var oldCModal = document.getElementById('brainCustomModal');
+  if(oldCModal) oldCModal.remove();
+  var customModal = document.createElement('div');
+  customModal.id = 'brainCustomModal';
+  customModal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(5px);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;';
+  customModal.innerHTML = 
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:20px;width:100%;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,0.8);">' +
+      '<div id="bcmTitle" style="color:var(--cyan);font-family:\'Orbitron\',monospace;font-size:1.1em;margin-bottom:15px;font-weight:bold;">Titre</div>' +
+      '<div id="bcmFields"></div>' +
+      '<div style="display:flex;gap:10px;margin-top:20px;">' +
+        '<button id="bcmCancel" style="flex:1;padding:10px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;">Annuler</button>' +
+        '<button id="bcmConfirm" style="flex:1;padding:10px;border-radius:8px;background:var(--cyan);border:none;color:#000;font-weight:bold;cursor:pointer;">Valider</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(customModal);
+
+  function openModal(title, fields, onConfirm) {
+    document.getElementById('bcmTitle').innerText = title;
+    var fieldsContainer = document.getElementById('bcmFields');
+    fieldsContainer.innerHTML = '';
+    
+    var inputs = [];
+    fields.forEach(function(f, i) {
+      var wrapper = document.createElement('div');
+      wrapper.style.marginBottom = '10px';
+      var label = document.createElement('div');
+      label.innerText = f.label;
+      label.style.cssText = 'font-size:0.8em;color:var(--text-muted);margin-bottom:5px;';
+      wrapper.appendChild(label);
+      
+      var input = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      if (f.type !== 'textarea') input.type = 'text';
+      input.value = f.value || '';
+      input.placeholder = f.placeholder || '';
+      input.style.cssText = 'width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;outline:none;';
+      if (f.type === 'textarea') {
+          input.style.resize = 'vertical';
+          input.style.minHeight = '80px';
+      }
+      inputs.push(input);
+      wrapper.appendChild(input);
+      fieldsContainer.appendChild(wrapper);
+    });
+
+    customModal.style.display = 'flex';
+    if(inputs[0]) inputs[0].focus();
+
+    document.getElementById('bcmCancel').onclick = function() {
+      customModal.style.display = 'none';
+    };
+    document.getElementById('bcmConfirm').onclick = function() {
+      customModal.style.display = 'none';
+      var results = inputs.map(function(inp) { return inp.value.trim(); });
+      onConfirm(results);
+    };
+  }
 
   var simNodes = [];
   var nodeMap = {};
@@ -1600,21 +1667,34 @@ function renderBrainMap() {
   function initSimulation() {
     simNodes = [];
     nodeMap = {};
-    nodesData.forEach(function(n) {
-      var sn = {
-        data: n,
-        id: n.id,
-        label: n.label,
-        x: n.x !== undefined ? n.x : Math.random() * w,
-        y: n.y !== undefined ? n.y : Math.random() * h,
-        vx: 0, vy: 0,
-        r: (n.id && (n.id.toLowerCase()==='utilisateur' || n.id.toLowerCase()==='user')) ? 16 : 10,
-        phase: Math.random() * Math.PI * 2,
-        fixed: false
-      };
-      simNodes.push(sn);
-      nodeMap[n.id] = sn;
-    });
+    if (nodesData.length === 0) {
+      for (var i = 0; i < 5; i++) {
+        var fake = {id: 'fake'+i, label: '???', details: 'Mémoire vide.'};
+        var sn = {
+          data: fake, id: fake.id, label: fake.label,
+          x: Math.random() * w, y: Math.random() * h,
+          vx: 0, vy: 0, r: 10, phase: Math.random() * Math.PI * 2, fixed: false
+        };
+        simNodes.push(sn);
+        nodeMap[sn.id] = sn;
+      }
+    } else {
+      nodesData.forEach(function(n) {
+        var sn = {
+          data: n,
+          id: n.id,
+          label: n.label,
+          x: n.x !== undefined ? n.x : Math.random() * w,
+          y: n.y !== undefined ? n.y : Math.random() * h,
+          vx: 0, vy: 0,
+          r: (n.id && (n.id.toLowerCase()==='utilisateur' || n.id.toLowerCase()==='user')) ? 16 : 10,
+          phase: Math.random() * Math.PI * 2,
+          fixed: false
+        };
+        simNodes.push(sn);
+        nodeMap[n.id] = sn;
+      });
+    }
   }
   initSimulation();
 
@@ -1638,17 +1718,50 @@ function renderBrainMap() {
   
   var draggedNode = null;
   var selectedNode = null;
+  
+  var interactionMode = 'default'; // 'default', 'add_node', 'add_link'
+  var linkModeStep = 0; // 0 = wait source, 1 = wait target
   var linkModeSource = null;
+  
   var offsetX = 0, offsetY = 0;
   var isPanning = false, hasMoved = false;
   var lastX = 0, lastY = 0;
   var mouseX = 0, mouseY = 0;
 
-  linkModeBanner.onclick = function() {
+  function resetMode() {
+    interactionMode = 'default';
+    linkModeStep = 0;
     linkModeSource = null;
     linkModeBanner.style.display = 'none';
+    btnAddNode.style.background = 'rgba(10,15,30,0.9)';
+    btnAddNode.style.color = 'var(--text)';
+    btnAddLink.style.background = 'rgba(10,15,30,0.9)';
+    btnAddLink.style.color = 'var(--text)';
+  }
+
+  btnAddNode.onclick = function() {
+    if(interactionMode === 'add_node') return resetMode();
+    resetMode();
+    interactionMode = 'add_node';
+    btnAddNode.style.background = 'var(--cyan)';
+    btnAddNode.style.color = '#000';
+    linkModeBanner.innerHTML = '📍 Cliquez n\'importe où pour placer le nœud (ou annuler)';
+    linkModeBanner.style.display = 'block';
+    popup.style.display = 'none';
   };
 
+  btnAddLink.onclick = function() {
+    if(interactionMode === 'add_link') return resetMode();
+    resetMode();
+    interactionMode = 'add_link';
+    btnAddLink.style.background = 'var(--cyan)';
+    btnAddLink.style.color = '#000';
+    linkModeBanner.innerHTML = '🔗 Cliquez sur le 1er nœud à relier (ou annuler)';
+    linkModeBanner.style.display = 'block';
+    popup.style.display = 'none';
+  };
+
+  linkModeBanner.onclick = resetMode;
   document.getElementById('bpClose').onclick = function() { popup.style.display = 'none'; selectedNode = null; };
   
   document.getElementById('bpDel').onclick = function() {
@@ -1663,70 +1776,104 @@ function renderBrainMap() {
   };
 
   document.getElementById('bpEdit').onclick = function() {
-    var newLabel = prompt("Nom du nœud :", selectedNode.data.label);
-    if(newLabel === null) return;
-    var newDesc = prompt("Description (3ème personne) :", selectedNode.data.details);
-    if(newDesc === null) return;
-    selectedNode.data.label = newLabel;
-    selectedNode.label = newLabel;
-    selectedNode.data.details = newDesc;
-    saveChanges();
-    document.getElementById('bpTitle').innerText = newLabel;
-    document.getElementById('bpDesc').innerText = newDesc;
-  };
-
-  document.getElementById('bpLink').onclick = function() {
-    linkModeSource = selectedNode;
     popup.style.display = 'none';
-    linkModeBanner.style.display = 'block';
+    openModal("Éditer le nœud", [
+      {label: "Nom du nœud", value: selectedNode.data.label, placeholder: "Ex: Maison de vacances"},
+      {label: "Description (3ème personne)", type: "textarea", value: selectedNode.data.details, placeholder: "Ex: L'utilisateur possède une..."}
+    ], function(res) {
+      if(!res[0]) return toast('Le titre est requis', 'warning');
+      selectedNode.data.label = res[0];
+      selectedNode.label = res[0];
+      selectedNode.data.details = res[1] || '';
+      saveChanges();
+    });
   };
 
-  canvas.onmousedown = function(e) {
+  // --- EVENTS MOUSE & TOUCH ---
+  function getPos(e) {
     var rect = canvas.getBoundingClientRect();
-    var mx = e.clientX - rect.left - offsetX;
-    var my = e.clientY - rect.top - offsetY;
+    var cx = e.touches ? e.touches[0].clientX : e.clientX;
+    var cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: cx - rect.left, y: cy - rect.top };
+  }
+
+  function handleDown(e) {
+    if(e.touches && e.touches.length > 1) return; // ignore multi-touch
+    var p = getPos(e);
+    lastX = p.x;
+    lastY = p.y;
+    var mx = p.x - offsetX;
+    var my = p.y - offsetY;
     
+    if (interactionMode === 'add_node') {
+        resetMode();
+        openModal("Nouveau Nœud", [
+            {label: "Nom du nœud", placeholder: "Ex: Ma Voiture"},
+            {label: "Description (3ème personne)", type: "textarea", placeholder: "Ex: L'utilisateur possède une Tesla..."}
+        ], function(res) {
+            if(!res[0]) return;
+            var id = 'node_' + Date.now();
+            nodesData.push({id: id, label: res[0], details: res[1]||'', x: mx, y: my, group:2, type:'concept'});
+            saveChanges();
+            initSimulation();
+        });
+        return;
+    }
+
     // Test node collision
+    var hitNode = null;
     for(var i=simNodes.length-1; i>=0; i--) {
       var n = simNodes[i];
-      if(Math.hypot(n.x - mx, n.y - my) <= n.r + 15) {
-        if(linkModeSource) {
-           if(n.id !== linkModeSource.id) {
-             var lbl = prompt("Label de la connexion (ex: possède) :");
-             if(lbl !== null) {
-                linksData.push({source: linkModeSource.id, target: n.id, label: lbl||'lié à'});
-                saveChanges();
-                initSimulation();
-             }
-           }
-           linkModeSource = null;
-           linkModeBanner.style.display = 'none';
-           return;
-        }
-        draggedNode = n;
-        n.fixed = true;
-        hasMoved = false;
-        return;
+      if(Math.hypot(n.x - mx, n.y - my) <= n.r + 20) { // Tolérance tactile
+        hitNode = n; break;
       }
     }
+
+    if (interactionMode === 'add_link') {
+        if(hitNode) {
+            if(linkModeStep === 0) {
+                linkModeSource = hitNode;
+                linkModeStep = 1;
+                linkModeBanner.innerHTML = '🔗 Cliquez sur le 2ème nœud pour finaliser la connexion';
+            } else if (linkModeStep === 1) {
+                if(hitNode.id !== linkModeSource.id) {
+                    var srcNode = linkModeSource;
+                    resetMode();
+                    openModal("Nouvelle connexion", [
+                        {label: "Lien entre '" + srcNode.label + "' et '" + hitNode.label + "'", placeholder: "Ex: possède, est ami avec..."}
+                    ], function(res) {
+                        if(res[0]) {
+                            linksData.push({source: srcNode.id, target: hitNode.id, label: res[0]});
+                            saveChanges();
+                            initSimulation();
+                        }
+                    });
+                } else {
+                    resetMode();
+                }
+            }
+        }
+        return;
+    }
     
-    if(linkModeSource) {
-      linkModeSource = null;
-      linkModeBanner.style.display = 'none';
-      return;
+    if(hitNode) {
+        draggedNode = hitNode;
+        hitNode.fixed = true;
+        hasMoved = false;
+        return;
     }
 
     // Pan
     isPanning = true;
     hasMoved = false;
-    lastX = e.clientX - rect.left;
-    lastY = e.clientY - rect.top;
-  };
+  }
 
-  canvas.onmousemove = function(e) {
-    var rect = canvas.getBoundingClientRect();
-    mouseX = e.clientX - rect.left;
-    mouseY = e.clientY - rect.top;
+  function handleMove(e) {
+    if(e.touches && e.touches.length > 1) return;
+    if(isPanning || draggedNode) e.preventDefault(); // prevent scrolling
+    var p = getPos(e);
+    mouseX = p.x;
+    mouseY = p.y;
 
     if(draggedNode) {
       draggedNode.x = mouseX - offsetX;
@@ -1748,17 +1895,20 @@ function renderBrainMap() {
       return;
     }
 
-    var hovering = false;
-    for(var i=0; i<simNodes.length; i++) {
-      if(Math.hypot(simNodes[i].x - (mouseX - offsetX), simNodes[i].y - (mouseY - offsetY)) <= simNodes[i].r + 15) {
-        hovering = true; break;
-      }
+    if(!e.touches) {
+        var hovering = false;
+        for(var i=0; i<simNodes.length; i++) {
+          if(Math.hypot(simNodes[i].x - (mouseX - offsetX), simNodes[i].y - (mouseY - offsetY)) <= simNodes[i].r + 15) {
+            hovering = true; break;
+          }
+        }
+        if (interactionMode === 'add_link') canvas.style.cursor = hovering ? 'crosshair' : 'default';
+        else if (interactionMode === 'add_node') canvas.style.cursor = 'crosshair';
+        else canvas.style.cursor = hovering ? 'pointer' : 'grab';
     }
-    if (linkModeSource) canvas.style.cursor = hovering ? 'crosshair' : 'default';
-    else canvas.style.cursor = hovering ? 'pointer' : 'grab';
-  };
+  }
 
-  canvas.onmouseup = function(e) {
+  function handleUp(e) {
     if(draggedNode) {
       draggedNode.fixed = false;
       if(!hasMoved) {
@@ -1772,34 +1922,25 @@ function renderBrainMap() {
       draggedNode = null;
     }
     isPanning = false;
-    if(!linkModeSource) canvas.style.cursor = 'grab';
-  };
-  
-  canvas.ondblclick = function(e) {
-    if(draggedNode || isPanning || linkModeSource) return;
-    var rect = canvas.getBoundingClientRect();
-    var mx = e.clientX - rect.left - offsetX;
-    var my = e.clientY - rect.top - offsetY;
-    
-    var id = prompt("ID unique du nœud (minuscules/sans espace, ex: voiture) :");
-    if(!id) return;
-    id = id.toLowerCase().replace(/[^a-z0-9_]/g, '');
-    if(nodeMap[id]) return toast('Cet ID existe déjà','warning');
-    
-    var lbl = prompt("Titre (ex: Ma Voiture) :");
-    if(!lbl) return;
-    var desc = prompt("Description (3ème personne) :");
-    
-    nodesData.push({id: id, label: lbl, details: desc||'', x: mx, y: my, group:2, type:'concept'});
-    saveChanges();
-    initSimulation();
-  };
+    if(interactionMode === 'default') canvas.style.cursor = 'grab';
+  }
 
-  canvas.onmouseleave = function() {
+  canvas.addEventListener('mousedown', handleDown, {passive: false});
+  canvas.addEventListener('mousemove', handleMove, {passive: false});
+  canvas.addEventListener('mouseup', handleUp);
+  canvas.addEventListener('mouseleave', function() {
     if(draggedNode) { draggedNode.fixed = false; draggedNode = null; }
     isPanning = false;
-    canvas.style.cursor = 'grab';
-  };
+    if(interactionMode === 'default') canvas.style.cursor = 'grab';
+  });
+
+  canvas.addEventListener('touchstart', handleDown, {passive: false});
+  canvas.addEventListener('touchmove', handleMove, {passive: false});
+  canvas.addEventListener('touchend', handleUp, {passive: false});
+  canvas.addEventListener('touchcancel', function() {
+    if(draggedNode) { draggedNode.fixed = false; draggedNode = null; }
+    isPanning = false;
+  }, {passive: false});
 
   // PHYSICS LOOP variables
   var kSpring = 0.01;
@@ -1868,6 +2009,7 @@ function renderBrainMap() {
     linksData.forEach(function(l) {
       var s = nodeMap[l.source], t = nodeMap[l.target];
       if(s && t) {
+        // Mode édition de lien : si on clique, on modifie le label
         ctx.beginPath();
         ctx.moveTo(s.x, s.y);
         ctx.lineTo(t.x, t.y);
