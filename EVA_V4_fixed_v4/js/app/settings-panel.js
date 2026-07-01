@@ -1664,10 +1664,9 @@ function renderBrainMap() {
       n.vx += ((w/2) - n.x) * 0.02;
       n.vy += ((h/2) - n.y) * 0.02;
       
-      if (n !== dragNode) {
-        n.x += n.vx;
-        n.y += n.vy;
-      }
+      n.x += n.vx;
+      n.y += n.vy;
+      
       n.vx *= damping;
       n.vy *= damping;
     });
