@@ -17,13 +17,13 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     var existingMemory = S.evaMemory && S.evaMemory.nodes ? JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links}) : '{"nodes":[],"links":[]}';
     var nick = (S.profile && (S.profile.nickname || S.profile.displayName)) || 'l\'utilisateur';
 
-    var extractPrompt = 'Tu es le Cerveau Neuronal (Graphe de Connaissances) de l\'IA EVA. Ton but est de modéliser ce que tu sais sur ' + nick + ' sous forme de graphe strict.\n' +
-      'À partir de la conversation ci-dessous et du graphe actuel, renvoie UNIQUEMENT un objet JSON (sans markdown, sans texte autour) représentant le graphe mis à jour.\n' +
+    var extractPrompt = 'Tu es le Cerveau Neuronal (Graphe de Connaissances) de l\'IA EVA. Ton but est de modéliser TOUT ce que tu sais sur ' + nick + ' sous forme de graphe strict et EXHAUSTIF.\n' +
+      'À partir de la conversation ci-dessous et du graphe actuel, renvoie UNIQUEMENT un objet JSON (sans markdown) représentant le graphe mis à jour.\n' +
       'RÈGLES ABSOLUES :\n' +
-      '1. Le JSON doit avoir la structure exacte : {"nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference"}], "links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
-      '2. "source" et "target" dans links doivent correspondre EXACTEMENT à un "id" existant dans "nodes".\n' +
-      '3. Fusionne, corrige ou supprime les nœuds si la nouvelle conversation contredit l\'ancienne (ex: s\'il dit qu\'il est PDG, remplace l\'ancien métier).\n' +
-      '4. Ne retiens QUE les faits permanents et importants. Ignore le bavardage.\n\n' +
+      '1. Structure exacte : {"nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description complète de ce qu\'est ce noeud..."}], "links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
+      '2. Le champ "details" des nœuds DOIT être complet et descriptif (ex: "Astral Technologie est l\'entreprise fondée par l\'utilisateur qui se spécialise dans..."). C\'est ici que tu stockes la vraie information.\n' +
+      '3. Le champ "label" des LIENS (links) doit être TRES COURT (1 à 3 mots max) pour indiquer la relation pure (ex: "dirige", "est ami avec", "aime", "travaille sur"). Ne mets jamais de longues phrases dans les liens !\n' +
+      '4. Sois extrêmement exhaustif. Extrait un maximum de faits et d\'entités distinctes. Fusionne les nœuds s\'ils parlent de la même chose.\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 

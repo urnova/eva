@@ -1499,10 +1499,24 @@ window.importEvaMemory = function(event) {
 
 function renderBrainMap() {
   var canvas = document.getElementById('brainCanvas');
-  if (!canvas) return;
+  var container = document.getElementById('brainMapContainer');
+  if (!canvas || !container) return;
   var ctx = canvas.getContext('2d');
   var w = canvas.width = canvas.offsetWidth;
   var h = canvas.height = canvas.offsetHeight;
+
+  // Création du popup
+  var oldPopup = document.getElementById('brainPopup');
+  if(oldPopup) oldPopup.remove();
+  var popup = document.createElement('div');
+  popup.id = 'brainPopup';
+  popup.style.cssText = 'position:absolute;top:10px;left:10px;right:10px;bottom:10px;background:rgba(10,15,30,0.95);border:1px solid var(--cyan);border-radius:10px;padding:15px;display:none;flex-direction:column;backdrop-filter:blur(5px);z-index:10;animation:fadeUp 0.3s;box-shadow:0 10px 30px rgba(0,0,0,0.8);';
+  popup.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid rgba(123,139,245,0.2);padding-bottom:5px;"><strong style="color:var(--cyan);font-family:\'Orbitron\',monospace;font-size:1.1em;letter-spacing:1px;" id="brainPopupTitle">Titre</strong><button id="brainPopupClose" style="background:none;border:none;color:var(--text-muted);font-size:1.2em;cursor:pointer;transition:color 0.2s;">✕</button></div><div id="brainPopupDesc" style="font-size:0.82em;color:var(--text);line-height:1.6;overflow-y:auto;flex:1;"></div>';
+  container.appendChild(popup);
+
+  document.getElementById('brainPopupClose').onclick = function() {
+    popup.style.display = 'none';
+  };
 
   var nodesData = (S.evaMemory && S.evaMemory.nodes) ? S.evaMemory.nodes : [];
   var linksData = (S.evaMemory && S.evaMemory.links) ? S.evaMemory.links : [];
@@ -1511,19 +1525,20 @@ function renderBrainMap() {
   var nodeMap = {};
 
   if (nodesData.length === 0) {
-    // Fake nodes if empty
     for (var i = 0; i < 5; i++) {
-      simNodes.push({ id: 'fake'+i, label: '???', x: Math.random()*w, y: Math.random()*h, vx: 0, vy: 0, r: 3 });
+      simNodes.push({ id: 'fake'+i, label: '???', details: 'Mémoire vide.', x: Math.random()*w, y: Math.random()*h, vx: 0, vy: 0, r: 3, phase: Math.random()*Math.PI*2 });
     }
   } else {
     nodesData.forEach(function(n) {
       var sn = {
         id: n.id,
         label: n.label,
+        details: n.details,
         x: Math.random() * w,
         y: Math.random() * h,
         vx: 0, vy: 0,
-        r: n.id.toLowerCase() === 'utilisateur' || n.id.toLowerCase() === 'user' ? 8 : 4
+        r: n.id.toLowerCase() === 'utilisateur' || n.id.toLowerCase() === 'user' ? 8 : 4,
+        phase: Math.random() * Math.PI * 2
       };
       simNodes.push(sn);
       nodeMap[n.id] = sn;
@@ -1539,15 +1554,16 @@ function renderBrainMap() {
 
   var isDragging = false;
   var dragNode = null;
+  var hasMoved = false;
 
   canvas.onmousedown = function(e) {
     var rect = canvas.getBoundingClientRect();
     var mx = e.clientX - rect.left;
     var my = e.clientY - rect.top;
+    hasMoved = false;
     for (var i=0; i<simNodes.length; i++) {
       var n = simNodes[i];
-      var dist = Math.hypot(n.x - mx, n.y - my);
-      if (dist < n.r + 10) {
+      if (Math.hypot(n.x - mx, n.y - my) < n.r + 15) {
         isDragging = true;
         dragNode = n;
         break;
@@ -1556,6 +1572,7 @@ function renderBrainMap() {
   };
   canvas.onmousemove = function(e) {
     if (isDragging && dragNode) {
+      hasMoved = true;
       var rect = canvas.getBoundingClientRect();
       dragNode.x = e.clientX - rect.left;
       dragNode.y = e.clientY - rect.top;
@@ -1563,20 +1580,41 @@ function renderBrainMap() {
       dragNode.vy = 0;
     }
   };
-  canvas.onmouseup = canvas.onmouseleave = function() {
+  canvas.onmouseup = function(e) {
+    if (!hasMoved && !isDragging) {
+      // It's a click without drag
+      var rect = canvas.getBoundingClientRect();
+      var mx = e.clientX - rect.left;
+      var my = e.clientY - rect.top;
+      for (var i=0; i<simNodes.length; i++) {
+        var n = simNodes[i];
+        if (Math.hypot(n.x - mx, n.y - my) < n.r + 15) {
+          document.getElementById('brainPopupTitle').innerText = n.label || n.id;
+          document.getElementById('brainPopupDesc').innerText = n.details || "Aucune information supplémentaire enregistrée.";
+          popup.style.display = 'flex';
+          break;
+        }
+      }
+    }
+    isDragging = false;
+    dragNode = null;
+  };
+  canvas.onmouseleave = function() {
     isDragging = false;
     dragNode = null;
   };
 
+  var time = 0;
+
   function draw() {
     if (!document.getElementById('brainCanvas')) return;
+    time += 0.05;
     
-    // Physics step
-    var k = 0.05; // spring constant
+    // Physics
+    var k = 0.05; 
     var repulsion = 1500;
     var damping = 0.85;
 
-    // Repulsion
     for (var i = 0; i < simNodes.length; i++) {
       for (var j = i + 1; j < simNodes.length; j++) {
         var n1 = simNodes[i], n2 = simNodes[j];
@@ -1591,7 +1629,6 @@ function renderBrainMap() {
       }
     }
 
-    // Attraction (Links)
     simLinks.forEach(function(l) {
       var dx = l.target.x - l.source.x;
       var dy = l.target.y - l.source.y;
@@ -1604,12 +1641,13 @@ function renderBrainMap() {
       l.target.vx -= fx; l.target.vy -= fy;
     });
 
-    // Center gravity
     simNodes.forEach(function(n) {
-      var dx = (w/2) - n.x;
-      var dy = (h/2) - n.y;
-      n.vx += dx * 0.01;
-      n.vy += dy * 0.01;
+      // Center gravity
+      n.vx += ((w/2) - n.x) * 0.01;
+      n.vy += ((h/2) - n.y) * 0.01;
+      // Constant drift (organic movement)
+      n.vx += Math.sin(time + n.phase) * 0.15;
+      n.vy += Math.cos(time + n.phase * 2) * 0.15;
       
       if (n !== dragNode) {
         n.x += n.vx;
@@ -1628,14 +1666,14 @@ function renderBrainMap() {
       ctx.beginPath();
       ctx.moveTo(l.source.x, l.source.y);
       ctx.lineTo(l.target.x, l.target.y);
-      ctx.strokeStyle = 'rgba(123, 139, 245, 0.4)';
+      var pulse = (Math.sin(time + l.source.phase) + 1) / 2; // 0 to 1
+      ctx.strokeStyle = 'rgba(123, 139, 245, ' + (0.2 + pulse * 0.3) + ')';
       ctx.stroke();
 
-      // Label
       if (l.label) {
         var mx = (l.source.x + l.target.x) / 2;
         var my = (l.source.y + l.target.y) / 2;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         ctx.font = '9px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(l.label, mx, my);
@@ -1645,19 +1683,19 @@ function renderBrainMap() {
     // Nodes
     simNodes.forEach(function(n) {
       ctx.beginPath();
-      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      var rPulse = n.r + Math.sin(time * 2 + n.phase) * 1;
+      ctx.arc(n.x, n.y, Math.max(1, rPulse), 0, Math.PI * 2);
       ctx.fillStyle = n.r > 4 ? '#06b6d4' : '#7b8bf5';
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 10 + Math.sin(time * 3 + n.phase) * 5;
       ctx.shadowColor = ctx.fillStyle;
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // Node Label
       if (n.label) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.font = '10px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(n.label, n.x, n.y - n.r - 4);
+        ctx.fillText(n.label, n.x, n.y - rPulse - 5);
       }
     });
 
