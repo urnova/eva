@@ -24,12 +24,12 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       '2. Le champ "_reflection" DOIT être rempli EN PREMIER. Oblige-toi à y lister de manière exhaustive toutes les entités (personnes, lieux, objets) présentes dans la conversation avant de construire la suite.\n' +
       '3. TU NE DOIS RIEN OUBLIER. Tu as interdiction de supprimer ou de simplifier des informations. Extrais CHAQUE NOUVEAU FAIT, CHAQUE NOUVELLE ENTITÉ en un nœud distinct.\n' +
       '4. N\'INVENTE JAMAIS RIEN. Base-toi STRICTEMENT sur ce qui a été dit dans la conversation. Aucune hallucination, aucune supposition.\n' +
-      '5. Le champ "details" des nœuds DOIT être un texte long et complet (ex: "Lydie est la partenaire de l\'utilisateur, elle travaille dans une agence immobilière."). C\'est ici que tu stockes toute l\'histoire.\n' +
+      '5. Le champ "details" des nœuds DOIT être un texte long et complet (ex: "X est la partenaire de l\'utilisateur, elle travaille dans une agence."). C\'est ici que tu stockes toute l\'histoire.\n' +
       '6. Le champ "label" des LIENS (links) doit être TRES COURT (1 à 3 mots max) pour indiquer la relation pure (ex: "dirige", "est ami avec", "habite à").\n' +
       '7. Tu dois absolument CONSERVER tout le graphe actuel. Ajoute simplement les nouveaux nœuds et liens, ou complète le champ "details" des nœuds existants si on t\'en dit plus sur eux.\n' +
-      '8. DÉDUPLICATION OBLIGATOIRE : Ne crée JAMAIS de doublons. "Lydie" et "Lydie Vernet" sont le même nœud. "Astral" et "Astral Technologie" sont le même nœud. Fusionne toujours les nouvelles informations dans le nœud existant correspondant.\n' +
-      '9. MULTIPLES CONNEXIONS : Un nœud peut et DOIT avoir plusieurs connexions s\'il est lié à plusieurs concepts (ex: "Mission Astral" doit être relié à "Enzo" ET à "Astral Technologie"). Crée autant de liens que nécessaire.\n' +
-      '10. HIÉRARCHIE DES LIENS : Ne relie pas systématiquement tout à l\'utilisateur central ! Crée des chaînes logiques (ex: L\'utilisateur dirige "Astral Technologie", et "Astral Technologie" a pour projet "Mission Astral". Le projet doit être relié à l\'entreprise, pas à l\'utilisateur).\n\n' +
+      '8. DÉDUPLICATION OBLIGATOIRE : Ne crée JAMAIS de doublons. Fusionne toujours les nouvelles informations dans le nœud existant correspondant (ex: "Jean" et "Jean Dupont" sont le même nœud. "StudioX" et "Studio X" sont le même nœud).\n' +
+      '9. MULTIPLES CONNEXIONS : Un nœud peut et DOIT avoir plusieurs connexions s\'il est lié à plusieurs concepts (ex: Le "Projet Z" doit être relié au "Créateur" ET à "L\'entreprise X"). Crée autant de liens que nécessaire.\n' +
+      '10. HIÉRARCHIE DES LIENS : Ne relie pas systématiquement tout à l\'utilisateur central ! Crée des chaînes logiques (ex: L\'utilisateur dirige "Entreprise X", et "Entreprise X" a pour projet "Projet Z". Le projet doit être relié à l\'entreprise, et non pas directement à l\'utilisateur).\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
