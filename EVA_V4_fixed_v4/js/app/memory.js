@@ -20,12 +20,13 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     var extractPrompt = 'Tu es l\'ARCHIVISTE STRICT du Cerveau Neuronal de l\'IA EVA. Ton but est de modéliser TOUTE la vie et les connaissances de ' + nick + ' sous forme de graphe.\n' +
       'À partir de la conversation ci-dessous et du graphe actuel, renvoie UNIQUEMENT un objet JSON (sans markdown) représentant le graphe mis à jour.\n' +
       'RÈGLES ABSOLUES :\n' +
-      '1. Structure exacte : {"nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
-      '2. TU NE DOIS RIEN OUBLIER. Tu as interdiction de supprimer ou de simplifier des informations. Extrais CHAQUE NOUVEAU FAIT, CHAQUE NOUVELLE ENTITÉ (personne, lieu, entreprise, projet) en un nœud distinct.\n' +
-      '3. N\'INVENTE JAMAIS RIEN. Base-toi STRICTEMENT sur ce qui a été dit dans la conversation. Aucune hallucination, aucune supposition.\n' +
-      '4. Le champ "details" des nœuds DOIT être un texte long et complet (ex: "Astral Technologie est l\'entreprise fondée par l\'utilisateur. Il en est le PDG et y a une vision extraordinaire."). C\'est ici que tu stockes toute l\'histoire.\n' +
-      '5. Le champ "label" des LIENS (links) doit être TRES COURT (1 à 3 mots max) pour indiquer la relation pure (ex: "dirige", "est ami avec", "aime").\n' +
-      '6. Tu dois absolument CONSERVER tout le graphe actuel. Ajoute simplement les nouveaux nœuds et liens, ou complète le champ "details" des nœuds existants si on t\'en dit plus sur eux.\n\n' +
+      '1. Structure exacte : {"_reflection": "1. Lister toutes les entités mentionnées (X, Y, Z). 2. Lister les relations...", "nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
+      '2. Le champ "_reflection" DOIT être rempli EN PREMIER. Oblige-toi à y lister de manière exhaustive toutes les entités (personnes, lieux, objets) présentes dans la conversation avant de construire la suite.\n' +
+      '3. TU NE DOIS RIEN OUBLIER. Tu as interdiction de supprimer ou de simplifier des informations. Extrais CHAQUE NOUVEAU FAIT, CHAQUE NOUVELLE ENTITÉ en un nœud distinct.\n' +
+      '4. N\'INVENTE JAMAIS RIEN. Base-toi STRICTEMENT sur ce qui a été dit dans la conversation. Aucune hallucination, aucune supposition.\n' +
+      '5. Le champ "details" des nœuds DOIT être un texte long et complet (ex: "Lydie est la partenaire de l\'utilisateur, elle travaille dans une agence immobilière."). C\'est ici que tu stockes toute l\'histoire.\n' +
+      '6. Le champ "label" des LIENS (links) doit être TRES COURT (1 à 3 mots max) pour indiquer la relation pure (ex: "dirige", "est ami avec", "habite à").\n' +
+      '7. Tu dois absolument CONSERVER tout le graphe actuel. Ajoute simplement les nouveaux nœuds et liens, ou complète le champ "details" des nœuds existants si on t\'en dit plus sur eux.\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
