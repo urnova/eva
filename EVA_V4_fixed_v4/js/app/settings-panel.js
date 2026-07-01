@@ -738,19 +738,19 @@ function renderSettings(section) {
       '<div class="settings-section-title">Notifications</div>' +
       '<div style="background:rgba(123,139,245,0.08);border:1px solid rgba(123,139,245,0.25);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:0.72em;color:var(--text-muted);line-height:1.5;">' +
         '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:5px;stroke:#7b8bf5;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-        '<strong style="color:#7b8bf5">Important :</strong> Les notifications fonctionnent <strong>uniquement quand le site est ouvert</strong> dans votre navigateur. Fermez le site = plus de notifications.' +
+        '<strong style="color:#7b8bf5">Nouveau :</strong> Grâce à la technologie Vercel Serverless, vous recevez vos alertes push en temps réel, <strong>même si l\\'application est fermée</strong> !' +
       '</div>' +
       '<div class="settings-row">' +
         '<div><div class="settings-row-label">Permission navigateur</div><div class="settings-row-sub">Chrome, Edge, Firefox, Opera</div></div>' +
         '<div style="color:'+permColor+';font-size:0.82em;font-weight:600">'+permLabel+'</div>' +
       '</div>' +
       '<div class="settings-row">' +
-        '<div><div class="settings-row-label">Statut</div><div class="settings-row-sub">Actives uniquement site ouvert</div></div>' +
+        '<div><div class="settings-row-label">Statut Serverless</div><div class="settings-row-sub">Actives en arrière-plan (Cloud Push)</div></div>' +
         '<div style="color:'+fcmColor+';font-size:0.80em;font-weight:600">'+fcmStatus+'</div>' +
       '</div>' +
       (notifPerm !== 'granted' && notifPerm !== 'denied' && notifPerm !== 'unavailable' ?
         '<button class="btn btn-primary" onclick="activateNotifications()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Activer les notifications</button>' +
-        '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px">Recevez vos alarmes et rappels <strong>quand le site est ouvert</strong> — fonctionne sur PC et Android.</div>'
+        '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px">Recevez vos alarmes et rappels <strong>en toutes circonstances</strong> — fonctionne nativement sur PC et Android.</div>'
       : notifPerm === 'granted' ?
         '<div style="display:flex;gap:8px;margin-top:10px">' +
         '<button class="btn btn-secondary" onclick="deactivateNotifications()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="2" y1="2" x2="22" y2="22"/></svg>Désactiver</button>' +
@@ -758,7 +758,7 @@ function renderSettings(section) {
         '</div>' +
         '<button class="btn btn-primary" onclick="testNotification()" style="margin-top:8px;width:100%;background:rgba(123,139,245,0.12);border-color:var(--cyan);display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Tester une notification</button>' +
         '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px;display:flex;align-items:center;gap:5px">' +
-        (hasFcmToken ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Notifications actives — le site doit rester ouvert.' : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Notifications non enregistrées. Cliquez sur Re-enregistrer.') +
+        (hasFcmToken ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Push Serverless actif — Vous recevrez des alertes même site fermé.' : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Notifications non enregistrées. Cliquez sur Re-enregistrer.') +
         '</div>'
       : notifPerm === 'denied' ?
         '<div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);border-radius:10px;padding:12px;margin-top:10px;font-size:0.78em;color:var(--text-muted);display:flex;gap:8px;align-items:flex-start">' +
@@ -770,15 +770,15 @@ function renderSettings(section) {
       '<div class="settings-section">' +
       '<div class="settings-section-title">Types de notifications</div>' +
       '<div class="settings-row">' +
-        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div><div class="settings-row-label">Alarmes</div><div class="settings-row-sub">Alerte + boutons Arrêter / Reporter (site ouvert)</div></div></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div><div class="settings-row-label">Alarmes</div><div class="settings-row-sub">Alerte + boutons Arrêter / Reporter (arrière-plan)</div></div></div>' +
         '<span style="color:var(--cyan);font-size:0.75em">Auto</span>' +
       '</div>' +
       '<div class="settings-row">' +
-        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><div><div class="settings-row-label">Rappels</div><div class="settings-row-sub">Notification à l\'heure exacte (site ouvert)</div></div></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><div><div class="settings-row-label">Rappels</div><div class="settings-row-sub">Notification à l\'heure exacte (arrière-plan)</div></div></div>' +
         '<span style="color:var(--cyan);font-size:0.75em">Auto</span>' +
       '</div>' +
       '<div class="settings-row">' +
-        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div><div class="settings-row-label">Événements calendrier</div><div class="settings-row-sub">Alerte 15 min avant (site ouvert)</div></div></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div><div class="settings-row-label">Événements calendrier</div><div class="settings-row-sub">Alerte 15 min avant (arrière-plan)</div></div></div>' +
         '<span style="color:var(--cyan);font-size:0.75em">Auto</span>' +
       '</div>' +
       '</div>' +
