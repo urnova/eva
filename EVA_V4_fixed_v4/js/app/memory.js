@@ -21,7 +21,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       'À partir de la conversation ci-dessous et du graphe actuel, renvoie UNIQUEMENT un objet JSON (sans markdown) représentant le graphe mis à jour.\n' +
       'RÈGLES ABSOLUES :\n' +
       '1. Structure exacte : {"_reflection": "1. Lister toutes les entités mentionnées (X, Y, Z). 2. Lister les relations...", "nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
-      '2. Le champ "_reflection" DOIT être rempli EN PREMIER. Oblige-toi à y lister de manière exhaustive toutes les entités (personnes, lieux, objets) présentes dans la conversation avant de construire la suite.\n' +
+      '2. Le champ "_reflection" DOIT être rempli EN PREMIER. Prends TOUT TON TEMPS. Réfléchis étape par étape, liste méticuleusement chaque information, chaque entité, sans aucune précipitation. Plus ta réflexion est longue et détaillée, mieux c\'est.\n' +
       '3. TU NE DOIS RIEN OUBLIER. Tu as interdiction de supprimer ou de simplifier des informations. Extrais CHAQUE NOUVEAU FAIT, CHAQUE NOUVELLE ENTITÉ en un nœud distinct.\n' +
       '4. N\'INVENTE JAMAIS RIEN. Base-toi STRICTEMENT sur ce qui a été dit dans la conversation. Aucune hallucination, aucune supposition.\n' +
       '5. Le champ "details" des nœuds DOIT être un texte long et complet (ex: "X est la partenaire de l\'utilisateur, elle travaille dans une agence."). C\'est ici que tu stockes toute l\'histoire.\n' +
@@ -38,7 +38,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     /* Tentative 1 : Puter AI */
     if (window.puter && S.config && S.config.puterUsername) {
       try {
-        var puterResp = await puter.ai.chat(extractPrompt, { model: 'gpt-4o-mini', response_format: { type: 'json_object' } });
+        var puterResp = await puter.ai.chat(extractPrompt, { model: 'gpt-4o-mini', response_format: { type: 'json_object' }, max_tokens: 4000 });
         var puterContent = typeof puterResp === 'string' ? puterResp
           : (puterResp && puterResp.message && puterResp.message.content) || (puterResp && puterResp.content) || '';
         newMemoryText = puterContent.trim();
@@ -55,7 +55,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
             model: 'gpt-4o-mini', 
             messages: [{ role: 'user', content: extractPrompt }], 
             response_format: { type: 'json_object' },
-            max_tokens: 800 
+            max_tokens: 4000 
           })
         });
         if (oaiResp.ok) {
