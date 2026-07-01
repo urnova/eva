@@ -1,6 +1,7 @@
 {
   "version": 2,
   "rewrites": [
+    { "source": "/js/core/firebase-config.js", "destination": "/api/config" },
     { "source": "/chat", "destination": "/chat.html" },
     { "source": "/chat/cloudworks", "destination": "/chat.html" },
     { "source": "/chat/(.*)", "destination": "/chat.html" },
