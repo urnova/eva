@@ -29,7 +29,8 @@ self.addEventListener('push', function(event) {
   var title = d.title || payload.title || 'E.V.A';
   var body  = d.body  || payload.body  || 'Nouvelle notification';
   var type  = d.type  || 'general';
-  var icon  = '/assets/images/favicon.svg';
+  var icon  = '/assets/images/eva-icon.png';
+  var badge = '/assets/images/eva-badge.png';
 
   var actions = [];
   if (type === 'alarm') {
@@ -44,7 +45,7 @@ self.addEventListener('push', function(event) {
   var options = {
     body:    body,
     icon:    icon,
-    badge:   icon,
+    badge:   badge,
     tag:     d.tag || ('eva-' + type + '-' + Date.now()),
     data:    d,
     actions: actions,
