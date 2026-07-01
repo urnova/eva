@@ -22,9 +22,10 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       'RÈGLES ABSOLUES :\n' +
       '1. Structure exacte : {"nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
       '2. TU NE DOIS RIEN OUBLIER. Tu as interdiction de supprimer ou de simplifier des informations. Extrais CHAQUE NOUVEAU FAIT, CHAQUE NOUVELLE ENTITÉ (personne, lieu, entreprise, projet) en un nœud distinct.\n' +
-      '3. Le champ "details" des nœuds DOIT être un texte long et complet (ex: "Astral Technologie est l\'entreprise fondée par l\'utilisateur. Il en est le PDG et y a une vision extraordinaire."). C\'est ici que tu stockes toute l\'histoire.\n' +
-      '4. Le champ "label" des LIENS (links) doit être TRES COURT (1 à 3 mots max) pour indiquer la relation pure (ex: "dirige", "est ami avec", "aime").\n' +
-      '5. Tu dois absolument CONSERVER tout le graphe actuel. Ajoute simplement les nouveaux nœuds et liens, ou complète le champ "details" des nœuds existants si on t\'en dit plus sur eux.\n\n' +
+      '3. N\'INVENTE JAMAIS RIEN. Base-toi STRICTEMENT sur ce qui a été dit dans la conversation. Aucune hallucination, aucune supposition.\n' +
+      '4. Le champ "details" des nœuds DOIT être un texte long et complet (ex: "Astral Technologie est l\'entreprise fondée par l\'utilisateur. Il en est le PDG et y a une vision extraordinaire."). C\'est ici que tu stockes toute l\'histoire.\n' +
+      '5. Le champ "label" des LIENS (links) doit être TRES COURT (1 à 3 mots max) pour indiquer la relation pure (ex: "dirige", "est ami avec", "aime").\n' +
+      '6. Tu dois absolument CONSERVER tout le graphe actuel. Ajoute simplement les nouveaux nœuds et liens, ou complète le champ "details" des nœuds existants si on t\'en dit plus sur eux.\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
