@@ -276,7 +276,11 @@ function showTyping(userMsg) {
     sendBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" style="color:#f87171"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>';
     sendBtn._isStopMode = true;
     sendBtn._stopHandler = function() { stopGeneration(); };
-    sendBtn.addEventListener('click', sendBtn._stopHandler, { once: true });
+    setTimeout(function() {
+      if (sendBtn._isStopMode) {
+        sendBtn.addEventListener('click', sendBtn._stopHandler, { once: true });
+      }
+    }, 100);
   }
 
   if (window.EvaCharacter) window.EvaCharacter.setThinking();
