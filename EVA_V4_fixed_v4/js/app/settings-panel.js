@@ -1546,11 +1546,52 @@ function renderBrainMap() {
   }
 
   var simLinks = [];
+  var linkCounts = {};
   linksData.forEach(function(l) {
     if (nodeMap[l.source] && nodeMap[l.target]) {
       simLinks.push({ source: nodeMap[l.source], target: nodeMap[l.target], label: l.label });
+      linkCounts[l.source] = (linkCounts[l.source] || 0) + 1;
+      linkCounts[l.target] = (linkCounts[l.target] || 0) + 1;
     }
   });
+
+  // Schéma Radial : Trouver le hub et positionner
+  var hubNode = null;
+  var maxLinks = -1;
+  simNodes.forEach(function(n) {
+    var c = linkCounts[n.id] || 0;
+    if (c > maxLinks) { maxLinks = c; hubNode = n; }
+    // Start everyone at center for the entrance animation
+    n.x = w/2;
+    n.y = h/2;
+  });
+
+  if (hubNode && simNodes.length > 1) {
+    hubNode.r = 14;
+    hubNode.targetX = w/2;
+    hubNode.targetY = h/2;
+    var satellites = simNodes.filter(function(n) { return n !== hubNode; });
+    var R = 150; // Rayon de base
+    satellites.forEach(function(n, i) {
+      var layer = Math.floor(i / 12);
+      var currentR = R + layer * 100;
+      var itemsInLayer = Math.min(satellites.length - layer * 12, 12);
+      var angle = ((i % 12) / itemsInLayer) * Math.PI * 2;
+      n.targetX = w/2 + currentR * Math.cos(angle);
+      n.targetY = h/2 + currentR * Math.sin(angle);
+    });
+  } else {
+    // Si aucun lien ou graphe vide
+    simNodes.forEach(function(n, i) {
+      n.targetX = w/2;
+      n.targetY = h/2;
+      if (simNodes.length > 1) {
+        var angle = (i / simNodes.length) * Math.PI * 2;
+        n.targetX = w/2 + 100 * Math.cos(angle);
+        n.targetY = h/2 + 100 * Math.sin(angle);
+      }
+    });
+  }
 
   var isPanning = false;
   var hasMoved = false;
@@ -1628,47 +1669,11 @@ function renderBrainMap() {
     if (!document.getElementById('brainCanvas')) return;
     time += 0.05; 
     
-    // Physics
-    var k = 0.08; 
-    var repulsion = 4000; 
-    var damping = 0.7; // Fort freinage pour stabiliser rapidement
-
-    for (var i = 0; i < simNodes.length; i++) {
-      for (var j = i + 1; j < simNodes.length; j++) {
-        var n1 = simNodes[i], n2 = simNodes[j];
-        var dx = n1.x - n2.x;
-        var dy = n1.y - n2.y;
-        var dist = Math.sqrt(dx*dx + dy*dy) || 1;
-        var force = repulsion / (dist * dist);
-        var fx = (dx / dist) * force;
-        var fy = (dy / dist) * force;
-        n1.vx += fx; n1.vy += fy;
-        n2.vx -= fx; n2.vy -= fy;
-      }
-    }
-
-    simLinks.forEach(function(l) {
-      var dx = l.target.x - l.source.x;
-      var dy = l.target.y - l.source.y;
-      var dist = Math.sqrt(dx*dx + dy*dy) || 1;
-      var targetDist = 100;
-      var force = (dist - targetDist) * k;
-      var fx = (dx / dist) * force;
-      var fy = (dy / dist) * force;
-      l.source.vx += fx; l.source.vy += fy;
-      l.target.vx -= fx; l.target.vy -= fy;
-    });
-
+    // Schema Animation (Lerp)
     simNodes.forEach(function(n) {
-      // Center gravity
-      n.vx += ((w/2) - n.x) * 0.02;
-      n.vy += ((h/2) - n.y) * 0.02;
-      
-      n.x += n.vx;
-      n.y += n.vy;
-      
-      n.vx *= damping;
-      n.vy *= damping;
+      // Lerp smooth movement vers la position cible
+      n.x += (n.targetX - n.x) * 0.04;
+      n.y += (n.targetY - n.y) * 0.04;
     });
 
     // Render
