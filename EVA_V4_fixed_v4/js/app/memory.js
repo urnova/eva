@@ -26,7 +26,9 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       '4. N\'INVENTE JAMAIS RIEN. Base-toi STRICTEMENT sur ce qui a été dit dans la conversation. Aucune hallucination, aucune supposition.\n' +
       '5. Le champ "details" des nœuds DOIT être un texte long et complet (ex: "Lydie est la partenaire de l\'utilisateur, elle travaille dans une agence immobilière."). C\'est ici que tu stockes toute l\'histoire.\n' +
       '6. Le champ "label" des LIENS (links) doit être TRES COURT (1 à 3 mots max) pour indiquer la relation pure (ex: "dirige", "est ami avec", "habite à").\n' +
-      '7. Tu dois absolument CONSERVER tout le graphe actuel. Ajoute simplement les nouveaux nœuds et liens, ou complète le champ "details" des nœuds existants si on t\'en dit plus sur eux.\n\n' +
+      '7. Tu dois absolument CONSERVER tout le graphe actuel. Ajoute simplement les nouveaux nœuds et liens, ou complète le champ "details" des nœuds existants si on t\'en dit plus sur eux.\n' +
+      '8. DÉDUPLICATION OBLIGATOIRE : Ne crée JAMAIS de doublons. "Lydie" et "Lydie Vernet" sont le même nœud. "Astral" et "Astral Technologie" sont le même nœud. Fusionne toujours les nouvelles informations dans le nœud existant correspondant.\n' +
+      '9. MULTIPLES CONNEXIONS : Un nœud peut et DOIT avoir plusieurs connexions s\'il est lié à plusieurs concepts (ex: "Mission Astral" doit être relié à "Enzo" ET à "Astral Technologie"). Crée autant de liens que nécessaire.\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
