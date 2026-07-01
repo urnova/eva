@@ -1290,7 +1290,7 @@ async function connectPuter() {
   /* puter.auth.signIn() peut lancer une exception même quand l'auth réussit
      (popup fermée par Puter après login, ou utilisateur déjà connecté).
      On appelle getUser() dans tous les cas pour vérifier l'état réel. */
-  try { await window.evaSafePuterSignIn(); } catch(_) {}
+  try { await window.evaSafePuterSignIn(); } catch(err) { console.error('[EVA] puter.auth.signIn() error:', err); }
   try {
     var user = await puter.auth.getUser();
     if (user && user.username) {
