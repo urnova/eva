@@ -17,22 +17,17 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     var existingMemory = S.evaMemory && S.evaMemory.nodes ? JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links}) : '{"nodes":[],"links":[]}';
     var nick = (S.profile && (S.profile.nickname || S.profile.displayName)) || 'l\'utilisateur';
 
-    var extractPrompt = 'Tu es l\'ARCHIVISTE STRICT du Cerveau Neuronal de l\'IA EVA. Ton but est de modéliser TOUTE la vie et les connaissances de ' + nick + ' sous forme de graphe.\n' +
-      'À partir de la conversation ci-dessous et du graphe actuel, renvoie UNIQUEMENT un objet JSON (sans markdown) représentant le graphe mis à jour.\n' +
+    var extractPrompt = 'Tu es l\'ARCHIVISTE STRICT du Cerveau Neuronal de l\'IA EVA. Ton but est de modéliser la vie de ' + nick + ' sous forme de graphe.\n' +
+      'À partir de la conversation ci-dessous et du graphe actuel, renvoie UNIQUEMENT un JSON représentant les **MODIFICATIONS** (Patch) à apporter au graphe.\n' +
       'RÈGLES ABSOLUES :\n' +
-      '1. Structure exacte : {"_etape1_analyse_texte": "...", "_etape2_verification_graphe": "...", "_etape3_fusion": "...", "nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
-      '2. OBLIGATION DE RÉFLEXION MULTI-ÉTAPES (Chain-of-Thought) : Tu DOIS remplir les 3 champs d\'étapes EN PREMIER avant de générer "nodes".\n' +
-      '  - _etape1_analyse_texte : Copie TOUTES les entités et faits du message de l\'utilisateur, un par un. (PÉNALITÉ EXTRÊME SI TU RESSUMES OU OUBLIES UNE INFO).\n' +
-      '  - _etape2_verification_graphe : Regarde le graphe existant et liste ce qui doit être mis à jour ou fusionné.\n' +
-      '  - _etape3_fusion : Explique précisément comment tu vas lier les nouvelles informations avec les anciennes.\n' +
-      '3. TON BUT N\'EST PAS D\'ÊTRE RAPIDE, TON BUT EST D\'ÊTRE EXHAUSTIF. Tu as interdiction de supprimer ou de simplifier des informations. Extrais CHAQUE NOUVEAU FAIT, CHAQUE NOUVELLE ENTITÉ en un nœud distinct.\n' +
-      '4. N\'INVENTE JAMAIS RIEN. Base-toi STRICTEMENT sur ce qui a été dit dans la conversation. Aucune hallucination, aucune supposition.\n' +
-      '5. Le champ "details" des nœuds DOIT être un texte long et complet (ex: "X est la partenaire de l\'utilisateur, elle travaille dans une agence."). C\'est ici que tu stockes toute l\'histoire.\n' +
-      '6. Le champ "label" des LIENS (links) doit être TRES COURT (1 à 3 mots max) pour indiquer la relation pure (ex: "dirige", "est ami avec", "habite à").\n' +
-      '7. Tu dois absolument CONSERVER tout le graphe actuel. Ajoute simplement les nouveaux nœuds et liens, ou complète le champ "details" des nœuds existants si on t\'en dit plus sur eux.\n' +
-      '8. DÉDUPLICATION OBLIGATOIRE : Ne crée JAMAIS de doublons. Fusionne toujours les nouvelles informations dans le nœud existant correspondant (ex: "Jean" et "Jean Dupont" sont le même nœud. "StudioX" et "Studio X" sont le même nœud).\n' +
-      '9. MULTIPLES CONNEXIONS : Un nœud peut et DOIT avoir plusieurs connexions s\'il est lié à plusieurs concepts (ex: Le "Projet Z" doit être relié au "Créateur" ET à "L\'entreprise X"). Crée autant de liens que nécessaire.\n' +
-      '10. HIÉRARCHIE DES LIENS : Ne relie pas systématiquement tout à l\'utilisateur central ! Crée des chaînes logiques (ex: L\'utilisateur dirige "Entreprise X", et "Entreprise X" a pour projet "Projet Z". Le projet doit être relié à l\'entreprise, et non pas directement à l\'utilisateur).\n\n' +
+      '1. Structure exacte : {"_etape1_analyse": "Liste les nouveaux faits", "_etape2_actions": "Explication des ajouts/modifs", "add_nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "update_nodes": [{"id":"...", "details":"Nouveau texte qui remplace l\'ancien"}], "add_links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
+      '2. Tu DOIS remplir _etape1_analyse et _etape2_actions EN PREMIER. Ne saute aucune nouvelle information.\n' +
+      '3. NE RENVOIE JAMAIS LE GRAPHE ENTIER. Renvoie uniquement ce qui change :\n' +
+      '   - "add_nodes" : pour les entités totalement nouvelles.\n' +
+      '   - "update_nodes" : pour modifier le champ "details" d\'une entité existante (utilise son "id" exact).\n' +
+      '   - "add_links" : pour lier de nouvelles choses.\n' +
+      '4. DÉDUPLICATION OBLIGATOIRE : Avant de créer dans "add_nodes", vérifie si ça n\'existe pas déjà. Si oui, utilise "update_nodes".\n' +
+      '5. HIÉRARCHIE DES LIENS : Ne relie pas tout à l\'utilisateur central. Crée des chaînes logiques (L\'utilisateur dirige Entreprise X -> Entreprise X gère Projet Z).\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
@@ -93,14 +88,59 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     
     var parsedMemory = JSON.parse(newMemoryText);
     
-    if (!parsedMemory.nodes || !Array.isArray(parsedMemory.nodes) || !parsedMemory.links || !Array.isArray(parsedMemory.links)) {
-      throw new Error("Structure JSON invalide");
+    var patch = JSON.parse(newMemoryText);
+    
+    var currentMem = S.evaMemory || { nodes: [], links: [] };
+    if (!currentMem.nodes) currentMem.nodes = [];
+    if (!currentMem.links) currentMem.links = [];
+    
+    var updated = false;
+
+    // 1. Ajouter les nouveaux noeuds
+    if (patch.add_nodes && Array.isArray(patch.add_nodes)) {
+      patch.add_nodes.forEach(function(n) {
+        if (n && n.id && !currentMem.nodes.find(function(ex){ return ex.id === n.id; })) {
+          currentMem.nodes.push(n);
+          updated = true;
+        }
+      });
+    }
+
+    // 2. Mettre à jour les noeuds existants
+    if (patch.update_nodes && Array.isArray(patch.update_nodes)) {
+      patch.update_nodes.forEach(function(un) {
+        if (un && un.id && un.details) {
+          var target = currentMem.nodes.find(function(ex){ return ex.id === un.id; });
+          if (target) {
+            target.details = un.details;
+            updated = true;
+          }
+        }
+      });
+    }
+
+    // 3. Ajouter les liens
+    if (patch.add_links && Array.isArray(patch.add_links)) {
+      patch.add_links.forEach(function(l) {
+        if (l && l.source && l.target) {
+          var exists = currentMem.links.find(function(ex){ return ex.source === l.source && ex.target === l.target && ex.label === l.label; });
+          if (!exists) {
+            currentMem.links.push(l);
+            updated = true;
+          }
+        }
+      });
+    }
+
+    if (!updated) {
+      console.log('[Mémoire Évolutive] Aucun changement détecté.');
+      return;
     }
 
     /* Sauvegarder en Firebase */
     var memoryData = {
-      nodes: parsedMemory.nodes,
-      links: parsedMemory.links,
+      nodes: currentMem.nodes,
+      links: currentMem.links,
       lastUpdated: new Date().toISOString(),
       version: ((S.evaMemory && S.evaMemory.version) || 0) + 1
     };
