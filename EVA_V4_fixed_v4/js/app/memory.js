@@ -3,6 +3,7 @@
 ═══════════════════════════════════════════════════ */
 async function extractUserInsights(lastUserMsg, lastEvaMsg) {
   if (!S.user || !S.adaptationEnabled) return;
+  if (window.setEvaStatusHeader) window.setEvaStatusHeader('🧠 MISE À JOUR CERVEAU...', 'thinking');
   try {
     /* Construire l'extrait de conversation (6 derniers messages) */
     var recentMsgs = (S.messages || []).slice(-6).map(function(m) {
@@ -12,7 +13,10 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     if (!recentMsgs && (lastUserMsg || lastEvaMsg)) {
       recentMsgs = 'Utilisateur : ' + (lastUserMsg || '').slice(0, 2000) + '\nEVA : ' + (lastEvaMsg || '').slice(0, 2000);
     }
-    if (!recentMsgs) return;
+    if (!recentMsgs) {
+      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      return;
+    }
 
     var existingMemory = S.evaMemory && S.evaMemory.nodes ? JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links}) : '{"nodes":[],"links":[]}';
     var nick = (S.profile && (S.profile.nickname || S.profile.displayName)) || 'l\'utilisateur';
@@ -82,6 +86,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
 
     if (!newMemoryText) {
       console.warn('[Mémoire Évolutive] Échec total de tous les providers.');
+      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
       return;
     }
     console.log('[Mémoire Évolutive] Provider ayant généré le JSON :', usedProvider);
@@ -92,6 +97,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     if (jsonMatch) {
       newMemoryText = jsonMatch[0];
     } else {
+      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
       throw new Error("Aucun objet JSON trouvé dans la réponse");
     }
     
@@ -143,6 +149,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
 
     if (!updated) {
       console.log('[Mémoire Évolutive] Aucun changement détecté.');
+      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
       return;
     }
 
@@ -158,7 +165,11 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     S.evaMemory = memoryData;
     if (S.profile) S.profile.evaMemory = memoryData;
     console.log('[Mémoire Évolutive] Cerveau mis à jour — v' + memoryData.version + ' (par ' + usedProvider + ')', memoryData);
-    if (window.showEvaToast) window.showEvaToast('Cerveau mis à jour par E.V.A', 'info');
+    
+    if (window.setEvaStatusHeader) {
+      window.setEvaStatusHeader('🧠 CERVEAU MIS À JOUR', 'action');
+      setTimeout(function(){ window.setEvaStatusHeader(null); }, 3000);
+    }
     
     // Si la page des paramètres est ouverte sur Cerveau, rafraîchir
     if (window.renderBrainMap && document.getElementById('brainCanvas')) {
@@ -167,6 +178,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
 
   } catch(e) {
     console.warn('[Mémoire Évolutive] Erreur extraction (JSON attendu):', e);
+    if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
   }
 }
 window.extractUserInsights = extractUserInsights;
