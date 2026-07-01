@@ -6,11 +6,11 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
   try {
     /* Construire l'extrait de conversation (6 derniers messages) */
     var recentMsgs = (S.messages || []).slice(-6).map(function(m) {
-      return (m.role === 'eva' || m.role === 'assistant' ? 'EVA' : 'Utilisateur') + ' : ' + (m.content || '').slice(0, 300);
+      return (m.role === 'eva' || m.role === 'assistant' ? 'EVA' : 'Utilisateur') + ' : ' + (m.content || '').slice(0, 2000);
     }).join('\n');
     /* Fallback si S.messages est vide (ex: 1er message d'une nouvelle conversation) */
     if (!recentMsgs && (lastUserMsg || lastEvaMsg)) {
-      recentMsgs = 'Utilisateur : ' + (lastUserMsg || '').slice(0, 300) + '\nEVA : ' + (lastEvaMsg || '').slice(0, 300);
+      recentMsgs = 'Utilisateur : ' + (lastUserMsg || '').slice(0, 2000) + '\nEVA : ' + (lastEvaMsg || '').slice(0, 2000);
     }
     if (!recentMsgs) return;
 
@@ -158,7 +158,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     S.evaMemory = memoryData;
     if (S.profile) S.profile.evaMemory = memoryData;
     console.log('[Mémoire Évolutive] Cerveau mis à jour — v' + memoryData.version + ' (par ' + usedProvider + ')', memoryData);
-    if (window.showEvaToast) window.showEvaToast('Mémoire modifiée par ' + usedProvider, 'info');
+    if (window.showEvaToast) window.showEvaToast('Cerveau mis à jour par E.V.A', 'info');
     
     // Si la page des paramètres est ouverte sur Cerveau, rafraîchir
     if (window.renderBrainMap && document.getElementById('brainCanvas')) {
