@@ -738,7 +738,7 @@ function renderSettings(section) {
       '<div class="settings-section-title">Notifications</div>' +
       '<div style="background:rgba(123,139,245,0.08);border:1px solid rgba(123,139,245,0.25);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:0.72em;color:var(--text-muted);line-height:1.5;">' +
         '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:5px;stroke:#7b8bf5;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-        '<strong style="color:#7b8bf5">Nouveau :</strong> Grâce à la technologie Vercel Serverless, vous recevez vos alertes push en temps réel, <strong>même si l\\'application est fermée</strong> !' +
+        '<strong style="color:#7b8bf5">Nouveau :</strong> Grâce à la technologie Vercel Serverless, vous recevez vos alertes push en temps réel, <strong>même si l’application est fermée</strong> !' +
       '</div>' +
       '<div class="settings-row">' +
         '<div><div class="settings-row-label">Permission navigateur</div><div class="settings-row-sub">Chrome, Edge, Firefox, Opera</div></div>' +
