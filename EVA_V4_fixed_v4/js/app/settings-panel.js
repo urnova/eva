@@ -656,12 +656,45 @@ function renderSettings(section) {
       c.innerHTML = '<div class="settings-section" style="color:var(--text-muted);text-align:center;padding:30px;">Erreur lors de la récupération des statistiques :<br><code style="font-size:0.8em;color:#ef4444;">' + e.message + '</code></div>';
     });
 
+  } else if (section === 'brain') {
+    c.innerHTML =
+      '<div class="settings-section">' +
+      '<div class="settings-section-title">Cartographie Neuronale</div>' +
+      '<div style="font-size:0.74em;color:var(--text-muted);margin-bottom:12px;line-height:1.5">Visualisation de la mémoire adaptative d\'EVA. Les nœuds représentent les concepts et les préférences mémorisés au fil de vos conversations.</div>' +
+      '<div id="brainMapContainer" style="width:100%;height:220px;background:rgba(10,15,30,0.8);border:1px solid rgba(123,139,245,0.3);border-radius:12px;position:relative;overflow:hidden;margin-bottom:15px;box-shadow:inset 0 0 20px rgba(0,0,0,0.5);">' +
+      '<canvas id="brainCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>' +
+      '</div>' +
+      '<div class="settings-row">' +
+        '<div><div class="settings-row-label">Apprentissage adaptatif</div>' +
+        '<div class="settings-row-sub">Activer la mémorisation automatique des préférences</div></div>' +
+        '<label class="alarm-toggle"><input type="checkbox" id="sAdaptation"' + (S.adaptationEnabled ? ' checked' : '') + ' onchange="toggleAdaptation(this.checked)"><span class="alarm-slider"></span></label>' +
+      '</div>' +
+      (S.evaMemory && S.evaMemory.resume ?
+        '<div style="margin-top:10px;background:rgba(123,139,245,0.06);border:1px solid rgba(123,139,245,0.18);border-radius:10px;padding:12px">' +
+        '<div style="font-size:0.68em;letter-spacing:1.5px;color:var(--cyan);text-transform:uppercase;margin-bottom:6px">Synthèse mémorielle</div>' +
+        '<div style="font-size:0.78em;color:var(--text);line-height:1.7">' + esc(S.evaMemory.resume) + '</div>' +
+        '<div style="font-size:0.66em;color:var(--text-dim);margin-top:8px">Mise à jour n°' + (S.evaMemory.version||1) + ' — ' + (S.evaMemory.lastUpdated ? new Date(S.evaMemory.lastUpdated).toLocaleDateString('fr-FR') : '') + '</div>' +
+        '</div>'
+      : '<div style="font-size:0.74em;color:var(--text-muted);margin-top:8px;font-style:italic">Le réseau neuronal est vide. Il se construira en conversant avec EVA.</div>') +
+      '</div>' +
+      '<div class="settings-section">' +
+      '<div class="settings-section-title">Gestion des données</div>' +
+      '<div style="display:flex;gap:10px;margin-bottom:10px">' +
+      '<button class="btn btn-secondary" onclick="exportEvaMemory()" style="flex:1">💾 Exporter</button>' +
+      '<button class="btn btn-secondary" onclick="document.getElementById(\'importMemoryInput\').click()" style="flex:1">📂 Importer</button>' +
+      '<input type="file" id="importMemoryInput" accept=".json" style="display:none" onchange="importEvaMemory(event)">' +
+      '</div>' +
+      '<button class="btn btn-danger" onclick="resetEvaMemory()" style="width:100%;margin-top:5px" '+(S.evaMemory && S.evaMemory.resume ? '':'disabled')+'>🗑️ Effacer la mémoire neuronale</button>' +
+      '</div>';
+      setTimeout(renderBrainMap, 100);
+
   } else if (section === 'account') {
     var isGoogleUser = S.user && S.user.providerData && S.user.providerData.some(function(p){return p.providerId==='google.com';});
     var hasPassword = S.user && S.user.providerData && S.user.providerData.some(function(p){return p.providerId==='password';});
     var isGoogleOnly = isGoogleUser && !hasPassword;
     var connLabel = isGoogleUser && hasPassword ? '🔵 Google + 🔑 Mot de passe' : isGoogleUser ? '🔵 Google' : '📧 Email/Mot de passe';
     c.innerHTML =
+      '<form style="display:none" aria-hidden="true"><input type="text" name="fake_email_to_prevent_autofill"><input type="password" name="fake_password_to_prevent_autofill"></form>' +
       '<div class="settings-section">' +
       '<div class="settings-section-title">Mon Compte</div>' +
       '<div class="settings-row"><div class="settings-row-label">Email actuel</div><div style="font-size:0.78em;color:var(--text-muted)">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
@@ -683,25 +716,6 @@ function renderSettings(section) {
       '<div class="form-field"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="sNewPassword" placeholder="Minimum 6 caractères"></div>' +
       '<div class="form-field"><label class="form-label">Confirmer le mot de passe</label><input type="password" class="form-input" id="sConfPassword" placeholder="Idem ci-dessus"></div>' +
       '<button class="btn btn-secondary" onclick="changePassword()" style="margin-top:4px">'+(isGoogleOnly ? 'Créer le mot de passe' : 'Mettre à jour le mot de passe')+'</button>' +
-      '</div>' +
-      '<div class="settings-section">' +
-      '<div class="settings-section-title">🧠 Mémoire Évolutive</div>' +
-      '<div class="settings-row">' +
-        '<div><div class="settings-row-label">Apprentissage adaptatif</div>' +
-        '<div class="settings-row-sub">EVA mémorise vos préférences au fil des conversations</div></div>' +
-        '<label class="alarm-toggle"><input type="checkbox" id="sAdaptation"' + (S.adaptationEnabled ? ' checked' : '') + ' onchange="toggleAdaptation(this.checked)"><span class="alarm-slider"></span></label>' +
-      '</div>' +
-      (S.evaMemory && S.evaMemory.resume ?
-        '<div style="margin-top:10px;background:rgba(123,139,245,0.06);border:1px solid rgba(123,139,245,0.18);border-radius:10px;padding:12px">' +
-        '<div style="font-size:0.68em;letter-spacing:1.5px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Ce qu\'EVA sait sur vous</div>' +
-        '<div style="font-size:0.78em;color:var(--text);line-height:1.7">' + esc(S.evaMemory.resume) + '</div>' +
-        '<div style="font-size:0.66em;color:var(--text-dim);margin-top:8px">Mise à jour n°' + (S.evaMemory.version||1) + ' — ' + (S.evaMemory.lastUpdated ? new Date(S.evaMemory.lastUpdated).toLocaleDateString('fr-FR') : '') + '</div>' +
-        '</div>'
-      : '<div style="font-size:0.74em;color:var(--text-muted);margin-top:8px;font-style:italic">La mémoire se construira automatiquement à mesure que vous conversez avec EVA.</div>') +
-      (S.evaMemory && S.evaMemory.resume ?
-        '<button class="btn btn-secondary" onclick="resetEvaMemory()" style="margin-top:10px;font-size:0.76em">🗑️ Effacer la mémoire</button>'
-      : '') +
-      '</div>' +
       '<div class="settings-section">' +
       '<div class="settings-section-title">Danger zone</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
@@ -1439,18 +1453,128 @@ window.toggleAdaptation = toggleAdaptation;
 
 async function resetEvaMemory() {
   if (!S.user) return;
-  if (!confirm('Effacer toute la mémoire qu\'EVA a apprise sur vous ? Cette action est irréversible.')) return;
+  if (!confirm('EFFACEMENT NEURONAL : Effacer toute la mémoire qu\'EVA a apprise sur vous ? Cette action est irréversible.')) return;
   try {
     await db.collection('users').doc(S.user.uid).set({ evaMemory: null }, { merge: true });
     S.evaMemory = null;
     if (S.profile) S.profile.evaMemory = null;
     S._msgSinceExtract = 0;
     toast('Mémoire effacée', 'success');
-    renderSettings('account');
+    renderSettings('brain');
   } catch(e) { toast('Erreur', 'error'); }
 }
 window.resetEvaMemory = resetEvaMemory;
 
+window.exportEvaMemory = function() {
+  if (!S.evaMemory) return toast('Aucune mémoire à exporter', 'warning');
+  var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(S.evaMemory, null, 2));
+  var downloadAnchorNode = document.createElement('a');
+  downloadAnchorNode.setAttribute("href", dataStr);
+  downloadAnchorNode.setAttribute("download", "eva_cerveau_" + Date.now() + ".json");
+  document.body.appendChild(downloadAnchorNode);
+  downloadAnchorNode.click();
+  downloadAnchorNode.remove();
+  toast('🧠 Cerveau exporté avec succès', 'success');
+};
+
+window.importEvaMemory = function(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (!data || !data.resume) throw new Error("Fichier invalide");
+      if (confirm('Voulez-vous remplacer la mémoire actuelle par celle de ce fichier ?')) {
+        S.evaMemory = data;
+        if (S.user && typeof db !== 'undefined') {
+          db.collection('users').doc(S.user.uid).set({ evaMemory: data }, { merge: true });
+        }
+        toast('🧠 Cerveau importé et fusionné !', 'success');
+        renderSettings('brain');
+      }
+    } catch(err) {
+      toast('Erreur d\\'importation : fichier invalide', 'error');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+};
+
+function renderBrainMap() {
+  var canvas = document.getElementById('brainCanvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width = canvas.offsetWidth;
+  var h = canvas.height = canvas.offsetHeight;
+
+  var nodeCount = 5;
+  var connections = 3;
+  if (S.evaMemory && S.evaMemory.resume) {
+    nodeCount = Math.min(40, 10 + Math.floor(S.evaMemory.resume.length / 15));
+    connections = 2;
+  }
+
+  var nodes = [];
+  for (var i = 0; i < nodeCount; i++) {
+    nodes.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: Math.random() * 3 + 1,
+      vx: (Math.random() - 0.5) * 0.7,
+      vy: (Math.random() - 0.5) * 0.7,
+      active: Math.random() > 0.7
+    });
+  }
+
+  function draw() {
+    if (!document.getElementById('brainCanvas')) return;
+    ctx.clearRect(0, 0, w, h);
+    
+    nodes.forEach(function(n) {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > w) n.vx *= -1;
+      if (n.y < 0 || n.y > h) n.vy *= -1;
+    });
+
+    ctx.lineWidth = 1;
+    for (var i = 0; i < nodes.length; i++) {
+      for (var j = i + 1; j < nodes.length; j++) {
+        var dx = nodes[i].x - nodes[j].x;
+        var dy = nodes[i].y - nodes[j].y;
+        var dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < (w / connections)) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          var alpha = 1 - (dist / (w / connections));
+          ctx.strokeStyle = nodes[i].active || nodes[j].active 
+            ? 'rgba(6, 182, 212, ' + (alpha * 0.8) + ')' 
+            : 'rgba(123, 139, 245, ' + (alpha * 0.3) + ')'; 
+          ctx.stroke();
+        }
+      }
+    }
+
+    nodes.forEach(function(n) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fillStyle = n.active ? '#06b6d4' : '#7b8bf5';
+      if (n.active) {
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = '#06b6d4';
+      } else {
+        ctx.shadowBlur = 0;
+      }
+      ctx.fill();
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+window.renderBrainMap = renderBrainMap;
 function testVoice() {
   if (!window.EVATTS) return;
   /* Débloquer AudioContext immédiatement pendant le geste utilisateur (avant tout await) */
