@@ -1294,7 +1294,7 @@ function connectPuter() {
     authPromise = puter.auth.signIn();
   } catch(err) {
     console.error('[EVA] puter.auth.signIn() error immédiate:', err);
-    toast('Impossible d\\'ouvrir la fenêtre Puter','error');
+    toast("Impossible d'ouvrir la fenêtre Puter", "error");
     return;
   }
 

@@ -605,7 +605,7 @@ async function activateNotifications() {
     return;
   }
   try {
-    toast('Demande d\\'autorisation envoyée... Regardez la barre d\\'adresse en haut à gauche !', 'info');
+    toast("Demande d'autorisation envoyée... Regardez la barre d'adresse en haut à gauche !", "info");
     console.log('[FCM] Appel de Notification.requestPermission()...');
     var perm = await Notification.requestPermission();
     console.log('[FCM] Résultat requestPermission:', perm);
