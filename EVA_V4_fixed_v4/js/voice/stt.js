@@ -87,7 +87,13 @@ function getCommitted()     { return _committed; }
 
 async function requestMicPermission() {
   try {
-    var s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    var s = await navigator.mediaDevices.getUserMedia({ 
+      audio: {
+        autoGainControl: false,
+        echoCancellation: true,
+        noiseSuppression: false
+      }
+    });
     s.getTracks().forEach(function(t) { t.stop(); });
     return true;
   } catch(e) { return false; }

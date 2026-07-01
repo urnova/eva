@@ -266,21 +266,12 @@ function showTyping(userMsg) {
     _thinkTimer = null;
   }
 
-  /* Transformer le bouton Envoyer en bouton Stop */
+  /* Cacher le bouton Envoyer et afficher le bouton Stop */
   var sendBtn = document.getElementById('sendBtn');
-  if (sendBtn) {
-    sendBtn.disabled = false;
-    sendBtn.title = 'Arrêter la génération';
-    sendBtn.style.background = 'rgba(239,68,68,0.15)';
-    sendBtn.style.borderColor = 'rgba(239,68,68,0.5)';
-    sendBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" style="color:#f87171"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>';
-    sendBtn._isStopMode = true;
-    sendBtn._stopHandler = function() { stopGeneration(); };
-    setTimeout(function() {
-      if (sendBtn._isStopMode) {
-        sendBtn.addEventListener('click', sendBtn._stopHandler, { once: true });
-      }
-    }, 100);
+  var stopBtn = document.getElementById('stopBtn');
+  if (sendBtn && stopBtn) {
+    sendBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-flex';
   }
 
   if (window.EvaCharacter) window.EvaCharacter.setThinking();
@@ -318,13 +309,12 @@ function hideTyping() {
   }
   /* Restaurer le bouton Envoyer */
   var sendBtn = document.getElementById('sendBtn');
-  if (sendBtn && sendBtn._isStopMode) {
-    sendBtn._isStopMode = false;
-    sendBtn.disabled = true;
-    sendBtn.title = 'Envoyer';
-    sendBtn.style.background = '';
-    sendBtn.style.borderColor = '';
-    sendBtn.innerHTML = '<svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+  var stopBtn = document.getElementById('stopBtn');
+  if (sendBtn && stopBtn) {
+    stopBtn.style.display = 'none';
+    sendBtn.style.display = 'inline-flex';
+    var input = document.getElementById('msgInput');
+    sendBtn.disabled = !(input && input.value.trim()) && (!S.images || !S.images.length) && (!S.documents || !S.documents.length);
   }
 }
 

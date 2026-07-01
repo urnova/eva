@@ -28,7 +28,8 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       '6. Le champ "label" des LIENS (links) doit être TRES COURT (1 à 3 mots max) pour indiquer la relation pure (ex: "dirige", "est ami avec", "habite à").\n' +
       '7. Tu dois absolument CONSERVER tout le graphe actuel. Ajoute simplement les nouveaux nœuds et liens, ou complète le champ "details" des nœuds existants si on t\'en dit plus sur eux.\n' +
       '8. DÉDUPLICATION OBLIGATOIRE : Ne crée JAMAIS de doublons. "Lydie" et "Lydie Vernet" sont le même nœud. "Astral" et "Astral Technologie" sont le même nœud. Fusionne toujours les nouvelles informations dans le nœud existant correspondant.\n' +
-      '9. MULTIPLES CONNEXIONS : Un nœud peut et DOIT avoir plusieurs connexions s\'il est lié à plusieurs concepts (ex: "Mission Astral" doit être relié à "Enzo" ET à "Astral Technologie"). Crée autant de liens que nécessaire.\n\n' +
+      '9. MULTIPLES CONNEXIONS : Un nœud peut et DOIT avoir plusieurs connexions s\'il est lié à plusieurs concepts (ex: "Mission Astral" doit être relié à "Enzo" ET à "Astral Technologie"). Crée autant de liens que nécessaire.\n' +
+      '10. HIÉRARCHIE DES LIENS : Ne relie pas systématiquement tout à l\'utilisateur central ! Crée des chaînes logiques (ex: L\'utilisateur dirige "Astral Technologie", et "Astral Technologie" a pour projet "Mission Astral". Le projet doit être relié à l\'entreprise, pas à l\'utilisateur).\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
