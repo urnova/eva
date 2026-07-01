@@ -24,15 +24,17 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     var extractPrompt = 'Tu es l\'ARCHIVISTE STRICT du Cerveau Neuronal de l\'IA EVA. Ton but est de modéliser la vie de ' + nick + ' sous forme de graphe.\n' +
       'À partir de la conversation ci-dessous et du graphe actuel, renvoie UNIQUEMENT un JSON représentant les **MODIFICATIONS** (Patch) à apporter au graphe.\n' +
       'RÈGLES ABSOLUES :\n' +
-      '1. Structure exacte : {"_etape1_analyse": "Liste les nouveaux faits", "_etape2_actions": "Explication des ajouts/modifs", "add_nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "update_nodes": [{"id":"...", "details":"Nouveau texte qui remplace l\'ancien"}], "add_links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
+      '1. Structure exacte : {"_etape1_analyse": "Liste les nouveaux faits", "_etape2_actions": "Explication des ajouts/modifs", "add_nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "update_nodes": [{"id":"...", "details":"Nouveau texte qui remplace l\'ancien"}], "remove_nodes": ["id_du_noeud_a_supprimer"], "add_links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
       '  - _etape1_analyse : Copie TOUTES les entités et faits de la conversation récente (Utilisateur ET Eva). (PÉNALITÉ EXTRÊME SI TU RESSUMES OU OUBLIES UNE INFO).\n' +
-      '  - _etape2_actions : Explication des ajouts/modifs.\n' +
+      '  - _etape2_actions : Explication des ajouts/modifs/suppressions.\n' +
       '3. NE RENVOIE JAMAIS LE GRAPHE ENTIER. Renvoie uniquement ce qui change :\n' +
       '   - "add_nodes" : pour les entités totalement nouvelles.\n' +
       '   - "update_nodes" : pour modifier le champ "details" d\'une entité existante (utilise son "id" exact).\n' +
+      '   - "remove_nodes" : pour SUPPRIMER DÉFINITIVEMENT un nœud (ex: si l\'utilisateur demande de l\'oublier ou de le fusionner et détruire l\'ancien). Mets juste les IDs dans un tableau.\n' +
       '   - "add_links" : pour lier de nouvelles choses.\n' +
       '4. DÉDUPLICATION OBLIGATOIRE : Avant de créer dans "add_nodes", vérifie si ça n\'existe pas déjà. Si oui, utilise "update_nodes".\n' +
-      '5. HIÉRARCHIE DES LIENS : Ne relie pas tout à l\'utilisateur central. Crée des chaînes logiques (L\'utilisateur dirige Entreprise X -> Entreprise X gère Projet Z).\n\n' +
+      '5. SUPPRESSION : Si tu dois regrouper deux nœuds, copie les infos du mauvais dans le bon via "update_nodes", puis mets l\'ID du mauvais dans "remove_nodes".\n' +
+      '6. HIÉRARCHIE DES LIENS : Ne relie pas tout à l\'utilisateur central. Crée des chaînes logiques (L\'utilisateur dirige Entreprise X -> Entreprise X gère Projet Z).\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
@@ -128,6 +130,23 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
           var target = currentMem.nodes.find(function(ex){ return ex.id === un.id; });
           if (target) {
             target.details = un.details;
+            updated = true;
+          }
+        }
+      });
+    }
+
+    // 2.5 Supprimer les noeuds (et leurs liens orphelins)
+    if (patch.remove_nodes && Array.isArray(patch.remove_nodes)) {
+      patch.remove_nodes.forEach(function(delId) {
+        if (delId && typeof delId === 'string') {
+          var initialLen = currentMem.nodes.length;
+          currentMem.nodes = currentMem.nodes.filter(function(ex){ return ex.id !== delId; });
+          if (currentMem.nodes.length < initialLen) {
+            // Le nœud a été supprimé, on nettoie les liens
+            currentMem.links = currentMem.links.filter(function(l){
+              return l.source !== delId && l.target !== delId;
+            });
             updated = true;
           }
         }
