@@ -60,6 +60,7 @@ function buildRecognition() {
               state = 'triggered';
               commandBuffer = '';
               if (window.setEvaStatusHeader) window.setEvaStatusHeader('🎤 PARLEZ...', 'listening');
+              if (window.eva && window.eva.overlay) window.eva.overlay.show('listening');
             }
           }
         }
@@ -70,6 +71,7 @@ function buildRecognition() {
           state = 'idle';
           commandBuffer = '';
           if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+          if (window.eva && window.eva.overlay) window.eva.overlay.hide();
           fireCommand(finalCmd);
         }
       }
@@ -82,6 +84,7 @@ function buildRecognition() {
       state = 'idle';
       commandBuffer = '';
       if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      if (window.eva && window.eva.overlay) window.eva.overlay.hide();
       fireCommand(cmd);
       return;
     }
@@ -155,6 +158,7 @@ function stop() {
     recognition = null;
   }
   if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+  if (window.eva && window.eva.overlay) window.eva.overlay.hide();
 }
 
 function isRunning() { return isActive; }

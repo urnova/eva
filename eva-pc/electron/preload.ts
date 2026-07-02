@@ -105,7 +105,20 @@ const evaAPI = {
     ipcRenderer.invoke('auth:exchangeToken', refreshToken, apiKey),
 
   // ── Popup Auth (conservé pour fallback futur) ──
-  openAuthWindow: (url: string) => ipcRenderer.invoke('auth:openAuthWindow', url)
+  openAuthWindow: (url: string) => ipcRenderer.invoke('auth:openAuthWindow', url),
+
+  // ── Overlay Agentique ──
+  overlay: {
+    show: (state?: string) => ipcRenderer.invoke('overlay:show', state),
+    hide: () => ipcRenderer.invoke('overlay:hide'),
+    setState: (state: string, text?: string) => ipcRenderer.invoke('overlay:setState', state, text),
+    onAction: (callback: (action: string) => void) => {
+      const channel = 'overlay:action'
+      const listener = (_: unknown, action: string) => callback(action)
+      ipcRenderer.on(channel, listener)
+      return () => ipcRenderer.removeListener(channel, listener)
+    }
+  }
 }
 
 contextBridge.exposeInMainWorld('eva', evaAPI)

@@ -17,6 +17,7 @@ export default defineConfig({
                 'electron',
                 'node-pty',
                 'electron-store',
+                'electron-updater',
                 'auto-launch',
                 'screenshot-desktop',
                 'systeminformation',

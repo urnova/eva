@@ -56,6 +56,7 @@ const evaAutoLaunch = new AutoLaunch({
 
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
+let overlayWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
@@ -127,8 +128,8 @@ function createWindow() {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: true,
-      allowRunningInsecureContent: false,
+      webSecurity: false,
+      allowRunningInsecureContent: true,
       // Permettre les scripts Puter dans le renderer
       sandbox: false
     },
@@ -201,6 +202,43 @@ function createSplashWindow() {
   splashWindow.on('closed', () => { splashWindow = null })
 }
 
+function createOverlayWindow() {
+  const { screen } = require('electron')
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { width, height } = primaryDisplay.workAreaSize
+
+  const overlayWidth = 340
+  const overlayHeight = 140
+
+  overlayWindow = new BrowserWindow({
+    width: overlayWidth,
+    height: overlayHeight,
+    x: width - overlayWidth - 20, // En haut à droite, avec un peu de marge
+    y: 20,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: false,
+    skipTaskbar: true, // Ignoré dans la barre des tâches
+    show: false, // Caché par défaut
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  })
+
+  // Permet à l'overlay de passer au-dessus des fenêtres en plein écran sur Windows
+  overlayWindow.setAlwaysOnTop(true, 'screen-saver')
+
+  if (isDev) {
+    overlayWindow.loadFile(join(__dirname, '../public/overlay.html'))
+  } else {
+    overlayWindow.loadFile(join(__dirname, '../dist/overlay.html'))
+  }
+
+  overlayWindow.on('closed', () => { overlayWindow = null })
+}
+
 function saveBounds() {
   if (!mainWindow) return
   const bounds = mainWindow.getBounds()
@@ -248,6 +286,7 @@ app.whenReady().then(async () => {
   // Laisser le temps au splash screen de s'afficher (500ms min)
   setTimeout(() => {
     createWindow() // Crée la mainWindow mais elle est cachée par défaut (show: false)
+    createOverlayWindow() // Crée la fenêtre d'overlay
     createTray()
 
     // ─── Auto-updater (Dépôt Privé) ───
@@ -353,6 +392,33 @@ ipcMain.handle('window:close', () => {
   else { app.isQuitting = true; mainWindow?.close() }
 })
 ipcMain.handle('window:isMaximized', () => mainWindow?.isMaximized())
+
+// ─── IPC Handlers — Overlay Agentique ───
+ipcMain.handle('overlay:show', (_event, state) => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('overlay:setState', state || 'listening')
+    overlayWindow.showInactive() // Affiche sans voler le focus
+  }
+})
+
+ipcMain.handle('overlay:hide', () => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.hide()
+  }
+})
+
+ipcMain.handle('overlay:setState', (_event, state, text) => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('overlay:setState', state, text)
+  }
+})
+
+// Communication Overlay -> Main App (Ex: Bouton Annuler appuyé)
+ipcMain.on('overlay:action', (_event, action) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('overlay:action', action)
+  }
+})
 
 // ─── IPC Handler — Ouvrir URL dans le navigateur système ───
 ipcMain.handle('shell:openExternal', (_event, url: string) => shell.openExternal(url))

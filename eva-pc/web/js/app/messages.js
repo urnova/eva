@@ -156,11 +156,17 @@ function setEvaStatusHeader(text, type) {
     dot.className = 'eva-hdr-dot';
     label.textContent = 'EN LIGNE';
     if (skip) skip.style.display = 'none';
+    if (window.eva && window.eva.overlay) window.eva.overlay.hide();
     return;
   }
-  dot.className = 'eva-hdr-dot ' + (type || 'thinking');
+  var stateType = type || 'thinking';
+  dot.className = 'eva-hdr-dot ' + stateType;
   label.textContent = text;
-  if (skip) skip.style.display = (type === 'speaking') ? 'inline-flex' : 'none';
+  if (skip) skip.style.display = (stateType === 'speaking') ? 'inline-flex' : 'none';
+  if (window.eva && window.eva.overlay) {
+    window.eva.overlay.show(stateType);
+    window.eva.overlay.setState(stateType, text);
+  }
 }
 window.setEvaStatusHeader = setEvaStatusHeader;
 
@@ -266,17 +272,12 @@ function showTyping(userMsg) {
     _thinkTimer = null;
   }
 
-  /* Transformer le bouton Envoyer en bouton Stop */
+  /* Cacher le bouton Envoyer et afficher le bouton Stop */
   var sendBtn = document.getElementById('sendBtn');
-  if (sendBtn) {
-    sendBtn.disabled = false;
-    sendBtn.title = 'Arrêter la génération';
-    sendBtn.style.background = 'rgba(239,68,68,0.15)';
-    sendBtn.style.borderColor = 'rgba(239,68,68,0.5)';
-    sendBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" style="color:#f87171"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>';
-    sendBtn._isStopMode = true;
-    sendBtn._stopHandler = function() { stopGeneration(); };
-    sendBtn.addEventListener('click', sendBtn._stopHandler, { once: true });
+  var stopBtn = document.getElementById('stopBtn');
+  if (sendBtn && stopBtn) {
+    sendBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-flex';
   }
 
   if (window.EvaCharacter) window.EvaCharacter.setThinking();
@@ -314,13 +315,12 @@ function hideTyping() {
   }
   /* Restaurer le bouton Envoyer */
   var sendBtn = document.getElementById('sendBtn');
-  if (sendBtn && sendBtn._isStopMode) {
-    sendBtn._isStopMode = false;
-    sendBtn.disabled = true;
-    sendBtn.title = 'Envoyer';
-    sendBtn.style.background = '';
-    sendBtn.style.borderColor = '';
-    sendBtn.innerHTML = '<svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+  var stopBtn = document.getElementById('stopBtn');
+  if (sendBtn && stopBtn) {
+    stopBtn.style.display = 'none';
+    sendBtn.style.display = 'inline-flex';
+    var input = document.getElementById('msgInput');
+    sendBtn.disabled = !(input && input.value.trim()) && (!S.images || !S.images.length) && (!S.documents || !S.documents.length);
   }
 }
 
@@ -505,19 +505,12 @@ async function handleSend() {
     if (S.profile.bio) userCtx += ' Contexte personnel : ' + S.profile.bio;
     if (S.keyPersonality) {
       userCtx += '\n' + S.keyPersonality;
-    } else {
-      var roleCtx = {
-        creator: '\nCONTEXTE UTILISATEUR : Tu parles en ce moment avec Enzo, ton créateur et le PDG d\'Astral Technologie. Il est la personne qui t\'a conçue et qui dirige Astral Technologie. Sois respectueuse, loyale, proactive et traite-le avec la considération due à ton créateur. Tu peux l\'appeler par son prénom.',
-        developer: '\nCONTEXTE UTILISATEUR : Tu parles avec un développeur de l\'équipe Astral Technologie. Active le mode technique : sois précise, utilise le vocabulaire technique approprié et n\'hésite pas à entrer dans les détails techniques.',
-        creator_wife: '\nCONTEXTE UTILISATEUR : Tu parles avec l\'épouse de ton créateur Enzo. Sois particulièrement chaleureuse, attentionnée et amicale. Traite-la avec beaucoup de respect et de bienveillance.'
-      };
-      if (roleCtx[S.profile.role]) userCtx += roleCtx[S.profile.role];
     }
   }
   if (window._userBio) userCtx += '\nNote personnelle : ' + window._userBio;
   /* Mémoire Évolutive — injectée si activée et non vide */
-  if (S.adaptationEnabled && S.evaMemory && S.evaMemory.resume) {
-    userCtx += '\n\nMÉMOIRE ÉVOLUTIVE (apprise lors des conversations précédentes) :\n' + S.evaMemory.resume;
+  if (S.adaptationEnabled && S.evaMemory && S.evaMemory.nodes) {
+    userCtx += '\n\nMÉMOIRE ÉVOLUTIVE (Graphe de Connaissances) :\n' + JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links});
   }
 
   // Injection date/heure courante — EVA connaît ainsi l'heure pour créer alarmes/rappels
@@ -1464,3 +1457,15 @@ function initChatDragDropPaste() {
   });
 }
 window.initChatDragDropPaste = initChatDragDropPaste;
+
+/* -- Overlay Integration -- */
+if (window.eva && window.eva.overlay) {
+  window.eva.overlay.onAction(function(action) {
+    if (action === 'cancel') {
+      if (window.stopGeneration) window.stopGeneration();
+      if (window.skipTTS) window.skipTTS();
+      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      if (window.EVAWakeWord && window.EVAWakeWord.isRunning()) { window.EVAWakeWord.stop(); setTimeout(function(){ window.EVAWakeWord.start(); }, 1000); }
+    }
+  });
+}

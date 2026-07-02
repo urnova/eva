@@ -480,8 +480,8 @@ footer{
     <a href="javascript:void(0)" class="nav-link" onclick="_scrollTo('download')">Téléchargement</a>
   </div>
   <div class="nav-user" id="navUser">
-    <a href="/login" target="_top" class="nav-user-btn">Connexion</a>
-    <a href="/login" target="_top" class="nav-cta">Essayer gratuitement</a>
+    <a href="/app-login.html" target="_top" class="nav-user-btn">Connexion</a>
+    <a href="/app-login.html" target="_top" class="nav-cta">Essayer gratuitement</a>
   </div>
 </nav>
 
@@ -495,7 +495,7 @@ footer{
   <p class="hero-subtitle">Evolutionary Virtual Assistant</p>
   <p class="hero-desc">Votre assistante IA personnelle nouvelle génération. Conversations intelligentes, organisation de votre vie, interface élégante et caractère unique.</p>
   <div class="hero-actions">
-    <a href="/login" target="_top" class="btn-hero-primary" id="heroMainBtn">
+    <a href="/app-login.html" target="_top" class="btn-hero-primary" id="heroMainBtn">
       <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
       Commencer maintenant
     </a>
@@ -650,11 +650,11 @@ footer{
     <h2 class="cta-title">Prête à vous rencontrer</h2>
     <p class="cta-desc">Rejoignez EVA dès maintenant. Aucune carte de crédit requise, commencez gratuitement avec Puter AI.</p>
     <div class="cta-actions">
-      <a href="/login" target="_top" class="btn-hero-primary" id="ctaMainBtn">
+      <a href="/app-login.html" target="_top" class="btn-hero-primary" id="ctaMainBtn">
         <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         Commencer maintenant
       </a>
-      <a href="/login?tab=login" target="_top" class="btn-hero-secondary">Me connecter</a>
+      <a href="/app-login.html?tab=login" target="_top" class="btn-hero-secondary">Me connecter</a>
     </div>
   </div>
 </div>
@@ -668,7 +668,7 @@ footer{
   </div>
   <div class="footer-copy">© 2026 Astral Technologie — Evolutionary Virtual Assistant — Beta V4</div>
   <div class="footer-links">
-    <a href="/login" target="_top" class="footer-link">Connexion</a>
+    <a href="/app-login.html" target="_top" class="footer-link">Connexion</a>
     <a href="/conditions" class="footer-link">Conditions d'utilisation</a>
     <a href="/privacy" class="footer-link">Confidentialité</a>
     <a href="/cookies" class="footer-link">Cookies</a>
@@ -812,9 +812,9 @@ auth.onAuthStateChanged(function(user) {
       _buildNavUser(user, user.photoURL || null);
     }
   } else {
-    if (navUser) navUser.innerHTML = '<a href="/login" target="_top" class="nav-user-btn">Connexion</a><a href="/login" target="_top" class="nav-cta">Essayer gratuitement</a>';
-    if (heroBtn) { heroBtn.textContent = 'Commencer maintenant'; heroBtn.href = '/login'; heroBtn.target = '_top'; }
-    if (ctaBtn)  { ctaBtn.textContent  = 'Commencer maintenant'; ctaBtn.href = '/login'; ctaBtn.target = '_top'; }
+    if (navUser) navUser.innerHTML = '<a href="/app-login.html" target="_top" class="nav-user-btn">Connexion</a><a href="/app-login.html" target="_top" class="nav-cta">Essayer gratuitement</a>';
+    if (heroBtn) { heroBtn.textContent = 'Commencer maintenant'; heroBtn.href = '/app-login.html'; heroBtn.target = '_top'; }
+    if (ctaBtn)  { ctaBtn.textContent  = 'Commencer maintenant'; ctaBtn.href = '/app-login.html'; ctaBtn.target = '_top'; }
   }
 });
 </script>

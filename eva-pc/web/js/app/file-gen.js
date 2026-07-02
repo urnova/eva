@@ -402,216 +402,80 @@ async function _evaGeneratePdf(action) {
   var filename = action.filename || 'document.pdf';
   var card = _evaGenCard('pdf', filename);
   try {
-    if (!window.jspdf || !window.jspdf.jsPDF) { toast('Librairie PDF non chargée', 'error'); setEvaStatus(null); return; }
-    var jsPDF = window.jspdf.jsPDF;
-    await new Promise(function(res) { setTimeout(res, 0); });
-    var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    var pageW = 210, pageH = 297, margin = 18, usable = pageW - margin * 2;
-    var style = _detectPdfStyle(action);
-    var title = (action.title || filename).replace(/\.pdf$/i, '');
-    var subtitle = action.subtitle || action.author || '';
-    var showBranding = !!(action.branded);
-    var dateStr = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
-
-    /* ═══════════════════════════════════════
-       PALETTES PAR STYLE
-    ═══════════════════════════════════════ */
-    var palette;
-    if (style === 'report') {
-      palette = { accent:[41,98,255], h1bg:[245,247,255], h1text:[41,98,255], h2:[30,64,175], h3:[55,65,81], body:[31,41,55], muted:[107,114,128], bullet:[41,98,255], footer:[156,163,175] };
-    } else if (style === 'academic') {
-      palette = { accent:[126,34,206], h1bg:[250,245,255], h1text:[126,34,206], h2:[88,28,135], h3:[55,65,81], body:[31,41,55], muted:[107,114,128], bullet:[126,34,206], footer:[156,163,175] };
-    } else if (style === 'creative') {
-      palette = { accent:[234,88,12], h1bg:[255,247,237], h1text:[234,88,12], h2:[154,52,18], h3:[55,65,81], body:[31,41,55], muted:[107,114,128], bullet:[234,88,12], footer:[156,163,175] };
-    } else {
-      /* pro = défaut */
-      palette = { accent:[30,64,175], h1bg:[241,245,249], h1text:[15,23,42], h2:[30,64,175], h3:[71,85,105], body:[30,41,59], muted:[100,116,139], bullet:[30,64,175], footer:[148,163,184] };
+    /* Charger html2pdf.js si non présent */
+    if (!window.html2pdf) {
+      await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js', 'html2pdf');
     }
-    var A = palette.accent;
-    var FOOTER_H = showBranding ? 13 : 10;
-    var CONTENT_BOTTOM = pageH - FOOTER_H - 4;
+    if (!window.html2pdf) throw new Error('html2pdf.js introuvable après chargement CDN');
 
-    /* ═══ HEADER ═══ */
-    var HEADER_H = subtitle ? 36 : 28;
-    /* Barre de couleur en haut */
-    doc.setFillColor(A[0], A[1], A[2]);
-    doc.rect(0, 0, pageW, 3.5, 'F');
-    /* Titre */
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
-    doc.setTextColor(palette.h1text[0], palette.h1text[1], palette.h1text[2]);
-    var titleLines = doc.splitTextToSize(title, usable);
-    titleLines.slice(0,2).forEach(function(l, li) { doc.text(l, margin, 13 + li * 10); });
-    if (subtitle) {
-      doc.setFontSize(9.5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(palette.muted[0], palette.muted[1], palette.muted[2]);
-      doc.text(subtitle, margin, 13 + Math.min(titleLines.length,2)*10 + 1);
-    }
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(palette.muted[0], palette.muted[1], palette.muted[2]);
-    doc.text(dateStr, pageW - margin, HEADER_H - 2, { align: 'right' });
-    /* Ligne séparatrice */
-    doc.setDrawColor(palette.muted[0], palette.muted[1], palette.muted[2]);
-    doc.setLineWidth(0.3);
-    doc.line(margin, HEADER_H, pageW - margin, HEADER_H);
+    var contentHtml = action.content || '';
 
-    var y = HEADER_H + 8;
+    /* Nettoyage : retirer les blocs de code markdown ```html résiduels si présents */
+    contentHtml = contentHtml.replace(/^```html\s*/i, '').replace(/```$/i, '');
+    contentHtml = contentHtml.replace(/^```pdf\s*/i, '').replace(/```$/i, '');
 
-    function chkPage(yy, need) {
-      if (yy + (need || 10) > CONTENT_BOTTOM) {
-        doc.addPage();
-        doc.setFillColor(A[0], A[1], A[2]);
-        doc.rect(0, 0, pageW, 3.5, 'F');
-        return margin + 6;
-      }
-      return yy;
+    /* Si le contenu ne contient pas de balise HTML → envelopper en HTML complet */
+    if (contentHtml.indexOf('<') === -1 || !contentHtml.toLowerCase().includes('<!doctype')) {
+      contentHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
+        'body{font-family:Arial,sans-serif;padding:40px;color:#222;font-size:14px;line-height:1.7;}' +
+        'h1{font-size:22px;color:#1a1a2e;border-bottom:2px solid #3498db;padding-bottom:8px;}' +
+        'h2{font-size:17px;color:#2c3e50;margin-top:20px;}' +
+        'p{margin:8px 0;}ul{padding-left:20px;}li{margin:4px 0;}' +
+        'table{width:100%;border-collapse:collapse;}td,th{border:1px solid #ddd;padding:8px;}th{background:#f2f2f2;}' +
+        '</style></head><body>' + contentHtml + '</body></html>';
     }
 
-    /* ═══ CONTENU ═══ */
-    var rawContent = (action.content || '').replace(/\\n/g, '\n');
-    if (rawContent.length > 18000) rawContent = rawContent.slice(0, 18000) + '\n\n[Contenu tronqué]';
-    var lines = rawContent.split('\n');
-    var numSec = 0;
+    /* Approche iframe : rend le HTML complet dans un iframe invisible
+       → garantit que DOCTYPE, <head> et <style> sont correctement appliqués */
+    var iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:794px;height:1123px;border:none;visibility:hidden;';
+    document.body.appendChild(iframe);
 
-    lines.forEach(function(line) {
-      var t = line.trim();
-      if (!t) { y += 3.5; return; }
+    /* Écrire le HTML complet dans l'iframe */
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(contentHtml);
+    iframe.contentDocument.close();
 
-      /* H1 / H2 → Titre de section avec fond coloré */
-      if (/^#{1,2}\s/.test(t)) {
-        numSec++;
-        var htxt = t.replace(/^#+\s*/, '');
-        y = chkPage(y, 16);
-        doc.setFillColor(palette.h1bg[0], palette.h1bg[1], palette.h1bg[2]);
-        doc.rect(margin, y - 4, usable, 11, 'F');
-        doc.setFillColor(A[0], A[1], A[2]);
-        doc.rect(margin, y - 4, 3.5, 11, 'F');
-        doc.setTextColor(palette.h1text[0], palette.h1text[1], palette.h1text[2]);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.text(doc.splitTextToSize(htxt, usable - 10)[0], margin + 7.5, y + 3.5);
-        y += 13;
-        return;
-      }
-
-      /* H3 → sous-titre */
-      if (/^#{3,}\s/.test(t)) {
-        var h3txt = t.replace(/^#+\s*/, '');
-        y = chkPage(y, 10);
-        doc.setTextColor(palette.h2[0], palette.h2[1], palette.h2[2]);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10.5);
-        doc.splitTextToSize(h3txt, usable).forEach(function(l) {
-          y = chkPage(y, 7); doc.text(l, margin, y); y += 7;
-        });
-        y += 1;
-        return;
-      }
-
-      /* Ligne gras (**...**) */
-      if (/^\*\*[^*]/.test(t) || /^__[^_]/.test(t)) {
-        var btxt = t.replace(/\*\*/g, '').replace(/__/g, '');
-        y = chkPage(y, 8);
-        doc.setTextColor(palette.body[0], palette.body[1], palette.body[2]);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10.5);
-        doc.splitTextToSize(btxt, usable).forEach(function(l) {
-          y = chkPage(y, 6.5); doc.text(l, margin, y); y += 6.5;
-        });
-        y += 0.5;
-        return;
-      }
-
-      /* Bullet − • – * + */
-      if (/^[-•·–*+]\s/.test(t)) {
-        var bTxt = t.replace(/^[-•·–*+]\s*/, '');
-        y = chkPage(y, 8);
-        doc.setFillColor(A[0], A[1], A[2]);
-        doc.circle(margin + 2.5, y - 1.5, 1, 'F');
-        doc.setTextColor(palette.body[0], palette.body[1], palette.body[2]);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10.5);
-        doc.splitTextToSize(bTxt, usable - 10).forEach(function(l, li) {
-          if (li > 0) y = chkPage(y, 7);
-          doc.text(l, margin + 7, y); y += 6.5;
-        });
-        y += 0.5;
-        return;
-      }
-
-      /* Numéroté 1. 2. ... */
-      if (/^\d+\.\s/.test(t)) {
-        var nNum = t.match(/^(\d+)\./)[1];
-        var nTxt = t.replace(/^\d+\.\s*/, '');
-        y = chkPage(y, 8);
-        doc.setTextColor(A[0], A[1], A[2]);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.text(nNum + '.', margin + 1, y);
-        doc.setTextColor(palette.body[0], palette.body[1], palette.body[2]);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10.5);
-        doc.splitTextToSize(nTxt, usable - 10).forEach(function(l, li) {
-          if (li > 0) y = chkPage(y, 7);
-          doc.text(l, margin + 8, y); y += 6.5;
-        });
-        y += 0.5;
-        return;
-      }
-
-      /* Séparateur --- */
-      if (/^-{3,}$|^={3,}$/.test(t)) {
-        y = chkPage(y, 5);
-        doc.setDrawColor(palette.muted[0], palette.muted[1], palette.muted[2]);
-        doc.setLineWidth(0.25);
-        doc.line(margin, y, pageW - margin, y);
-        y += 5;
-        return;
-      }
-
-      /* Texte normal */
-      y = chkPage(y, 8);
-      doc.setTextColor(palette.body[0], palette.body[1], palette.body[2]);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10.5);
-      doc.splitTextToSize(t, usable).forEach(function(l) {
-        y = chkPage(y, 6.5); doc.text(l, margin, y); y += 6.5;
-      });
-      y += 1;
+    /* Attendre que le contenu soit rendu */
+    await new Promise(function(resolve) {
+      if (iframe.contentDocument.readyState === 'complete') { resolve(); return; }
+      iframe.contentWindow.addEventListener('load', resolve);
+      setTimeout(resolve, 1200); /* timeout de sécurité */
     });
 
-    /* ═══ FOOTER TOUTES PAGES ═══ */
-    var totalPg = doc.internal.getNumberOfPages();
-    for (var pg = 1; pg <= totalPg; pg++) {
-      doc.setPage(pg);
-      doc.setDrawColor(palette.muted[0], palette.muted[1], palette.muted[2]);
-      doc.setLineWidth(0.25);
-      doc.line(margin, pageH - FOOTER_H, pageW - margin, pageH - FOOTER_H);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(palette.footer[0], palette.footer[1], palette.footer[2]);
-      var footerLeft = showBranding ? 'Généré par E.V.A · Astral Technologie' : title;
-      doc.text(footerLeft, margin, pageH - FOOTER_H + 5);
-      doc.setTextColor(A[0], A[1], A[2]);
-      doc.setFont('helvetica', 'bold');
-      doc.text(pg + ' / ' + totalPg, pageW - margin, pageH - FOOTER_H + 5, { align: 'right' });
+    var iframeBody = iframe.contentDocument.body;
+
+    /* Options html2pdf */
+    var opt = {
+      margin:       [8, 8, 8, 8],
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollY: 0 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    /* Générer le PDF → blob */
+    var blob = await window.html2pdf().set(opt).from(iframeBody).outputPdf('blob');
+    document.body.removeChild(iframe);
+
+    if (!blob || blob.size < 200) {
+      throw new Error('PDF vide généré (taille < 200 bytes). Le HTML fourni par l\'IA est peut-être invalide.');
     }
 
-    var blob = doc.output('blob');
     var url = URL.createObjectURL(blob);
-    toast('PDF prêt : ' + filename, 'success');
+    toast('📄 PDF prêt : ' + filename, 'success');
     setEvaStatus('PDF CRÉÉ', 'action');
     setTimeout(function(){ setEvaStatus(null); }, 3000);
     _evaCardReady(card, 'pdf', filename, url);
   } catch(e) {
     console.error('[EVA PDF]', e);
     toast('Erreur génération PDF : ' + (e.message || e), 'error');
-    if (card) card.innerHTML = '<span style="color:#f87171;font-size:0.75em;">❌ Erreur PDF : ' + (e.message || 'inconnue') + '</span>';
+    if (card) card.innerHTML = '<span style="color:#f87171;font-size:0.75em;">❌ Erreur PDF : ' + esc(e.message || 'inconnue') + '</span>';
     setEvaStatus(null);
   }
 }
+
+
 
 function _evaGenerateExcel(action) {
   setEvaStatus('GÉNÉRATION EXCEL…', 'action');

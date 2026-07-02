@@ -3,18 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>E.V.A — Connexion App</title>
+<title>E.V.A — Connexion Desktop</title>
 <link rel="icon" type="image/png" href="assets/images/eva-logo.png">
-<link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#7b8bf5">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="E.V.A">
-<link rel="apple-touch-icon" href="/assets/images/icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --cyan:#7b8bf5;--cyan-dim:rgba(123,139,245,0.10);--cyan-glow:rgba(123,139,245,0.28);
@@ -23,7 +15,7 @@
   --border:rgba(255,255,255,0.07);--text:#e4e4ef;--text-muted:#88889a;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);}
+html,body{height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);overflow:hidden;}
 body::before{
   content:'';position:fixed;inset:0;
   background-image:linear-gradient(rgba(123,139,245,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.015) 1px,transparent 1px);
@@ -32,26 +24,32 @@ body::before{
 .bg-orb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(100px);z-index:0;}
 .bg-orb-1{width:500px;height:500px;background:rgba(123,139,245,0.06);top:-150px;right:-150px;}
 .bg-orb-2{width:400px;height:400px;background:rgba(167,139,250,0.04);bottom:-150px;left:-100px;}
+@keyframes orbDrift{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-30px)}}
 
 .page{
-  position:relative;z-index:1;min-height:100vh;
+  position:relative;z-index:1;height:100vh;
   display:flex;align-items:center;justify-content:center;padding:20px;
 }
 
+/* Split layout */
 .auth-wrap{
   display:grid;
   grid-template-columns:1fr 420px;
   gap:0;
-  max-width:900px;width:100%;min-height:560px;
+  max-width:900px;
+  width:100%;
+  min-height:560px;
   background:var(--surface);
   border:1px solid var(--border);
-  border-radius:24px;overflow:hidden;
+  border-radius:24px;
+  overflow:hidden;
   box-shadow:0 40px 100px rgba(0,0,0,0.7),0 0 0 1px rgba(123,139,245,0.05);
   backdrop-filter:blur(30px);
   animation:panelIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
 }
 @keyframes panelIn{from{opacity:0;transform:translateY(24px) scale(0.97)}to{opacity:1;transform:none}}
 
+/* Left side - decorative */
 .auth-deco{
   background:linear-gradient(160deg,rgba(123,139,245,0.06),rgba(183,148,246,0.04));
   border-right:1px solid var(--border);
@@ -63,23 +61,15 @@ body::before{
   background-image:linear-gradient(rgba(123,139,245,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.04) 1px,transparent 1px);
   background-size:30px 30px;
 }
-.deco-logo{position:relative;z-index:1;text-align:center;}
-.deco-circle{
-  width:140px;height:auto;
-  display:flex;align-items:center;justify-content:center;
-  margin:0 auto 24px;
+.deco-logo{
+  position:relative;z-index:1;text-align:center;
 }
-.deco-circle img{width:140px;height:auto;object-fit:contain;}
 .deco-title{
   font-family:'Orbitron',monospace;font-size:2.5em;font-weight:900;
   letter-spacing:8px;color:var(--cyan);text-shadow:0 0 30px var(--cyan-glow);
   margin-bottom:6px;
 }
 .deco-sub{font-size:0.72em;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;}
-.deco-badge{
-  margin-top:8px;display:inline-block;font-size:0.6em;
-  color:rgba(123,139,245,0.6);letter-spacing:1.5px;
-}
 .deco-desc{
   margin-top:28px;font-size:0.78em;color:var(--text-muted);
   line-height:1.8;text-align:center;max-width:240px;
@@ -89,155 +79,118 @@ body::before{
   margin-top:24px;display:flex;flex-direction:column;gap:10px;
   position:relative;z-index:1;width:100%;
 }
-.deco-feature{display:flex;align-items:center;gap:10px;font-size:0.73em;color:var(--text-muted);}
+.deco-feature{
+  display:flex;align-items:center;gap:10px;
+  font-size:0.73em;color:var(--text-muted);
+}
 .deco-feature::before{content:'▸';color:var(--cyan);font-size:0.9em;}
 
-/* Platform banner */
-.platform-banner{
-  display:flex;align-items:center;gap:8px;
-  background:rgba(123,139,245,0.06);border:1px solid rgba(123,139,245,0.15);
-  border-radius:10px;padding:9px 12px;margin-bottom:18px;font-size:0.73em;color:var(--text-muted);
+/* Right - actions */
+.auth-form-side{
+  padding:40px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
 }
-.platform-dot{
-  width:7px;height:7px;border-radius:50%;background:var(--cyan);
-  box-shadow:0 0 6px var(--cyan);flex-shrink:0;
-  animation:dotPulse 2s ease-in-out infinite;
-}
-@keyframes dotPulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.platform-banner strong{color:var(--cyan);}
-
-.auth-form-side{padding:40px;display:flex;flex-direction:column;}
 .auth-form-title{
   font-family:'Orbitron',monospace;font-size:1.1em;letter-spacing:3px;
   color:var(--text);margin-bottom:6px;
 }
-.auth-form-sub{font-size:0.75em;color:var(--text-muted);margin-bottom:24px;line-height:1.6;}
-.auth-form-sub a{color:var(--cyan);text-decoration:none;}
-
-.form-group{margin-bottom:14px;}
-.form-label{display:block;font-size:0.72em;color:var(--text-muted);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;}
-.form-input{
-  width:100%;padding:11px 14px;
-  background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:10px;
-  color:var(--text);font-family:'Space Mono',monospace;font-size:0.85em;
-  outline:none;transition:all 0.2s;
+.auth-form-sub{
+  font-size:0.75em;color:var(--text-muted);margin-bottom:32px;line-height:1.6;
 }
-.form-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(123,139,245,0.1);}
-.form-input::placeholder{color:rgba(100,110,140,0.5);}
 
-.form-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
-.form-check{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.75em;color:var(--text-muted);user-select:none;}
-.form-check input{accent-color:var(--cyan);}
-.link-subtle{font-size:0.72em;color:var(--cyan);text-decoration:none;opacity:0.7;transition:opacity 0.2s;}
-.link-subtle:hover{opacity:1;}
+.action-buttons {
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  margin-bottom:24px;
+}
 
-.btn-submit{
-  width:100%;padding:13px;border-radius:12px;border:none;
+.btn-primary, .btn-secondary {
+  width:100%;
+  padding:15px;
+  border-radius:12px;
+  font-family:'Orbitron',monospace;
+  font-weight:700;
+  font-size:0.85em;
+  letter-spacing:2px;
+  cursor:pointer;
+  transition:all 0.3s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
+
+.btn-primary {
+  border:none;
   background:linear-gradient(135deg,var(--cyan),#0099cc);
-  color:#000;font-family:'Orbitron',monospace;font-weight:700;
-  font-size:0.85em;letter-spacing:2px;cursor:pointer;
-  transition:all 0.3s;margin-bottom:4px;
+  color:#000;
   box-shadow:0 0 25px rgba(123,139,245,0.3);
 }
-.btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(123,139,245,0.5);}
-.btn-submit:active{transform:translateY(0);}
-.btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(123,139,245,0.5);}
+.btn-primary:active{transform:translateY(0);}
 
-.auth-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--text-muted);font-size:0.72em;}
-.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
-
-.btn-google{
-  width:100%;padding:11px;border-radius:12px;
-  background:rgba(255,255,255,0.05);border:1px solid var(--border);
-  color:var(--text);font-family:'Space Mono',monospace;font-size:0.8em;
-  cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:10px;
+.btn-secondary {
+  border:1px solid rgba(123,139,245,0.5);
+  background:rgba(123,139,245,0.05);
+  color:var(--cyan);
 }
-.btn-google:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);}
+.btn-secondary:hover{
+  background:rgba(123,139,245,0.1);
+  border-color:var(--cyan);
+  transform:translateY(-2px);
+}
+.btn-secondary:active{transform:translateY(0);}
 
 .auth-message{
-  padding:10px 14px;border-radius:8px;font-size:0.76em;margin-bottom:12px;display:none;
+  padding:12px 14px;border-radius:8px;font-size:0.76em;margin-bottom:20px;display:none;
 }
 .auth-message.error{background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);color:var(--red);}
 .auth-message.success{background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);color:var(--green);}
 .auth-message.show{display:block;}
 
-.auth-footer{text-align:center;margin-top:auto;padding-top:16px;font-size:0.72em;color:var(--text-muted);}
-.auth-footer a{color:var(--cyan);text-decoration:none;}
-
-/* Redirect banner */
-.redirect-banner{
-  display:none;
-  background:linear-gradient(135deg,rgba(123,139,245,0.08),rgba(123,139,245,0.03));
-  border:1px solid rgba(123,139,245,0.3);
-  border-radius:16px;padding:20px;text-align:center;margin-top:8px;
-}
-.redirect-banner h2{
-  font-family:'Orbitron',monospace;font-size:0.95em;letter-spacing:2px;
-  color:var(--cyan);margin-bottom:8px;
-}
-.redirect-banner p{font-size:0.74em;color:var(--text-muted);margin-bottom:16px;line-height:1.6;}
-.redirect-btns{display:flex;flex-direction:column;gap:8px;}
-.redirect-btn{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  padding:12px;border-radius:10px;font-size:0.8em;font-weight:700;
-  text-decoration:none;cursor:pointer;border:none;
-  font-family:'Space Mono',monospace;transition:all 0.2s;
-}
-.redirect-btn:hover{transform:translateY(-1px);}
-.redirect-btn.app{
-  background:linear-gradient(135deg,var(--cyan),#0099cc);color:#000;
-  box-shadow:0 4px 20px rgba(123,139,245,0.3);
-}
-.redirect-btn.web{
-  background:transparent;border:1px solid rgba(123,139,245,0.35);color:var(--cyan);
+.auth-footer{
+  text-align:center;margin-top:auto;padding-top:16px;font-size:0.72em;color:var(--text-muted);
 }
 
-/* ── TV / Very large ── */
+/* ── TV / Very large screens (≥1800px) ── */
 @media(min-width:1800px){
   .auth-wrap{max-width:1100px;min-height:680px;grid-template-columns:1fr 520px;}
   .auth-deco{padding:64px;}
   .deco-title{font-size:3em;}
-  .deco-circle{width:130px;height:130px;}
-  .deco-circle img{width:68px;height:68px;}
   .auth-form-side{padding:56px;}
   .auth-form-title{font-size:1.3em;}
-  .btn-submit{padding:16px;font-size:0.95em;}
-  .form-input{padding:14px 16px;font-size:0.95em;}
+  .btn-primary, .btn-secondary {padding:18px;font-size:0.95em;}
 }
-/* ── Tablet ── */
+
+/* ── Tablet (768px – 1023px) ── */
 @media(min-width:640px) and (max-width:1023px){
   .auth-wrap{max-width:760px;grid-template-columns:1fr 380px;}
   .auth-deco{padding:36px;}
   .deco-title{font-size:2em;letter-spacing:5px;}
-  .deco-circle{width:90px;height:90px;}
-  .deco-circle img{width:44px;height:44px;}
   .auth-form-side{padding:32px 28px;}
 }
-/* ── Mobile ── */
+
+/* ── Mobile (≤639px) ── */
 @media(max-width:639px){
   .page{padding:12px;align-items:flex-start;padding-top:clamp(20px,8vh,60px);}
-  .auth-wrap{grid-template-columns:1fr;border-radius:20px;min-height:auto;width:100%;}
+  .auth-wrap{
+    grid-template-columns:1fr;
+    border-radius:20px;
+    min-height:auto;
+    width:100%;
+  }
   .auth-deco{display:none;}
   .auth-form-side{padding:28px 22px 32px;}
-  .auth-form-title{font-size:1em;letter-spacing:2px;}
-  .auth-form-sub{font-size:0.72em;margin-bottom:16px;}
-  .form-group{margin-bottom:12px;}
-  .form-input{padding:11px 13px;font-size:0.87em;}
-  .btn-submit{padding:13px;font-size:0.84em;letter-spacing:1.5px;}
-  .btn-google{padding:11px;font-size:0.78em;}
-  .auth-footer{font-size:0.7em;}
-  .auth-message{font-size:0.74em;}
-}
-@media(max-width:380px){
-  .auth-form-side{padding:22px 16px 28px;}
-  .auth-form-title{font-size:0.92em;}
-  .btn-submit{padding:12px;font-size:0.8em;}
+  .btn-primary, .btn-secondary {padding:14px;font-size:0.8em;}
 }
 </style>
 </head>
 <body>
 <!-- ── Barre de titre Electron ── -->
-<div id="electronTitlebar" class="electron-titlebar" style="-webkit-app-region: drag; position: absolute; top: 0; left: 0; width: 100%; height: 32px; background: rgba(17, 17, 19, 0.95); z-index: 10000; display:flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'Space Mono', monospace;">
+<div class="electron-titlebar" style="-webkit-app-region: drag; position: absolute; top: 0; left: 0; width: 100%; height: 32px; background: rgba(17, 17, 19, 0.95); z-index: 10000; display:flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'Space Mono', monospace;">
   <div style="padding-left: 15px; font-size: 0.7em; color: var(--cyan); letter-spacing: 2px; font-weight: 700;">EVA DESKTOP</div>
   <div style="-webkit-app-region: no-drag; display: flex; height: 100%;">
     <button class="tb-btn" onclick="if(window.eva) window.eva.window.minimize()" style="width: 45px; height: 100%; background: transparent; border: none; color: #aaa; cursor: pointer; display: flex; align-items: center; justify-content: center;">_</button>
@@ -250,24 +203,43 @@ body::before{
 <div class="bg-orb bg-orb-2"></div>
 
 <div class="page" style="padding-top: 32px;">
-  <div class="auth-wrap" style="grid-template-columns: 1fr; max-width: 500px; text-align: center; padding: 40px;">
-    
-    <div class="deco-circle" style="margin-bottom: 20px;">
-      <img src="/assets/images/eva-logo.png" alt="EVA" style="width: 100px;">
+  <div class="auth-wrap">
+    <!-- Left decorative panel -->
+    <div class="auth-deco">
+      <div class="deco-logo">
+        <img src="/assets/images/eva-logo.png" alt="EVA" style="width:160px;height:auto;margin-bottom:20px;filter:drop-shadow(0 0 28px rgba(255,130,80,0.4));">
+        <div class="deco-sub">Evolutionary Virtual Assistant</div>
+        <div style="font-size:0.65em;color:var(--text-muted);margin-top:4px;opacity:0.65;">Desktop V4</div>
+      </div>
+      <div class="deco-desc">Votre assistante IA personnelle, intégrée directement à votre environnement PC.</div>
+      <div class="deco-features">
+        <div class="deco-feature">Contrôle système & CloudWorks</div>
+        <div class="deco-feature">Interaction vocale globale</div>
+        <div class="deco-feature">Modèles IA 100% Locaux (Ollama/LM Studio)</div>
+      </div>
     </div>
-    
-    <div class="deco-title" style="font-size: 1.8em; margin-bottom: 10px;">E.V.A DESKTOP</div>
-    <div class="auth-form-sub" style="margin-bottom: 30px;">Cliquez ci-dessous pour ouvrir la page de connexion sécurisée dans votre navigateur. Vous serez redirigé ici automatiquement.</div>
 
-    <div id="authMessage" class="auth-message"></div>
+    <!-- Right form panel -->
+    <div class="auth-form-side">
+      <div class="auth-form-title">BIENVENUE SUR EVA</div>
+      <div class="auth-form-sub">Veuillez vous authentifier pour synchroniser vos paramètres et votre mémoire neuronale.</div>
 
-    <button class="btn-submit" onclick="handlePCOnlyLogin()" style="padding: 16px; font-size: 0.9em; display: flex; align-items: center; justify-content: center; gap: 10px;">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-      CONNEXION VIA LE NAVIGATEUR
-    </button>
-    
-    <div class="auth-footer" style="margin-top: 30px;">
-      Astral Technologie © 2026
+      <div id="authMessage" class="auth-message"></div>
+
+      <div class="action-buttons">
+        <button class="btn-primary" onclick="openLogin()">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+          SE CONNECTER
+        </button>
+        <button class="btn-secondary" onclick="openSignup()">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+          S'INSCRIRE
+        </button>
+      </div>
+      
+      <div class="auth-footer" style="margin-top:20px;">
+        Astral Technologie © 2026
+      </div>
     </div>
   </div>
 </div>
@@ -285,10 +257,19 @@ body::before{
     el.className = 'auth-message show ' + (type || 'error');
   }
 
-  function handlePCOnlyLogin() {
+  function openLogin() {
     if (window.eva && window.eva.openExternal) {
       window.eva.openExternal('https://eva.astraltechnologie.fr/app-login.html?redirect=eva-desktop');
       showMsg('Une page sécurisée vient de s\'ouvrir dans votre navigateur. Veuillez vous y connecter.', 'success');
+    } else {
+      showMsg('Erreur: L\'environnement Electron n\'est pas détecté.', 'error');
+    }
+  }
+
+  function openSignup() {
+    if (window.eva && window.eva.openExternal) {
+      window.eva.openExternal('https://eva.astraltechnologie.fr/app-signup.html?redirect=eva-desktop');
+      showMsg('Une page sécurisée vient de s\'ouvrir dans votre navigateur. Veuillez y créer votre compte.', 'success');
     } else {
       showMsg('Erreur: L\'environnement Electron n\'est pas détecté.', 'error');
     }
@@ -299,7 +280,7 @@ body::before{
     window.eva.onAuthCallback(function(data) {
       if (data.refreshToken || data.hid) {
         showMsg('Authentification réussie ! Lancement d\'EVA...', 'success');
-        // On redirige vers le chat, le token est géré soit dans auth.js (si stocké) soit via main process
+        // Redirection vers le chat
         setTimeout(function() {
           window.location.href = '/chat.html';
         }, 1000);

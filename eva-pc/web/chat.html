@@ -9,16 +9,16 @@
 </script>
 <!-- Chart.js pour graphiques dans le chat -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<link rel="icon" type="image/png" href="/assets/images/icon-192.png" sizes="192x192">
-<link rel="icon" type="image/png" href="/assets/images/icon-192.png" sizes="32x32">
-<link rel="shortcut icon" type="image/png" href="/assets/images/icon-192.png">
+<link rel="icon" type="image/png" href="/assets/images/eva-icon.png" sizes="192x192">
+<link rel="icon" type="image/png" href="/assets/images/eva-icon.png" sizes="32x32">
+<link rel="shortcut icon" type="image/png" href="/assets/images/eva-icon.png">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#7b8bf5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="E.V.A">
-<link rel="apple-touch-icon" href="/assets/images/icon-192.png">
+<link rel="apple-touch-icon" href="/assets/images/eva-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
 <!-- Chart.js pour les statistiques d'utilisation -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -36,15 +36,6 @@
 <link rel="stylesheet" href="/assets/styles/cloudworks.css">
 </head>
 <body>
-<!-- ── Barre de titre Electron ── -->
-<div id="electronTitlebar" class="electron-titlebar" style="display:none; -webkit-app-region: drag; position: absolute; top: 0; left: 0; width: 100%; height: 32px; background: rgba(17, 17, 19, 0.95); z-index: 10000; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'Space Mono', monospace;">
-  <div style="padding-left: 15px; font-size: 0.7em; color: var(--cyan); letter-spacing: 2px; font-weight: 700;">EVA DESKTOP</div>
-  <div style="-webkit-app-region: no-drag; display: flex; height: 100%;">
-    <button class="tb-btn" onclick="window.eva.window.minimize()" style="width: 45px; height: 100%; background: transparent; border: none; color: #aaa; cursor: pointer; display: flex; align-items: center; justify-content: center;">_</button>
-    <button class="tb-btn" onclick="window.eva.window.maximize()" style="width: 45px; height: 100%; background: transparent; border: none; color: #aaa; cursor: pointer; display: flex; align-items: center; justify-content: center;">□</button>
-    <button class="tb-btn close" onclick="window.eva.window.close()" style="width: 45px; height: 100%; background: transparent; border: none; color: #aaa; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: sans-serif;">✕</button>
-  </div>
-</div>
 <div class="bg-orb bg-orb-1"></div>
 <div class="bg-orb bg-orb-2"></div>
 
@@ -61,7 +52,7 @@
   <div class="sb-search">
     <div class="sb-search-wrap">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input class="sb-search-input" id="searchInput" type="search" placeholder="Rechercher..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <input class="sb-search-input" id="searchInput" type="search" placeholder="Rechercher..." autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
   </div>
 
@@ -275,7 +266,10 @@
           <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
             <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(123,139,245,0.1);border:1px solid rgba(123,139,245,0.25);color:var(--cyan);">⚗ Expérimental</span>
             <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(123,139,245,0.1);border:1px solid rgba(123,139,245,0.25);color:var(--cyan);">Multi-appareils</span>
-            <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(255,140,0,0.1);border:1px solid rgba(255,140,0,0.3);color:#ffaa44;">Agent Desktop bientôt</span>
+            <a href="https://github.com/urnova/eva/releases/latest/download/EVA-Assistant-Setup.exe" target="_blank" style="text-decoration:none;font-size:0.62em;padding:4px 10px;border-radius:20px;background:rgba(123,139,245,0.15);border:1px solid rgba(123,139,245,0.4);color:var(--cyan);font-weight:700;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;" onmouseover="this.style.background='rgba(123,139,245,0.25)'" onmouseout="this.style.background='rgba(123,139,245,0.15)'">
+              <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Télécharger Agent Desktop
+            </a>
           </div>
         </div>
       </div>
@@ -361,6 +355,7 @@
             <div class="prompt-chip" data-prompt="Quelles sont tes fonctionnalités principales ?">⚡ Tes fonctionnalités</div>
             <div class="prompt-chip" data-prompt="Aide-moi à organiser ma journée de demain.">📅 Organiser ma journée</div>
             <div class="prompt-chip" data-prompt="Raconte-moi quelque chose d'intéressant.">✨ Surprends-moi</div>
+            <div class="prompt-chip" data-prompt="Dis-moi ce que tu sais sur moi.">🧠 Ce que tu sais sur moi</div>
           </div>
         </div>
         <div id="messagesList"></div>
@@ -431,12 +426,15 @@
           <button class="input-btn" id="attachBtn" title="Joindre une image ou un document (PDF, Word, Excel, PowerPoint, CSV, TXT)">
             <svg viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </button>
-          <textarea id="msgInput" placeholder="Message à Eva... (Entrée pour envoyer)" rows="1"></textarea>
+          <textarea id="msgInput" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true" data-lpignore="true" data-1p-ignore placeholder="Message à Eva... (Entrée pour envoyer)" rows="1"></textarea>
           <button class="input-btn" id="micBtn" title="Message vocal">
             <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
           </button>
-          <button id="sendBtn" disabled title="Envoyer">
+          <button class="input-btn send-btn" id="sendBtn" title="Envoyer" disabled>
             <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+          <button class="input-btn send-btn" id="stopBtn" title="Arrêter" style="display:none; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.5); color:#f87171;" onclick="stopGeneration()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
           </button>
         </div>
         <p class="input-disclaimer">E.V.A peut faire des erreurs · Vérifiez les informations importantes</p>
@@ -1076,19 +1074,23 @@
           Voix
         </button>
         <button class="settings-nav" data-section="account">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
+          <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
           Compte
         </button>
+        <button class="settings-nav" data-section="brain">
+          <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
+          Cerveau
+        </button>
         <button class="settings-nav" data-section="notifications">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           Notifications
         </button>
         <button class="settings-nav" data-section="dev">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
           Clés Dev
         </button>
         <button class="settings-nav" data-section="experimental">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           Expérimental
         </button>
         <button class="settings-nav" data-section="tutorial">
@@ -1216,6 +1218,7 @@
 <!-- ════════════════ SCRIPTS ════════════════ -->
 <script src="/js/core/firebase-config.js"></script>
 <script src="/js/features/cloudworks.js"></script>
+<script src="/js/features/pc-agent.js"></script>
 <script src="/js/ai/providers.js"></script>
 <script src="/js/ai/chat-handler.js"></script>
 <script src="/js/ai/web-search.js"></script>

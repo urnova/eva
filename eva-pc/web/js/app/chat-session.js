@@ -10,15 +10,31 @@ function initChatSession() {
 
 /* ═══ VISION CAPABILITY ═══
    Retourne true si le provider + modèle actuel accepte les images.
-   Les modèles locaux (qwen, eva) ne peuvent PAS analyser des images.
-   Tous les providers cloud acceptent les images, SAUF gpt-3.5-turbo. */
+
+   PROVIDERS AVEC VISION :
+   - openai     : GPT-4o, GPT-4-turbo (PAS gpt-3.5-turbo)
+   - claude     : Tous les modèles Claude 3+
+   - puter      : GPT-4o via puter.ai (vision native)
+   - lmstudio   : Dépend du modèle local chargé (ex. LLaVA) — on autorise la tentative
+   - ollama     : Dépend du modèle (ex. llava) — on autorise la tentative
+
+   PROVIDERS SANS VISION :
+   - pollinations : API text.pollinations.ai = TEXT ONLY, pas de multimodal
+   - qwen        : WebLLM local, pas de vision
+   - eva         : Modèle local Astral, pas de vision
+ */
 function _providerSupportsVision(prov, modelId) {
+  /* Pas de vision sur les providers text-only */
   if (prov === 'eva' || prov === 'qwen') return false;
+  /* Pollinations = API texte uniquement, PAS de vision native */
+  if (prov === 'pollinations') return false;
+
   if (prov === 'openai') {
     /* gpt-3.5-turbo ne supporte pas la vision */
     return !modelId || !modelId.includes('gpt-3.5');
   }
-  /* puter (gpt-4o, gpt-4o-mini, claude), claude, lmstudio, ollama — vision OK */
+
+  /* puter, claude, lmstudio, ollama — vision possible */
   return true;
 }
 window._providerSupportsVision = _providerSupportsVision;
@@ -30,22 +46,29 @@ function updateAttachCapabilities(prov, modelId) {
   if (!fi || !btn) return;
 
   var canPhoto = _providerSupportsVision(prov, modelId);
-  var DOC_EXT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv';
+  var DOC_EXT  = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv';
 
   if (canPhoto) {
     fi.accept = 'image/*,' + DOC_EXT;
     btn.title = 'Joindre une image ou un document (PDF, Word, Excel, PowerPoint, CSV, TXT)';
     btn.setAttribute('data-vision', 'true');
   } else {
+    /* Toujours activé, mais images exclues */
     fi.accept = DOC_EXT;
-    btn.title = 'Joindre un document (PDF, Word, Excel…) — images non disponibles avec ce modèle';
+    var provLabel = { pollinations:'Pollinations', qwen:'Local Privé', eva:'EVA Local',
+                      lmstudio:'LM Studio', ollama:'Ollama' }[prov] || prov;
+    btn.title = 'Joindre un document (PDF, Word, Excel, TXT…) — Photos non disponibles avec ' + provLabel;
     btn.setAttribute('data-vision', 'false');
   }
+  /* Le bouton est toujours actif (les documents fonctionnent partout) */
+  btn.disabled = false;
+  btn.style.opacity = '';
+  btn.style.cursor  = '';
 }
 window.updateAttachCapabilities = updateAttachCapabilities;
 
 function updateProviderLabel(p) {
-  var labels = {eva:'E.V.A — Officiel Astral',puter:'Puter (Gratuit)',qwen:'Local Privé',openai:'OpenAI GPT',claude:'Claude',lmstudio:'LM Studio',ollama:'Ollama'};
+  var labels = {eva:'E.V.A — Officiel Astral',puter:'Puter (Gratuit)',pollinations:'Pollinations (Gratuit)',qwen:'Local Privé',openai:'OpenAI GPT',claude:'Claude',lmstudio:'LM Studio',ollama:'Ollama'};
   var el = document.getElementById('providerName');
   if (el) el.textContent = labels[p] || p;
   /* Bannière d'avertissement mode local */
@@ -69,8 +92,16 @@ var CONV_MODELS = {
   ],
   puter: [
     { id:'gpt-4o-mini', label:'GPT-4o Mini — Rapide' },
-    { id:'gpt-4o', label:'GPT-4o — Expert' },
-    { id:'claude-3-5-sonnet', label:'Claude 3.5 Sonnet' }
+    { id:'gpt-4o', label:'GPT-4o — Expert' }
+  ],
+  pollinations: [
+    { id:'openai',          label:'GPT-4o Mini — Rapide' },
+    { id:'openai-large',    label:'GPT-4o — Expert' },
+    { id:'mistral',         label:'Mistral Nemo — Puissant' },
+    { id:'llama',           label:'Llama 3.3 70B — Open Source' },
+    { id:'deepseek',        label:'DeepSeek-V3 — Très performant' },
+    { id:'gemini',          label:'Gemini Flash 2.0 — Google' },
+    { id:'gemini-thinking', label:'Gemini 2.0 Thinking — Raisonnement' }
   ],
   openai: [
     { id:'gpt-4o-mini', label:'GPT-4o Mini — Rapide' },
@@ -108,7 +139,7 @@ window.getActiveModel = getActiveModel;
 
 /* Icônes par provider pour le dropdown modèle */
 var MODEL_ICONS = {
-  eva:'✨', puter:'🤖', openai:'🟢', claude:'🔷', qwen:'⚡', lmstudio:'🔧', ollama:'🦙'
+  eva:'✨', puter:'🤖', pollinations:'🌸', openai:'🟢', claude:'🔷', qwen:'⚡', lmstudio:'🔧', ollama:'🦙'
 };
 
 function updateModelSelectUI() {

@@ -656,12 +656,41 @@ function renderSettings(section) {
       c.innerHTML = '<div class="settings-section" style="color:var(--text-muted);text-align:center;padding:30px;">Erreur lors de la récupération des statistiques :<br><code style="font-size:0.8em;color:#ef4444;">' + e.message + '</code></div>';
     });
 
+  } else if (section === 'brain') {
+    c.innerHTML =
+      '<div class="settings-section">' +
+      '<div class="settings-section-title">Cartographie Neuronale</div>' +
+      '<div style="font-size:0.74em;color:var(--text-muted);margin-bottom:12px;line-height:1.5">Visualisation de la mémoire adaptative d\'EVA. Les nœuds représentent les concepts et les préférences mémorisés au fil de vos conversations.</div>' +
+      '<div id="brainMapContainer" style="width:100%;height:220px;background:rgba(10,15,30,0.8);border:1px solid rgba(123,139,245,0.3);border-radius:12px;position:relative;overflow:hidden;margin-bottom:15px;box-shadow:inset 0 0 20px rgba(0,0,0,0.5);">' +
+      '<canvas id="brainCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>' +
+      '</div>' +
+      '<div class="settings-row">' +
+        '<div><div class="settings-row-label">Apprentissage adaptatif</div>' +
+        '<div class="settings-row-sub">Activer la mémorisation automatique des préférences</div></div>' +
+        '<label class="alarm-toggle"><input type="checkbox" id="sAdaptation"' + (S.adaptationEnabled ? ' checked' : '') + ' onchange="toggleAdaptation(this.checked)"><span class="alarm-slider"></span></label>' +
+      '</div>' +
+      (S.evaMemory && S.evaMemory.nodes && S.evaMemory.nodes.length > 0 ?
+        '<div style="font-size:0.74em;color:var(--text-muted);margin-top:8px;"><strong>' + S.evaMemory.nodes.length + '</strong> nœuds et <strong>' + (S.evaMemory.links ? S.evaMemory.links.length : 0) + '</strong> connexions.<br><span style="font-size:0.8em;color:var(--text-dim)">Dernière mise à jour: ' + (S.evaMemory.lastUpdated ? new Date(S.evaMemory.lastUpdated).toLocaleDateString('fr-FR') : '') + '</span></div>'
+      : '<div style="font-size:0.74em;color:var(--text-muted);margin-top:8px;font-style:italic">Le réseau neuronal est vide. Il se construira en conversant avec EVA.</div>') +
+      '</div>' +
+      '<div class="settings-section">' +
+      '<div class="settings-section-title">Gestion des données</div>' +
+      '<div style="display:flex;gap:10px;margin-bottom:10px">' +
+      '<button class="btn btn-secondary" onclick="exportEvaMemory()" style="flex:1">💾 Exporter</button>' +
+      '<button class="btn btn-secondary" onclick="document.getElementById(\'importMemoryInput\').click()" style="flex:1">📂 Importer</button>' +
+      '<input type="file" id="importMemoryInput" accept=".json" style="display:none" onchange="importEvaMemory(event)">' +
+      '</div>' +
+      '<button class="btn btn-danger" onclick="resetEvaMemory()" style="width:100%;margin-top:5px" '+(S.evaMemory && S.evaMemory.nodes ? '':'disabled')+'>🗑️ Effacer la mémoire neuronale</button>' +
+      '</div>';
+      setTimeout(renderBrainMap, 100);
+
   } else if (section === 'account') {
     var isGoogleUser = S.user && S.user.providerData && S.user.providerData.some(function(p){return p.providerId==='google.com';});
     var hasPassword = S.user && S.user.providerData && S.user.providerData.some(function(p){return p.providerId==='password';});
     var isGoogleOnly = isGoogleUser && !hasPassword;
     var connLabel = isGoogleUser && hasPassword ? '🔵 Google + 🔑 Mot de passe' : isGoogleUser ? '🔵 Google' : '📧 Email/Mot de passe';
     c.innerHTML =
+      '<form style="display:none" aria-hidden="true"><input type="text" name="fake_email_to_prevent_autofill"><input type="password" name="fake_password_to_prevent_autofill"></form>' +
       '<div class="settings-section">' +
       '<div class="settings-section-title">Mon Compte</div>' +
       '<div class="settings-row"><div class="settings-row-label">Email actuel</div><div style="font-size:0.78em;color:var(--text-muted)">'+esc((S.user&&S.user.email)||'—')+'</div></div>' +
@@ -683,25 +712,6 @@ function renderSettings(section) {
       '<div class="form-field"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="sNewPassword" placeholder="Minimum 6 caractères"></div>' +
       '<div class="form-field"><label class="form-label">Confirmer le mot de passe</label><input type="password" class="form-input" id="sConfPassword" placeholder="Idem ci-dessus"></div>' +
       '<button class="btn btn-secondary" onclick="changePassword()" style="margin-top:4px">'+(isGoogleOnly ? 'Créer le mot de passe' : 'Mettre à jour le mot de passe')+'</button>' +
-      '</div>' +
-      '<div class="settings-section">' +
-      '<div class="settings-section-title">🧠 Mémoire Évolutive</div>' +
-      '<div class="settings-row">' +
-        '<div><div class="settings-row-label">Apprentissage adaptatif</div>' +
-        '<div class="settings-row-sub">EVA mémorise vos préférences au fil des conversations</div></div>' +
-        '<label class="alarm-toggle"><input type="checkbox" id="sAdaptation"' + (S.adaptationEnabled ? ' checked' : '') + ' onchange="toggleAdaptation(this.checked)"><span class="alarm-slider"></span></label>' +
-      '</div>' +
-      (S.evaMemory && S.evaMemory.resume ?
-        '<div style="margin-top:10px;background:rgba(123,139,245,0.06);border:1px solid rgba(123,139,245,0.18);border-radius:10px;padding:12px">' +
-        '<div style="font-size:0.68em;letter-spacing:1.5px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Ce qu\'EVA sait sur vous</div>' +
-        '<div style="font-size:0.78em;color:var(--text);line-height:1.7">' + esc(S.evaMemory.resume) + '</div>' +
-        '<div style="font-size:0.66em;color:var(--text-dim);margin-top:8px">Mise à jour n°' + (S.evaMemory.version||1) + ' — ' + (S.evaMemory.lastUpdated ? new Date(S.evaMemory.lastUpdated).toLocaleDateString('fr-FR') : '') + '</div>' +
-        '</div>'
-      : '<div style="font-size:0.74em;color:var(--text-muted);margin-top:8px;font-style:italic">La mémoire se construira automatiquement à mesure que vous conversez avec EVA.</div>') +
-      (S.evaMemory && S.evaMemory.resume ?
-        '<button class="btn btn-secondary" onclick="resetEvaMemory()" style="margin-top:10px;font-size:0.76em">🗑️ Effacer la mémoire</button>'
-      : '') +
-      '</div>' +
       '<div class="settings-section">' +
       '<div class="settings-section-title">Danger zone</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
@@ -738,19 +748,19 @@ function renderSettings(section) {
       '<div class="settings-section-title">Notifications</div>' +
       '<div style="background:rgba(123,139,245,0.08);border:1px solid rgba(123,139,245,0.25);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:0.72em;color:var(--text-muted);line-height:1.5;">' +
         '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:5px;stroke:#7b8bf5;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-        '<strong style="color:#7b8bf5">Important :</strong> Les notifications fonctionnent <strong>uniquement quand le site est ouvert</strong> dans votre navigateur. Fermez le site = plus de notifications.' +
+        '<strong style="color:#7b8bf5">Nouveau :</strong> Grâce à la technologie Vercel Serverless, vous recevez vos alertes push en temps réel, <strong>même si l’application est fermée</strong> !' +
       '</div>' +
       '<div class="settings-row">' +
         '<div><div class="settings-row-label">Permission navigateur</div><div class="settings-row-sub">Chrome, Edge, Firefox, Opera</div></div>' +
         '<div style="color:'+permColor+';font-size:0.82em;font-weight:600">'+permLabel+'</div>' +
       '</div>' +
       '<div class="settings-row">' +
-        '<div><div class="settings-row-label">Statut</div><div class="settings-row-sub">Actives uniquement site ouvert</div></div>' +
+        '<div><div class="settings-row-label">Statut Serverless</div><div class="settings-row-sub">Actives en arrière-plan (Cloud Push)</div></div>' +
         '<div style="color:'+fcmColor+';font-size:0.80em;font-weight:600">'+fcmStatus+'</div>' +
       '</div>' +
       (notifPerm !== 'granted' && notifPerm !== 'denied' && notifPerm !== 'unavailable' ?
         '<button class="btn btn-primary" onclick="activateNotifications()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Activer les notifications</button>' +
-        '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px">Recevez vos alarmes et rappels <strong>quand le site est ouvert</strong> — fonctionne sur PC et Android.</div>'
+        '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px">Recevez vos alarmes et rappels <strong>en toutes circonstances</strong> — fonctionne nativement sur PC et Android.</div>'
       : notifPerm === 'granted' ?
         '<div style="display:flex;gap:8px;margin-top:10px">' +
         '<button class="btn btn-secondary" onclick="deactivateNotifications()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="2" y1="2" x2="22" y2="22"/></svg>Désactiver</button>' +
@@ -758,7 +768,7 @@ function renderSettings(section) {
         '</div>' +
         '<button class="btn btn-primary" onclick="testNotification()" style="margin-top:8px;width:100%;background:rgba(123,139,245,0.12);border-color:var(--cyan);display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Tester une notification</button>' +
         '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px;display:flex;align-items:center;gap:5px">' +
-        (hasFcmToken ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Notifications actives — le site doit rester ouvert.' : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Notifications non enregistrées. Cliquez sur Re-enregistrer.') +
+        (hasFcmToken ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Push Serverless actif — Vous recevrez des alertes même site fermé.' : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Notifications non enregistrées. Cliquez sur Re-enregistrer.') +
         '</div>'
       : notifPerm === 'denied' ?
         '<div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);border-radius:10px;padding:12px;margin-top:10px;font-size:0.78em;color:var(--text-muted);display:flex;gap:8px;align-items:flex-start">' +
@@ -770,15 +780,15 @@ function renderSettings(section) {
       '<div class="settings-section">' +
       '<div class="settings-section-title">Types de notifications</div>' +
       '<div class="settings-row">' +
-        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div><div class="settings-row-label">Alarmes</div><div class="settings-row-sub">Alerte + boutons Arrêter / Reporter (site ouvert)</div></div></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div><div class="settings-row-label">Alarmes</div><div class="settings-row-sub">Alerte + boutons Arrêter / Reporter (arrière-plan)</div></div></div>' +
         '<span style="color:var(--cyan);font-size:0.75em">Auto</span>' +
       '</div>' +
       '<div class="settings-row">' +
-        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><div><div class="settings-row-label">Rappels</div><div class="settings-row-sub">Notification à l\'heure exacte (site ouvert)</div></div></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><div><div class="settings-row-label">Rappels</div><div class="settings-row-sub">Notification à l\'heure exacte (arrière-plan)</div></div></div>' +
         '<span style="color:var(--cyan);font-size:0.75em">Auto</span>' +
       '</div>' +
       '<div class="settings-row">' +
-        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div><div class="settings-row-label">Événements calendrier</div><div class="settings-row-sub">Alerte 15 min avant (site ouvert)</div></div></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div><div class="settings-row-label">Événements calendrier</div><div class="settings-row-sub">Alerte 15 min avant (arrière-plan)</div></div></div>' +
         '<span style="color:var(--cyan);font-size:0.75em">Auto</span>' +
       '</div>' +
       '</div>' +
@@ -998,15 +1008,15 @@ async function saveAISettings() {
   /* Sauvegarde locale */
   saveCfg();
 
-  /* Sauvegarde Firebase — sync cross-appareils */
-  if (S.user && S.user.uid) {
-    try {
-      await db.collection('users').doc(S.user.uid).set(
-        { preferences: S.config },
-        { merge: true }
-      );
-    } catch(e) { console.warn('[EVA] Firebase AI prefs save:', e); }
-  }
+  /* Sauvegarde locale uniquement pour PC (Pas de Firebase) */
+  // if (S.user && S.user.uid) {
+  //   try {
+  //     await db.collection('users').doc(S.user.uid).set(
+  //       { preferences: S.config },
+  //       { merge: true }
+  //     );
+  //   } catch(e) { console.warn('[EVA] Firebase AI prefs save:', e); }
+  // }
 
   /* Réinitialiser le conv state pour que la nouvelle conv utilise le nouveau provider */
   if (!S.convId) S.conv = {};
@@ -1207,15 +1217,15 @@ async function saveVoiceSettings() {
   /* Mise à jour du badge provider dans l'UI */
   updateProviderBadge();
 
-  /* Sauvegarde Firebase — sync cross-appareils (clés incluses) */
-  if (S.user && S.user.uid) {
-    try {
-      await db.collection('users').doc(S.user.uid).set(
-        { preferences: S.config },
-        { merge: true }
-      );
-    } catch(e) { console.warn('[EVA] Firebase voice prefs save:', e); }
-  }
+  /* Sauvegarde locale uniquement pour PC (Pas de Firebase) */
+  // if (S.user && S.user.uid) {
+  //   try {
+  //     await db.collection('users').doc(S.user.uid).set(
+  //       { preferences: S.config },
+  //       { merge: true }
+  //     );
+  //   } catch(e) { console.warn('[EVA] Firebase voice prefs save:', e); }
+  // }
 
   var provLabel = {'eva-custom':'EVA Voice Perso','native':'Navigateur','eva':'Kokoro Neural','elevenlabs':'ElevenLabs','openai':'OpenAI TTS','piper':'Piper TTS (FR)'}[S.config.voiceProvider||'piper'] || S.config.voiceProvider;
   toast('✓ Paramètres audio sauvegardés — provider : ' + provLabel, 'success');
@@ -1285,30 +1295,39 @@ async function getPuterStatus() {
   if (!window.puter) return null;
   try { return await puter.auth.getUser(); } catch(e) { return null; }
 }
-async function connectPuter() {
+function connectPuter() {
   if (!window.puter) { toast('Puter non disponible','error'); return; }
-  /* puter.auth.signIn() peut lancer une exception même quand l'auth réussit
-     (popup fermée par Puter après login, ou utilisateur déjà connecté).
-     On appelle getUser() dans tous les cas pour vérifier l'état réel. */
-  try { await window.evaSafePuterSignIn(); } catch(_) {}
+  
+  // Appel 100% synchrone pour contourner les bloqueurs de pop-up d'Edge
+  var authPromise;
   try {
-    var user = await puter.auth.getUser();
+    authPromise = puter.auth.signIn();
+  } catch(err) {
+    console.error('[EVA] puter.auth.signIn() error immédiate:', err);
+    toast("Impossible d'ouvrir la fenêtre Puter", "error");
+    return;
+  }
+
+  // On gère la suite de manière asynchrone
+  authPromise.then(function() {
+    return puter.auth.getUser();
+  }).then(function(user) {
     if (user && user.username) {
       S.config.puterUsername = user.username;
       saveCfg();
       if (S.user) {
-        await db.collection('users').doc(S.user.uid).set({puterUsername: user.username}, {merge:true}).catch(function(){});
+        db.collection('users').doc(S.user.uid).set({puterUsername: user.username}, {merge:true}).catch(function(){});
       }
       toast('Puter connecté : ' + user.username, 'success');
       renderSettings('ai');
     } else {
       toast('Connexion Puter annulée','error');
     }
-  } catch(e) { 
-    console.error('[EVA] Erreur détaillée connexion Puter:', e); 
-    var msg = (e && e.message) ? e.message : 'inconnue';
+  }).catch(function(err) {
+    console.error('[EVA] Erreur détaillée connexion Puter:', err); 
+    var msg = (err && err.message) ? err.message : (err && err.error) ? err.error : 'inconnue';
     toast('Connexion Puter échouée (' + msg + ')','error'); 
-  }
+  });
 }
 async function refreshPuterStatusUI() {
   var statusEl = document.getElementById('puterConnectStatus');
@@ -1430,18 +1449,323 @@ window.toggleAdaptation = toggleAdaptation;
 
 async function resetEvaMemory() {
   if (!S.user) return;
-  if (!confirm('Effacer toute la mémoire qu\'EVA a apprise sur vous ? Cette action est irréversible.')) return;
+  if (!confirm('EFFACEMENT NEURONAL : Effacer toute la mémoire qu\'EVA a apprise sur vous ? Cette action est irréversible.')) return;
   try {
     await db.collection('users').doc(S.user.uid).set({ evaMemory: null }, { merge: true });
     S.evaMemory = null;
     if (S.profile) S.profile.evaMemory = null;
     S._msgSinceExtract = 0;
     toast('Mémoire effacée', 'success');
-    renderSettings('account');
+    renderSettings('brain');
   } catch(e) { toast('Erreur', 'error'); }
 }
 window.resetEvaMemory = resetEvaMemory;
 
+window.exportEvaMemory = function() {
+  if (!S.evaMemory) return toast('Aucune mémoire à exporter', 'warning');
+  var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(S.evaMemory, null, 2));
+  var downloadAnchorNode = document.createElement('a');
+  downloadAnchorNode.setAttribute("href", dataStr);
+  downloadAnchorNode.setAttribute("download", "eva_cerveau_" + Date.now() + ".json");
+  document.body.appendChild(downloadAnchorNode);
+  downloadAnchorNode.click();
+  downloadAnchorNode.remove();
+  toast('🧠 Cerveau exporté avec succès', 'success');
+};
+
+window.importEvaMemory = function(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (!data || !data.nodes || !Array.isArray(data.nodes)) throw new Error("Fichier invalide");
+      if (confirm('Voulez-vous remplacer la mémoire actuelle par celle de ce fichier ?')) {
+        S.evaMemory = data;
+        if (S.user && typeof db !== 'undefined') {
+          db.collection('users').doc(S.user.uid).set({ evaMemory: data }, { merge: true });
+        }
+        toast('🧠 Cerveau importé et fusionné !', 'success');
+        renderSettings('brain');
+      }
+    } catch(err) {
+      toast("Erreur d'importation : fichier invalide", 'error');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+};
+
+function renderBrainMap() {
+  var canvas = document.getElementById('brainCanvas');
+  var container = document.getElementById('brainMapContainer');
+  if (!canvas || !container) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width = canvas.offsetWidth;
+  var h = canvas.height = canvas.offsetHeight;
+
+  // Création du popup
+  var oldPopup = document.getElementById('brainPopup');
+  if(oldPopup) oldPopup.remove();
+  var popup = document.createElement('div');
+  popup.id = 'brainPopup';
+  popup.style.cssText = 'position:absolute;top:10px;left:10px;right:10px;bottom:10px;background:rgba(10,15,30,0.95);border:1px solid var(--cyan);border-radius:10px;padding:15px;display:none;flex-direction:column;backdrop-filter:blur(5px);z-index:10;animation:fadeUp 0.3s;box-shadow:0 10px 30px rgba(0,0,0,0.8);';
+  popup.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid rgba(123,139,245,0.2);padding-bottom:5px;"><strong style="color:var(--cyan);font-family:\'Orbitron\',monospace;font-size:1.1em;letter-spacing:1px;" id="brainPopupTitle">Titre</strong><button id="brainPopupClose" style="background:none;border:none;color:var(--text-muted);font-size:1.2em;cursor:pointer;transition:color 0.2s;">✕</button></div><div id="brainPopupDesc" style="font-size:0.82em;color:var(--text);line-height:1.6;overflow-y:auto;flex:1;"></div>';
+  container.appendChild(popup);
+
+  document.getElementById('brainPopupClose').onclick = function() {
+    popup.style.display = 'none';
+  };
+
+  var nodesData = (S.evaMemory && Array.isArray(S.evaMemory.nodes)) ? S.evaMemory.nodes : [];
+  var linksData = (S.evaMemory && Array.isArray(S.evaMemory.links)) ? S.evaMemory.links : [];
+
+  var simNodes = [];
+  var nodeMap = {};
+
+  if (nodesData.length === 0) {
+    for (var i = 0; i < 5; i++) {
+      simNodes.push({ id: 'fake'+i, label: '???', details: 'Mémoire vide.', x: Math.random()*w, y: Math.random()*h, vx: 0, vy: 0, r: 6, phase: Math.random()*Math.PI*2 });
+    }
+  } else {
+    nodesData.forEach(function(n) {
+      var sn = {
+        id: n.id,
+        label: n.label,
+        details: n.details,
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: 0, vy: 0,
+        r: (n.id && String(n.id).toLowerCase() === 'utilisateur') || (n.id && String(n.id).toLowerCase() === 'user') ? 14 : 9,
+        phase: Math.random() * Math.PI * 2
+      };
+      simNodes.push(sn);
+      nodeMap[n.id] = sn;
+    });
+  }
+
+  var simLinks = [];
+  var linkCounts = {};
+  linksData.forEach(function(l) {
+    if (nodeMap[l.source] && nodeMap[l.target]) {
+      simLinks.push({ source: nodeMap[l.source], target: nodeMap[l.target], label: l.label });
+      linkCounts[l.source] = (linkCounts[l.source] || 0) + 1;
+      linkCounts[l.target] = (linkCounts[l.target] || 0) + 1;
+    }
+  });
+
+  // Schéma Radial : Trouver le hub et positionner
+  var hubNode = null;
+  var maxLinks = -1;
+  simNodes.forEach(function(n) {
+    var c = linkCounts[n.id] || 0;
+    if (c > maxLinks) { maxLinks = c; hubNode = n; }
+    // Start everyone at center for the entrance animation
+    n.x = w/2;
+    n.y = h/2;
+  });
+
+  if (hubNode && simNodes.length > 1) {
+    hubNode.r = 14;
+    hubNode.targetX = w/2;
+    hubNode.targetY = h/2;
+    var satellites = simNodes.filter(function(n) { return n !== hubNode; });
+    var R = 150; // Rayon de base
+    satellites.forEach(function(n, i) {
+      var layer = Math.floor(i / 12);
+      var currentR = R + layer * 100;
+      var itemsInLayer = Math.min(satellites.length - layer * 12, 12);
+      var angle = ((i % 12) / itemsInLayer) * Math.PI * 2;
+      n.targetX = w/2 + currentR * Math.cos(angle);
+      n.targetY = h/2 + currentR * Math.sin(angle);
+    });
+  } else {
+    // Si aucun lien ou graphe vide
+    simNodes.forEach(function(n, i) {
+      n.targetX = w/2;
+      n.targetY = h/2;
+      if (simNodes.length > 1) {
+        var angle = (i / simNodes.length) * Math.PI * 2;
+        n.targetX = w/2 + 100 * Math.cos(angle);
+        n.targetY = h/2 + 100 * Math.sin(angle);
+      }
+    });
+  }
+
+  var isPanning = false;
+  var hasMoved = false;
+  var lastX = 0;
+  var lastY = 0;
+  var offsetX = 0;
+  var offsetY = 0;
+
+  canvas.onmousedown = function(e) {
+    var rect = canvas.getBoundingClientRect();
+    lastX = e.clientX - rect.left;
+    lastY = e.clientY - rect.top;
+    isPanning = true;
+    hasMoved = false;
+  };
+  
+  canvas.onmousemove = function(e) {
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left;
+    var my = e.clientY - rect.top;
+    
+    // Hover effect (en tenant compte de l'offset)
+    var hovering = false;
+    for (var i=0; i<simNodes.length; i++) {
+      if (Math.hypot(simNodes[i].x - (mx - offsetX), simNodes[i].y - (my - offsetY)) < simNodes[i].r + 15) {
+        hovering = true; break;
+      }
+    }
+    canvas.style.cursor = isPanning && hasMoved ? 'grabbing' : (hovering ? 'pointer' : 'grab');
+
+    if (isPanning) {
+      var dx = mx - lastX;
+      var dy = my - lastY;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+        hasMoved = true;
+      }
+      offsetX += dx;
+      offsetY += dy;
+      lastX = mx;
+      lastY = my;
+    }
+  };
+  
+  canvas.onmouseup = function(e) {
+    if (!hasMoved) {
+      // C'est un clic !
+      var rect = canvas.getBoundingClientRect();
+      var mx = e.clientX - rect.left;
+      var my = e.clientY - rect.top;
+      for (var i=0; i<simNodes.length; i++) {
+        var n = simNodes[i];
+        if (Math.hypot(n.x - (mx - offsetX), n.y - (my - offsetY)) < n.r + 20) {
+          document.getElementById('brainPopupTitle').innerText = n.label || n.id;
+          document.getElementById('brainPopupDesc').innerText = n.details || "Aucune information supplémentaire enregistrée.";
+          popup.style.display = 'flex';
+          break;
+        }
+      }
+    }
+    isPanning = false;
+    canvas.style.cursor = 'grab';
+  };
+  
+  canvas.onmouseleave = function() {
+    isPanning = false;
+    canvas.style.cursor = 'grab';
+  };
+  
+  // Set default cursor
+  canvas.style.cursor = 'grab';
+
+  var time = 0;
+
+  function draw() {
+    if (!document.getElementById('brainCanvas')) return;
+    time += 0.05; 
+    
+    // Schema Animation (Lerp)
+    simNodes.forEach(function(n) {
+      // Lerp smooth movement vers la position cible
+      n.x += (n.targetX - n.x) * 0.04;
+      n.y += (n.targetY - n.y) * 0.04;
+    });
+
+    // Render
+    ctx.clearRect(0, 0, w, h);
+    
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    
+    // Edges
+    ctx.lineWidth = 2;
+    simLinks.forEach(function(l) {
+      ctx.beginPath();
+      ctx.moveTo(l.source.x, l.source.y);
+      ctx.lineTo(l.target.x, l.target.y);
+      var pulse = (Math.sin(time + l.source.phase) + 1) / 2;
+      ctx.strokeStyle = 'rgba(123, 139, 245, ' + (0.3 + pulse * 0.3) + ')';
+      ctx.stroke();
+
+      var dx = l.target.x - l.source.x;
+      var dy = l.target.y - l.source.y;
+      var angle = Math.atan2(dy, dx);
+      var targetR = l.target.r + 6;
+      var arrowX = l.target.x - targetR * Math.cos(angle);
+      var arrowY = l.target.y - targetR * Math.sin(angle);
+      
+      ctx.beginPath();
+      ctx.moveTo(arrowX, arrowY);
+      ctx.lineTo(arrowX - 8 * Math.cos(angle - Math.PI/7), arrowY - 8 * Math.sin(angle - Math.PI/7));
+      ctx.lineTo(arrowX - 8 * Math.cos(angle + Math.PI/7), arrowY - 8 * Math.sin(angle + Math.PI/7));
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.fill();
+
+      if (l.label) {
+        var mx = l.source.x + dx * 0.4;
+        var my = l.source.y + dy * 0.4;
+        
+        ctx.font = '10px sans-serif';
+        var textW = ctx.measureText(l.label).width;
+        
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.85)';
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(mx - textW/2 - 6, my - 8, textW + 12, 16, 8);
+        } else {
+            ctx.fillRect(mx - textW/2 - 6, my - 8, textW + 12, 16);
+        }
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(123, 139, 245, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.textAlign = 'center';
+        ctx.fillText(l.label, mx, my + 3);
+      }
+    });
+
+    // Nodes
+    simNodes.forEach(function(n) {
+      ctx.beginPath();
+      var rPulse = n.r + Math.sin(time * 2 + n.phase) * 1.5;
+      ctx.arc(n.x, n.y, Math.max(1, rPulse), 0, Math.PI * 2);
+      ctx.fillStyle = n.r > 9 ? '#06b6d4' : '#7b8bf5';
+      ctx.shadowBlur = 12 + Math.sin(time * 3 + n.phase) * 8;
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      if (n.label) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(n.label, n.x, n.y - rPulse - 6);
+      }
+    });
+
+    ctx.restore();
+
+    if (!S.adaptationEnabled) {
+      ctx.fillStyle = 'rgba(10, 15, 30, 0.7)';
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '14px Orbitron';
+      ctx.textAlign = 'center';
+      ctx.fillText('APPRENTISSAGE DÉSACTIVÉ', w/2, h/2);
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+window.renderBrainMap = renderBrainMap;
 function testVoice() {
   if (!window.EVATTS) return;
   /* Débloquer AudioContext immédiatement pendant le geste utilisateur (avant tout await) */
