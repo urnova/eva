@@ -1902,19 +1902,25 @@ function renderBrainMap() {
     if(!hitNode && interactionMode === 'default') {
         for(var j=0; j<linksData.length; j++) {
             var l = linksData[j];
-            var s = nodeMap[l.source], t = nodeMap[l.target];
-            if(s && t) {
-                var sx = s.x * scale, sy = s.y * scale;
-                var tx = t.x * scale, ty = t.y * scale;
-                var l2 = Math.pow(tx - sx, 2) + Math.pow(ty - sy, 2);
-                var tt = l2 === 0 ? 0 : ((mx - sx) * (tx - sx) + (my - sy) * (ty - sy)) / l2;
-                tt = Math.max(0, Math.min(1, tt));
-                var projX = sx + tt * (tx - sx);
-                var projY = sy + tt * (ty - sy);
-                var distSq = Math.pow(mx - projX, 2) + Math.pow(my - projY, 2);
-                if (distSq < 100) { // < 10px tolerance
+            if (l._lx && l._ly) {
+                var distSq = Math.pow(mx - l._lx, 2) + Math.pow(my - l._ly, 2);
+                if (distSq < 250) { // Rayon de tolérance pour le clic (label)
                     hitLink = l;
                     break;
+                }
+            } else {
+                // Fallback (si la boucle de rendu n'a pas encore tourné)
+                var s = nodeMap[l.source], t = nodeMap[l.target];
+                if(s && t) {
+                    var sx = s.x * scale, sy = s.y * scale;
+                    var tx = t.x * scale, ty = t.y * scale;
+                    var l2 = Math.pow(tx - sx, 2) + Math.pow(ty - sy, 2);
+                    var tt = l2 === 0 ? 0 : ((mx - sx) * (tx - sx) + (my - sy) * (ty - sy)) / l2;
+                    tt = Math.max(0, Math.min(1, tt));
+                    var projX = sx + tt * (tx - sx);
+                    var projY = sy + tt * (ty - sy);
+                    var dSq = Math.pow(mx - projX, 2) + Math.pow(my - projY, 2);
+                    if (dSq < 100) { hitLink = l; break; }
                 }
             }
         }
@@ -2144,24 +2150,62 @@ function renderBrainMap() {
     
     // Draw Links
     ctx.lineWidth = 2;
+    
+    // Groupement des liens pour Bézier
+    var linkGroups = {};
+    linksData.forEach(function(l) {
+      var s = l.source, t = l.target;
+      var isCanonical = s < t;
+      var key = isCanonical ? (s + '_' + t) : (t + '_' + s);
+      if(!linkGroups[key]) linkGroups[key] = [];
+      l._groupIndex = linkGroups[key].length;
+      l._isCanonical = isCanonical;
+      linkGroups[key].push(l);
+    });
+    linksData.forEach(function(l) {
+      var key = l._isCanonical ? (l.source + '_' + l.target) : (l.target + '_' + l.source);
+      l._groupTotal = linkGroups[key].length;
+    });
+
     linksData.forEach(function(l) {
       var s = nodeMap[l.source], t = nodeMap[l.target];
       if(s && t) {
         var sx = s.x * scale, sy = s.y * scale;
         var tx = t.x * scale, ty = t.y * scale;
+        
+        // Calcul du vecteur normal orthogonal
+        var cx_s = l._isCanonical ? s : t;
+        var cx_t = l._isCanonical ? t : s;
+        var cdx = (cx_t.x - cx_s.x) * scale;
+        var cdy = (cx_t.y - cx_s.y) * scale;
+        var cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
+        var nx = -cdy / cdist;
+        var ny = cdx / cdist;
+        
+        var step = 40;
+        var offset = (l._groupIndex - (l._groupTotal - 1) / 2) * step;
+        
+        var midX = (sx + tx) / 2;
+        var midY = (sy + ty) / 2;
+        
+        var cpX = midX + nx * offset;
+        var cpY = midY + ny * offset;
+
         // Mode édition de lien : si on clique, on modifie le label
         ctx.beginPath();
         ctx.moveTo(sx, sy);
-        ctx.lineTo(tx, ty);
+        ctx.quadraticCurveTo(cpX, cpY, tx, ty);
         var pulse = (Math.sin(time + s.phase) + 1) / 2;
         ctx.strokeStyle = 'rgba(123, 139, 245, ' + (0.3 + pulse * 0.4) + ')';
         ctx.stroke();
 
-        var dx = tx - sx, dy = ty - sy;
-        var angle = Math.atan2(dy, dx);
-        var targetR = t.r + 6;
-        var arrowX = tx - targetR * Math.cos(angle);
-        var arrowY = ty - targetR * Math.sin(angle);
+        var tanX = tx - cpX;
+        var tanY = ty - cpY;
+        var tanDist = Math.sqrt(tanX*tanX + tanY*tanY) || 1;
+        var angle = Math.atan2(tanY, tanX);
+        var targetR = t.r * scale + 6;
+        var arrowX = tx - (tanX / tanDist) * targetR;
+        var arrowY = ty - (tanY / tanDist) * targetR;
         
         ctx.beginPath();
         ctx.moveTo(arrowX, arrowY);
@@ -2170,9 +2214,13 @@ function renderBrainMap() {
         ctx.fillStyle = ctx.strokeStyle;
         ctx.fill();
 
+        // Label au centre de la courbe (t=0.5)
+        var lx = (midX + cpX) / 2;
+        var ly = (midY + cpY) / 2;
+        l._lx = lx; // Sauvegarde pour le hit detection
+        l._ly = ly;
+
         if (l.label) {
-          var lx = sx + dx * 0.5;
-          var ly = sy + dy * 0.5;
           ctx.font = '10px sans-serif';
           var textW = ctx.measureText(l.label).width;
           ctx.fillStyle = 'rgba(10, 15, 30, 0.85)';
