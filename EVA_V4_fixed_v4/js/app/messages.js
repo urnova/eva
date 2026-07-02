@@ -504,7 +504,9 @@ async function handleSend() {
   if (window._userBio) userCtx += '\nNote personnelle : ' + window._userBio;
   /* Mémoire Évolutive — injectée si activée et non vide */
   if (S.adaptationEnabled && S.evaMemory && S.evaMemory.nodes) {
-    userCtx += '\n\nMÉMOIRE ÉVOLUTIVE (Graphe de Connaissances) :\n' + JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links});
+    userCtx += '\n\nMÉMOIRE ÉVOLUTIVE (Graphe de Connaissances) :\n' + 
+               'Note vitale: Dans ce graphe, le nœud avec l\'id "utilisateur" te représente TOI (l\'interlocuteur humain). Toutes les connexions à "utilisateur" sont tes caractéristiques et ton entourage.\n' +
+               JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links});
   }
 
   // Injection date/heure courante — EVA connaît ainsi l'heure pour créer alarmes/rappels

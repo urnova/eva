@@ -34,7 +34,8 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       '   - "add_links" : pour lier de nouvelles choses. RÈGLE CRUCIALE : Le "label" d\'un lien DOIT FAIRE ENTRE 1 ET 3 MOTS MAXIMUM (ex: "aime", "travaille pour", "déteste"). Les explications longues vont dans "details" du nœud.\n' +
       '4. DÉDUPLICATION OBLIGATOIRE : Avant de créer dans "add_nodes", vérifie si ça n\'existe pas déjà. Si oui, utilise "update_nodes".\n' +
       '5. SUPPRESSION : Si tu dois regrouper deux nœuds, copie les infos du mauvais dans le bon via "update_nodes", puis mets l\'ID du mauvais dans "remove_nodes".\n' +
-      '6. HIÉRARCHIE DES LIENS : Ne relie pas tout à l\'utilisateur central. Crée des chaînes logiques (L\'utilisateur dirige Entreprise X -> Entreprise X gère Projet Z).\n\n' +
+      '6. NŒUD CENTRAL ABSOLU : L\'entité centrale représentant l\'utilisateur de l\'application a TOUJOURS l\'id "utilisateur". Tu ne dois JAMAIS créer un nouveau nœud avec son prénom. Si l\'utilisateur parle de lui-même ou de ses préférences, lie les informations à l\'id "utilisateur" via update_nodes ou add_links.\n' +
+      '7. HIÉRARCHIE DES LIENS : Ne relie pas tout à l\'utilisateur central. Crée des chaînes logiques (Ex: "utilisateur" -> dirige -> Entreprise X -> gère -> Projet Z).\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
