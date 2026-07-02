@@ -1,7 +1,7 @@
 /* ═══ AUTH ═══ */
 function initAuth() {
   auth.onAuthStateChanged(function(user) {
-    if (!user) { window.location.href = '/login'; return; }
+    if (!user) { window.location.href = 'app-login.html'; return; }
     S.user = user;
     loadProfile(user.uid);
     initChatSession();
@@ -33,7 +33,7 @@ async function loadProfile(uid) {
     if (doc.exists) {
       S.profile = doc.data() || {};
       if (S.profile.onboardingCompleted === false) {
-        window.location.href = '/onboarding.html';
+        window.location.href = 'onboarding.html';
         return;
       }
       S.keyPersonality = S.profile.keyPersonality || null;
@@ -132,7 +132,7 @@ async function createProfile(user) {
   };
   try {
     await db.collection('users').doc(user.uid).set(p);
-    window.location.href = '/onboarding.html';
+    window.location.href = 'onboarding.html';
   } catch(e) {}
 }
 
