@@ -156,12 +156,27 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       });
     }
 
-    // 3. Ajouter les liens
+    // 3. Ajouter ou fusionner les liens
     if (patch.add_links && Array.isArray(patch.add_links)) {
       patch.add_links.forEach(function(l) {
         if (l && l.source && l.target) {
-          var exists = currentMem.links.find(function(ex){ return ex.source === l.source && ex.target === l.target && ex.label === l.label; });
-          if (!exists) {
+          // Chercher si un lien existe déjà entre ces deux nœuds (peu importe le sens)
+          var exists = currentMem.links.find(function(ex){ 
+            return (ex.source === l.source && ex.target === l.target) || 
+                   (ex.source === l.target && ex.target === l.source); 
+          });
+          
+          if (exists) {
+            // Si le lien existe, on vérifie si le label est différent pour le concaténer
+            if (exists.label !== l.label && !exists.label.includes(l.label)) {
+              exists.label = exists.label + " | " + l.label;
+              // Limiter la taille du label si ça devient trop grand
+              var parts = exists.label.split(" | ");
+              if (parts.length > 3) parts.shift(); // garder les 3 derniers contextes max
+              exists.label = parts.join(" | ");
+              updated = true;
+            }
+          } else {
             currentMem.links.push(l);
             updated = true;
           }

@@ -41,10 +41,33 @@ async function loadProfile(uid) {
       S.evaMemory = S.profile.evaMemory || null;
       S._lastExtractTime = 0;
 
-      // Nettoyage des liens corrompus (self-loops invisibles ou inaccessibles)
+      // Nettoyage des liens corrompus (self-loops invisibles ou inaccessibles) et dédoublonnage
       if (S.evaMemory && S.evaMemory.links) {
           var initialLinkCount = S.evaMemory.links.length;
-          S.evaMemory.links = S.evaMemory.links.filter(function(l) { return l.source !== l.target; });
+          // 1. Enlever les self-loops
+          var cleanedLinks = S.evaMemory.links.filter(function(l) { return l.source !== l.target; });
+          
+          // 2. Dédoublonner (fusionner les labels si deux nœuds sont déjà connectés)
+          var uniqueLinks = [];
+          cleanedLinks.forEach(function(l) {
+             var existing = uniqueLinks.find(function(ex) {
+                 return (ex.source === l.source && ex.target === l.target) || 
+                        (ex.source === l.target && ex.target === l.source);
+             });
+             if (existing) {
+                 if (existing.label !== l.label && !existing.label.includes(l.label)) {
+                     existing.label = existing.label + " | " + l.label;
+                     var parts = existing.label.split(" | ");
+                     if (parts.length > 3) parts.shift();
+                     existing.label = parts.join(" | ");
+                 }
+             } else {
+                 uniqueLinks.push(l);
+             }
+          });
+          
+          S.evaMemory.links = uniqueLinks;
+          
           if (S.evaMemory.links.length !== initialLinkCount) {
               try { db.collection('users').doc(S.user.uid).set({ evaMemory: S.evaMemory }, { merge: true }); } catch(e){}
           }
