@@ -4,12 +4,11 @@
   "rewrites": [
     { "source": "/js/core/firebase-config.js", "destination": "/api/config" },
     { "source": "/chat", "destination": "/chat.html" },
-    { "source": "/chat/cloudworks", "destination": "/chat.html" },
-    { "source": "/chat/(.*)", "destination": "/chat.html" },
+    { "source": "/chat/:path*", "destination": "/chat.html" },
     { "source": "/login", "destination": "/login.html" },
-    { "source": "/login/(.*)", "destination": "/login.html" },
+    { "source": "/login/:path*", "destination": "/login.html" },
     { "source": "/onboarding", "destination": "/onboarding.html" },
-    { "source": "/onboarding/(.*)", "destination": "/onboarding.html" }
+    { "source": "/onboarding/:path*", "destination": "/onboarding.html" }
   ],
   "headers": [
 
