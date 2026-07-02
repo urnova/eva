@@ -121,7 +121,6 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     frame: false,           // Fenêtre sans bordure native
-    titleBarStyle: 'hidden',
     backgroundColor: '#111113',
     icon: join(__dirname, '../public/eva-icon.png'),
     webPreferences: {
@@ -146,19 +145,7 @@ function createWindow() {
 
   // ─── Affichage fluide ───
   mainWindow.once('ready-to-show', () => {
-    mainWindow?.show()
-    // Animation d'entrée via fade
-    mainWindow?.setOpacity(0)
-    let opacity = 0
-    const fadeIn = setInterval(() => {
-      opacity += 0.05
-      if (opacity >= 1) {
-        clearInterval(fadeIn)
-        mainWindow?.setOpacity(1)
-      } else {
-        mainWindow?.setOpacity(opacity)
-      }
-    }, 16)
+    // La fenêtre principale attendra l'appel de launchMainApp() pour s'afficher.
   })
 
   // ─── Sauvegarder la position/taille ───
@@ -347,6 +334,18 @@ function launchMainApp() {
   }
   if (mainWindow && !mainWindow.isVisible()) {
     mainWindow.show()
+    // Animation d'entrée via fade
+    mainWindow.setOpacity(0)
+    let opacity = 0
+    const fadeIn = setInterval(() => {
+      opacity += 0.05
+      if (opacity >= 1) {
+        clearInterval(fadeIn)
+        if (mainWindow) mainWindow.setOpacity(1)
+      } else {
+        if (mainWindow) mainWindow.setOpacity(opacity)
+      }
+    }, 30)
     mainWindow.focus()
   }
 }
