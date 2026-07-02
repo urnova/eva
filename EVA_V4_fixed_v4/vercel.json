@@ -3,12 +3,9 @@
   "cleanUrls": true,
   "rewrites": [
     { "source": "/js/core/firebase-config.js", "destination": "/api/config" },
-    { "source": "/chat", "destination": "/chat.html" },
-    { "source": "/chat/:path*", "destination": "/chat.html" },
-    { "source": "/login", "destination": "/login.html" },
-    { "source": "/login/:path*", "destination": "/login.html" },
-    { "source": "/onboarding", "destination": "/onboarding.html" },
-    { "source": "/onboarding/:path*", "destination": "/onboarding.html" }
+    { "source": "/chat/(.*)", "destination": "/chat" },
+    { "source": "/login/(.*)", "destination": "/login" },
+    { "source": "/onboarding/(.*)", "destination": "/onboarding" }
   ],
   "headers": [
 
