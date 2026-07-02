@@ -35,7 +35,8 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       '4. DÉDUPLICATION OBLIGATOIRE : Avant de créer dans "add_nodes", vérifie si ça n\'existe pas déjà. Si oui, utilise "update_nodes".\n' +
       '5. SUPPRESSION : Si tu dois regrouper deux nœuds, copie les infos du mauvais dans le bon via "update_nodes", puis mets l\'ID du mauvais dans "remove_nodes".\n' +
       '6. NŒUD CENTRAL OBLIGATOIRE : L\'entité centrale de l\'utilisateur a TOUJOURS l\'id "utilisateur". Tu ne dois JAMAIS créer un nouveau nœud avec son prénom pour le représenter lui-même.\n' +
-      '7. RAMIFICATIONS COMPLEXES (TRÈS IMPORTANT) : Ne force pas tous les liens vers "utilisateur". Si l\'utilisateur dit "Ma mère habite à Paris", tu DOIS créer un lien [mère] -> habite à -> [Paris], ET un lien [utilisateur] -> a pour mère -> [mère]. Il est crucial de créer un vrai réseau connecté (graphe), et pas juste une étoile centrée sur l\'utilisateur.\n\n' +
+      '7. RAMIFICATIONS COMPLEXES (TRÈS IMPORTANT) : Ne force pas tous les liens vers "utilisateur". Si l\'utilisateur dit "Ma mère habite à Paris", tu DOIS créer un lien [mère] -> habite à -> [Paris], ET un lien [utilisateur] -> a pour mère -> [mère]. Il est crucial de créer un vrai réseau connecté (graphe), et pas juste une étoile centrée sur l\'utilisateur.\n' +
+      '8. TEMPORALITÉ ET HISTORIQUE : Si une information change ou évolue (ex: déménagement, rupture, changement de goût), NE SUPPRIME PAS l\'ancienne information. Garde l\'historique ! Utilise "update_nodes" pour ajouter la nouvelle info tout en mentionnant l\'ancienne dans le champ "details", ou modifie les "add_links" avec des labels au passé (ex: "habitait à", "ex-copine").\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 

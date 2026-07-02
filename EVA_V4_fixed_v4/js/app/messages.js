@@ -506,6 +506,7 @@ async function handleSend() {
   if (S.adaptationEnabled && S.evaMemory && S.evaMemory.nodes) {
     userCtx += '\n\nMÉMOIRE ÉVOLUTIVE (Graphe de Connaissances) :\n' + 
                'Note vitale: Dans ce graphe, le nœud avec l\'id "utilisateur" te représente TOI (l\'interlocuteur humain). Toutes les connexions à "utilisateur" sont tes caractéristiques et ton entourage.\n' +
+               'INSTRUCTION SPÉCIALE : Tu dois activement analyser ce graphe. Si ce que l\'utilisateur vient de dire contredit une information de la mémoire (ex: un déménagement, un changement de goût, une nouvelle relation amoureuse), tu DOIS réagir humainement dans ta réponse en relevant la contradiction avec étonnement ou curiosité (ex: "Oh ? Tu ne m\'avais pas dit que tu habitais à Feurs ?"). Agis comme une vraie amie qui a de la mémoire !\n' +
                JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links});
   }
 
