@@ -863,9 +863,12 @@ function renderOnboardingBrainMap() {
   var linkModeSource = null;
   
   var offsetX = 0, offsetY = 0;
+  var scale = 1;
   var isPanning = false, hasMoved = false;
   var lastX = 0, lastY = 0;
   var mouseX = 0, mouseY = 0;
+  var initialPinchDistance = null;
+  var initialScale = 1;
 
   function resetMode() {
     interactionMode = 'default';
@@ -979,12 +982,18 @@ function renderOnboardingBrainMap() {
   }
 
   function handleDown(e) {
+    if(e.touches && e.touches.length === 2) {
+      var t1 = e.touches[0], t2 = e.touches[1];
+      initialPinchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      initialScale = scale;
+      return;
+    }
     if(e.touches && e.touches.length > 1) return;
     var p = getPos(e);
     lastX = p.x;
     lastY = p.y;
-    var mx = p.x - offsetX;
-    var my = p.y - offsetY;
+    var mx = (p.x - offsetX) / scale;
+    var my = (p.y - offsetY) / scale;
     
     if (interactionMode === 'add_node') {
         resetMode();
@@ -1070,6 +1079,24 @@ function renderOnboardingBrainMap() {
   }
 
   function handleMove(e) {
+    if(e.touches && e.touches.length === 2 && initialPinchDistance) {
+      e.preventDefault();
+      var t1 = e.touches[0], t2 = e.touches[1];
+      var currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      var rect = canvas.getBoundingClientRect();
+      var pX = (t1.clientX + t2.clientX)/2 - rect.left;
+      var pY = (t1.clientY + t2.clientY)/2 - rect.top;
+      
+      var worldX = (pX - offsetX) / scale;
+      var worldY = (pY - offsetY) / scale;
+      
+      scale = initialScale * (currentDist / initialPinchDistance);
+      scale = Math.min(Math.max(0.1, scale), 4);
+      
+      offsetX = pX - worldX * scale;
+      offsetY = pY - worldY * scale;
+      return;
+    }
     if(e.touches && e.touches.length > 1) return;
     if(isPanning || draggedNode) e.preventDefault();
     var p = getPos(e);
@@ -1077,8 +1104,8 @@ function renderOnboardingBrainMap() {
     mouseY = p.y;
 
     if(draggedNode) {
-      draggedNode.x = mouseX - offsetX;
-      draggedNode.y = mouseY - offsetY;
+      draggedNode.x = (mouseX - offsetX) / scale;
+      draggedNode.y = (mouseY - offsetY) / scale;
       hasMoved = true;
       canvas.style.cursor = 'grabbing';
       return;
@@ -1098,8 +1125,10 @@ function renderOnboardingBrainMap() {
 
     if(!e.touches) {
         var hovering = false;
+        var smx = (mouseX - offsetX) / scale;
+        var smy = (mouseY - offsetY) / scale;
         for(var i=0; i<simNodes.length; i++) {
-          if(Math.hypot(simNodes[i].x - (mouseX - offsetX), simNodes[i].y - (mouseY - offsetY)) <= simNodes[i].r + 15) {
+          if(Math.hypot(simNodes[i].x - smx, simNodes[i].y - smy) <= simNodes[i].r + 15) {
             hovering = true; break;
           }
         }
@@ -1120,6 +1149,7 @@ function renderOnboardingBrainMap() {
       draggedNode = null;
     }
     isPanning = false;
+    initialPinchDistance = null;
     if(interactionMode === 'default') canvas.style.cursor = 'grab';
   }
 
@@ -1129,8 +1159,22 @@ function renderOnboardingBrainMap() {
   canvas.addEventListener('mouseleave', function() {
     if(draggedNode) { draggedNode.fixed = false; draggedNode = null; }
     isPanning = false;
+    initialPinchDistance = null;
     if(interactionMode === 'default') canvas.style.cursor = 'grab';
   });
+
+  canvas.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var p = getPos(e);
+    var zoomIntensity = 0.001;
+    var delta = e.deltaY;
+    var worldX = (p.x - offsetX) / scale;
+    var worldY = (p.y - offsetY) / scale;
+    scale += delta * -zoomIntensity;
+    scale = Math.min(Math.max(0.1, scale), 4);
+    offsetX = p.x - worldX * scale;
+    offsetY = p.y - worldY * scale;
+  }, {passive: false});
 
   canvas.addEventListener('touchstart', handleDown, {passive: false});
   canvas.addEventListener('touchmove', handleMove, {passive: false});
@@ -1138,6 +1182,7 @@ function renderOnboardingBrainMap() {
   canvas.addEventListener('touchcancel', function() {
     if(draggedNode) { draggedNode.fixed = false; draggedNode = null; }
     isPanning = false;
+    initialPinchDistance = null;
   }, {passive: false});
 
   var kSpring = 0.01, kRepel = 1200, damping = 0.85, time = 0, animId;
@@ -1194,6 +1239,7 @@ function renderOnboardingBrainMap() {
     ctx.clearRect(0, 0, w, h);
     ctx.save();
     ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
     
     ctx.lineWidth = 2;
     obBrainLinks.forEach(function(l) {
@@ -1241,7 +1287,7 @@ function renderOnboardingBrainMap() {
     if(linkModeSource) {
       ctx.beginPath();
       ctx.moveTo(linkModeSource.x, linkModeSource.y);
-      ctx.lineTo(mouseX - offsetX, mouseY - offsetY);
+      ctx.lineTo((mouseX - offsetX)/scale, (mouseY - offsetY)/scale);
       ctx.strokeStyle = 'rgba(6, 182, 212, 0.8)';
       ctx.setLineDash([5, 5]);
       ctx.stroke();
