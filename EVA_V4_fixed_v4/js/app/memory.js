@@ -34,8 +34,8 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       '   - "add_links" : pour lier de nouvelles choses. RÈGLE CRUCIALE : Le "label" d\'un lien DOIT FAIRE ENTRE 1 ET 3 MOTS MAXIMUM (ex: "aime", "travaille pour", "déteste"). Les explications longues vont dans "details" du nœud.\n' +
       '4. DÉDUPLICATION OBLIGATOIRE : Avant de créer dans "add_nodes", vérifie si ça n\'existe pas déjà. Si oui, utilise "update_nodes".\n' +
       '5. SUPPRESSION : Si tu dois regrouper deux nœuds, copie les infos du mauvais dans le bon via "update_nodes", puis mets l\'ID du mauvais dans "remove_nodes".\n' +
-      '6. NŒUD CENTRAL ABSOLU : L\'entité centrale représentant l\'utilisateur de l\'application a TOUJOURS l\'id "utilisateur". Tu ne dois JAMAIS créer un nouveau nœud avec son prénom. Si l\'utilisateur parle de lui-même ou de ses préférences, lie les informations à l\'id "utilisateur" via update_nodes ou add_links.\n' +
-      '7. HIÉRARCHIE DES LIENS : Ne relie pas tout à l\'utilisateur central. Crée des chaînes logiques (Ex: "utilisateur" -> dirige -> Entreprise X -> gère -> Projet Z).\n\n' +
+      '6. NŒUD CENTRAL OBLIGATOIRE : L\'entité centrale de l\'utilisateur a TOUJOURS l\'id "utilisateur". Tu ne dois JAMAIS créer un nouveau nœud avec son prénom pour le représenter lui-même.\n' +
+      '7. RAMIFICATIONS COMPLEXES (TRÈS IMPORTANT) : Ne force pas tous les liens vers "utilisateur". Si l\'utilisateur dit "Ma mère habite à Paris", tu DOIS créer un lien [mère] -> habite à -> [Paris], ET un lien [utilisateur] -> a pour mère -> [mère]. Il est crucial de créer un vrai réseau connecté (graphe), et pas juste une étoile centrée sur l\'utilisateur.\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
