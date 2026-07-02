@@ -121,6 +121,7 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     frame: false,           // Fenêtre sans bordure native
+    titleBarStyle: 'hidden',
     backgroundColor: '#111113',
     icon: join(__dirname, '../public/eva-icon.png'),
     webPreferences: {
@@ -277,7 +278,8 @@ app.whenReady().then(async () => {
     createTray()
 
     // ─── Auto-updater (Dépôt Privé) ───
-    const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg"
+    if (isDev) { setTimeout(launchMainApp, 1500); return; }
+      const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg"
     const _t = _enc.split('').reverse().join('')
     autoUpdater.requestHeaders = { "Authorization": "token " + _t }
 
@@ -756,3 +758,4 @@ declare global {
     }
   }
 }
+
