@@ -150,17 +150,14 @@ function setEvaStatus(text, type) {
 function setEvaStatusHeader(text, type) {
   var dot = document.getElementById('evaHdrDot');
   var label = document.getElementById('evaHdrText');
-  var skip = document.getElementById('skipTtsBtn');
   if (!dot || !label) return;
   if (!text) {
     dot.className = 'eva-hdr-dot';
     label.textContent = 'EN LIGNE';
-    if (skip) skip.style.display = 'none';
     return;
   }
   dot.className = 'eva-hdr-dot ' + (type || 'thinking');
   label.textContent = text;
-  if (skip) skip.style.display = (type === 'speaking') ? 'inline-flex' : 'none';
 }
 window.setEvaStatusHeader = setEvaStatusHeader;
 
@@ -287,6 +284,21 @@ window.setThinkingPhase = function(iconSvg, label, detail) {
   if (lb && label)   lb.textContent = label;
   if (dt !== null && detail !== undefined) dt.textContent = detail || '';
   if (label) _thinkHistory.push({ label: label, detail: detail || '', ts: Date.now() });
+};
+
+/* Ajoute une étape à la boîte de réflexion du dernier message, même une fois terminé (utile pour les process en background comme la mémoire) */
+window.addFinalThinkingStep = function(label, detail) {
+  var tb = document.getElementById('lastThoughtBody');
+  if (!tb) return;
+  var count = tb.children.length + 1;
+  var item = document.createElement('div');
+  item.style.cssText = 'display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:0.68em;color:rgba(160,165,200,0.55);';
+  item.innerHTML = '<span style="color:rgba(123,139,245,0.4);min-width:14px;">' + count + '.</span><div><span style="color:rgba(200,205,230,0.6);">' + label + '</span>' + (detail ? '<span style="margin-left:5px;opacity:0.5;">' + detail + '</span>' : '') + '</div>';
+  tb.appendChild(item);
+  if (tb.previousElementSibling) {
+    var headerCount = tb.previousElementSibling.querySelector('span:last-child');
+    if (headerCount) headerCount.innerHTML = count + ' étape' + (count > 1 ? 's' : '') + ' ↓';
+  }
 };
 
 /* Stoppe la génération en cours */
@@ -504,10 +516,27 @@ async function handleSend() {
   if (window._userBio) userCtx += '\nNote personnelle : ' + window._userBio;
   /* Mémoire Évolutive — injectée si activée et non vide */
   if (S.adaptationEnabled && S.evaMemory && S.evaMemory.nodes) {
+    var formatGraphToText = function(mem) {
+        var txt = 'Entités:\n';
+        var nodeMap = {};
+        (mem.nodes || []).forEach(function(n) {
+            var lbl = (n.id === 'utilisateur' ? 'Utilisateur' : (n.label || n.id));
+            nodeMap[n.id] = lbl;
+            if (n.details) txt += '- [' + lbl + '] : ' + n.details + '\n';
+        });
+        txt += '\nRelations:\n';
+        (mem.links || []).forEach(function(l) {
+            var src = nodeMap[l.source] || l.source;
+            var tgt = nodeMap[l.target] || l.target;
+            txt += '[' + src + '] -> ' + (l.label || 'lié à') + ' -> [' + tgt + ']\n';
+        });
+        return txt;
+    };
+    
     userCtx += '\n\nMÉMOIRE ÉVOLUTIVE (Graphe de Connaissances) :\n' + 
-               'Note vitale: Dans ce graphe, le nœud avec l\'id "utilisateur" te représente TOI (l\'interlocuteur humain). Toutes les connexions à "utilisateur" sont tes caractéristiques et ton entourage.\n' +
-               'INSTRUCTION SPÉCIALE : Tu dois activement analyser ce graphe. Si ce que l\'utilisateur vient de dire contredit une information de la mémoire (ex: un déménagement, un changement de goût, une nouvelle relation amoureuse), tu DOIS réagir humainement dans ta réponse en relevant la contradiction avec étonnement ou curiosité (ex: "Oh ? Tu ne m\'avais pas dit que tu habitais à Feurs ?"). Agis comme une vraie amie qui a de la mémoire !\n' +
-               JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links});
+               'Note vitale: Dans ce graphe, le nœud [Utilisateur] te représente TOI (l\'interlocuteur humain). Toutes les connexions à [Utilisateur] sont tes caractéristiques et ton entourage.\n' +
+               'INSTRUCTION SPÉCIALE : Tu dois activement analyser ce graphe. Si ce que l\'utilisateur vient de dire contredit une information de la mémoire (ex: un déménagement, un changement de goût, une nouvelle relation amoureuse), tu DOIS réagir humainement dans ta réponse en relevant la contradiction avec étonnement ou curiosité (ex: "Oh ? Tu ne m\'avais pas dit que tu habitais à Feurs ?"). Agis comme une vraie amie qui a de la mémoire !\n\n' +
+               formatGraphToText(S.evaMemory);
   }
 
   // Injection date/heure courante — EVA connaît ainsi l'heure pour créer alarmes/rappels
@@ -776,7 +805,13 @@ function streamEvaMsg(content) {
     var thoughtHeader = document.createElement('button');
     thoughtHeader.style.cssText = 'width:100%;display:flex;align-items:center;gap:6px;padding:5px 10px;background:none;border:none;cursor:pointer;color:rgba(160,165,200,0.5);font-size:0.68em;font-family:inherit;text-align:left;transition:opacity 0.2s;';
     thoughtHeader.innerHTML = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></svg><span style="letter-spacing:0.3px;">Réflexion</span><span style="margin-left:auto;opacity:0.5;">' + _thinkHistory.length + ' étape' + (_thinkHistory.length > 1 ? 's' : '') + ' ▾</span>';
+    
+    // Nettoyer les anciens ID pour que seul le dernier ait lastThoughtBody
+    var oldBody = document.getElementById('lastThoughtBody');
+    if (oldBody) oldBody.removeAttribute('id');
+    
     var thoughtBody = document.createElement('div');
+    thoughtBody.id = 'lastThoughtBody';
     thoughtBody.style.cssText = 'display:none;padding:6px 10px 8px;border-top:1px solid rgba(123,139,245,0.08);';
     var thCaptured = _thinkHistory.slice();
     thCaptured.forEach(function(step, i) {

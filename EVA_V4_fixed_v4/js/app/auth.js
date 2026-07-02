@@ -41,10 +41,27 @@ async function loadProfile(uid) {
       S.evaMemory = S.profile.evaMemory || null;
       S._lastExtractTime = 0;
 
-      // Nettoyage des liens corrompus (self-loops invisibles ou inaccessibles)
+      // Nettoyage des liens corrompus (self-loops) et des doublons exacts
       if (S.evaMemory && S.evaMemory.links) {
           var initialLinkCount = S.evaMemory.links.length;
-          S.evaMemory.links = S.evaMemory.links.filter(function(l) { return l.source !== l.target; });
+          // 1. Enlever les self-loops
+          var cleanedLinks = S.evaMemory.links.filter(function(l) { return l.source !== l.target; });
+          
+          // 2. Supprimer les doublons stricts (même label, insensible à la casse)
+          var uniqueLinks = [];
+          cleanedLinks.forEach(function(l) {
+             var existing = uniqueLinks.find(function(ex) {
+                 var sameNodes = (ex.source === l.source && ex.target === l.target) || 
+                                 (ex.source === l.target && ex.target === l.source);
+                 var sameLabel = (ex.label || '').toLowerCase().trim() === (l.label || '').toLowerCase().trim();
+                 return sameNodes && sameLabel;
+             });
+             if (!existing) {
+                 uniqueLinks.push(l);
+             }
+          });
+          
+          S.evaMemory.links = uniqueLinks;
           
           if (S.evaMemory.links.length !== initialLinkCount) {
               try { db.collection('users').doc(S.user.uid).set({ evaMemory: S.evaMemory }, { merge: true }); } catch(e){}

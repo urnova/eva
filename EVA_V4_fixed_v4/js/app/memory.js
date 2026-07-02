@@ -3,7 +3,7 @@
 ═══════════════════════════════════════════════════ */
 async function extractUserInsights(lastUserMsg, lastEvaMsg) {
   if (!S.user || !S.adaptationEnabled) return;
-  if (window.setEvaStatusHeader) window.setEvaStatusHeader('🧠 MISE À JOUR CERVEAU...', 'thinking');
+  if (window.addFinalThinkingStep) window.addFinalThinkingStep('Modifie le cerveau...', 'Analyse de la conversation...');
   try {
     /* Construire l'extrait de conversation (6 derniers messages) */
     var recentMsgs = (S.messages || []).slice(-6).map(function(m) {
@@ -14,11 +14,31 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       recentMsgs = 'Utilisateur : ' + (lastUserMsg || '').slice(0, 2000) + '\nEVA : ' + (lastEvaMsg || '').slice(0, 2000);
     }
     if (!recentMsgs) {
-      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      if (window.addFinalThinkingStep) window.addFinalThinkingStep('Mise à jour ignorée', 'Aucune conversation récente.');
       return;
     }
 
-    var existingMemory = S.evaMemory && S.evaMemory.nodes ? JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links}) : '{"nodes":[],"links":[]}';
+    var existingMemory = '';
+    if (S.evaMemory && S.evaMemory.nodes) {
+        var txt = 'Entités:\n';
+        var memNodeMap = {};
+        (S.evaMemory.nodes || []).forEach(function(n) {
+            var lbl = (n.id === 'utilisateur' ? 'Utilisateur' : (n.label || n.id));
+            memNodeMap[n.id] = lbl;
+            if (n.details) txt += '- [' + lbl + '] (ID: ' + n.id + ') : ' + n.details + '\n';
+            else txt += '- [' + lbl + '] (ID: ' + n.id + ')\n';
+        });
+        txt += '\nRelations:\n';
+        (S.evaMemory.links || []).forEach(function(l) {
+            var src = memNodeMap[l.source] || l.source;
+            var tgt = memNodeMap[l.target] || l.target;
+            txt += '[' + src + '] -> ' + (l.label || 'lié à') + ' -> [' + tgt + ']\n';
+        });
+        existingMemory = txt;
+    } else {
+        existingMemory = 'Aucune donnée. Le graphe est vide.';
+    }
+
     var nick = (S.profile && (S.profile.nickname || S.profile.displayName)) || 'l\'utilisateur';
 
     var extractPrompt = 'Tu es l\'ARCHIVISTE STRICT du Cerveau Neuronal de l\'IA EVA. Ton but est de modéliser la vie de ' + nick + ' sous forme de graphe.\n' +
@@ -90,7 +110,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
 
     if (!newMemoryText) {
       console.warn('[Mémoire Évolutive] Échec total de tous les providers.');
-      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      if (window.addFinalThinkingStep) window.addFinalThinkingStep('Erreur réseau', 'Échec de la mise à jour mémoire.');
       return;
     }
     console.log('[Mémoire Évolutive] Provider ayant généré le JSON :', usedProvider);
@@ -101,7 +121,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     if (jsonMatch) {
       newMemoryText = jsonMatch[0];
     } else {
-      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      if (window.addFinalThinkingStep) window.addFinalThinkingStep('Erreur', 'JSON invalide retourné par l\'IA.');
       throw new Error("Aucun objet JSON trouvé dans la réponse");
     }
     
@@ -162,8 +182,10 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
         if (l && l.source && l.target) {
           // Chercher si un lien IDENTIQUE existe déjà (même source, même cible, même label)
           var exists = currentMem.links.find(function(ex){ 
-            return (ex.source === l.source && ex.target === l.target && ex.label === l.label) || 
-                   (ex.source === l.target && ex.target === l.source && ex.label === l.label); 
+            var sameNodes = (ex.source === l.source && ex.target === l.target) || 
+                            (ex.source === l.target && ex.target === l.source);
+            var sameLabel = (ex.label || '').toLowerCase().trim() === (l.label || '').toLowerCase().trim();
+            return sameNodes && sameLabel;
           });
           
           if (!exists) {
@@ -176,7 +198,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
 
     if (!updated) {
       console.log('[Mémoire Évolutive] Aucun changement détecté.');
-      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      if (window.addFinalThinkingStep) window.addFinalThinkingStep('Cerveau inchangé', 'Aucune nouvelle information pertinente.');
       return;
     }
 
@@ -193,42 +215,16 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     if (S.profile) S.profile.evaMemory = memoryData;
     console.log('[Mémoire Évolutive] Cerveau mis à jour — v' + memoryData.version + ' (par ' + usedProvider + ')', memoryData);
     
-    if (window.setEvaStatusHeader) {
-      window.setEvaStatusHeader('🧠 CERVEAU MIS À JOUR', 'action');
-      setTimeout(function(){ window.setEvaStatusHeader(null); }, 3000);
+    /* Injecter l'étape dans la boîte de réflexion du dernier message via la nouvelle fonction */
+    if (window.addFinalThinkingStep) {
+      var summary = [];
+      if (patch.add_nodes && patch.add_nodes.length > 0) summary.push('+' + patch.add_nodes.length + ' nœud' + (patch.add_nodes.length > 1 ? 's' : ''));
+      if (patch.add_links && patch.add_links.length > 0) summary.push('+' + patch.add_links.length + ' lien' + (patch.add_links.length > 1 ? 's' : ''));
+      if (patch.update_nodes && patch.update_nodes.length > 0) summary.push(patch.update_nodes.length + ' maj');
+      if (patch.remove_nodes && patch.remove_nodes.length > 0) summary.push('-' + patch.remove_nodes.length + ' nœud');
+      var detailStr = summary.join(', ') || 'Modifications mineures';
+      window.addFinalThinkingStep('Cerveau mis à jour', detailStr);
     }
-    
-    /* Injecter l'étape dans la boîte de réflexion du dernier message */
-    try {
-      var chatList = document.getElementById('chatList');
-      if (chatList) {
-        var evaMsgs = chatList.querySelectorAll('.msg.eva .msg-thought-wrap');
-        if (evaMsgs.length > 0) {
-          var lastThoughtWrap = evaMsgs[evaMsgs.length - 1];
-          var listEl = lastThoughtWrap.querySelector('.msg-thought-list');
-          var hdrArrow = lastThoughtWrap.querySelector('.msg-thought-hdr span:last-child');
-          if (listEl) {
-            var stepIdx = listEl.children.length + 1;
-            var newStep = document.createElement('div');
-            newStep.className = 'msg-thought-item';
-            
-            var addC = patch.add_nodes ? patch.add_nodes.length : 0;
-            var upC = patch.update_nodes ? patch.update_nodes.length : 0;
-            var rmC = patch.remove_nodes ? patch.remove_nodes.length : 0;
-            var lnkC = patch.add_links ? patch.add_links.length : 0;
-            
-            newStep.innerHTML = '<span style="color:rgba(123,139,245,0.4);min-width:14px;">' + stepIdx + '.</span>' +
-                                '<div><span style="color:rgba(200,205,230,0.6);">Mémoire (Arrière-plan)</span>' +
-                                '<span style="margin-left:5px;opacity:0.5;">Cerveau mis à jour : ' + addC + ' ajout(s), ' + upC + ' modif(s), ' + rmC + ' suppr(s), ' + lnkC + ' lien(s)</span></div>';
-            listEl.appendChild(newStep);
-            if (hdrArrow) {
-               var open = lastThoughtWrap.classList.contains('open');
-               hdrArrow.textContent = stepIdx + ' étape(s) ' + (open ? '▲' : '▼');
-            }
-          }
-        }
-      }
-    } catch(e) { console.warn('Erreur injection réflexion:', e); }
     
     // Si la page des paramètres est ouverte sur Cerveau, rafraîchir
     if (window.renderBrainMap && document.getElementById('brainCanvas')) {
@@ -237,7 +233,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
 
   } catch(e) {
     console.warn('[Mémoire Évolutive] Erreur extraction (JSON attendu):', e);
-    if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+    if (window.addFinalThinkingStep) window.addFinalThinkingStep('Erreur', 'Extraction mémoire échouée.');
   }
 }
 window.extractUserInsights = extractUserInsights;
