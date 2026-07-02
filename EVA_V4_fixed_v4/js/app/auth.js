@@ -41,50 +41,14 @@ async function loadProfile(uid) {
       S.evaMemory = S.profile.evaMemory || null;
       S._lastExtractTime = 0;
 
-      // --- DEBUT MIGRATION NOEUD UTILISATEUR ---
-      if (S.evaMemory && S.evaMemory.nodes && S.profile) {
-          var uName = (S.profile.nickname || S.profile.displayName || '').toLowerCase().trim();
-          var uNameClean = uName.replace(/[^a-z0-9_]/g, ''); // Pour correspondre à l'ID généré
-          if (uName) {
-              var oldNodeIndex = S.evaMemory.nodes.findIndex(function(n) {
-                  if (!n || !n.id) return false;
-                  var idLow = n.id.toLowerCase();
-                  if (idLow === 'utilisateur' || idLow === 'user') return false;
-                  // Si l'id ou le label correspond au pseudo
-                  return idLow === uName || idLow === uNameClean || (n.label && n.label.toLowerCase() === uName);
-              });
-              
-              if (oldNodeIndex !== -1) {
-                  var oldNode = S.evaMemory.nodes[oldNodeIndex];
-                  var centralNode = S.evaMemory.nodes.find(function(n) { return n.id === 'utilisateur' || n.id === 'user'; });
-                  if (!centralNode) {
-                      centralNode = {id: 'utilisateur', label: S.profile.nickname || S.profile.displayName, details: 'L\'utilisateur du compte.', group: 1, type: 'user'};
-                      S.evaMemory.nodes.push(centralNode);
-                  }
-                  
-                  // Fusionner les détails
-                  if (oldNode.details && oldNode.details.trim() !== '') {
-                      centralNode.details = centralNode.details ? (centralNode.details + " " + oldNode.details) : oldNode.details;
-                  }
-                  // Rediriger les liens
-                  if (S.evaMemory.links) {
-                      S.evaMemory.links.forEach(function(l) {
-                          if (l.source === oldNode.id) l.source = centralNode.id;
-                          if (l.target === oldNode.id) l.target = centralNode.id;
-                      });
-                  }
-                  // Supprimer l'ancien noeud
-                  S.evaMemory.nodes.splice(oldNodeIndex, 1);
-                  
-                  // Sauvegarder
-                  try {
-                      db.collection('users').doc(S.user.uid).set({ evaMemory: S.evaMemory }, { merge: true });
-                      console.log('[Migration] Ancien nœud utilisateur fusionné avec succès vers "utilisateur".');
-                  } catch(e) { console.error('Erreur migration:', e); }
-              }
+      // Nettoyage des liens corrompus (self-loops invisibles ou inaccessibles)
+      if (S.evaMemory && S.evaMemory.links) {
+          var initialLinkCount = S.evaMemory.links.length;
+          S.evaMemory.links = S.evaMemory.links.filter(function(l) { return l.source !== l.target; });
+          if (S.evaMemory.links.length !== initialLinkCount) {
+              try { db.collection('users').doc(S.user.uid).set({ evaMemory: S.evaMemory }, { merge: true }); } catch(e){}
           }
       }
-      // --- FIN MIGRATION ---
 
       console.log('[loadProfile] Appel de renderUserUI...');
       renderUserUI(S.profile);
