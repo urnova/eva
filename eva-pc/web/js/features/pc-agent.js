@@ -10,14 +10,11 @@
       const uid = window.S.user.uid;
       
       // Essayer de récupérer un deviceId local ou le créer
-      if (window.eva && window.eva.store) {
-        deviceId = await window.eva.store.get('deviceId');
-        if (!deviceId) {
-          deviceId = 'PC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-          await window.eva.store.set('deviceId', deviceId);
-        }
-      } else {
-        deviceId = 'PC-LOCAL';
+      // Essayer de récupérer un deviceId local ou le créer
+      deviceId = localStorage.getItem('cw_device_id');
+      if (!deviceId) {
+        deviceId = 'PC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        localStorage.setItem('cw_device_id', deviceId);
       }
 
       let osInfo = 'Windows';
@@ -34,6 +31,8 @@
         } catch(e){}
       }
 
+      const ts = typeof window.timestamp === 'function' ? window.timestamp() : new Date();
+      
       const docRef = window.db.collection('cloudworks').doc(uid).collection('devices').doc(deviceId);
       await docRef.set({
         deviceId: deviceId,
@@ -42,7 +41,7 @@
         localIP: localIP,
         osVersion: osInfo,
         online: true,
-        lastSeen: window.timestamp()
+        lastSeen: ts
       }, { merge: true });
 
       console.log('[CloudWorks] Enregistré sous ID:', deviceId);
@@ -54,13 +53,13 @@
       setInterval(() => {
         docRef.update({
           online: true,
-          lastSeen: window.timestamp()
+          lastSeen: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
         }).catch(()=>{});
       }, 60000);
 
       // S'assurer de passer hors-ligne à la fermeture
       window.addEventListener('beforeunload', () => {
-        docRef.update({ online: false, lastSeen: window.timestamp() }).catch(()=>{});
+        docRef.update({ online: false, lastSeen: typeof window.timestamp === 'function' ? window.timestamp() : new Date() }).catch(()=>{});
       });
 
     } catch (e) {
@@ -154,7 +153,7 @@
     await window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId).update({
       status: status,
       result: resultData,
-      updatedAt: window.timestamp()
+      updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
     });
 
     // Cacher l'overlay au bout de 2 secondes
