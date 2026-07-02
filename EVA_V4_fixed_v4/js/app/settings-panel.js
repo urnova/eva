@@ -1870,8 +1870,8 @@ function renderBrainMap() {
     var p = getPos(e);
     lastX = p.x;
     lastY = p.y;
-    var mx = (p.x - offsetX) / scale;
-    var my = (p.y - offsetY) / scale;
+    var mx = p.x - offsetX;
+    var my = p.y - offsetY;
     
     if (interactionMode === 'add_node') {
         resetMode();
@@ -1881,7 +1881,7 @@ function renderBrainMap() {
         ], function(res) {
             if(!res[0]) return;
             var id = 'node_' + Date.now();
-            nodesData.push({id: id, label: res[0], details: res[1]||'', x: mx, y: my, group:2, type:'concept'});
+            nodesData.push({id: id, label: res[0], details: res[1]||'', x: mx / scale, y: my / scale, group:2, type:'concept'});
             saveChanges();
             initSimulation();
         });
@@ -1892,7 +1892,7 @@ function renderBrainMap() {
     var hitNode = null;
     for(var i=simNodes.length-1; i>=0; i--) {
       var n = simNodes[i];
-      if(Math.hypot(n.x - mx, n.y - my) <= n.r + 20) { // Tolérance tactile
+      if(Math.hypot(n.x * scale - mx, n.y * scale - my) <= n.r + 20) { // Tolérance tactile
         hitNode = n; break;
       }
     }
@@ -1904,12 +1904,13 @@ function renderBrainMap() {
             var l = linksData[j];
             var s = nodeMap[l.source], t = nodeMap[l.target];
             if(s && t) {
-                // Dist to segment
-                var l2 = Math.pow(t.x - s.x, 2) + Math.pow(t.y - s.y, 2);
-                var tt = l2 === 0 ? 0 : ((mx - s.x) * (t.x - s.x) + (my - s.y) * (t.y - s.y)) / l2;
+                var sx = s.x * scale, sy = s.y * scale;
+                var tx = t.x * scale, ty = t.y * scale;
+                var l2 = Math.pow(tx - sx, 2) + Math.pow(ty - sy, 2);
+                var tt = l2 === 0 ? 0 : ((mx - sx) * (tx - sx) + (my - sy) * (ty - sy)) / l2;
                 tt = Math.max(0, Math.min(1, tt));
-                var projX = s.x + tt * (t.x - s.x);
-                var projY = s.y + tt * (t.y - s.y);
+                var projX = sx + tt * (tx - sx);
+                var projY = sy + tt * (ty - sy);
                 var distSq = Math.pow(mx - projX, 2) + Math.pow(my - projY, 2);
                 if (distSq < 100) { // < 10px tolerance
                     hitLink = l;
@@ -2015,10 +2016,10 @@ function renderBrainMap() {
 
     if(!e.touches) {
         var hovering = false;
-        var smx = (mouseX - offsetX) / scale;
-        var smy = (mouseY - offsetY) / scale;
+        var smx = mouseX - offsetX;
+        var smy = mouseY - offsetY;
         for(var i=0; i<simNodes.length; i++) {
-          if(Math.hypot(simNodes[i].x - smx, simNodes[i].y - smy) <= simNodes[i].r + 15) {
+          if(Math.hypot(simNodes[i].x * scale - smx, simNodes[i].y * scale - smy) <= simNodes[i].r + 15) {
             hovering = true; break;
           }
         }
@@ -2140,26 +2141,27 @@ function renderBrainMap() {
     ctx.clearRect(0, 0, w, h);
     ctx.save();
     ctx.translate(offsetX, offsetY);
-    ctx.scale(scale, scale);
     
     // Draw Links
     ctx.lineWidth = 2;
     linksData.forEach(function(l) {
       var s = nodeMap[l.source], t = nodeMap[l.target];
       if(s && t) {
+        var sx = s.x * scale, sy = s.y * scale;
+        var tx = t.x * scale, ty = t.y * scale;
         // Mode édition de lien : si on clique, on modifie le label
         ctx.beginPath();
-        ctx.moveTo(s.x, s.y);
-        ctx.lineTo(t.x, t.y);
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(tx, ty);
         var pulse = (Math.sin(time + s.phase) + 1) / 2;
         ctx.strokeStyle = 'rgba(123, 139, 245, ' + (0.3 + pulse * 0.4) + ')';
         ctx.stroke();
 
-        var dx = t.x - s.x, dy = t.y - s.y;
+        var dx = tx - sx, dy = ty - sy;
         var angle = Math.atan2(dy, dx);
         var targetR = t.r + 6;
-        var arrowX = t.x - targetR * Math.cos(angle);
-        var arrowY = t.y - targetR * Math.sin(angle);
+        var arrowX = tx - targetR * Math.cos(angle);
+        var arrowY = ty - targetR * Math.sin(angle);
         
         ctx.beginPath();
         ctx.moveTo(arrowX, arrowY);
@@ -2169,8 +2171,8 @@ function renderBrainMap() {
         ctx.fill();
 
         if (l.label) {
-          var lx = s.x + dx * 0.5;
-          var ly = s.y + dy * 0.5;
+          var lx = sx + dx * 0.5;
+          var ly = sy + dy * 0.5;
           ctx.font = '10px sans-serif';
           var textW = ctx.measureText(l.label).width;
           ctx.fillStyle = 'rgba(10, 15, 30, 0.85)';
@@ -2189,8 +2191,8 @@ function renderBrainMap() {
 
     if(linkModeSource) {
       ctx.beginPath();
-      ctx.moveTo(linkModeSource.x, linkModeSource.y);
-      ctx.lineTo((mouseX - offsetX)/scale, (mouseY - offsetY)/scale);
+      ctx.moveTo(linkModeSource.x * scale, linkModeSource.y * scale);
+      ctx.lineTo(mouseX - offsetX, mouseY - offsetY);
       ctx.strokeStyle = 'rgba(6, 182, 212, 0.8)';
       ctx.setLineDash([5, 5]);
       ctx.stroke();
@@ -2200,8 +2202,9 @@ function renderBrainMap() {
     // Draw Nodes
     simNodes.forEach(function(n) {
       ctx.beginPath();
+      var nx = n.x * scale, ny = n.y * scale;
       var rPulse = n.r + Math.sin(time * 2 + n.phase) * 1.5;
-      ctx.arc(n.x, n.y, Math.max(1, rPulse), 0, Math.PI * 2);
+      ctx.arc(nx, ny, Math.max(1, rPulse), 0, Math.PI * 2);
       ctx.fillStyle = (n === selectedNode || n === linkModeSource) ? '#fff' : (n.r > 12 ? '#06b6d4' : '#7b8bf5');
       ctx.shadowBlur = (n === selectedNode) ? 20 : (12 + Math.sin(time * 3 + n.phase) * 8);
       ctx.shadowColor = ctx.fillStyle;
@@ -2212,7 +2215,7 @@ function renderBrainMap() {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
         ctx.font = (n === selectedNode) ? 'bold 12px sans-serif' : 'bold 11px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(n.label, n.x, n.y - rPulse - 6);
+        ctx.fillText(n.label, nx, ny - rPulse - 6);
       }
     });
 
