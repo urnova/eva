@@ -221,6 +221,11 @@ function cfg() {
 }
 function saveCfg() {
   try { localStorage.setItem('eva_config', JSON.stringify(S.config)); } catch(e){}
+  
+  // Ne pas synchroniser les paramètres sur Firebase si on est sur PC
+  // (permet d'avoir des paramètres locaux distincts pour l'IA et le TTS sur chaque machine)
+  if (window.eva) return;
+
   if (S.user && typeof db !== 'undefined') {
     try {
       db.collection('users').doc(S.user.uid).set({ preferences: S.config }, { merge: true }).catch(function(){});

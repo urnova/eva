@@ -97,6 +97,11 @@ const evaAPI = {
     ipcRenderer.on('auth:callback', (_: unknown, data: { refreshToken?: string; hid?: string }) => callback(data))
   },
 
+  // Connexion Puter via proxy (eva-desktop://puter?token=...)
+  onPuterCallback: (callback: (data: { token: string }) => void) => {
+    ipcRenderer.on('puter:callback', (_: unknown, data: { token: string }) => callback(data))
+  },
+
   // ─── Splash Screen ───
   onSplashStatus: (callback: (status: string) => void) => {
     ipcRenderer.on('splash:status', (_: unknown, status: string) => callback(status))

@@ -1296,9 +1296,12 @@ async function getPuterStatus() {
   try { return await puter.auth.getUser(); } catch(e) { return null; }
 }
 function connectPuter() {
+  if (window.eva) {
+    window.eva.openExternal('https://eva.astraltechnologie.fr/puter-proxy.html?redirect=eva-desktop');
+    toast("Une page s'est ouverte pour la connexion Puter", "info");
+    return;
+  }
   if (!window.puter) { toast('Puter non disponible','error'); return; }
-  
-  // Appel 100% synchrone pour contourner les bloqueurs de pop-up d'Edge
   var authPromise;
   try {
     authPromise = puter.auth.signIn();
@@ -1814,3 +1817,19 @@ window.clearAllConvs = clearAllConvs;
 window.saveProfileSettings = saveProfileSettings;
 window.saveAISettings = saveAISettings;
 window.saveVoiceSettings = saveVoiceSettings;
+
+// Ecouteur pour la connexion Puter via proxy Desktop
+if (window.eva && window.eva.onPuterCallback) {
+  window.eva.onPuterCallback(function(data) {
+    if (data && data.token) {
+      if (window.puter) {
+        window.puter.auth.signIn(data.token);
+      }
+      localStorage.setItem('puter_auth_token', data.token);
+      S.config.puterUsername = "Connecté (Desktop)";
+      saveCfg();
+      toast('Puter connecté avec succès', 'success');
+      renderSettings('ai');
+    }
+  });
+}

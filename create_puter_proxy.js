@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+﻿const fs = require('fs');
+const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
@@ -47,4 +48,7 @@
     checkAuth();
   </script>
 </body>
-</html>
+</html>`;
+
+fs.writeFileSync('EVA_V4_fixed_v4/puter-proxy.html', html, 'utf8');
+console.log("PUTER PROXY HTML GENERATED");

@@ -172,29 +172,31 @@ function createOverlayWindow() {
   const overlayWidth = 340
   const overlayHeight = 140
 
-  overlayWindow = new BrowserWindow({
-    width: overlayWidth,
-    height: overlayHeight,
-    x: width - overlayWidth - 20, // En haut Ã  droite, avec un peu de marge
-    y: 20,
-    transparent: true,
-    frame: false,
-    alwaysOnTop: true,
-    resizable: false,
-    skipTaskbar: true, // IgnorÃ© dans la barre des tÃ¢ches
-    show: false, // CachÃ© par dÃ©faut
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      overlayWindow = new BrowserWindow({
+      width: overlayWidth,
+      height: overlayHeight,
+      x: width - overlayWidth - 20, // En haut à droite, avec un peu de marge
+      y: 20,
+      transparent: true,
+      frame: false,
+      alwaysOnTop: true,
+      resizable: false,
+      skipTaskbar: true,
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: join(__dirname, 'preload.js')
+      }
+    })
+
+    overlayWindow.setAlwaysOnTop(true, 'screen-saver')
+
+    if (isDev) {
+      overlayWindow.loadFile(join(__dirname, '../web/overlay.html'))
+    } else {
+      overlayWindow.loadFile(join(__dirname, '../web/overlay.html'))
     }
-  })
-
-  // Permet Ã  l'overlay de passer au-dessus des fenÃªtres en plein Ã©cran sur Windows
-  overlayWindow.setAlwaysOnTop(true, 'screen-saver')
-
-  if (isDev) {
-    overlayWindow.loadFile(join(__dirname, '../public/overlay.html'))
-  } else {
     overlayWindow.loadFile(join(__dirname, '../dist/overlay.html'))
   }
 
@@ -209,20 +211,20 @@ function saveBounds() {
 
 // â”€â”€â”€ Tray Icon â”€â”€â”€
 function createTray() {
-  const trayIconPath = join(__dirname, '../public/eva-tray.png')
+  const trayIconPath = join(__dirname, '../web/assets/images/eva-logo.png')
   const icon = nativeImage.createFromPath(trayIconPath).resize({ width: 16, height: 16 })
   tray = new Tray(icon)
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'E.V.A â€” Ouvrir', click: () => { mainWindow?.show(); mainWindow?.focus() } },
+    { label: 'E.V.A — Ouvrir', click: () => { mainWindow?.show(); mainWindow?.focus() } },
     { type: 'separator' },
     { label: 'CloudWorks', click: () => { mainWindow?.show(); mainWindow?.webContents.send('navigate', 'cloudworks') } },
     { label: 'Nouveau chat', click: () => { mainWindow?.show(); mainWindow?.webContents.send('new-chat') } },
     { type: 'separator' },
-    { label: 'Quitter EVA', click: () => { app.isQuitting = true; app.quit() } }
+    { label: 'Quitter E.V.A', click: () => { app.isQuitting = true; app.quit() } }
   ])
 
-  tray.setToolTip('E.V.A â€” Evolutionary Virtual Assistant')
+  tray.setToolTip('E.V.A — Evolutionary Virtual Assistant')
   tray.setContextMenu(contextMenu)
   tray.on('double-click', () => { mainWindow?.show(); mainWindow?.focus() })
 }

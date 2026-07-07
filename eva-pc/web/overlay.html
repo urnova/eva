@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>E.V.A Overlay</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@0,400;0,700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: rgba(15, 17, 26, 0.85);
+      --border: rgba(123, 139, 245, 0.3);
+      --cyan: #7b8bf5;
+      --pink: #ff4d6d;
+    }
+    body {
+      margin: 0;
+      padding: 10px;
+      overflow: hidden;
+      font-family: 'Space Mono', monospace;
+      background: transparent;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-start;
+      -webkit-app-region: drag;
+    }
+    
+    .overlay-container {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(123, 139, 245, 0.2);
+      backdrop-filter: blur(12px);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      min-width: 60px;
+      max-width: 300px;
+      position: relative;
+    }
+
+    /* Animation d'ouverture (petit point qui s'allonge) */
+    .overlay-container.opening {
+      width: 10px;
+      border-radius: 50%;
+      padding: 10px;
+      opacity: 0;
+      transform: scale(0.5);
+    }
+
+    .icon-box {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(123, 139, 245, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+    }
+    
+    .icon-box img {
+      width: 14px;
+      height: 14px;
+      object-fit: contain;
+    }
+
+    .text-content {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .title {
+      font-size: 0.75em;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 2px;
+    }
+
+    .status {
+      font-size: 0.65em;
+      color: #e4e4ef;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .close-btn {
+      -webkit-app-region: no-drag;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: #aaa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: 0.2s;
+      flex-shrink: 0;
+    }
+    .close-btn:hover {
+      background: var(--pink);
+      color: #fff;
+    }
+
+    /* Animations d'états */
+    .state-listening .icon-box { box-shadow: 0 0 10px var(--cyan); animation: pulse 1.5s infinite; }
+    .state-thinking .icon-box { animation: spin 2s linear infinite; }
+    .state-speaking .icon-box { box-shadow: 0 0 15px #a855f7; }
+    .state-action .icon-box { background: rgba(74,222,128,0.2); box-shadow: 0 0 10px #4ade80; }
+    .state-remote .icon-box { background: rgba(255,77,109,0.2); box-shadow: 0 0 10px var(--pink); }
+
+    .state-remote .title { color: var(--pink); }
+
+    @keyframes pulse { 0% { transform: scale(0.95); } 50% { transform: scale(1.05); } 100% { transform: scale(0.95); } }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* Visualizer vocal */
+    .visualizer {
+      display: none;
+      gap: 3px;
+      align-items: center;
+      height: 14px;
+      margin-left: auto;
+      margin-right: 8px;
+    }
+    .state-speaking .visualizer { display: flex; }
+    .bar { width: 3px; background: var(--cyan); border-radius: 3px; animation: bounce 0.5s infinite alternate; }
+    .bar:nth-child(2) { animation-delay: 0.1s; height: 10px; }
+    .bar:nth-child(3) { animation-delay: 0.2s; height: 14px; }
+    .bar:nth-child(4) { animation-delay: 0.3s; height: 8px; }
+    
+    @keyframes bounce { 0% { height: 4px; } 100% { height: 14px; } }
+
+  </style>
+</head>
+<body>
+
+  <div class="overlay-container" id="container">
+    <div class="icon-box">
+      <img src="./assets/images/eva-logo.png" alt="EVA">
+    </div>
+    
+    <div class="text-content">
+      <div class="title" id="title">E.V.A ÉCOUTE</div>
+      <div class="status" id="statusText">En attente de commande...</div>
+    </div>
+
+    <div class="visualizer">
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    </div>
+
+    <button class="close-btn" id="closeBtn" onclick="closeOverlay()">×</button>
+  </div>
+
+  <script>
+    // Ecoute des commandes IPC depuis le Main Process
+    if (window.eva && window.eva.overlay) {
+      const container = document.getElementById('container');
+      const title = document.getElementById('title');
+      const statusText = document.getElementById('statusText');
+
+      window.eva.overlay.onAction((actionData) => {
+        // Optionnel : gérer des retours du main process
+      });
+
+      // API exposée pour modifier l'état depuis le backend
+      window.setOverlayState = function(state, text) {
+        container.className = 'overlay-container state-' + state;
+        
+        if (state === 'listening') {
+          title.textContent = 'E.V.A ÉCOUTE';
+          statusText.textContent = text || 'Parlez maintenant...';
+        } else if (state === 'thinking') {
+          title.textContent = 'ANALYSE...';
+          statusText.textContent = text || 'Traitement neural...';
+        } else if (state === 'speaking') {
+          title.textContent = 'E.V.A RÉPOND';
+          statusText.textContent = text || '...';
+        } else if (state === 'action') {
+          title.textContent = 'CLOUDWORKS AGENT';
+          statusText.textContent = text || 'Exécution de la tâche...';
+        } else if (state === 'remote') {
+          title.textContent = 'CONTRÔLE DISTANT';
+          statusText.textContent = text || 'CloudWorks prend le contrôle';
+        }
+      };
+
+      // Mettre l'état de base
+      window.setOverlayState('listening');
+    }
+
+    function closeOverlay() {
+      // Si c'est distant, c'est l'arrêt d'urgence
+      if (document.getElementById('container').classList.contains('state-remote')) {
+        if (window.eva) window.eva.overlay.setState('killed');
+      }
+      if (window.eva) {
+        window.eva.overlay.hide();
+      }
+    }
+  </script>
+</body>
+</html>

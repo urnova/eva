@@ -15,6 +15,12 @@ function initAuth() {
         onCommand: function(cmd) {
           if (S.busy) return;
           if (window.EVASTS && window.EVASTS.getIsListening()) return;
+          
+          if (window.eva && window.eva.overlay) {
+            window.eva.overlay.show('listening');
+            window.eva.overlay.setState('thinking', 'Traitement...');
+          }
+          
           sendVoiceCommand(cmd);
           setTimeout(function() {
             if (S.wakeWordOn && window.EVAWakeWord && !S.busy) window.EVAWakeWord.start();
@@ -43,8 +49,15 @@ async function loadProfile(uid) {
       console.log('[loadProfile] Appel de renderUserUI...');
       renderUserUI(S.profile);
       if (S.profile.preferences) {
-        /* Firebase gagne sur le cache localStorage — sync multi-appareils */
-        S.config = Object.assign({}, S.config, S.profile.preferences);
+          if (window.eva) {
+            const localCfg = S.config;
+            S.config = Object.assign({}, S.config, S.profile.preferences);
+            ['aiProvider', 'aiModel', 'ollamaEndpoint', 'lmstudioEndpoint', 'voiceProvider', 'speechRate', 'openrouterApiKey', 'geminiApiKey', 'openAIApiKey', 'claudeApiKey', 'mistralApiKey', 'huggingfaceApiKey'].forEach(k => {
+              if (localCfg[k] !== undefined) S.config[k] = localCfg[k];
+            });
+          } else {
+            S.config = Object.assign({}, S.config, S.profile.preferences);
+          }
         /* Migration : si l'ancien provider par défaut 'native' est stocké, passer à 'eva-custom' */
         if (!S.config.voiceProvider || S.config.voiceProvider === 'native') {
           S.config.voiceProvider = 'eva-custom';
