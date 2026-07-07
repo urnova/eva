@@ -256,6 +256,7 @@ function cwShowInputModal(opts) {
    RESULT LISTENER — Firestore real-time
 ══════════════════════════════════════════ */
 function _handleResultsSnap(snap) {
+    if (isInitialLoad) return;
   snap.docChanges().forEach(function(change) {
     if (change.type !== 'added' && change.type !== 'modified') return;
     var data = change.doc.data();

@@ -319,6 +319,26 @@ function toggleWindow() {
   }
 }
 
+let forceQuit = false;
+
+app.on('before-quit', (e) => {
+  if (!forceQuit && mainWindow && !mainWindow.isDestroyed()) {
+    e.preventDefault();
+    mainWindow.webContents.send('app:request-quit');
+    
+    // Timeout de sǸcuritǸ si le renderer ne rǸpond pas
+    setTimeout(() => {
+      forceQuit = true;
+      app.quit();
+    }, 3000);
+  }
+});
+
+ipcMain.on('app:quit-ready', () => {
+  forceQuit = true;
+  app.quit();
+});
+
 app.on('will-quit', () => {
   // DÃ©senregistrer tous les raccourcis
   globalShortcut.unregisterAll()

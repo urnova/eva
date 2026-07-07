@@ -63,9 +63,12 @@ window.pcAgentDocRef = docRef;
         docRef.update({ online: false, lastSeen: typeof window.timestamp === 'function' ? window.timestamp() : new Date() }).catch(()=>{});
       });
       
-      if (window.eva && window.eva.onAppQuit) {
-        window.eva.onAppQuit(() => {
-          docRef.update({ online: false, lastSeen: typeof window.timestamp === 'function' ? window.timestamp() : new Date() }).catch(()=>{});
+      if (window.eva && window.eva.onAppRequestQuit) {
+        window.eva.onAppRequestQuit(async () => {
+          try {
+            await docRef.update({ online: false, lastSeen: typeof window.timestamp === 'function' ? window.timestamp() : new Date() });
+          } catch(e) {}
+          window.eva.sendQuitReady();
         });
       }
 
