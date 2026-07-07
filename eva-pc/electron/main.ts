@@ -433,7 +433,8 @@ ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey
       email: fbUser.email,
       displayName: fbUser.displayName || fbUser.email?.split('@')[0] || 'Utilisateur',
       idToken: tokenData.id_token,
-      refreshToken
+        expiresIn: tokenData.expires_in,
+        refreshToken
     }
   } catch (error) {
     return { success: false, error: String(error) }

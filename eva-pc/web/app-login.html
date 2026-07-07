@@ -290,10 +290,12 @@ body::before{
         try {
           var firebaseConfig = { apiKey: "AIzaSyDrXk8X9Ow7CcOc0Sr-yv3mXvzatNxpj3o" };
           var res = await window.eva.exchangeToken(data.refreshToken, firebaseConfig.apiKey);
-          if (res && res.id_token) {
-            var payload = JSON.parse(atob(res.id_token.split('.')[1]));
+          if (res && res.idToken) {
+            var payload = JSON.parse(atob(res.idToken.split('.')[1]));
             
                 
+                
+                var provider = (payload.firebase && payload.firebase.sign_in_provider) ? payload.firebase.sign_in_provider : "password";
                 var fbaseKey = 'firebase:authUser:' + firebaseConfig.apiKey + ':[DEFAULT]';
                 var sessionData = {
                   uid: payload.user_id,
@@ -303,7 +305,14 @@ body::before{
                   isAnonymous: false,
                   photoURL: payload.picture || null,
                   providerData: [{
-                    providerId: "password",
+                    providerId: provider,
+                    uid: payload.email,
+                    displayName: payload.name || null,
+                    email: payload.email,
+                    phoneNumber: null,
+                    photoURL: payload.picture || null
+                  }],
+
                     uid: payload.email,
                     displayName: payload.name || null,
                     email: payload.email,
@@ -312,8 +321,8 @@ body::before{
                   }],
                   stsTokenManager: {
                     refreshToken: data.refreshToken,
-                    accessToken: res.id_token,
-                    expirationTime: Date.now() + (parseInt(res.expires_in) * 1000)
+                    accessToken: res.idToken,
+                    expirationTime: Date.now() + (parseInt(res.expiresIn) * 1000)
                   },
                   createdAt: String(Date.now()),
                   lastLoginAt: String(Date.now()),
