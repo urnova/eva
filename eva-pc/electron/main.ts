@@ -55,7 +55,6 @@ const evaAutoLaunch = new AutoLaunch({
 })
 
 let mainWindow: BrowserWindow | null = null
-let splashWindow: BrowserWindow | null = null
 let overlayWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
@@ -121,7 +120,6 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     frame: false,           // Fenêtre sans bordure native
-    titleBarStyle: 'hidden',
     backgroundColor: '#111113',
     icon: join(__dirname, '../public/eva-icon.png'),
     webPreferences: {
@@ -138,15 +136,15 @@ function createWindow() {
 
   // ─── Chargement de l'URL ───
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173/chat.html')
+    mainWindow.loadURL('http://localhost:5173/splash.html')
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
-    mainWindow.loadFile(join(__dirname, '../dist/chat.html'))
+    mainWindow.loadFile(join(__dirname, '../dist/splash.html'))
   }
 
-  // ─── Affichage fluide ───
+  // ─── Affichage ───
   mainWindow.once('ready-to-show', () => {
-    // La fenêtre principale attendra l'appel de launchMainApp() pour s'afficher.
+    mainWindow?.show()
   })
 
   // ─── Sauvegarder la position/taille ───
@@ -164,31 +162,7 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null })
 }
 
-function createSplashWindow() {
-  splashWindow = new BrowserWindow({
-    width: 400,
-    height: 400,
-    transparent: true,
-    frame: false,
-    alwaysOnTop: true,
-    resizable: false,
-    icon: join(__dirname, '../public/eva-icon.png'),
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
-    }
-  })
 
-  // Dans Electron+Vite, le public folder est copié à la racine (ou dans dist/public),
-  // mais en dev on peut le charger via http ou file path.
-  if (isDev) {
-    splashWindow.loadFile(join(__dirname, '../public/splash.html'))
-  } else {
-    splashWindow.loadFile(join(__dirname, '../dist/splash.html'))
-  }
-
-  splashWindow.on('closed', () => { splashWindow = null })
-}
 
 function createOverlayWindow() {
   const { screen } = require('electron')
@@ -268,58 +242,52 @@ app.whenReady().then(async () => {
     handleDeepLink(url)
   })
 
-  // Afficher le Splash Screen en premier
-  createSplashWindow()
+  // Afficher directement la fenêtre principale avec splash.html
+  createWindow()
+  createOverlayWindow()
+  createTray()
+
+  // ─── Auto-updater (Dépôt Privé) ───
+  if (isDev) { setTimeout(launchMainApp, 1500); return; }
+  const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg"
+  const _t = _enc.split('').reverse().join('')
+  autoUpdater.requestHeaders = { "Authorization": "token " + _t }
+
+  autoUpdater.checkForUpdatesAndNotify().catch(err => {
+    console.error('[AutoUpdater] Erreur de vérification:', err)
+    launchMainApp()
+  })
+
+  autoUpdater.on('checking-for-update', () => {
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Vérification des mises à jour...')
+  })
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[AutoUpdater] Mise à jour disponible:', info)
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise à jour trouvée. Téléchargement...')
+    if (mainWindow) mainWindow.webContents.send('updater:available', info)
+  })
   
-  // Laisser le temps au splash screen de s'afficher (500ms min)
-  setTimeout(() => {
-    createWindow() // Crée la mainWindow mais elle est cachée par défaut (show: false)
-    createOverlayWindow() // Crée la fenêtre d'overlay
-    createTray()
+  autoUpdater.on('update-not-available', (info) => {
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Système à jour. Démarrage...')
+    setTimeout(launchMainApp, 1000)
+  })
 
-    // ─── Auto-updater (Dépôt Privé) ───
-    if (isDev) { setTimeout(launchMainApp, 1500); return; }
-      const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg"
-    const _t = _enc.split('').reverse().join('')
-    autoUpdater.requestHeaders = { "Authorization": "token " + _t }
-
-    autoUpdater.checkForUpdatesAndNotify().catch(err => {
-      console.error('[AutoUpdater] Erreur de vérification:', err)
-      launchMainApp()
-    })
-
-    autoUpdater.on('checking-for-update', () => {
-      if (splashWindow) splashWindow.webContents.send('splash:status', 'Vérification des mises à jour...')
-    })
-
-    autoUpdater.on('update-available', (info) => {
-      console.log('[AutoUpdater] Mise à jour disponible:', info)
-      if (splashWindow) splashWindow.webContents.send('splash:status', 'Mise à jour trouvée. Téléchargement...')
-      if (mainWindow) mainWindow.webContents.send('updater:available', info)
-    })
+  autoUpdater.on('error', (err) => {
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Erreur réseau. Démarrage...')
+    setTimeout(launchMainApp, 1000)
+  })
+  
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[AutoUpdater] Mise à jour téléchargée:', info)
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise à jour prête. Redémarrage...')
+    if (mainWindow) mainWindow.webContents.send('updater:downloaded', info)
     
-    autoUpdater.on('update-not-available', (info) => {
-      if (splashWindow) splashWindow.webContents.send('splash:status', 'Système à jour. Démarrage...')
-      setTimeout(launchMainApp, 1000)
-    })
-
-    autoUpdater.on('error', (err) => {
-      if (splashWindow) splashWindow.webContents.send('splash:status', 'Erreur réseau. Démarrage...')
-      setTimeout(launchMainApp, 1000)
-    })
-    
-    autoUpdater.on('update-downloaded', (info) => {
-      console.log('[AutoUpdater] Mise à jour téléchargée:', info)
-      if (splashWindow) splashWindow.webContents.send('splash:status', 'Mise à jour prête. Redémarrage...')
-      if (mainWindow) mainWindow.webContents.send('updater:downloaded', info)
-      
-      // Installer l'update immédiatement et redémarrer (silencieusement)
-      setTimeout(() => {
-        autoUpdater.quitAndInstall(true, true)
-      }, 2000)
-    })
-
-  }, 1000) // Attendre 1 sec pour que l'utilisateur voie le logo
+    // Installer l'update immédiatement et redémarrer (silencieusement)
+    setTimeout(() => {
+      autoUpdater.quitAndInstall(true, true)
+    }, 2000)
+  })
 
   const shouldAutoLaunch = store.get('autoLaunch')
   if (shouldAutoLaunch) {
@@ -331,24 +299,8 @@ app.whenReady().then(async () => {
 })
 
 function launchMainApp() {
-  if (splashWindow && !splashWindow.isDestroyed()) {
-    splashWindow.close()
-  }
-  if (mainWindow && !mainWindow.isVisible()) {
-    mainWindow.show()
-    // Animation d'entrée via fade
-    mainWindow.setOpacity(0)
-    let opacity = 0
-    const fadeIn = setInterval(() => {
-      opacity += 0.05
-      if (opacity >= 1) {
-        clearInterval(fadeIn)
-        if (mainWindow) mainWindow.setOpacity(1)
-      } else {
-        if (mainWindow) mainWindow.setOpacity(opacity)
-      }
-    }, 30)
-    mainWindow.focus()
+  if (mainWindow) {
+    mainWindow.webContents.send('splash:done')
   }
 }
 

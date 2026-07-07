@@ -97,6 +97,14 @@ const evaAPI = {
     ipcRenderer.on('auth:callback', (_: unknown, data: { refreshToken?: string; hid?: string }) => callback(data))
   },
 
+  // ─── Splash Screen ───
+  onSplashStatus: (callback: (status: string) => void) => {
+    ipcRenderer.on('splash:status', (_: unknown, status: string) => callback(status))
+  },
+  onSplashDone: (callback: () => void) => {
+    ipcRenderer.on('splash:done', () => callback())
+  },
+
   // ── Ouvrir URL dans le navigateur système ──
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
 

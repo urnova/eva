@@ -29,7 +29,6 @@ async function loadCloudWorks() {
         _setStats(0, 0, 0);
       });
     _cwResultUnsub = window.db.collection('cloudworks').doc(uid).collection('commands')
-      .where('status','in',['done','error'])
       .orderBy('updatedAt','desc')
       .limit(MAX_LOG)
       .onSnapshot(function(snap) { _handleResultsSnap(snap); });
