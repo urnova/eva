@@ -119,6 +119,7 @@ function createWindow() {
     y: bounds.y,
     minWidth: 900,
     minHeight: 600,
+    titleBarStyle: 'hidden',
     frame: false,           // FenÃªtre sans bordure native
     backgroundColor: '#111113',
     icon: join(__dirname, '../public/eva-icon.png'),
@@ -710,5 +711,6 @@ declare global {
     }
   }
 }
+
 
 

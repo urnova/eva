@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E.V.A — Page introuvable (404)</title>
+  <link rel="icon" type="image/png" href="/assets/images/eva-logo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cyan: #7b8bf5;
+      --cyan-glow: rgba(123, 139, 245, 0.28);
+      --bg: #111113;
+      --surface: rgba(24, 24, 27, 0.97);
+      --border: rgba(255, 255, 255, 0.07);
+      --text: #e4e4ef;
+      --text-muted: #88889a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: 'Space Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(123,139,245,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(123,139,245,0.015) 1px, transparent 1px);
+      background-size: 60px 60px; pointer-events: none; z-index: 0;
+    }
+    .bg-orb { position: fixed; border-radius: 50%; pointer-events: none; filter: blur(100px); z-index: 0; }
+    .bg-orb-1 { width: 500px; height: 500px; background: rgba(123, 139, 245, 0.06); top: -150px; right: -150px; }
+    .bg-orb-2 { width: 400px; height: 400px; background: rgba(167, 139, 250, 0.04); bottom: -150px; left: -100px; }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 60px 40px;
+      max-width: 600px;
+      text-align: center;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(123,139,245,0.05);
+      backdrop-filter: blur(30px);
+      animation: panelIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes panelIn { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+    .logo {
+      width: 140px;
+      height: auto;
+      object-fit: contain;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 0 28px rgba(123,139,245,0.4));
+    }
+
+    .error-code {
+      font-family: 'Orbitron', monospace;
+      font-size: 4em;
+      font-weight: 900;
+      letter-spacing: 10px;
+      color: var(--cyan);
+      text-shadow: 0 0 30px var(--cyan-glow);
+      margin-bottom: 10px;
+    }
+
+    .error-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.2em;
+      letter-spacing: 3px;
+      margin-bottom: 20px;
+    }
+
+    .error-desc {
+      font-size: 0.85em;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 40px;
+    }
+
+    .btn-return {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      font-size: 0.85em;
+      letter-spacing: 2px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.3s;
+      border: none;
+      background: linear-gradient(135deg, var(--cyan), #0099cc);
+      color: #000;
+      box-shadow: 0 0 25px rgba(123, 139, 245, 0.3);
+    }
+    .btn-return:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(123, 139, 245, 0.5);
+    }
+    .btn-return:active { transform: translateY(0); }
+  </style>
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <div class="container">
+    <img src="/assets/images/eva-logo.png" alt="EVA Logo" class="logo">
+    <div class="error-code">404</div>
+    <div class="error-title">ZONE INCONNUE</div>
+    <div class="error-desc">
+      Cette page n'existe pas dans la base de données d'E.V.A.<br>
+      Veuillez retourner au menu principal pour continuer votre navigation.
+    </div>
+    <a href="/" class="btn-return">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      RETOURNER À L'ACCUEIL
+    </a>
+  </div>
+</body>
+</html>

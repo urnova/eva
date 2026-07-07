@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>E.V.A â€” Connexion Desktop</title>
+<title>E.V.A — Connexion Desktop</title>
 <link rel="icon" type="image/png" href="assets/images/eva-logo.png">
 <meta name="theme-color" content="#7b8bf5">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
@@ -83,7 +83,7 @@ body::before{
   display:flex;align-items:center;gap:10px;
   font-size:0.73em;color:var(--text-muted);
 }
-.deco-feature::before{content:'â–¸';color:var(--cyan);font-size:0.9em;}
+.deco-feature::before{content:'▸';color:var(--cyan);font-size:0.9em;}
 
 /* Right - actions */
 .auth-form-side{
@@ -155,7 +155,7 @@ body::before{
   text-align:center;margin-top:auto;padding-top:16px;font-size:0.72em;color:var(--text-muted);
 }
 
-/* â”€â”€ TV / Very large screens (â‰¥1800px) â”€â”€ */
+/* ── TV / Very large screens (≥1800px) ── */
 @media(min-width:1800px){
   .auth-wrap{max-width:1100px;min-height:680px;grid-template-columns:1fr 520px;}
   .auth-deco{padding:64px;}
@@ -165,7 +165,7 @@ body::before{
   .btn-primary, .btn-secondary {padding:18px;font-size:0.95em;}
 }
 
-/* â”€â”€ Tablet (768px â€“ 1023px) â”€â”€ */
+/* ── Tablet (768px – 1023px) ── */
 @media(min-width:640px) and (max-width:1023px){
   .auth-wrap{max-width:760px;grid-template-columns:1fr 380px;}
   .auth-deco{padding:36px;}
@@ -173,7 +173,7 @@ body::before{
   .auth-form-side{padding:32px 28px;}
 }
 
-/* â”€â”€ Mobile (â‰¤639px) â”€â”€ */
+/* ── Mobile (≤639px) ── */
 @media(max-width:639px){
   .page{padding:12px;align-items:flex-start;padding-top:clamp(20px,8vh,60px);}
   .auth-wrap{
@@ -189,42 +189,32 @@ body::before{
 </style>
 </head>
 <body>
-<div id="electronTitlebar" style="-webkit-app-region: drag; position: fixed; top: 0; left: 0; right: 0; height: 32px; z-index: 99999;"></div>
 <script>document.body.style.paddingTop = '32px';</script>
-<!-- â”€â”€ Barre de titre Electron â”€â”€ -->
-<div class="electron-titlebar" style="-webkit-app-region: drag; position: absolute; top: 0; left: 0; width: 100%; height: 32px; background: rgba(17, 17, 19, 0.95); z-index: 10000; display:flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'Space Mono', monospace;">
-  <div style="padding-left: 15px; font-size: 0.7em; color: var(--cyan); letter-spacing: 2px; font-weight: 700;">EVA DESKTOP</div>
-  <div style="-webkit-app-region: no-drag; display: flex; height: 100%;">
-    <button class="tb-btn" onclick="if(window.eva) window.eva.window.minimize()" style="width: 45px; height: 100%; background: transparent; border: none; color: #aaa; cursor: pointer; display: flex; align-items: center; justify-content: center;">_</button>
-    <button class="tb-btn" onclick="if(window.eva) window.eva.window.maximize()" style="width: 45px; height: 100%; background: transparent; border: none; color: #aaa; cursor: pointer; display: flex; align-items: center; justify-content: center;">â–¡</button>
-    <button class="tb-btn close" onclick="if(window.eva) window.eva.window.close()" style="width: 45px; height: 100%; background: transparent; border: none; color: #aaa; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: sans-serif;">âœ•</button>
-  </div>
-</div>
 
 <div class="bg-orb bg-orb-1"></div>
 <div class="bg-orb bg-orb-2"></div>
 
-<div class="page" style="padding-top: 32px;">
+<div class="page">
   <div class="auth-wrap">
     <!-- Left decorative panel -->
     <div class="auth-deco">
       <div class="deco-logo">
-        <img src="./assets/images/eva-logo.png" alt="EVA" style="width:140px;height:auto;object-fit:contain;margin-bottom:20px;filter:drop-shadow(0 0 28px rgba(123,139,245,0.4));">
+        <img src="./assets/images/eva-logo.png" alt="EVA" style="width:250px;height:auto;object-fit:contain;margin-bottom:20px;filter:drop-shadow(0 0 28px rgba(123,139,245,0.4));">
         <div class="deco-sub">Evolutionary Virtual Assistant</div>
         <div style="font-size:0.65em;color:var(--text-muted);margin-top:4px;opacity:0.65;">Desktop V4</div>
       </div>
-      <div class="deco-desc">Votre assistante IA personnelle, intÃ©grÃ©e directement Ã  votre environnement PC.</div>
+      <div class="deco-desc">Votre assistante IA personnelle, intégrée directement à votre environnement PC.</div>
       <div class="deco-features">
-        <div class="deco-feature">ContrÃ´le systÃ¨me & CloudWorks</div>
+        <div class="deco-feature">Contrôle système & CloudWorks</div>
         <div class="deco-feature">Interaction vocale globale</div>
-        <div class="deco-feature">ModÃ¨les IA 100% Locaux (Ollama/LM Studio)</div>
+        <div class="deco-feature">Modèles IA 100% Locaux (Ollama/LM Studio)</div>
       </div>
     </div>
 
     <!-- Right form panel -->
     <div class="auth-form-side">
       <div class="auth-form-title">BIENVENUE SUR EVA</div>
-      <div class="auth-form-sub">Veuillez vous authentifier pour synchroniser vos paramÃ¨tres et votre mÃ©moire neuronale.</div>
+      <div class="auth-form-sub">Veuillez vous authentifier pour synchroniser vos paramètres et votre mémoire neuronale.</div>
 
       <div id="authMessage" class="auth-message"></div>
 
@@ -240,7 +230,7 @@ body::before{
       </div>
       
       <div class="auth-footer" style="margin-top:20px;">
-        Astral Technologie Â© 2026
+        Astral Technologie © 2026
       </div>
     </div>
   </div>
@@ -262,36 +252,69 @@ body::before{
   function openLogin() {
     if (window.eva && window.eva.openExternal) {
       window.eva.openExternal('https://eva.astraltechnologie.fr/app-login.html?redirect=eva-desktop');
-      showMsg('Une page sÃ©curisÃ©e vient de s\'ouvrir dans votre navigateur. Veuillez vous y connecter.', 'success');
+      showMsg('Une page sécurisée vient de s\'ouvrir dans votre navigateur. Veuillez vous y connecter.', 'success');
     } else {
-      showMsg('Erreur: L\'environnement Electron n\'est pas dÃ©tectÃ©.', 'error');
+      showMsg('Erreur: L\'environnement Electron n\'est pas détecté.', 'error');
     }
   }
 
   function openSignup() {
     if (window.eva && window.eva.openExternal) {
       window.eva.openExternal('https://eva.astraltechnologie.fr/app-signup.html?redirect=eva-desktop');
-      showMsg('Une page sÃ©curisÃ©e vient de s\'ouvrir dans votre navigateur. Veuillez y crÃ©er votre compte.', 'success');
+      showMsg('Une page sécurisée vient de s\'ouvrir dans votre navigateur. Veuillez y créer votre compte.', 'success');
     } else {
-      showMsg('Erreur: L\'environnement Electron n\'est pas dÃ©tectÃ©.', 'error');
+      showMsg('Erreur: L\'environnement Electron n\'est pas détecté.', 'error');
     }
   }
 
-  // Ã‰coute du retour de l'authentification via Deep Link (gÃ©rÃ© par ipcRenderer dans preload)
+  // Écoute du retour de l'authentification via Deep Link
   if (window.eva && window.eva.onAuthCallback) {
-    window.eva.onAuthCallback(function(data) {
+    window.eva.onAuthCallback(async function(data) {
       if (data.refreshToken || data.hid) {
-        showMsg('Authentification rÃ©ussie ! Lancement d\'EVA...', 'success');
-        // Redirection vers le chat
-        setTimeout(function() {
+        showMsg('Authentification réussie ! Création de la session locale...', 'success');
+        try {
+          var firebaseConfig = { apiKey: "AIzaSyDrXk8X9Ow7CcOc0Sr-yv3mXvzatNxpj3o" };
+          var res = await window.eva.exchangeToken(data.refreshToken, firebaseConfig.apiKey);
+          if (res && res.id_token) {
+            var payload = JSON.parse(atob(res.id_token.split('.')[1]));
+            var dbReq = indexedDB.open('firebaseLocalStorageDb');
+            dbReq.onupgradeneeded = function(e) {
+              var db = e.target.result;
+              db.createObjectStore('firebaseLocalStorage', { keyPath: 'fbase_key' });
+            };
+            dbReq.onsuccess = function(e) {
+              var idb = e.target.result;
+              var tx = idb.transaction('firebaseLocalStorage', 'readwrite');
+              var store = tx.objectStore('firebaseLocalStorage');
+              var fbaseKey = 'firebase:authUser:' + firebaseConfig.apiKey + ':[DEFAULT]';
+              var sessionData = {
+                uid: payload.user_id,
+                email: payload.email,
+                displayName: payload.name || payload.email.split('@')[0],
+                photoURL: payload.picture || null,
+                stsTokenManager: {
+                  refreshToken: data.refreshToken,
+                  accessToken: res.id_token,
+                  expirationTime: Date.now() + (parseInt(res.expires_in) * 1000)
+                }
+              };
+              store.put({ fbase_key: fbaseKey, value: sessionData });
+              tx.oncomplete = function() {
+                setTimeout(function() { window.location.href = 'chat.html'; }, 500);
+              };
+            };
+            dbReq.onerror = function() { window.location.href = 'chat.html'; };
+          } else {
+            window.location.href = 'chat.html';
+          }
+        } catch(err) {
           window.location.href = 'chat.html';
-        }, 1000);
+        }
       }
     });
   }
 </script>
 </body>
 </html>
-
 
 
