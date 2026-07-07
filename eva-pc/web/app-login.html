@@ -295,6 +295,7 @@ body::before{
             
                 
                 
+                
                 var provider = (payload.firebase && payload.firebase.sign_in_provider) ? payload.firebase.sign_in_provider : "password";
                 var fbaseKey = 'firebase:authUser:' + firebaseConfig.apiKey + ':[DEFAULT]';
                 var sessionData = {
@@ -306,13 +307,6 @@ body::before{
                   photoURL: payload.picture || null,
                   providerData: [{
                     providerId: provider,
-                    uid: payload.email,
-                    displayName: payload.name || null,
-                    email: payload.email,
-                    phoneNumber: null,
-                    photoURL: payload.picture || null
-                  }],
-
                     uid: payload.email,
                     displayName: payload.name || null,
                     email: payload.email,
@@ -334,7 +328,7 @@ body::before{
                 setTimeout(function() {
                   window.location.href = 'chat.html';
                 }, 100);
-dbReq.onerror = function() { window.location.href = 'chat.html'; };
+
           } else {
             window.location.href = 'chat.html';
           }
