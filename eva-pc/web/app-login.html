@@ -196,12 +196,25 @@ body::before{
 <div class="bg-orb bg-orb-1"></div>
 <div class="bg-orb bg-orb-2"></div>
 
-<div class="page">
+<!-- Barre de titre Electron -->
+<div class="electron-titlebar" style="-webkit-app-region: drag; position: fixed; top: 0; left: 0; right: 0; height: 32px; background: rgba(17,17,19,0.9); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 999999; backdrop-filter: blur(10px);">
+  <div style="display: flex; align-items: center; padding-left: 12px; gap: 10px;">
+    <img src="./assets/images/eva-logo.png" style="width: 16px; height: 16px; object-fit: contain;">
+    <span style="color: #e4e4ef; font-family: 'Space Mono', monospace; font-size: 11px; font-weight: bold; letter-spacing: 1px;">E.V.A DESKTOP</span>
+  </div>
+  <div style="-webkit-app-region: no-drag; display: flex; height: 100%;">
+    <button onclick="if(window.eva) window.eva.window.minimize()" style="width: 46px; height: 100%; background: transparent; border: none; color: #88889a; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#88889a'">&#x2014;</button>
+    <button onclick="if(window.eva) window.eva.window.maximize()" style="width: 46px; height: 100%; background: transparent; border: none; color: #88889a; cursor: pointer; transition: all 0.2s; font-size: 15px;" onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#88889a'">&#x25A1;</button>
+    <button onclick="if(window.eva) window.eva.window.close()" style="width: 46px; height: 100%; background: transparent; border: none; color: #88889a; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e81123';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#88889a'">&#x2715;</button>
+  </div>
+</div>
+
+<div class="page" style="padding-top: 32px;">
   <div class="auth-wrap">
     <!-- Left decorative panel -->
     <div class="auth-deco">
       <div class="deco-logo">
-        <img src="./assets/images/eva-logo.png" alt="EVA" style="width:250px;height:auto;object-fit:contain;margin-bottom:20px;filter:drop-shadow(0 0 28px rgba(123,139,245,0.4));">
+        <img src="./assets/images/eva-logo.png" alt="EVA" style="width:380px;height:auto;object-fit:contain;margin-bottom:20px;filter:drop-shadow(0 0 28px rgba(123,139,245,0.4));">
         <div class="deco-sub">Evolutionary Virtual Assistant</div>
         <div style="font-size:0.65em;color:var(--text-muted);margin-top:4px;opacity:0.65;">Desktop V4</div>
       </div>

@@ -119,7 +119,7 @@ function createWindow() {
     y: bounds.y,
     minWidth: 900,
     minHeight: 600,
-    frame: true,           // FenÃªtre sans bordure native
+    frame: false,           // FenÃªtre sans bordure native
     backgroundColor: '#111113',
     icon: join(__dirname, '../public/eva-icon.png'),
     webPreferences: {
