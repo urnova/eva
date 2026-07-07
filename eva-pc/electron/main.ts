@@ -1,4 +1,4 @@
-﻿import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
 import { join } from 'path'
 import { fileURLToPath } from 'url'
 import Store from 'electron-store'
@@ -172,31 +172,29 @@ function createOverlayWindow() {
   const overlayWidth = 340
   const overlayHeight = 140
 
-      overlayWindow = new BrowserWindow({
-      width: overlayWidth,
-      height: overlayHeight,
-      x: width - overlayWidth - 20, // En haut à droite, avec un peu de marge
-      y: 20,
-      transparent: true,
-      frame: false,
-      alwaysOnTop: true,
-      resizable: false,
-      skipTaskbar: true,
-      show: false,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        preload: join(__dirname, 'preload.js')
-      }
-    })
-
-    overlayWindow.setAlwaysOnTop(true, 'screen-saver')
-
-    if (isDev) {
-      overlayWindow.loadFile(join(__dirname, '../web/overlay.html'))
-    } else {
-      overlayWindow.loadFile(join(__dirname, '../web/overlay.html'))
+  overlayWindow = new BrowserWindow({
+    width: overlayWidth,
+    height: overlayHeight,
+    x: width - overlayWidth - 20, // En haut à droite, avec un peu de marge
+    y: 20,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: false,
+    skipTaskbar: true,
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: join(__dirname, 'preload.js')
     }
+  })
+
+  overlayWindow.setAlwaysOnTop(true, 'screen-saver')
+
+  if (isDev) {
+    overlayWindow.loadFile(join(__dirname, '../web/overlay.html'))
+  } else {
     overlayWindow.loadFile(join(__dirname, '../dist/overlay.html'))
   }
 
@@ -211,12 +209,12 @@ function saveBounds() {
 
 // â”€â”€â”€ Tray Icon â”€â”€â”€
 function createTray() {
-  const trayIconPath = join(__dirname, '../web/assets/images/eva-logo.png')
+  const trayIconPath = join(__dirname, '../public/eva-icon.png')
   const icon = nativeImage.createFromPath(trayIconPath).resize({ width: 16, height: 16 })
   tray = new Tray(icon)
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'E.V.A — Ouvrir', click: () => { mainWindow?.show(); mainWindow?.focus() } },
+    { label: 'E.V.A - Ouvrir', click: () => { mainWindow?.show(); mainWindow?.focus() } },
     { type: 'separator' },
     { label: 'CloudWorks', click: () => { mainWindow?.show(); mainWindow?.webContents.send('navigate', 'cloudworks') } },
     { label: 'Nouveau chat', click: () => { mainWindow?.show(); mainWindow?.webContents.send('new-chat') } },
@@ -224,7 +222,7 @@ function createTray() {
     { label: 'Quitter E.V.A', click: () => { app.isQuitting = true; app.quit() } }
   ])
 
-  tray.setToolTip('E.V.A — Evolutionary Virtual Assistant')
+  tray.setToolTip('E.V.A - Evolutionary Virtual Assistant')
   tray.setContextMenu(contextMenu)
   tray.on('double-click', () => { mainWindow?.show(); mainWindow?.focus() })
 }
@@ -250,10 +248,11 @@ app.whenReady().then(async () => {
   createTray()
 
   // â”€â”€â”€ Auto-updater (DÃ©pÃ´t PrivÃ©) â”€â”€â”€
-  if (isDev) { mainWindow.webContents.once('did-finish-load', () => { setTimeout(launchMainApp, 1500); }); return; }
+  if (isDev) { mainWindow?.webContents.once('did-finish-load', () => { setTimeout(launchMainApp, 1500); }); return; }
   const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg"
   const _t = _enc.split('').reverse().join('')
   autoUpdater.requestHeaders = { "Authorization": "token " + _t }
+  autoUpdater.autoDownload = false
 
   autoUpdater.checkForUpdatesAndNotify().catch(err => {
     console.error('[AutoUpdater] Erreur de vÃ©rification:', err)
@@ -480,6 +479,7 @@ ipcMain.handle('system:cpuLoad', async () => {
 // â”€â”€â”€ IPC Handlers â€” Screenshot â”€â”€â”€
 ipcMain.handle('system:screenshot', async () => {
   try {
+    // @ts-ignore
     const screenshot = await import('screenshot-desktop')
     const img = await screenshot.default()
     return { success: true, data: img.toString('base64') }

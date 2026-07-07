@@ -4,6 +4,19 @@ import { contextBridge, ipcRenderer } from 'electron'
 // Pas de nodeIntegration → sécurité maximale
 
 const evaAPI = {
+  // 🔄 Updater
+  updater: {
+    startDownload: () => ipcRenderer.invoke('updater:start-download'),
+    quitAndInstall: () => ipcRenderer.invoke('updater:quit-and-install'),
+    onUpdateAvailable: (callback: (info: any) => void) => ipcRenderer.on('updater:available', (e, info) => callback(info)),
+    onUpdateProgress: (callback: (progress: any) => void) => ipcRenderer.on('updater:progress', (e, info) => callback(info)),
+    onUpdateDownloaded: (callback: () => void) => ipcRenderer.on('updater:downloaded', callback)
+  },
+  
+  // 🔒 App Quit
+  onAppQuit: (callback: () => void) => {
+    ipcRenderer.on('app:quit-request', callback)
+  },
   // ── Window Controls ──
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),

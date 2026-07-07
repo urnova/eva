@@ -292,6 +292,8 @@ window.EVAChatHandler = {
   getLastAssistantMessage,
   getConversationSummary,
   getIsProcessing,
+  getCurrentProvider: function() { return currentProvider; },
+  getCurrentConfig: function() { return currentConfig; },
   retryLastMessage
 };
 

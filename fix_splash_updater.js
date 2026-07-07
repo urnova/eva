@@ -1,71 +1,10 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>E.V.A - Chargement</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --cyan:#7b8bf5;--cyan-glow:rgba(123,139,245,0.28);
-      --bg:#111113;--text:#e4e4ef;--text-muted:#88889a;
-    }
-    *{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);overflow:hidden;}
-    body::before{
-      content:'';position:fixed;inset:0;
-      background-image:linear-gradient(rgba(123,139,245,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.015) 1px,transparent 1px);
-      background-size:60px 60px;pointer-events:none;z-index:0;
-    }
-    .bg-orb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(100px);z-index:0;}
-    .bg-orb-1{width:500px;height:500px;background:rgba(123,139,245,0.06);top:-150px;right:-150px;}
-    .bg-orb-2{width:400px;height:400px;background:rgba(167,139,250,0.04);bottom:-150px;left:-100px;}
-    
-    .splash-container {
-      position: relative; z-index: 10;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      height: 100vh;
-      animation: fadeIn 0.8s ease-out;
-      -webkit-app-region: drag;
-    }
-    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+﻿const fs = require('fs');
+let splashHtml = fs.readFileSync('eva-pc/web/splash.html', 'utf8');
 
-    .logo-container {
-      position: relative; width: 250px; height: 250px;
-      display: flex; align-items: center; justify-content: center; margin-bottom: 30px;
-    }
-    .logo-container img { width: 180px; height: auto; object-fit: contain; z-index: 2; filter: drop-shadow(0 0 20px rgba(123,139,245,0.4)); }
-    
-    .ring {
-      position: absolute; width: 100%; height: 100%; border-radius: 50%;
-      border: 2px solid transparent; border-top-color: var(--cyan);
-      animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-    }
-    .ring::before {
-      content: ""; position: absolute; top: 8px; right: 8px; bottom: 8px; left: 8px;
-      border-radius: 50%; border: 2px solid transparent; border-left-color: rgba(167, 139, 250, 0.8);
-      animation: spin 2s linear infinite reverse;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+const targetHtml = `  <div class="splash-container">
+    <div class="logo-container">`;
 
-    h1 {
-      font-family: 'Orbitron', monospace; font-size: 2.2em; letter-spacing: 6px;
-      margin: 0 0 15px 0; color: var(--cyan); text-shadow: 0 0 20px var(--cyan-glow);
-    }
-    #status-text {
-      font-size: 0.9em; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase;
-      animation: pulseText 2s infinite;
-    }
-    @keyframes pulseText { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
-  </style>
-</head>
-<body>
-  <div style="-webkit-app-region: drag; position: fixed; top: 0; left: 0; right: 0; height: 32px; z-index: 99999;"></div>
-  
-  <div class="bg-orb bg-orb-1"></div>
-  <div class="bg-orb bg-orb-2"></div>
-  
-  <!-- Modal de mise à jour -->
+const replacementHtml = `  <!-- Modal de mise à jour -->
   <div id="update-modal" style="display:none; position:fixed; inset:0; background:rgba(17,17,19,0.85); backdrop-filter:blur(10px); z-index:999999; flex-direction:column; justify-content:center; align-items:center; -webkit-app-region:no-drag;">
     <div style="background:rgba(25,25,28,0.95); border:1px solid rgba(123,139,245,0.3); border-radius:12px; padding:30px; width:400px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.5);">
       <h2 style="color:var(--cyan); margin-bottom:15px; font-family:'Orbitron', monospace;">Mise à jour requise</h2>
@@ -90,15 +29,24 @@
   </div>
 
   <div class="splash-container">
-    <div class="logo-container">
-      <div class="ring"></div>
-      <img src="./assets/images/eva-logo.png" alt="EVA Logo">
-    </div>
-    <h1>E.V.A</h1>
-    <div id="status-text">Lancement de l'application...</div>
-  </div>
+    <div class="logo-container">`;
 
-  <script>
+splashHtml = splashHtml.replace(targetHtml, replacementHtml);
+
+const targetScript = `<script>
+    if (window.eva && window.eva.onSplashStatus) {
+      window.eva.onSplashStatus((status) => {
+        document.getElementById('status-text').innerText = status;
+      });
+    }
+    if (window.eva && window.eva.onSplashDone) {
+      window.eva.onSplashDone(() => {
+        window.location.href = 'chat.html';
+      });
+    }
+  </script>`;
+
+const replacementScript = `<script>
     let downloadStarted = false;
     
     function startUpdate() {
@@ -152,6 +100,9 @@
         });
       }
     }
-  </script>
-</body>
-</html>
+  </script>`;
+
+splashHtml = splashHtml.replace(targetScript, replacementScript);
+
+fs.writeFileSync('eva-pc/web/splash.html', splashHtml, 'utf8');
+console.log("SPLASH UPDATER UI ADDED");

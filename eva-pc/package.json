@@ -1,6 +1,6 @@
 {
   "name": "eva-assistant-pc",
-  "version": "4.0.0",
+  "version": "5.2.0",
   "description": "E.V.A — Evolutionary Virtual Assistant by Astral Technologie",
   "author": "Astral Technologie",
   "main": "dist-electron/main.js",
@@ -95,11 +95,14 @@
       "artifactName": "E.V.A-Setup.exe",
       "uninstallDisplayName": "E.V.A Assistant"
     },
-    "publish": {
-      "provider": "github",
-      "owner": "urnova",
-      "repo": "eva"
-    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "urnova",
+        "repo": "eva",
+        "releaseType": "release"
+      }
+    ],
     "compression": "maximum"
   }
 }

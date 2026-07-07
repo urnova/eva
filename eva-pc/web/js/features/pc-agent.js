@@ -34,6 +34,7 @@
       const ts = typeof window.timestamp === 'function' ? window.timestamp() : new Date();
       
       const docRef = window.db.collection('cloudworks').doc(uid).collection('devices').doc(deviceId);
+window.pcAgentDocRef = docRef;
       await docRef.set({
         deviceId: deviceId,
         deviceName: 'EVA Desktop',
@@ -61,6 +62,12 @@
       window.addEventListener('beforeunload', () => {
         docRef.update({ online: false, lastSeen: typeof window.timestamp === 'function' ? window.timestamp() : new Date() }).catch(()=>{});
       });
+      
+      if (window.eva && window.eva.onAppQuit) {
+        window.eva.onAppQuit(() => {
+          docRef.update({ online: false, lastSeen: typeof window.timestamp === 'function' ? window.timestamp() : new Date() }).catch(()=>{});
+        });
+      }
 
     } catch (e) {
       console.error('[CloudWorks] Erreur enregistrement:', e);
