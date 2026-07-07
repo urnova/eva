@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
+﻿import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
 import { join } from 'path'
 import { fileURLToPath } from 'url'
 import Store from 'electron-store'
@@ -9,11 +9,11 @@ import * as path from 'path'
 import * as os from 'os'
 import * as child_process from 'child_process'
 
-// ─── Polyfill __dirname pour ESM ───
+// â”€â”€â”€ Polyfill __dirname pour ESM â”€â”€â”€
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// ─── Store local (config NON synchronisée) ───
+// â”€â”€â”€ Store local (config NON synchronisÃ©e) â”€â”€â”€
 interface StoreSchema {
   firebaseConfig: Record<string, string> | null
   aiProvider: string
@@ -48,22 +48,21 @@ const store = new Store<StoreSchema>({
   }
 })
 
-// ─── Auto Launch ───
+// â”€â”€â”€ Auto Launch â”€â”€â”€
 const evaAutoLaunch = new AutoLaunch({
   name: 'EVA Assistant',
   path: process.execPath
 })
 
 let mainWindow: BrowserWindow | null = null
-let splashWindow: BrowserWindow | null = null
 let overlayWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
-// ─── URL du site web EVA (en production) ───
+// â”€â”€â”€ URL du site web EVA (en production) â”€â”€â”€
 export const EVA_WEB_URL = 'https://eva.astraltechnologie.fr'
 
-// ─── Prévenir multiple instances + gérer protocole custom ───
+// â”€â”€â”€ PrÃ©venir multiple instances + gÃ©rer protocole custom â”€â”€â”€
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
@@ -88,10 +87,10 @@ function handleDeepLink(url: string) {
     const parsed = new URL(url)
     if (parsed.hostname === 'auth' || parsed.pathname.includes('auth')) {
       const params = new URLSearchParams(parsed.search)
-      // Décoder le token (Windows peut modifier l'encodage URL)
+      // DÃ©coder le token (Windows peut modifier l'encodage URL)
       let refreshToken = params.get('refreshToken') || params.get('token')
       if (refreshToken) {
-        // Réassurer le décodage correct des caractères spéciaux
+        // RÃ©assurer le dÃ©codage correct des caractÃ¨res spÃ©ciaux
         try { refreshToken = decodeURIComponent(refreshToken) } catch { /* already decoded */ }
       }
       const hid = params.get('hid')
@@ -109,7 +108,7 @@ function handleDeepLink(url: string) {
   }
 }
 
-// ─── Créer la fenêtre principale ───
+// â”€â”€â”€ CrÃ©er la fenÃªtre principale â”€â”€â”€
 function createWindow() {
   const bounds = store.get('windowBounds')
 
@@ -120,9 +119,7 @@ function createWindow() {
     y: bounds.y,
     minWidth: 900,
     minHeight: 600,
-      titleBarStyle: 'hidden',
-      titleBarOverlay: { color: '#111113', symbolColor: '#7b8bf5', height: 32 },
-    frame: true,
+    frame: true,           // FenÃªtre sans bordure native
     backgroundColor: '#111113',
     icon: join(__dirname, '../public/eva-icon.png'),
     webPreferences: {
@@ -134,27 +131,27 @@ function createWindow() {
       // Permettre les scripts Puter dans le renderer
       sandbox: false
     },
-    show: false // On affiche après ready-to-show
+    show: false // On affiche aprÃ¨s ready-to-show
   })
 
-  // ─── Chargement de l'URL ───
+  // â”€â”€â”€ Chargement de l'URL â”€â”€â”€
   if (isDev) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL ? `${process.env.VITE_DEV_SERVER_URL}splash.html` : '')
+    mainWindow.loadURL('http://localhost:5173/splash.html')
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
     mainWindow.loadFile(join(__dirname, '../dist/splash.html'))
   }
 
-  // ─── Affichage fluide ───
+  // â”€â”€â”€ Affichage â”€â”€â”€
   mainWindow.once('ready-to-show', () => {
-    // La fenêtre principale attendra l'appel de launchMainApp() pour s'afficher.
+    mainWindow?.show()
   })
 
-  // ─── Sauvegarder la position/taille ───
+  // â”€â”€â”€ Sauvegarder la position/taille â”€â”€â”€
   mainWindow.on('resized', saveBounds)
   mainWindow.on('moved', saveBounds)
 
-  // ─── Minimize to tray ───
+  // â”€â”€â”€ Minimize to tray â”€â”€â”€
   mainWindow.on('close', (event) => {
     if (store.get('minimizeToTray') && !app.isQuitting) {
       event.preventDefault()
@@ -165,31 +162,7 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null })
 }
 
-function createSplashWindow() {
-  splashWindow = new BrowserWindow({
-    width: 400,
-    height: 400,
-    transparent: true,
-    frame: false,
-    alwaysOnTop: true,
-    resizable: false,
-    icon: join(__dirname, '../public/eva-icon.png'),
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
-    }
-  })
 
-  // Dans Electron+Vite, le public folder est copié à la racine (ou dans dist/public),
-  // mais en dev on peut le charger via http ou file path.
-  if (isDev) {
-    splashWindow.loadFile(join(__dirname, '../public/splash.html'))
-  } else {
-    splashWindow.loadFile(join(__dirname, '../dist/splash.html'))
-  }
-
-  splashWindow.on('closed', () => { splashWindow = null })
-}
 
 function createOverlayWindow() {
   const { screen } = require('electron')
@@ -202,21 +175,21 @@ function createOverlayWindow() {
   overlayWindow = new BrowserWindow({
     width: overlayWidth,
     height: overlayHeight,
-    x: width - overlayWidth - 20, // En haut à droite, avec un peu de marge
+    x: width - overlayWidth - 20, // En haut Ã  droite, avec un peu de marge
     y: 20,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
     resizable: false,
-    skipTaskbar: true, // Ignoré dans la barre des tâches
-    show: false, // Caché par défaut
+    skipTaskbar: true, // IgnorÃ© dans la barre des tÃ¢ches
+    show: false, // CachÃ© par dÃ©faut
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     }
   })
 
-  // Permet à l'overlay de passer au-dessus des fenêtres en plein écran sur Windows
+  // Permet Ã  l'overlay de passer au-dessus des fenÃªtres en plein Ã©cran sur Windows
   overlayWindow.setAlwaysOnTop(true, 'screen-saver')
 
   if (isDev) {
@@ -234,14 +207,14 @@ function saveBounds() {
   store.set('windowBounds', bounds)
 }
 
-// ─── Tray Icon ───
+// â”€â”€â”€ Tray Icon â”€â”€â”€
 function createTray() {
   const trayIconPath = join(__dirname, '../public/eva-tray.png')
   const icon = nativeImage.createFromPath(trayIconPath).resize({ width: 16, height: 16 })
   tray = new Tray(icon)
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'E.V.A — Ouvrir', click: () => { mainWindow?.show(); mainWindow?.focus() } },
+    { label: 'E.V.A â€” Ouvrir', click: () => { mainWindow?.show(); mainWindow?.focus() } },
     { type: 'separator' },
     { label: 'CloudWorks', click: () => { mainWindow?.show(); mainWindow?.webContents.send('navigate', 'cloudworks') } },
     { label: 'Nouveau chat', click: () => { mainWindow?.show(); mainWindow?.webContents.send('new-chat') } },
@@ -249,12 +222,12 @@ function createTray() {
     { label: 'Quitter EVA', click: () => { app.isQuitting = true; app.quit() } }
   ])
 
-  tray.setToolTip('E.V.A — Evolutionary Virtual Assistant')
+  tray.setToolTip('E.V.A â€” Evolutionary Virtual Assistant')
   tray.setContextMenu(contextMenu)
   tray.on('double-click', () => { mainWindow?.show(); mainWindow?.focus() })
 }
 
-// ─── App Events ───
+// â”€â”€â”€ App Events â”€â”€â”€
 app.whenReady().then(async () => {
   if (isDev) {
     app.setAsDefaultProtocolClient('eva-desktop', process.execPath, [
@@ -269,58 +242,52 @@ app.whenReady().then(async () => {
     handleDeepLink(url)
   })
 
-  // Afficher le Splash Screen en premier
-  createSplashWindow()
+  // Afficher directement la fenÃªtre principale avec splash.html
+  createWindow()
+  createOverlayWindow()
+  createTray()
+
+  // â”€â”€â”€ Auto-updater (DÃ©pÃ´t PrivÃ©) â”€â”€â”€
+  if (isDev) { mainWindow.webContents.once('did-finish-load', () => { setTimeout(launchMainApp, 1500); }); return; }
+  const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg"
+  const _t = _enc.split('').reverse().join('')
+  autoUpdater.requestHeaders = { "Authorization": "token " + _t }
+
+  autoUpdater.checkForUpdatesAndNotify().catch(err => {
+    console.error('[AutoUpdater] Erreur de vÃ©rification:', err)
+    launchMainApp()
+  })
+
+  autoUpdater.on('checking-for-update', () => {
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'VÃ©rification des mises Ã  jour...')
+  })
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[AutoUpdater] Mise Ã  jour disponible:', info)
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise Ã  jour trouvÃ©e. TÃ©lÃ©chargement...')
+    if (mainWindow) mainWindow.webContents.send('updater:available', info)
+  })
   
-  // Laisser le temps au splash screen de s'afficher (500ms min)
-  setTimeout(() => {
-    createWindow() // Crée la mainWindow mais elle est cachée par défaut (show: false)
-    createOverlayWindow() // Crée la fenêtre d'overlay
-    createTray()
+  autoUpdater.on('update-not-available', (info) => {
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'SystÃ¨me Ã  jour. DÃ©marrage...')
+    setTimeout(launchMainApp, 1000)
+  })
 
-    // ─── Auto-updater (Dépôt Privé) ───
-    if (isDev) { setTimeout(launchMainApp, 1500); return; }
-      const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg"
-    const _t = _enc.split('').reverse().join('')
-    autoUpdater.requestHeaders = { "Authorization": "token " + _t }
-
-    autoUpdater.checkForUpdatesAndNotify().catch(err => {
-      console.error('[AutoUpdater] Erreur de vérification:', err)
-      launchMainApp()
-    })
-
-    autoUpdater.on('checking-for-update', () => {
-      if (splashWindow) splashWindow.webContents.send('splash:status', 'Vérification des mises à jour...')
-    })
-
-    autoUpdater.on('update-available', (info) => {
-      console.log('[AutoUpdater] Mise à jour disponible:', info)
-      if (splashWindow) splashWindow.webContents.send('splash:status', 'Mise à jour trouvée. Téléchargement...')
-      if (mainWindow) mainWindow.webContents.send('updater:available', info)
-    })
+  autoUpdater.on('error', (err) => {
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Erreur rÃ©seau. DÃ©marrage...')
+    setTimeout(launchMainApp, 1000)
+  })
+  
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[AutoUpdater] Mise Ã  jour tÃ©lÃ©chargÃ©e:', info)
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise Ã  jour prÃªte. RedÃ©marrage...')
+    if (mainWindow) mainWindow.webContents.send('updater:downloaded', info)
     
-    autoUpdater.on('update-not-available', (info) => {
-      if (splashWindow) splashWindow.webContents.send('splash:status', 'Système à jour. Démarrage...')
-      setTimeout(launchMainApp, 1000)
-    })
-
-    autoUpdater.on('error', (err) => {
-      if (splashWindow) splashWindow.webContents.send('splash:status', 'Erreur réseau. Démarrage...')
-      setTimeout(launchMainApp, 1000)
-    })
-    
-    autoUpdater.on('update-downloaded', (info) => {
-      console.log('[AutoUpdater] Mise à jour téléchargée:', info)
-      if (splashWindow) splashWindow.webContents.send('splash:status', 'Mise à jour prête. Redémarrage...')
-      if (mainWindow) mainWindow.webContents.send('updater:downloaded', info)
-      
-      // Installer l'update immédiatement et redémarrer (silencieusement)
-      setTimeout(() => {
-        autoUpdater.quitAndInstall(true, true)
-      }, 2000)
-    })
-
-  }, 1000) // Attendre 1 sec pour que l'utilisateur voie le logo
+    // Installer l'update immÃ©diatement et redÃ©marrer (silencieusement)
+    setTimeout(() => {
+      autoUpdater.quitAndInstall(true, true)
+    }, 2000)
+  })
 
   const shouldAutoLaunch = store.get('autoLaunch')
   if (shouldAutoLaunch) {
@@ -332,24 +299,8 @@ app.whenReady().then(async () => {
 })
 
 function launchMainApp() {
-  if (splashWindow && !splashWindow.isDestroyed()) {
-    splashWindow.close()
-  }
-  if (mainWindow && !mainWindow.isVisible()) {
-    mainWindow.show()
-    // Animation d'entrée via fade
-    mainWindow.setOpacity(0)
-    let opacity = 0
-    const fadeIn = setInterval(() => {
-      opacity += 0.05
-      if (opacity >= 1) {
-        clearInterval(fadeIn)
-        if (mainWindow) mainWindow.setOpacity(1)
-      } else {
-        if (mainWindow) mainWindow.setOpacity(opacity)
-      }
-    }, 30)
-    mainWindow.focus()
+  if (mainWindow) {
+    mainWindow.webContents.send('splash:done')
   }
 }
 
@@ -368,7 +319,7 @@ function toggleWindow() {
 }
 
 app.on('will-quit', () => {
-  // Désenregistrer tous les raccourcis
+  // DÃ©senregistrer tous les raccourcis
   globalShortcut.unregisterAll()
 })
 
@@ -383,7 +334,7 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()
 })
 
-// ─── IPC Handlers — Window Controls ───
+// â”€â”€â”€ IPC Handlers â€” Window Controls â”€â”€â”€
 ipcMain.handle('window:minimize', () => mainWindow?.minimize())
 ipcMain.handle('window:maximize', () => {
   if (mainWindow?.isMaximized()) mainWindow.unmaximize()
@@ -395,7 +346,7 @@ ipcMain.handle('window:close', () => {
 })
 ipcMain.handle('window:isMaximized', () => mainWindow?.isMaximized())
 
-// ─── IPC Handlers — Overlay Agentique ───
+// â”€â”€â”€ IPC Handlers â€” Overlay Agentique â”€â”€â”€
 ipcMain.handle('overlay:show', (_event, state) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.webContents.send('overlay:setState', state || 'listening')
@@ -415,17 +366,17 @@ ipcMain.handle('overlay:setState', (_event, state, text) => {
   }
 })
 
-// Communication Overlay -> Main App (Ex: Bouton Annuler appuyé)
+// Communication Overlay -> Main App (Ex: Bouton Annuler appuyÃ©)
 ipcMain.on('overlay:action', (_event, action) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('overlay:action', action)
   }
 })
 
-// ─── IPC Handler — Ouvrir URL dans le navigateur système ───
+// â”€â”€â”€ IPC Handler â€” Ouvrir URL dans le navigateur systÃ¨me â”€â”€â”€
 ipcMain.handle('shell:openExternal', (_event, url: string) => shell.openExternal(url))
 
-// ─── IPC Handler — Échange du refresh token via Firebase REST API (depuis Node.js = pas de restriction origin) ───
+// â”€â”€â”€ IPC Handler â€” Ã‰change du refresh token via Firebase REST API (depuis Node.js = pas de restriction origin) â”€â”€â”€
 ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey: string) => {
   try {
     const https = await import('https')
@@ -449,7 +400,7 @@ ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey
         req.end()
       })
 
-    // Étape 1 : échanger le refresh token contre un ID token
+    // Ã‰tape 1 : Ã©changer le refresh token contre un ID token
     const tokenData = await postData(
       `https://securetoken.googleapis.com/v1/token?key=${apiKey}`,
       `grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`,
@@ -457,7 +408,7 @@ ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey
     ) as Record<string, unknown>
 
     if (!tokenData.id_token) {
-      // tokenData.error peut être un objet {code, message, status}
+      // tokenData.error peut Ãªtre un objet {code, message, status}
       const err = tokenData.error
       const errMsg = typeof err === 'object' && err !== null
         ? ((err as Record<string, unknown>).message as string) || JSON.stringify(err)
@@ -466,7 +417,7 @@ ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey
       return { success: false, error: errMsg }
     }
 
-    // Étape 2 : récupérer les infos utilisateur
+    // Ã‰tape 2 : rÃ©cupÃ©rer les infos utilisateur
     const userData = await postData(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
       JSON.stringify({ idToken: tokenData.id_token }),
@@ -490,13 +441,13 @@ ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey
 })
 
 
-// ─── IPC Handlers — Store ───
+// â”€â”€â”€ IPC Handlers â€” Store â”€â”€â”€
 ipcMain.handle('store:get', (_event, key: string) => store.get(key as keyof StoreSchema))
 ipcMain.handle('store:set', (_event, key: string, value: unknown) => store.set(key as keyof StoreSchema, value))
 ipcMain.handle('store:delete', (_event, key: string) => store.delete(key as keyof StoreSchema))
 ipcMain.handle('store:getAll', () => store.store)
 
-// ─── IPC Handlers — System Info ───
+// â”€â”€â”€ IPC Handlers â€” System Info â”€â”€â”€
 ipcMain.handle('system:info', async () => {
   try {
     const si = await import('systeminformation')
@@ -523,7 +474,7 @@ ipcMain.handle('system:cpuLoad', async () => {
   }
 })
 
-// ─── IPC Handlers — Screenshot ───
+// â”€â”€â”€ IPC Handlers â€” Screenshot â”€â”€â”€
 ipcMain.handle('system:screenshot', async () => {
   try {
     const screenshot = await import('screenshot-desktop')
@@ -534,7 +485,7 @@ ipcMain.handle('system:screenshot', async () => {
   }
 })
 
-// ─── IPC Handlers — Filesystem ───
+// â”€â”€â”€ IPC Handlers â€” Filesystem â”€â”€â”€
 ipcMain.handle('fs:list', async (_event, dirPath: string) => {
   try {
     const items = fs.readdirSync(dirPath, { withFileTypes: true })
@@ -643,7 +594,7 @@ ipcMain.handle('fs:drives', () => {
 
 ipcMain.handle('fs:homedir', () => os.homedir())
 
-// ─── IPC Handlers — Terminal (node-pty) ───
+// â”€â”€â”€ IPC Handlers â€” Terminal (node-pty) â”€â”€â”€
 const terminals = new Map<string, import('node-pty').IPty>()
 
 ipcMain.handle('terminal:create', async (_event, termId: string) => {
@@ -687,7 +638,7 @@ ipcMain.handle('terminal:kill', (_event, termId: string) => {
   return { success: false }
 })
 
-// ─── IPC Handlers — System Commands ───
+// â”€â”€â”€ IPC Handlers â€” System Commands â”€â”€â”€
 ipcMain.handle('system:exec', async (_event, cmd: string) => {
   return new Promise(resolve => {
     child_process.exec(cmd, { timeout: 10000 }, (error, stdout, stderr) => {
@@ -736,7 +687,7 @@ ipcMain.handle('system:killProcess', async (_event, pid: number) => {
   }
 })
 
-// ─── IPC Handlers — Auto Launch ───
+// â”€â”€â”€ IPC Handlers â€” Auto Launch â”€â”€â”€
 ipcMain.handle('autolaunch:get', () => store.get('autoLaunch'))
 ipcMain.handle('autolaunch:set', async (_event, enabled: boolean) => {
   store.set('autoLaunch', enabled)
@@ -745,7 +696,7 @@ ipcMain.handle('autolaunch:set', async (_event, enabled: boolean) => {
   return { success: true }
 })
 
-// ─── IPC Handlers — App Info ───
+// â”€â”€â”€ IPC Handlers â€” App Info â”€â”€â”€
 ipcMain.handle('app:version', () => app.getVersion())
 ipcMain.handle('app:platform', () => process.platform)
 ipcMain.handle('app:name', () => app.getName())
@@ -759,4 +710,5 @@ declare global {
     }
   }
 }
+
 
