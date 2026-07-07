@@ -123,7 +123,6 @@ function createWindow() {
       titleBarStyle: 'hidden',
       titleBarOverlay: { color: '#111113', symbolColor: '#7b8bf5', height: 32 },
     frame: true,
-    titleBarStyle: 'hidden',
     backgroundColor: '#111113',
     icon: join(__dirname, '../public/eva-icon.png'),
     webPreferences: {
@@ -140,10 +139,10 @@ function createWindow() {
 
   // ─── Chargement de l'URL ───
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173/chat.html')
+    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL ? `${process.env.VITE_DEV_SERVER_URL}splash.html` : '')
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
-    mainWindow.loadFile(join(__dirname, '../dist/chat.html'))
+    mainWindow.loadFile(join(__dirname, '../dist/splash.html'))
   }
 
   // ─── Affichage fluide ───
