@@ -292,49 +292,40 @@ body::before{
           var res = await window.eva.exchangeToken(data.refreshToken, firebaseConfig.apiKey);
           if (res && res.id_token) {
             var payload = JSON.parse(atob(res.id_token.split('.')[1]));
-            var dbReq = indexedDB.open('firebaseLocalStorageDb');
-            dbReq.onupgradeneeded = function(e) {
-              var db = e.target.result;
-              if (!db.objectStoreNames.contains('firebaseLocalStorage')) {
-                db.createObjectStore('firebaseLocalStorage', { keyPath: 'fbase_key' });
-              }
-            };
-            dbReq.onsuccess = function(e) {
-              var idb = e.target.result;
-              var tx = idb.transaction('firebaseLocalStorage', 'readwrite');
-              var store = tx.objectStore('firebaseLocalStorage');
-              var fbaseKey = 'firebase:authUser:' + firebaseConfig.apiKey + ':[DEFAULT]';
-              var sessionData = {
-                uid: payload.user_id,
-                email: payload.email,
-                emailVerified: payload.email_verified || false,
-                displayName: payload.name || payload.email.split('@')[0],
-                isAnonymous: false,
-                photoURL: payload.picture || null,
-                providerData: [{
-                  providerId: "password",
-                  uid: payload.email,
-                  displayName: payload.name || null,
+            
+                
+                var fbaseKey = 'firebase:authUser:' + firebaseConfig.apiKey + ':[DEFAULT]';
+                var sessionData = {
+                  uid: payload.user_id,
                   email: payload.email,
-                  phoneNumber: null,
-                  photoURL: payload.picture || null
-                }],
-                stsTokenManager: {
-                  refreshToken: data.refreshToken,
-                  accessToken: res.id_token,
-                  expirationTime: Date.now() + (parseInt(res.expires_in) * 1000)
-                },
-                createdAt: String(Date.now()),
-                lastLoginAt: String(Date.now()),
-                apiKey: firebaseConfig.apiKey,
-                appName: "[DEFAULT]"
-              };
-              store.put({ fbase_key: fbaseKey, value: sessionData });
-              tx.oncomplete = function() {
-                setTimeout(function() { window.location.href = 'chat.html'; }, 500);
-              };
-            };
-            dbReq.onerror = function() { window.location.href = 'chat.html'; };
+                  emailVerified: payload.email_verified || false,
+                  displayName: payload.name || payload.email.split('@')[0],
+                  isAnonymous: false,
+                  photoURL: payload.picture || null,
+                  providerData: [{
+                    providerId: "password",
+                    uid: payload.email,
+                    displayName: payload.name || null,
+                    email: payload.email,
+                    phoneNumber: null,
+                    photoURL: payload.picture || null
+                  }],
+                  stsTokenManager: {
+                    refreshToken: data.refreshToken,
+                    accessToken: res.id_token,
+                    expirationTime: Date.now() + (parseInt(res.expires_in) * 1000)
+                  },
+                  createdAt: String(Date.now()),
+                  lastLoginAt: String(Date.now()),
+                  apiKey: firebaseConfig.apiKey,
+                  appName: "[DEFAULT]"
+                };
+                localStorage.setItem(fbaseKey, JSON.stringify(sessionData));
+
+                setTimeout(function() {
+                  window.location.href = 'chat.html';
+                }, 100);
+dbReq.onerror = function() { window.location.href = 'chat.html'; };
           } else {
             window.location.href = 'chat.html';
           }

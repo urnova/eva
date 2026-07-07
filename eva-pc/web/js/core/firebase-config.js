@@ -20,6 +20,7 @@ if (!firebase.apps.length) {
 
 // Variables globales (accessibles partout sans imports)
 window.auth = firebase.auth();
+window.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e => console.warn(e));
 window.db = firebase.firestore();
 window.timestamp = firebase.firestore.FieldValue.serverTimestamp;
 window.increment = firebase.firestore.FieldValue.increment;
