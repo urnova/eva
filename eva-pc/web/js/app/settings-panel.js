@@ -711,7 +711,7 @@ function renderSettings(section) {
       (isGoogleOnly ? '' : '<div class="form-field"><label class="form-label">Mot de passe actuel</label><input type="password" class="form-input" id="sCurPassword" placeholder="••••••••"></div>') +
       '<div class="form-field"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="sNewPassword" placeholder="Minimum 6 caractères"></div>' +
       '<div class="form-field"><label class="form-label">Confirmer le mot de passe</label><input type="password" class="form-input" id="sConfPassword" placeholder="Idem ci-dessus"></div>' +
-      ''<button class="btn btn-secondary" onclick="changePassword()" style="margin-top:4px">'+(isGoogleOnly ? 'Créer le mot de passe' : 'Mettre à jour le mot de passe')+'</button>' +
+      '<button class="btn btn-secondary" onclick="changePassword()" style="margin-top:4px">'+(isGoogleOnly ? 'Créer le mot de passe' : 'Mettre à jour le mot de passe')+'</button>' +
         '</div>' +
         '<div class="settings-section">' +
         '<div class="settings-section-title">Sessions Actives</div>' +
