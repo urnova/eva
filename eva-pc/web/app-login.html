@@ -189,7 +189,9 @@ body::before{
 </style>
 </head>
 <body>
-<script>document.body.style.paddingTop = '32px';</script>
+
+<!-- ── Barre de titre Electron ── -->
+
 
 <div class="bg-orb bg-orb-1"></div>
 <div class="bg-orb bg-orb-2"></div>
@@ -267,7 +269,7 @@ body::before{
     }
   }
 
-  // Écoute du retour de l'authentification via Deep Link
+  // Écoute du retour de l'authentification via Deep Link (géré par ipcRenderer dans preload)
   if (window.eva && window.eva.onAuthCallback) {
     window.eva.onAuthCallback(async function(data) {
       if (data.refreshToken || data.hid) {
@@ -280,7 +282,9 @@ body::before{
             var dbReq = indexedDB.open('firebaseLocalStorageDb');
             dbReq.onupgradeneeded = function(e) {
               var db = e.target.result;
-              db.createObjectStore('firebaseLocalStorage', { keyPath: 'fbase_key' });
+              if (!db.objectStoreNames.contains('firebaseLocalStorage')) {
+                db.createObjectStore('firebaseLocalStorage', { keyPath: 'fbase_key' });
+              }
             };
             dbReq.onsuccess = function(e) {
               var idb = e.target.result;
