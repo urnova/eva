@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
+app.disableHardwareAcceleration();
 import { join } from 'path'
 import { fileURLToPath } from 'url'
 import Store from 'electron-store'

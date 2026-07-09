@@ -57,7 +57,7 @@ function renderDevices(snap) {
   var list = document.getElementById('cwDeviceList');
   if (!list) return;
   if (snap.empty) {
-    list.innerHTML = '<div class="cw-empty"><div class="cw-empty-icon">\uD83D\uDCBB</div><div class="cw-empty-title">AUCUN APPAREIL CONNECTÉ</div>Installez EVA Desktop Agent sur votre PC pour qu\'il apparaisse ici automatiquement.</div>';
+    list.innerHTML = '<div class="cw-empty"><div class="cw-empty-icon">\uD83D\uDCBB</div><div class="cw-empty-title">AUCUN APPAREIL CONNECTÉ</div>Installez EVA Desktop Agent sur votre PC pour qu\'il apparaisse ici automatiquement.<br><br><a href="https://github.com/urnova/eva/releases/latest/download/E.V.A-Setup.exe" target="_blank" class="cw-btn" style="text-decoration:none;display:inline-block;margin-top:10px;">Télécharger E.V.A Desktop (Dernière version)</a></div>';
     _setStats(0, 0, 0);
     return;
   }

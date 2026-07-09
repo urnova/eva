@@ -67,33 +67,6 @@ function initAuth() {
       }
     });
 
-      }, 300000);
-      
-      window.addEventListener('beforeunload', function() {
-        if (S.user && S.sessionId) {
-          db.collection('users').doc(S.user.uid).collection('sessions').doc(S.sessionId).update({
-            online: false,
-            lastSeen: window.timestamp ? window.timestamp() : new Date()
-          }).catch(function(){});
-        }
-      });
-
-      // Écouter si la session a été révoquée
-      db.collection('users').doc(user.uid).collection('sessions').doc(S.sessionId).onSnapshot(function(doc) {
-        if (doc.exists && doc.data().revoke === true) {
-          auth.signOut().then(function() {
-            localStorage.removeItem('eva_session_id');
-            window.location.reload();
-          });
-        } else if (!doc.exists) {
-          auth.signOut().then(function() {
-            localStorage.removeItem('eva_session_id');
-            window.location.reload();
-          });
-        }
-      });
-    }
-
     loadProfile(user.uid);
     initChatSession();
     loadConvs();

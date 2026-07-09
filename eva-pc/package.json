@@ -81,19 +81,19 @@
         }
       ],
       "icon": "public/eva-icon.png",
-      "artifactName": "EVA-Assistant-Setup.exe",
+      "artifactName": "E.V.A-Setup.exe",
       "legalTrademarks": "Astral Technologie",
       "publisherName": "Astral Technologie",
       "verifyUpdateCodeSignature": false
     },
     "nsis": {
-      "oneClick": true,
-      "allowToChangeInstallationDirectory": false,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "public/installer-icon.ico",
+      "uninstallerIcon": "public/installer-icon.ico",
+      "uninstallDisplayName": "Désinstaller E.V.A",
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "EVA Assistant",
-      "artifactName": "E.V.A-Setup.exe",
-      "uninstallDisplayName": "E.V.A Assistant"
+      "createStartMenuShortcut": true
     },
     "publish": [
       {
@@ -103,6 +103,7 @@
         "releaseType": "release"
       }
     ],
-    "compression": "maximum"
+    "compression": "maximum",
+    "artifactName": "E.V.A-Setup.exe"
   }
 }
