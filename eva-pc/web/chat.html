@@ -50,7 +50,11 @@
   </div>
 </div>
 
-<style>body { padding-top: 32px; box-sizing: border-box; height: 100vh; overflow: hidden; } .sidebar { height: calc(100vh - 32px); top: 32px; }</style>
+<style>
+  body { padding-top: 32px; box-sizing: border-box; height: 100vh; overflow: hidden; display: flex; flex-direction: row; }
+  .sidebar { height: calc(100vh - 32px) !important; top: 32px !important; }
+  .main-wrapper, .main-content, #appContainer { height: calc(100vh - 32px) !important; }
+</style>
 
 <div class="bg-orb bg-orb-1"></div>
 <div class="bg-orb bg-orb-2"></div>

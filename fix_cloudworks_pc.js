@@ -1,4 +1,5 @@
-
+﻿const fs = require('fs');
+const pcCloudWorks = `
 /* EVA V4 — CLOUDWORKS.JS (PC AGENT EDITION) */
 (function() {
 'use strict';
@@ -21,7 +22,7 @@ async function loadCloudWorks() {
       '<div style="font-size:1.5em;font-weight:bold;color:var(--cyan);margin-bottom:10px;">Agent CloudWorks Actif</div>' +
       '<div style="font-size:0.9em;color:var(--text-muted);margin-bottom:30px;line-height:1.6;">' +
         'Ce PC est actuellement enregistré comme un Agent système.<br>' +
-        'Il écoute les commandes distantes (Capture d\'écran, Scripts, etc.) envoyées depuis votre tableau de bord web ou vos autres appareils.' +
+        'Il écoute les commandes distantes (Capture d\\'écran, Scripts, etc.) envoyées depuis votre tableau de bord web ou vos autres appareils.' +
       '</div>' +
       '<div style="background:rgba(123,139,245,0.05);border:1px solid rgba(123,139,245,0.2);padding:15px;border-radius:12px;display:inline-block;text-align:left;">' +
         '<div style="font-size:0.8em;color:var(--cyan);margin-bottom:5px;font-family:Orbitron,monospace;">ÉTAT DU SERVICE</div>' +
@@ -51,3 +52,6 @@ window.cwShowScreenshot = function(){};
 window.cwShowSysInfo = function(){};
 window.cwShowScriptResult = function(){};
 })();
+`;
+fs.writeFileSync('eva-pc/web/js/features/cloudworks.js', pcCloudWorks, 'utf8');
+console.log('PC Agent Dashboard replaced in eva-pc/web/js/features/cloudworks.js');

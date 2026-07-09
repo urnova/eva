@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+﻿const fs = require('fs');
+
+const overlayHtml = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
@@ -153,4 +155,7 @@
     }
   </script>
 </body>
-</html>
+</html>`;
+
+fs.writeFileSync('eva-pc/web/overlay.html', overlayHtml, 'utf8');
+console.log('Overlay redesign applied');

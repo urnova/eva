@@ -776,6 +776,7 @@ function renderSettings(section) {
       '<div style="font-size:0.68em;color:var(--text-dim);margin-top:8px">La suppression du compte est irréversible. Toutes vos données seront effacées définitivement.</div>' +
       '</div>';
 
+    setTimeout(loadSessions, 100);
   } else if (section === 'notifications') {
     var notifPerm = ('Notification' in window) ? Notification.permission : 'unavailable';
     var _svgCheck   = '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:3px;stroke:#4ade80;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="20 6 9 17 4 12"/></svg>';
@@ -2334,3 +2335,59 @@ window.clearAllConvs = clearAllConvs;
 window.saveProfileSettings = saveProfileSettings;
 window.saveAISettings = saveAISettings;
 window.saveVoiceSettings = saveVoiceSettings;
+
+
+
+window.loadSessions = function() {
+  var c = document.getElementById('sessionsListContainer');
+  if(!c) return;
+  db.collection('users').doc(S.user.uid).collection('sessions').orderBy('lastSeen', 'desc').onSnapshot(function(snap) {
+    if(!document.getElementById('sessionsListContainer')) return;
+    c.innerHTML = '';
+    if(snap.empty) {
+      c.innerHTML = '<div style="color:var(--text-muted);font-size:0.8em;text-align:center;">Aucune session trouvée.</div>';
+      return;
+    }
+    snap.forEach(function(doc) {
+      var d = doc.data();
+      if(d.revoke) return;
+      var isCurrent = (S.sessionId === doc.id);
+      
+      var lastSeenDate = d.lastSeen && d.lastSeen.toDate ? d.lastSeen.toDate() : new Date();
+      var diffMins = Math.floor((new Date() - lastSeenDate) / 60000);
+      var isOnline = diffMins < 6 || d.online;
+      
+      var connDateStr = d.connectedAt && d.connectedAt.toDate ? d.connectedAt.toDate().toLocaleDateString('fr-FR', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : 'Inconnu';
+      
+      var div = document.createElement('div');
+      div.style.cssText = 'background:var(--surface2);border:1px solid ' + (isCurrent ? 'rgba(123,139,245,0.4)' : 'var(--border)') + ';border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;';
+      
+      var left = '<div style="display:flex;flex-direction:column;">' +
+        '<div style="font-weight:700;color:var(--text);font-size:0.9em;display:flex;align-items:center;gap:6px;">' +
+        (d.device==='Application PC'?'💻':(d.device==='Mobile'?'📱':'🌐')) + ' ' + (d.os || 'Inconnu') + ' - ' + (d.browser || 'Inconnu') +
+        (isCurrent ? '<span style="font-size:0.65em;background:var(--cyan);color:#000;padding:2px 6px;border-radius:4px;">ACTUELLE</span>' : '') +
+        '</div>' +
+        '<div style="font-size:0.7em;color:var(--text-muted);margin-top:4px;">Connecté le: ' + connDateStr + '</div>' +
+        '<div style="font-size:0.7em;color:' + (isOnline ? 'var(--green)' : 'var(--text-dim)') + ';margin-top:2px;">' + 
+        (isOnline ? '🟢 En ligne' : '⚪ Hors ligne (Vu il y a ' + (diffMins>60 ? Math.floor(diffMins/60)+'h' : diffMins+'m') + ')') + 
+        '</div>' +
+      '</div>';
+      
+      var right = isCurrent ? '' : '<button class="btn btn-danger" style="padding:6px 10px;font-size:0.75em;" onclick="revokeSession(\''+doc.id+'\')">Retirer</button>';
+      
+      div.innerHTML = left + right;
+      c.appendChild(div);
+    });
+  }, function(e) {
+    c.innerHTML = '<div style="color:#ff4d6d;font-size:0.8em;text-align:center;">Erreur de lecture</div>';
+  });
+};
+
+window.revokeSession = function(sid) {
+  if(confirm('Voulez-vous déconnecter cet appareil ?')) {
+    db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).update({ revoke: true }).catch(function(e){
+      console.error(e);
+      alert('Erreur: ' + e.message);
+    });
+  }
+};

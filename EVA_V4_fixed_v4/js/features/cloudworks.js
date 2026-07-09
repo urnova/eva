@@ -230,8 +230,8 @@ function cwShowInputModal(opts) {
       '<div class="cw-modal-title">' + opts.title + '</div>' +
       '<label class="cw-modal-label">' + opts.label + '</label>' +
       (opts.textarea ?
-        '<textarea class="cw-modal-input cw-modal-textarea" id="cwInputField" placeholder="' + esc(opts.placeholder || '') + '" rows="4"></textarea>' :
-        '<input class="cw-modal-input" id="cwInputField" type="text" placeholder="' + esc(opts.placeholder || '') + '">'
+        '<textarea class="cw-modal-input cw-modal-textarea" id="cwInputField" placeholder="' + esc(opts.placeholder || '') + '" rows="4">' + esc(opts.defaultValue || '') + '</textarea>' :
+        '<input class="cw-modal-input" id="cwInputField" type="text" placeholder="' + esc(opts.placeholder || '') + '" value="' + esc(opts.defaultValue || '') + '">'
       ) +
       '<div class="cw-modal-actions">' +
         '<button class="cw-modal-cancel" onclick="document.getElementById(\'cwInputModal\').remove()">Annuler</button>' +

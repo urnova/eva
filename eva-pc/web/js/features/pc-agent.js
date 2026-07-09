@@ -81,14 +81,16 @@ window.pcAgentDocRef = docRef;
     if (unsubCmds) unsubCmds();
     unsubCmds = window.db.collection('cloudworks').doc(uid).collection('commands')
       .where('deviceId', '==', deviceId)
-      .where('status', '==', 'pending')
       .onSnapshot(async (snap) => {
         for (const change of snap.docChanges()) {
           if (change.type === 'added') {
-            await handleCommand(change.doc.id, change.doc.data(), uid);
+            const data = change.doc.data();
+            if (data.status === 'pending') {
+              await handleCommand(change.doc.id, data, uid);
+            }
           }
         }
-      });
+      }, (e) => console.error('Erreur listenCommands:', e));
   }
 
   async function handleCommand(cmdId, data, uid) {
