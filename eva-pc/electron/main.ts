@@ -132,21 +132,25 @@ function createWindow() {
       // Permettre les scripts Puter dans le renderer
       sandbox: false
     },
-    show: false // On affiche aprÃ¨s ready-to-show
+        show: false
   })
 
-  // â”€â”€â”€ Chargement de l'URL â”€â”€â”€
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show()
+  })
+
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173/splash.html')
+    const loadDevURL = () => {
+      mainWindow?.loadURL('http://localhost:5173/splash.html').catch(e => {
+        console.log('Vite not ready, retrying...', e.message);
+        setTimeout(loadDevURL, 500);
+      });
+    };
+    loadDevURL();
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
     mainWindow.loadFile(join(__dirname, '../dist/splash.html'))
   }
-
-  // â”€â”€â”€ Affichage â”€â”€â”€
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show()
-  })
 
   // â”€â”€â”€ Sauvegarder la position/taille â”€â”€â”€
   mainWindow.on('resized', saveBounds)

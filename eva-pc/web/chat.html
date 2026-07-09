@@ -53,7 +53,7 @@
 <style>
   body { padding-top: 32px; box-sizing: border-box; height: 100vh; overflow: hidden; display: flex; flex-direction: row; }
   .sidebar { height: calc(100vh - 32px) !important; top: 32px !important; }
-  .main-wrapper, .main-content, #appContainer { height: calc(100vh - 32px) !important; }
+  .main-wrapper, .main-content, #appContainer, .app-main { height: calc(100vh - 32px) !important; }
 </style>
 
 <div class="bg-orb bg-orb-1"></div>
@@ -1015,14 +1015,14 @@
               </div>
             </div>
             <div class="cw-actions-row">
-              <a href="#" class="cw-dl-btn-v2" onclick="return false;" title="Bientôt disponible">
-                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <span class="cw-dl-label">
-                  <span class="cw-dl-name">EVA Desktop Agent</span>
-                  <span class="cw-dl-os">Windows · macOS · Linux</span>
-                </span>
-                <span class="cw-soon-badge">Bientôt</span>
-              </a>
+              <a href="https://github.com/urnova/eva/releases/latest/download/E.V.A-Setup.exe" target="_blank" class="cw-dl-btn-v2" style="text-decoration:none;">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--cyan)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <div style="text-align:left;flex:1;">
+                <div style="font-weight:600;color:var(--text);font-size:0.95em;">Télécharger EVA Desktop Agent</div>
+                <div style="font-size:0.75em;color:var(--text-muted);margin-top:2px;">Windows (Dernière version)</div>
+              </div>
+              <span class="cw-soon-badge" style="background:rgba(74, 222, 128, 0.15);color:#4ade80;border:1px solid rgba(74, 222, 128, 0.3);">Télécharger</span>
+            </a>
             </div>
           </div>
 
