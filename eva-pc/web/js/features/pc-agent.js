@@ -183,3 +183,58 @@ window.pcAgentDocRef = docRef;
   }, 1000);
 
 })();
+
+  async function runAgenticLoop(userPrompt, cmdId, uid) {
+    let history = [
+      { role: 'system', content: "Tu es l'Agent PC Autonome d'EVA (Modèle local). Ton rôle est d'accomplir des tâches sur le système Windows de l'utilisateur. Tu as accès à un exécuteur de commandes. Pour exécuter une commande PowerShell/Batch, renvoie EXACTEMENT ce bloc: [CMD] ta_commande_ici [/CMD]. Tu recevras ensuite le résultat. Raisonne étape par étape. Une fois la tâche entièrement finie, renvoie [REPORT] ton_rapport_final_ici [/REPORT]. Ne fais pas de longs discours, sois direct." },
+      { role: 'user', content: userPrompt }
+    ];
+    let finalReport = 'Tâche terminée, mais aucun rapport généré.';
+    
+    for(let i=0; i<10; i++) {
+      try {
+        const r = await fetch('http://127.0.0.1:11434/api/chat', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            model: 'qwen2.5:1.5b',
+            messages: history,
+            stream: false,
+            keep_alive: -1
+          })
+        });
+        if(!r.ok) throw new Error('Ollama non disponible');
+        const data = await r.json();
+        const text = data.message?.content || '';
+        history.push({role: 'assistant', content: text});
+        
+        // Check for REPORT
+        const reportMatch = text.match(/\[REPORT\]([\s\S]*?)\[\/REPORT\]/i);
+        if(reportMatch) {
+          finalReport = reportMatch[1].trim();
+          break;
+        }
+        
+        // Check for CMD
+        const cmdMatch = text.match(/\[CMD\]([\s\S]*?)\[\/CMD\]/i);
+        if(cmdMatch) {
+          const cmd = cmdMatch[1].trim();
+          await window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId).update({ step: 'Exécution: ' + cmd });
+          
+          let cmdResult = '';
+          try {
+            const res = await window.eva.system.exec(cmd);
+            cmdResult = res.success ? (res.stdout || 'Succès') : (res.stderr || res.error);
+          } catch(e) { cmdResult = 'Erreur: ' + e; }
+          
+          history.push({role: 'user', content: "Résultat de la commande:\n" + cmdResult + "\n\nQue fais-tu ensuite ? (Utilise [CMD] ou [REPORT])"});
+        } else {
+          // No tag found
+          history.push({role: 'user', content: "Je n'ai pas trouvé de balise [CMD] ou [REPORT]. Utilise obligatoirement l'une de ces balises."});
+        }
+      } catch(e) {
+        return { error: e.message };
+      }
+    }
+    return { output: finalReport };
+  }

@@ -13,6 +13,20 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
    LOAD — initialise listeners
 ══════════════════════════════════════════ */
 async function loadCloudWorks() {
+    // Récupération version dynamique
+    fetch('https://api.github.com/repos/urnova/eva/releases/latest')
+      .then(r => r.json())
+      .then(d => {
+        if(d.tag_name) {
+          document.querySelectorAll('.cw-dl-btn-v2, .cw-btn').forEach(b => {
+            if(b.innerHTML.includes('Télécharger') && !b.innerHTML.includes(d.tag_name)) {
+              b.innerHTML = b.innerHTML.replace('Télécharger E.V.A Desktop (Dernière version)', 'Télécharger E.V.A Desktop (' + d.tag_name + ')');
+              b.innerHTML = b.innerHTML.replace('Télécharger EVA Desktop Agent', 'Télécharger EVA Desktop Agent (' + d.tag_name + ')');
+            }
+          });
+        }
+      }).catch(e=>console.log(e));
+
   if (!window.S || !window.S.user) return;
   var uid = S.user.uid;
   var list = document.getElementById('cwDeviceList');

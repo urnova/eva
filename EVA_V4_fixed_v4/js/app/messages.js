@@ -563,6 +563,7 @@ async function handleSend() {
       '- Note → [ACTION:{"type":"note","title":"Titre","body":"Contenu"}]\n' +
       '- Alarme → [ACTION:{"type":"alarm","time":"HH:MM","label":"Libellé","repeat":"once"}]\n' +
       '- Rappel → [ACTION:{"type":"reminder","text":"Texte","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
+      '- Tâche PC → [ACTION:{"type":"agentic_task","prompt":"..."}]\n' +
       '- Agenda → [ACTION:{"type":"event","title":"Titre","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
       '- Excel → [ACTION:{"type":"excel","filename":"data.xlsx","headers":["Col1","Col2"],"rows":[["val1","val2"]]}]\n' +
       '- PowerPoint → [ACTION:{"type":"pptx","filename":"p.pptx","title":"Titre","slides":[{"title":"S1","points":["Point 1"]}]}]\n' +

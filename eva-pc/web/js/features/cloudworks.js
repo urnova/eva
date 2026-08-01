@@ -4,6 +4,25 @@
 'use strict';
 
 async function loadCloudWorks() {
+    // Récupération version dynamique
+    fetch('https://api.github.com/repos/urnova/eva/releases/latest')
+      .then(r => r.json())
+      .then(d => {
+        if(d.tag_name) {
+          document.querySelectorAll('.cw-dl-btn-v2').forEach(b => {
+            if(!b.innerHTML.includes(d.tag_name)) b.innerHTML += ' (' + d.tag_name + ')';
+          });
+        }
+      }).catch(e=>console.log(e));
+
+    // Nettoyage UI sur PC
+    if (window.eva) {
+      const dlSection = document.querySelector('.cw-dl-section');
+      if (dlSection) dlSection.style.display = 'none';
+      const activities = document.querySelector('.cw-activities');
+      if (activities) activities.style.display = 'none';
+    }
+
   var list = document.getElementById('cwDeviceList');
   if (!list) return;
 
