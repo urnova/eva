@@ -1,4 +1,4 @@
-(async function() {
+﻿(async function() {
   'use strict';
 
   let unsubCmds = null;
@@ -9,8 +9,8 @@
     try {
       const uid = window.S.user.uid;
       
-      // Essayer de récupérer un deviceId local ou le créer
-      // Essayer de récupérer un deviceId local ou le créer
+      // Essayer de rÃ©cupÃ©rer un deviceId local ou le crÃ©er
+      // Essayer de rÃ©cupÃ©rer un deviceId local ou le crÃ©er
       deviceId = localStorage.getItem('cw_device_id');
       if (!deviceId) {
         deviceId = 'PC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -45,12 +45,12 @@ window.pcAgentDocRef = docRef;
         lastSeen: ts
       }, { merge: true });
 
-      console.log('[CloudWorks] Enregistré sous ID:', deviceId);
+      console.log('[CloudWorks] EnregistrÃ© sous ID:', deviceId);
 
-      // Écouter les commandes
+      // Ã‰couter les commandes
       listenCommands(uid);
       
-      // Mettre à jour lastSeen toutes les minutes
+      // Mettre Ã  jour lastSeen toutes les minutes
       setInterval(() => {
         docRef.update({
           online: true,
@@ -58,7 +58,7 @@ window.pcAgentDocRef = docRef;
         }).catch(()=>{});
       }, 60000);
 
-      // S'assurer de passer hors-ligne à la fermeture
+      // S'assurer de passer hors-ligne Ã  la fermeture
       window.addEventListener('beforeunload', () => {
         docRef.update({ online: false, lastSeen: typeof window.timestamp === 'function' ? window.timestamp() : new Date() }).catch(()=>{});
       });
@@ -111,6 +111,14 @@ window.pcAgentDocRef = docRef;
           resultData = { imageBase64: res.data };
         } else throw new Error(res.error);
       } 
+      else if (data.type === 'agentic_task') {
+        const prompt = data.payload?.prompt || 'Aucun prompt';
+        status = 'running';
+        await window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId).update({ status: 'running', updatedAt: new Date(), step: 'DÃ©marrage boucle autonome...' });
+        
+        resultData = await runAgenticLoop(prompt, cmdId, uid);
+        status = 'done';
+      }
       else if (data.type === 'sysinfo') {
         const res = await window.eva.system.info();
         if (res.success) {
@@ -145,11 +153,11 @@ window.pcAgentDocRef = docRef;
       }
       else if (data.type === 'lock') {
         await window.eva.system.lock();
-        resultData = { output: 'Session verrouillée.' };
+        resultData = { output: 'Session verrouillÃ©e.' };
       }
       else if (data.type === 'sleep') {
         await window.eva.system.sleep();
-        resultData = { output: 'Mise en veille effectuée.' };
+        resultData = { output: 'Mise en veille effectuÃ©e.' };
       }
       else if (data.type === 'shutdown') {
         await window.eva.system.shutdown();
@@ -161,7 +169,7 @@ window.pcAgentDocRef = docRef;
       console.error('[CloudWorks] Erreur commmande:', err);
     }
 
-    // Mettre à jour Firebase
+    // Mettre Ã  jour Firebase
     await window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId).update({
       status: status,
       result: resultData,
@@ -174,7 +182,7 @@ window.pcAgentDocRef = docRef;
     }, 2000);
   }
 
-  // Démarrer dès que l'utilisateur est authentifié
+  // DÃ©marrer dÃ¨s que l'utilisateur est authentifiÃ©
   const iv = setInterval(() => {
     if (window.S && window.S.user && window.db) {
       clearInterval(iv);
@@ -182,14 +190,12 @@ window.pcAgentDocRef = docRef;
     }
   }, 1000);
 
-})();
-
   async function runAgenticLoop(userPrompt, cmdId, uid) {
     let history = [
-      { role: 'system', content: "Tu es l'Agent PC Autonome d'EVA (Modèle local). Ton rôle est d'accomplir des tâches sur le système Windows de l'utilisateur. Tu as accès à un exécuteur de commandes. Pour exécuter une commande PowerShell/Batch, renvoie EXACTEMENT ce bloc: [CMD] ta_commande_ici [/CMD]. Tu recevras ensuite le résultat. Raisonne étape par étape. Une fois la tâche entièrement finie, renvoie [REPORT] ton_rapport_final_ici [/REPORT]. Ne fais pas de longs discours, sois direct." },
+      { role: 'system', content: "Tu es l'Agent PC Autonome d'EVA (ModÃ¨le local). Ton rÃ´le est d'accomplir des tÃ¢ches sur le systÃ¨me Windows de l'utilisateur. Tu as accÃ¨s Ã  un exÃ©cuteur de commandes. Pour exÃ©cuter une commande PowerShell/Batch, renvoie EXACTEMENT ce bloc: [CMD] ta_commande_ici [/CMD]. Tu recevras ensuite le rÃ©sultat. Raisonne Ã©tape par Ã©tape. Une fois la tÃ¢che entiÃ¨rement finie, renvoie [REPORT] ton_rapport_final_ici [/REPORT]. Ne fais pas de longs discours, sois direct." },
       { role: 'user', content: userPrompt }
     ];
-    let finalReport = 'Tâche terminée, mais aucun rapport généré.';
+    let finalReport = 'TÃ¢che terminÃ©e, mais aucun rapport gÃ©nÃ©rÃ©.';
     
     for(let i=0; i<10; i++) {
       try {
@@ -219,18 +225,17 @@ window.pcAgentDocRef = docRef;
         const cmdMatch = text.match(/\[CMD\]([\s\S]*?)\[\/CMD\]/i);
         if(cmdMatch) {
           const cmd = cmdMatch[1].trim();
-          await window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId).update({ step: 'Exécution: ' + cmd });
+          await window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId).update({ step: 'ExÃ©cution: ' + cmd });
           
           let cmdResult = '';
           try {
             const res = await window.eva.system.exec(cmd);
-            cmdResult = res.success ? (res.stdout || 'Succès') : (res.stderr || res.error);
+            cmdResult = res.success ? (res.stdout || 'SuccÃ¨s') : (res.stderr || res.error);
           } catch(e) { cmdResult = 'Erreur: ' + e; }
           
-          history.push({role: 'user', content: "Résultat de la commande:\n" + cmdResult + "\n\nQue fais-tu ensuite ? (Utilise [CMD] ou [REPORT])"});
+          history.push({role: 'user', content: "RÃ©sultat de la commande:\n" + cmdResult + "\n\nQue fais-tu ensuite ? (Utilise [CMD] ou [REPORT])"});
         } else {
-          // No tag found
-          history.push({role: 'user', content: "Je n'ai pas trouvé de balise [CMD] ou [REPORT]. Utilise obligatoirement l'une de ces balises."});
+          history.push({role: 'user', content: "Je n'ai pas trouvÃ© de balise [CMD] ou [REPORT]. Utilise obligatoirement l'une de ces balises."});
         }
       } catch(e) {
         return { error: e.message };
@@ -238,3 +243,5 @@ window.pcAgentDocRef = docRef;
     }
     return { output: finalReport };
   }
+
+})();

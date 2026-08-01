@@ -17,10 +17,12 @@ async function loadCloudWorks() {
 
     // Nettoyage UI sur PC
     if (window.eva) {
-      const dlSection = document.querySelector('.cw-dl-section');
-      if (dlSection) dlSection.style.display = 'none';
-      const activities = document.querySelector('.cw-activities');
-      if (activities) activities.style.display = 'none';
+      setTimeout(() => {
+        const guide = document.querySelector('.cw-guide-v2');
+        if (guide) guide.style.display = 'none';
+        const activities = document.querySelector('.cw-activities');
+        if (activities) activities.style.display = 'none';
+      }, 50);
     }
 
   var list = document.getElementById('cwDeviceList');

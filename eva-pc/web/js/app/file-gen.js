@@ -192,7 +192,26 @@ async function executeEvaAction(action) {
   if (!action || !action.type || !S.user) return;
   var uid = S.user.uid;
   try {
-    if (action.type === 'note') {
+    if (action.type === 'agentic_task') {
+      try {
+        var snap = await window.db.collection('cloudworks').doc(uid).collection('devices').where('deviceType','==','windows').get();
+        var onlineDevice = null;
+        snap.forEach(function(d) { if (d.data().online) onlineDevice = d.id; });
+        if (onlineDevice) {
+          if(window.setEvaStatus) window.setEvaStatus('🚀 MISSION AGENTIQUE...', 'action');
+          await window.db.collection('cloudworks').doc(uid).collection('commands').add({
+            deviceId: onlineDevice,
+            type: 'agentic_task',
+            payload: { prompt: action.prompt || "Trouve un moyen de le faire." },
+            status: 'pending',
+            createdAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+          });
+          if (window.toast) window.toast('Agent Local : Tâche envoyée avec succès au PC !', 'success');
+        } else {
+          if (window.toast) window.toast('Action échouée : Le PC Agent est déconnecté.', 'error');
+        }
+      } catch(e) { console.error('Erreur agentic_task:', e); }
+    } else if (action.type === 'note') {
       setEvaStatus('📝 CRÉATION NOTE...', 'action');
       await db.collection('users').doc(uid).collection('notes').add({
         title: action.title || 'Note d\'EVA',
