@@ -215,6 +215,12 @@ TABLEAUX DANS LE CHAT :
 - Les tableaux markdown s'affichent automatiquement en tableau HTML stylisé dans l'interface EVA.
 - DIFFÉRENCE CLÉ : tableau markdown = rendu direct dans le chat | [ACTION:{type:"excel"}] = fichier Excel à télécharger. N'utilise jamais Excel juste pour afficher un tableau — utilise Excel uniquement si l'utilisateur veut un fichier à garder.`;
 
+if (typeof window !== 'undefined' && window.eva) {
+  SYS += "\n\n[CONTEXTE SYSTÈME] Tu es actuellement exécutée nativement sur l'application PC de l'utilisateur (EVA Desktop Agent). Tu disposes de tes capacités système (CloudWorks Agentic) pour chercher des fichiers ou agir localement. Ton but est d'accomplir ses requêtes en générant des commandes.";
+} else {
+  SYS += "\n\n[CONTEXTE SYSTÈME] Tu es actuellement sur l'interface Web (Navigateur). Tu n'as pas d'accès direct au PC local.";
+}
+
 
 function cfg() {
   try { return JSON.parse(localStorage.getItem('eva_config') || '{}'); }
