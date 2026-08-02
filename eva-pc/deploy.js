@@ -4,9 +4,9 @@ const { spawnSync } = require('child_process');
 
 // Le token GitHub est inversé pour échapper au bot de révocation de GitHub
 const _enc = "";
-const _t = _enc.split('').reverse().join('');
 
-process.env.GH_TOKEN = _t;
+
+
 
 console.log("📦 [1/2] Compilation du code source (Vite & TypeScript)...");
 const buildRes = spawnSync('F:\\donnee_app\\dev_tool\\node\\npm.cmd', ['run', 'build'], { stdio: 'inherit', shell: true });
