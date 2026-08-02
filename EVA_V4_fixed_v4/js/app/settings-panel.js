@@ -2444,3 +2444,40 @@ function revokeSession(sid) {
   });
 }
 window.revokeSession = revokeSession;
+
+
+
+function loadConnectedSessions() {
+  const container = document.getElementById('sessionsListContainer');
+  if(!container || !S.user) return;
+  window.db.collection('cloudworks').doc(S.user.uid).collection('devices').onSnapshot(snap => {
+    let html = '';
+    if(snap.empty) {
+      html = '<div style="font-size:0.85em;color:#888;">Aucune session détectée.</div>';
+    } else {
+      snap.forEach(doc => {
+        const d = doc.data();
+        const isOnline = d.online ? '<span style="color:#10b981">● En ligne</span>' : '<span style="color:#ef4444">○ Hors-ligne</span>';
+        const lastSeen = d.updatedAt ? (d.updatedAt.toDate ? d.updatedAt.toDate().toLocaleString() : new Date(d.updatedAt).toLocaleString()) : 'Inconnu';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.1);">';
+        html += '<div><strong style="display:block;margin-bottom:4px;">'+(d.deviceName||doc.id)+'</strong><div style="font-size:0.8em;color:#aaa;">'+isOnline+' - Dernière activité: '+lastSeen+'</div></div>';
+        html += '<button class="btn btn-danger" style="padding:4px 8px;font-size:0.8em;" onclick="revokeSession(\''+doc.id+'\')">Déconnecter</button>';
+        html += '</div>';
+      });
+    }
+    container.innerHTML = html;
+  });
+}
+
+window.revokeSession = async function(deviceId) {
+  if(confirm("Êtes-vous sûr de vouloir déconnecter cet appareil ?")) {
+    if(confirm("DOUBLE VALIDATION : Confirmez-vous la révocation définitive de l'accès pour cet appareil ?")) {
+      try {
+        await window.db.collection('cloudworks').doc(S.user.uid).collection('devices').doc(deviceId).set({ forceLogout: true }, { merge: true });
+        if(window.toast) window.toast("Session révoquée avec succès. L'appareil sera déconnecté.", "success");
+      } catch(e) {
+        if(window.toast) window.toast("Erreur: "+e.message, "error");
+      }
+    }
+  }
+}

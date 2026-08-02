@@ -555,6 +555,12 @@ function renderSettings(section) {
           'Vos statistiques d\'utilisation sont désormais synchronisées de manière sécurisée et globale via votre compte CloudWorks/Firebase.' +
         '</div>' +
 
+        '</div>' +
+        '<div class="settings-section" style="margin-top:20px;">' +
+        '<div class="settings-section-title">Anciens Rapports</div>' +
+        '<div id="usageHistoryList">' +
+        '<div style="text-align:center;padding:10px;"><div class="loader" style="margin:0 auto;width:20px;height:20px;border-width:2px;"></div></div>' +
+        '</div></div>' +
         '</div>';
 
       c.innerHTML = html;
@@ -651,6 +657,47 @@ function renderSettings(section) {
         });
       }
 
+      /* FETCH ALL HISTORY FOR PREVIOUS PERIODS */
+      db.collection('users').doc(S.user.uid).collection('stats').get().then(function(snap) {
+        var monthMap = {};
+        snap.forEach(function(doc) {
+          if (doc.id === 'global') return;
+          var d = doc.data();
+          if (!d.date) return; // Format YYYY-MM-DD
+          var parts = d.date.split('-');
+          if (parts.length >= 2) {
+             var mKey = parts[0] + '-' + parts[1];
+             if (!monthMap[mKey]) monthMap[mKey] = { msg:0, tok:0, d: new Date(parts[0], parseInt(parts[1])-1, 1) };
+             monthMap[mKey].msg += (d.msgCount || 0);
+             monthMap[mKey].tok += (d.tokensEst || 0);
+          }
+        });
+        var mKeys = Object.keys(monthMap).sort().reverse();
+        var listEl = document.getElementById('usageHistoryList');
+        if (!listEl) return;
+        if (mKeys.length === 0) {
+           listEl.innerHTML = '<div style="font-size:0.75em;color:var(--text-muted);padding:10px 0;">Aucun historique précédent trouvé.</div>';
+           return;
+        }
+        var mNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+        var histHtml = '';
+        mKeys.forEach(function(k) {
+           var mObj = monthMap[k];
+           var lbl = mNames[mObj.d.getMonth()] + ' ' + mObj.d.getFullYear();
+           var tokStr = mObj.tok > 1000 ? (mObj.tok/1000).toFixed(1)+'K' : mObj.tok;
+           histHtml += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">' +
+                   '<div style="font-weight:700;color:var(--text);font-size:0.85em;">' + lbl + '</div>' +
+                   '<div style="display:flex;gap:15px;font-size:0.75em;color:var(--text-muted);">' +
+                   '<span>💬 ' + mObj.msg + ' msg</span>' +
+                   '<span style="color:var(--cyan);">🔤 ' + tokStr + ' tok</span>' +
+                   '</div></div>';
+        });
+        listEl.innerHTML = histHtml;
+      }).catch(function(e) {
+        var listEl = document.getElementById('usageHistoryList');
+        if (listEl) listEl.innerHTML = '<div style="font-size:0.75em;color:#ef4444;">Erreur de chargement de l\'historique.</div>';
+      });
+
     }).catch(function(e) {
       console.error('[EVA Stats] global fetch error:', e);
       c.innerHTML = '<div class="settings-section" style="color:var(--text-muted);text-align:center;padding:30px;">Erreur lors de la récupération des statistiques :<br><code style="font-size:0.8em;color:#ef4444;">' + e.message + '</code></div>';
@@ -664,6 +711,13 @@ function renderSettings(section) {
       '<div id="brainMapContainer" style="width:100%;height:220px;background:rgba(10,15,30,0.8);border:1px solid rgba(123,139,245,0.3);border-radius:12px;position:relative;overflow:hidden;margin-bottom:15px;box-shadow:inset 0 0 20px rgba(0,0,0,0.5);">' +
       '<canvas id="brainCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>' +
       '</div>' +
+      '<div class="settings-row">' +
+        '<div><div class="settings-row-label">Mode Édition</div>' +
+        '<div class="settings-row-sub">Autoriser la modification manuelle de la carte</div></div>' +
+        '<label class="alarm-toggle"><input type="checkbox" id="sBrainEditMode" ' + (window._brainEditMode ? 'checked' : '') + ' onchange="toggleBrainEditMode(this.checked)"><span class="alarm-slider"></span></label>' +
+      '</div>' +
+      '<div id="brainEditWarning" style="display:' + (window._brainEditMode ? 'block' : 'none') + ';background:rgba(255,165,0,0.1);border:1px solid rgba(255,165,0,0.5);color:#ffb703;padding:10px;border-radius:8px;margin-bottom:15px;font-size:0.8em;line-height:1.4;">' +
+      '<strong>⚠️ RÈGLE IMPORTANTE :</strong> Rédigez toujours à la <strong>3ème personne</strong>. N\'utilisez jamais "Je" ou "Mon".<br>Ex: "L\'utilisateur aime le cinéma" (et non "J\'aime le cinéma").</div>' +
       '<div class="settings-row">' +
         '<div><div class="settings-row-label">Apprentissage adaptatif</div>' +
         '<div class="settings-row-sub">Activer la mémorisation automatique des préférences</div></div>' +
@@ -712,13 +766,8 @@ function renderSettings(section) {
       '<div class="form-field"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="sNewPassword" placeholder="Minimum 6 caractères"></div>' +
       '<div class="form-field"><label class="form-label">Confirmer le mot de passe</label><input type="password" class="form-input" id="sConfPassword" placeholder="Idem ci-dessus"></div>' +
       '<button class="btn btn-secondary" onclick="changePassword()" style="margin-top:4px">'+(isGoogleOnly ? 'Créer le mot de passe' : 'Mettre à jour le mot de passe')+'</button>' +
-        '</div>' +
-        '<div class="settings-section">' +
-        '<div class="settings-section-title">Sessions Actives</div>' +
-        '<div id="sessionsListContainer"><div class="loader"></div></div>' +
-        '</div>' +
-        '<div class="settings-section">' +
-        '<div class="settings-section-title">Danger zone</div>' +
+      '<div class="settings-section">' +
+      '<div class="settings-section-title">Danger zone</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
       '<button class="btn btn-secondary" onclick="auth.signOut().then(function(){window.location.href=\'/\';})">🚪 Se déconnecter</button>' +
       '<button class="btn btn-danger" onclick="if(confirm(\'Supprimer toutes les conversations ? Cette action est irréversible.\'))clearAllConvs()">🗑️ Effacer toutes les conversations</button>' +
@@ -870,7 +919,7 @@ function renderSettings(section) {
               '<svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--cyan);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>' +
             '</div>' +
             '<div style="flex:1;min-width:0;">' +
-              '<div style="font-weight:700;color:var(--text);font-size:0.9em;margin-bottom:3px;">Tutoriel Web (Ordinateur)</div>' +
+              '<div style="font-weight:700;color:var(--text);font-size:0.9em;margin-bottom:3px;">Tutoriel Ordinateur</div>' +
               '<div style="font-size:0.74em;color:var(--text-muted);line-height:1.5;">8 étapes · Interface complète, raccourcis clavier, header, tones, contrôle média, paramètres avancés.</div>' +
             '</div>' +
             '<button class="btn btn-secondary" style="flex-shrink:0;" onclick="closeSettings();setTimeout(showTutorialPC,200);">Lancer</button>' +
@@ -1014,15 +1063,15 @@ async function saveAISettings() {
   /* Sauvegarde locale */
   saveCfg();
 
-  /* Sauvegarde locale uniquement pour PC (Pas de Firebase) */
-  // if (S.user && S.user.uid) {
-  //   try {
-  //     await db.collection('users').doc(S.user.uid).set(
-  //       { preferences: S.config },
-  //       { merge: true }
-  //     );
-  //   } catch(e) { console.warn('[EVA] Firebase AI prefs save:', e); }
-  // }
+  /* Sauvegarde Firebase — sync cross-appareils */
+  if (S.user && S.user.uid) {
+    try {
+      await db.collection('users').doc(S.user.uid).set(
+        { preferences: S.config },
+        { merge: true }
+      );
+    } catch(e) { console.warn('[EVA] Firebase AI prefs save:', e); }
+  }
 
   /* Réinitialiser le conv state pour que la nouvelle conv utilise le nouveau provider */
   if (!S.convId) S.conv = {};
@@ -1069,7 +1118,7 @@ function renderTTSProvOpts(provider) {
   var keyInputStyle = 'font-family:monospace;font-size:0.78em;letter-spacing:0.05em;';
   var hintStyle = 'font-size:0.67em;color:var(--text-muted);margin-top:3px;line-height:1.4;';
 
-  if (provider === 'eva') {
+  if (provider === 'eva')  {
     el.innerHTML =
       '<div style="background:rgba(168,85,247,0.07);border:1px solid rgba(168,85,247,0.25);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:0.69em;color:rgba(192,132,252,0.9);line-height:1.5;">' +
       '🧠 <strong>Kokoro Neural</strong> — Voix française <strong>féminine</strong> via Piper VITS (~63 Mo, mis en cache au 1er usage). Identique sur tous les navigateurs.' +
@@ -1980,3 +2029,40 @@ function revokeSession(sid) {
   });
 }
 window.revokeSession = revokeSession;
+
+
+
+function loadConnectedSessions() {
+  const container = document.getElementById('sessionsListContainer');
+  if(!container || !S.user) return;
+  window.db.collection('cloudworks').doc(S.user.uid).collection('devices').onSnapshot(snap => {
+    let html = '';
+    if(snap.empty) {
+      html = '<div style="font-size:0.85em;color:#888;">Aucune session détectée.</div>';
+    } else {
+      snap.forEach(doc => {
+        const d = doc.data();
+        const isOnline = d.online ? '<span style="color:#10b981">● En ligne</span>' : '<span style="color:#ef4444">○ Hors-ligne</span>';
+        const lastSeen = d.updatedAt ? (d.updatedAt.toDate ? d.updatedAt.toDate().toLocaleString() : new Date(d.updatedAt).toLocaleString()) : 'Inconnu';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.1);">';
+        html += '<div><strong style="display:block;margin-bottom:4px;">'+(d.deviceName||doc.id)+'</strong><div style="font-size:0.8em;color:#aaa;">'+isOnline+' - Dernière activité: '+lastSeen+'</div></div>';
+        html += '<button class="btn btn-danger" style="padding:4px 8px;font-size:0.8em;" onclick="revokeSession(\''+doc.id+'\')">Déconnecter</button>';
+        html += '</div>';
+      });
+    }
+    container.innerHTML = html;
+  });
+}
+
+window.revokeSession = async function(deviceId) {
+  if(confirm("Êtes-vous sûr de vouloir déconnecter cet appareil ?")) {
+    if(confirm("DOUBLE VALIDATION : Confirmez-vous la révocation définitive de l'accès pour cet appareil ?")) {
+      try {
+        await window.db.collection('cloudworks').doc(S.user.uid).collection('devices').doc(deviceId).set({ forceLogout: true }, { merge: true });
+        if(window.toast) window.toast("Session révoquée avec succès. L'appareil sera déconnecté.", "success");
+      } catch(e) {
+        if(window.toast) window.toast("Erreur: "+e.message, "error");
+      }
+    }
+  }
+}

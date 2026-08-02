@@ -72,6 +72,7 @@ const evaAPI = {
   // â”€â”€ System â”€â”€
   system: {
     info: () => ipcRenderer.invoke('system:info'),
+      llmChat: (messages) => ipcRenderer.invoke('llm:chat', messages),
     cpuLoad: () => ipcRenderer.invoke('system:cpuLoad'),
     screenshot: () => ipcRenderer.invoke('system:screenshot'),
     exec: (cmd: string) => ipcRenderer.invoke('system:exec', cmd),

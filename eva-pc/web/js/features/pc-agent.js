@@ -199,18 +199,11 @@ window.pcAgentDocRef = docRef;
     
     for(let i=0; i<10; i++) {
       try {
-        const r = await fetch('http://127.0.0.1:11434/api/chat', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({
-            model: 'qwen2.5:1.5b',
-            messages: history,
-            stream: false,
-            keep_alive: -1
-          })
-        });
-        if(!r.ok) throw new Error('Ollama non disponible');
-        const data = await r.json();
+        const data = await window.eva.system.llmChat(history);
+          // Format adapter from openai-compatible (llama-server) to ollama format
+          if (data.choices && data.choices[0] && data.choices[0].message) {
+            data.message = data.choices[0].message;
+          }
         const text = data.message?.content || '';
         history.push({role: 'assistant', content: text});
         

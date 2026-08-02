@@ -13,7 +13,7 @@
     "electron:dev": "vite",
     "electron:build": "vite build && electron-builder",
     "deploy": "node deploy.js",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "node scripts/download-llm.js && electron-builder install-app-deps"
   },
   "dependencies": {
     "auto-launch": "^5.0.6",
@@ -104,6 +104,15 @@
       }
     ],
     "compression": "maximum",
-    "artifactName": "E.V.A-Setup.exe"
+    "artifactName": "E.V.A-Setup.exe",
+    "extraResources": [
+      {
+        "from": "resources/",
+        "to": "resources/",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
   }
 }

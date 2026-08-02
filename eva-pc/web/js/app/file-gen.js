@@ -194,9 +194,11 @@ async function executeEvaAction(action) {
   try {
     if (action.type === 'agentic_task') {
       try {
-        var snap = await window.db.collection('cloudworks').doc(uid).collection('devices').where('deviceType','==','windows').get();
-        var onlineDevice = null;
-        snap.forEach(function(d) { if (d.data().online) onlineDevice = d.id; });
+        var onlineDevice = action.deviceId || null;
+          if (!onlineDevice) {
+            var snap = await window.db.collection('cloudworks').doc(uid).collection('devices').where('deviceType','==','windows').get();
+            snap.forEach(function(d) { if (d.data().online) onlineDevice = d.id; });
+          }
         if (onlineDevice) {
           if(window.setEvaStatus) window.setEvaStatus('🚀 MISSION AGENTIQUE...', 'action');
           await window.db.collection('cloudworks').doc(uid).collection('commands').add({
