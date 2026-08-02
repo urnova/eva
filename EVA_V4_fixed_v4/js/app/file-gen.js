@@ -201,13 +201,14 @@ async function executeEvaAction(action) {
           }
         if (onlineDevice) {
           if(window.setEvaStatus) window.setEvaStatus('🚀 MISSION AGENTIQUE...', 'action');
-          await window.db.collection('cloudworks').doc(uid).collection('commands').add({
+          var cmdRef = await window.db.collection('cloudworks').doc(uid).collection('commands').add({
             deviceId: onlineDevice,
             type: 'agentic_task',
             payload: { prompt: action.prompt || "Trouve un moyen de le faire." },
             status: 'pending',
             createdAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
           });
+          if (window.appendCloudWorksTracker) window.appendCloudWorksTracker(cmdRef.id, action.prompt || "Trouve un moyen de le faire.");
           if (window.toast) window.toast('Agent Local : Tâche envoyée avec succès au PC !', 'success');
         } else {
           if (window.toast) window.toast('Action échouée : Le PC Agent est déconnecté.', 'error');

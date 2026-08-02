@@ -1490,3 +1490,59 @@ function initChatDragDropPaste() {
   });
 }
 window.initChatDragDropPaste = initChatDragDropPaste;
+
+window.appendCloudWorksTracker = function(cmdId, promptText) {
+  var list = document.getElementById('messagesList');
+  if (!list) return;
+
+  var div = document.createElement('div');
+  div.className = 'msg-bubble system-bubble cw-tracker-bubble';
+  div.id = 'cw-tracker-' + cmdId;
+  div.innerHTML =
+    '<div class="cw-tracker-header">☁️ Agent CloudWorks : En cours</div>' +
+    '<div class="cw-tracker-prompt">"' + window.esc(promptText) + '"</div>' +
+    '<div class="cw-tracker-step" id="cw-step-' + cmdId + '">⏳ En attente du PC...</div>' +
+    '<div class="cw-tracker-actions" id="cw-actions-' + cmdId + '">' +
+       '<button class="cw-tracker-cancel" onclick="window.cancelCwCmd(\'' + cmdId + '\')">❌ Annuler la tâche</button>' +
+    '</div>';
+  list.appendChild(div);
+  if (window.scrollDown) window.scrollDown();
+
+  if (window.db && window.S && window.S.user) {
+    window.db.collection('cloudworks').doc(window.S.user.uid).collection('commands').doc(cmdId)
+      .onSnapshot(function(snap) {
+        if (!snap.exists) return;
+        var data = snap.data();
+        var stepEl = document.getElementById('cw-step-' + cmdId);
+        var actionsEl = document.getElementById('cw-actions-' + cmdId);
+        if (!stepEl) return;
+
+        if (data.status === 'pending') {
+          stepEl.innerHTML = '⏳ En attente de réception par le PC...';
+        } else if (data.status === 'running') {
+          stepEl.innerHTML = '🔄 ' + (data.step || 'Exécution en cours...');
+        } else if (data.status === 'done') {
+          stepEl.innerHTML = '✅ Tâche terminée avec succès !';
+          stepEl.style.color = '#10b981';
+          if (actionsEl) actionsEl.style.display = 'none';
+        } else if (data.status === 'error') {
+          stepEl.innerHTML = '❌ Erreur : ' + window.esc(data.error || 'Erreur inconnue');
+          stepEl.style.color = '#ef4444';
+          if (actionsEl) actionsEl.style.display = 'none';
+        } else if (data.status === 'cancelled') {
+          stepEl.innerHTML = '🛑 Tâche annulée par l\'utilisateur.';
+          stepEl.style.color = '#f59e0b';
+          if (actionsEl) actionsEl.style.display = 'none';
+        }
+      });
+  }
+};
+
+window.cancelCwCmd = function(cmdId) {
+  if (window.db && window.S && window.S.user) {
+    window.db.collection('cloudworks').doc(window.S.user.uid).collection('commands').doc(cmdId)
+      .update({ status: 'cancelled' }).then(function() {
+        if (window.toast) window.toast('Tâche annulée.', 'info');
+      }).catch(function(e) { console.error('Erreur annulation', e); });
+  }
+};

@@ -157,13 +157,14 @@ function setEvaStatusHeader(text, type) {
     label.textContent = 'EN LIGNE';
     if (skip) skip.style.display = 'none';
     if (window.eva && window.eva.overlay) window.eva.overlay.hide();
+    window.isVoiceSession = false;
     return;
   }
   var stateType = type || 'thinking';
   dot.className = 'eva-hdr-dot ' + stateType;
   label.textContent = text;
   if (skip) skip.style.display = (stateType === 'speaking') ? 'inline-flex' : 'none';
-  if (window.eva && window.eva.overlay) {
+  if (window.eva && window.eva.overlay && window.isVoiceSession) {
     window.eva.overlay.show(stateType);
     window.eva.overlay.setState(stateType, text);
   }
@@ -179,6 +180,7 @@ window.skipTTS = skipTTS;
 
 function sendVoiceCommand(cmd) {
   if (S.busy) return;
+  window.isVoiceSession = true;
   var input = document.getElementById('msgInput');
   if (input) {
     input.value = cmd;
