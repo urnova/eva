@@ -777,6 +777,7 @@ function renderSettings(section) {
       '</div>';
 
     setTimeout(loadSessions, 100);
+      setTimeout(renderAccountDevices, 100);
   } else if (section === 'notifications') {
     var notifPerm = ('Notification' in window) ? Notification.permission : 'unavailable';
     var _svgCheck   = '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:3px;stroke:#4ade80;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="20 6 9 17 4 12"/></svg>';
@@ -1414,7 +1415,49 @@ async function disconnectPuter() {
 }
 
 /* ══════════════════ ACCOUNT — CHANGE EMAIL / PASSWORD ══════════════════ */
-async function changeEmail() {
+
+  window.renderAccountDevices = function() {
+    var c = document.getElementById('account-devices-list');
+    if (!c) return;
+    var devices = (S.profile && Array.isArray(S.profile.fcmDevices)) ? S.profile.fcmDevices : [];
+    if (devices.length === 0) {
+      c.innerHTML = '<div style="font-size:0.8em;color:var(--text-muted)">Aucun appareil connecté.</div>';
+      return;
+    }
+    var html = '';
+    devices.forEach(function(d) {
+      var dateStr = d.registeredAt ? new Date(d.registeredAt).toLocaleString() : 'Inconnu';
+      var isCurrent = d.token === window._fcmToken;
+      html += '<div style="background:var(--surface2);padding:10px;border-radius:8px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">';
+      html += '<div>';
+      html += '<div style="font-weight:bold;font-size:0.85em;color:var(--text)">' + esc(d.name || 'Appareil inconnu') + (isCurrent ? ' <span style="color:var(--cyan);font-size:0.8em">(Actuel)</span>' : '') + '</div>';
+      html += '<div style="font-size:0.7em;color:var(--text-muted)">IP: ' + esc(d.ip || '?') + ' | Inscrit le: ' + dateStr + '</div>';
+      html += '</div>';
+      if (!isCurrent) {
+        html += '<button class="btn btn-secondary" style="color:#ef4444;border-color:rgba(239,68,68,0.4);padding:4px 8px;font-size:0.75em" onclick="revokeDeviceToken(\'' + esc(d.token) + '\')">Déconnecter</button>';
+      }
+      html += '</div>';
+    });
+    c.innerHTML = html;
+  };
+  
+  window.revokeDeviceToken = async function(token) {
+    if (!confirm('Voulez-vous vraiment déconnecter cet appareil ? (Double validation : OK pour confirmer)')) return;
+    if (!confirm('Êtes-vous absolument sûr de vouloir le déconnecter ?')) return;
+    try {
+      if (S.profile && Array.isArray(S.profile.fcmDevices)) {
+        var updated = S.profile.fcmDevices.filter(function(d){ return d.token !== token; });
+        await db.collection('users').doc(S.user.uid).update({ fcmDevices: updated });
+        S.profile.fcmDevices = updated;
+        toast('Appareil déconnecté avec succès', 'success');
+        renderAccountDevices();
+      }
+    } catch(e) {
+      toast('Erreur: ' + e.message, 'error');
+    }
+  };
+
+  async function changeEmail() {
   var newEmail = (document.getElementById('sNewEmail') || {}).value.trim();
   var pass = (document.getElementById('sEmailPassword') || {}).value;
   if (!newEmail || !pass) { toast('Renseignez l\'email et votre mot de passe','error'); return; }

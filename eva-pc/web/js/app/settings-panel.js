@@ -777,6 +777,7 @@ function renderSettings(section) {
       '</div>';
 
     setTimeout(loadSessions, 100);
+      setTimeout(renderAccountDevices, 100);
   } else if (section === 'notifications') {
     var notifPerm = ('Notification' in window) ? Notification.permission : 'unavailable';
     var _svgCheck   = '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:3px;stroke:#4ade80;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="20 6 9 17 4 12"/></svg>';
@@ -1118,7 +1119,7 @@ function renderTTSProvOpts(provider) {
   var keyInputStyle = 'font-family:monospace;font-size:0.78em;letter-spacing:0.05em;';
   var hintStyle = 'font-size:0.67em;color:var(--text-muted);margin-top:3px;line-height:1.4;';
 
-  if (provider === 'eva')  {
+  if (provider === 'eva') {
     el.innerHTML =
       '<div style="background:rgba(168,85,247,0.07);border:1px solid rgba(168,85,247,0.25);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:0.69em;color:rgba(192,132,252,0.9);line-height:1.5;">' +
       '🧠 <strong>Kokoro Neural</strong> — Voix française <strong>féminine</strong> via Piper VITS (~63 Mo, mis en cache au 1er usage). Identique sur tous les navigateurs.' +
@@ -1272,15 +1273,15 @@ async function saveVoiceSettings() {
   /* Mise à jour du badge provider dans l'UI */
   updateProviderBadge();
 
-  /* Sauvegarde locale uniquement pour PC (Pas de Firebase) */
-  // if (S.user && S.user.uid) {
-  //   try {
-  //     await db.collection('users').doc(S.user.uid).set(
-  //       { preferences: S.config },
-  //       { merge: true }
-  //     );
-  //   } catch(e) { console.warn('[EVA] Firebase voice prefs save:', e); }
-  // }
+  /* Sauvegarde Firebase — sync cross-appareils (clés incluses) */
+  if (S.user && S.user.uid) {
+    try {
+      await db.collection('users').doc(S.user.uid).set(
+        { preferences: S.config },
+        { merge: true }
+      );
+    } catch(e) { console.warn('[EVA] Firebase voice prefs save:', e); }
+  }
 
   var provLabel = {'eva-custom':'EVA Voice Perso','native':'Navigateur','eva':'Kokoro Neural','elevenlabs':'ElevenLabs','openai':'OpenAI TTS','piper':'Piper TTS (FR)'}[S.config.voiceProvider||'piper'] || S.config.voiceProvider;
   toast('✓ Paramètres audio sauvegardés — provider : ' + provLabel, 'success');
@@ -1352,6 +1353,8 @@ async function getPuterStatus() {
 }
 function connectPuter() {
   if (!window.puter) { toast('Puter non disponible','error'); return; }
+  
+  // Appel 100% synchrone pour contourner les bloqueurs de pop-up d'Edge
   var authPromise;
   try {
     authPromise = puter.auth.signIn();
@@ -1412,7 +1415,49 @@ async function disconnectPuter() {
 }
 
 /* ══════════════════ ACCOUNT — CHANGE EMAIL / PASSWORD ══════════════════ */
-async function changeEmail() {
+
+  window.renderAccountDevices = function() {
+    var c = document.getElementById('account-devices-list');
+    if (!c) return;
+    var devices = (S.profile && Array.isArray(S.profile.fcmDevices)) ? S.profile.fcmDevices : [];
+    if (devices.length === 0) {
+      c.innerHTML = '<div style="font-size:0.8em;color:var(--text-muted)">Aucun appareil connecté.</div>';
+      return;
+    }
+    var html = '';
+    devices.forEach(function(d) {
+      var dateStr = d.registeredAt ? new Date(d.registeredAt).toLocaleString() : 'Inconnu';
+      var isCurrent = d.token === window._fcmToken;
+      html += '<div style="background:var(--surface2);padding:10px;border-radius:8px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">';
+      html += '<div>';
+      html += '<div style="font-weight:bold;font-size:0.85em;color:var(--text)">' + esc(d.name || 'Appareil inconnu') + (isCurrent ? ' <span style="color:var(--cyan);font-size:0.8em">(Actuel)</span>' : '') + '</div>';
+      html += '<div style="font-size:0.7em;color:var(--text-muted)">IP: ' + esc(d.ip || '?') + ' | Inscrit le: ' + dateStr + '</div>';
+      html += '</div>';
+      if (!isCurrent) {
+        html += '<button class="btn btn-secondary" style="color:#ef4444;border-color:rgba(239,68,68,0.4);padding:4px 8px;font-size:0.75em" onclick="revokeDeviceToken(\'' + esc(d.token) + '\')">Déconnecter</button>';
+      }
+      html += '</div>';
+    });
+    c.innerHTML = html;
+  };
+  
+  window.revokeDeviceToken = async function(token) {
+    if (!confirm('Voulez-vous vraiment déconnecter cet appareil ? (Double validation : OK pour confirmer)')) return;
+    if (!confirm('Êtes-vous absolument sûr de vouloir le déconnecter ?')) return;
+    try {
+      if (S.profile && Array.isArray(S.profile.fcmDevices)) {
+        var updated = S.profile.fcmDevices.filter(function(d){ return d.token !== token; });
+        await db.collection('users').doc(S.user.uid).update({ fcmDevices: updated });
+        S.profile.fcmDevices = updated;
+        toast('Appareil déconnecté avec succès', 'success');
+        renderAccountDevices();
+      }
+    } catch(e) {
+      toast('Erreur: ' + e.message, 'error');
+    }
+  };
+
+  async function changeEmail() {
   var newEmail = (document.getElementById('sNewEmail') || {}).value.trim();
   var pass = (document.getElementById('sEmailPassword') || {}).value;
   if (!newEmail || !pass) { toast('Renseignez l\'email et votre mot de passe','error'); return; }
@@ -1431,7 +1476,6 @@ async function changeEmail() {
     document.getElementById('sNewEmail').value = '';
     document.getElementById('sEmailPassword').value = '';
     renderSettings('account');
-setTimeout(window.renderSessionsList, 100);
   } catch(e) {
     var msg = e.code === 'auth/wrong-password' ? 'Mot de passe incorrect'
       : e.code === 'auth/email-already-in-use' ? 'Email déjà utilisé'
@@ -1489,6 +1533,15 @@ async function changePassword() {
   }
 }
 
+window._brainEditMode = false;
+window.toggleBrainEditMode = function(checked) {
+  window._brainEditMode = checked;
+  var warn = document.getElementById('brainEditWarning');
+  if(warn) warn.style.display = checked ? 'block' : 'none';
+  var tb = document.getElementById('brainToolbar');
+  if(tb) tb.style.display = checked ? 'flex' : 'none';
+};
+
 /* ── Mémoire Évolutive : toggle & reset ── */
 async function toggleAdaptation(enabled) {
   if (!S.user) return;
@@ -1514,6 +1567,7 @@ async function resetEvaMemory() {
   } catch(e) { toast('Erreur', 'error'); }
 }
 window.resetEvaMemory = resetEvaMemory;
+
 
 window.exportEvaMemory = function() {
   if (!S.evaMemory) return toast('Aucune mémoire à exporter', 'warning');
@@ -1559,248 +1613,701 @@ function renderBrainMap() {
   var w = canvas.width = canvas.offsetWidth;
   var h = canvas.height = canvas.offsetHeight;
 
-  // Création du popup
+  var nodesData = (S.evaMemory && Array.isArray(S.evaMemory.nodes)) ? S.evaMemory.nodes : [];
+  var linksData = (S.evaMemory && Array.isArray(S.evaMemory.links)) ? S.evaMemory.links : [];
+  if (!S.evaMemory) S.evaMemory = {nodes:[], links:[]};
+
+  // Ajout d'une toolbar (UI) superposée
+  var oldToolbar = document.getElementById('brainToolbar');
+  if (oldToolbar) oldToolbar.remove();
+  var toolbar = document.createElement('div');
+  toolbar.id = 'brainToolbar';
+  toolbar.style.cssText = 'position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;user-select:none;';
+  
+  var btnAddNode = document.createElement('button');
+  btnAddNode.innerHTML = '➕ Nœud';
+  btnAddNode.style.cssText = 'background:rgba(10,15,30,0.9);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:0.8em;font-family:\'Space Mono\';backdrop-filter:blur(5px);transition:0.2s;';
+  
+  var btnAddLink = document.createElement('button');
+  btnAddLink.innerHTML = '🔗 Lien';
+  btnAddLink.style.cssText = 'background:rgba(10,15,30,0.9);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:0.8em;font-family:\'Space Mono\';backdrop-filter:blur(5px);transition:0.2s;';
+  
+  toolbar.appendChild(btnAddNode);
+  toolbar.appendChild(btnAddLink);
+  toolbar.style.display = window._brainEditMode ? 'flex' : 'none';
+  container.appendChild(toolbar);
+
+  // Popup edition contextuelle
   var oldPopup = document.getElementById('brainPopup');
   if(oldPopup) oldPopup.remove();
   var popup = document.createElement('div');
   popup.id = 'brainPopup';
-  popup.style.cssText = 'position:absolute;top:10px;left:10px;right:10px;bottom:10px;background:rgba(10,15,30,0.95);border:1px solid var(--cyan);border-radius:10px;padding:15px;display:none;flex-direction:column;backdrop-filter:blur(5px);z-index:10;animation:fadeUp 0.3s;box-shadow:0 10px 30px rgba(0,0,0,0.8);';
-  popup.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid rgba(123,139,245,0.2);padding-bottom:5px;"><strong style="color:var(--cyan);font-family:\'Orbitron\',monospace;font-size:1.1em;letter-spacing:1px;" id="brainPopupTitle">Titre</strong><button id="brainPopupClose" style="background:none;border:none;color:var(--text-muted);font-size:1.2em;cursor:pointer;transition:color 0.2s;">✕</button></div><div id="brainPopupDesc" style="font-size:0.82em;color:var(--text);line-height:1.6;overflow-y:auto;flex:1;"></div>';
+  popup.style.cssText = 'position:absolute;top:10px;left:10px;right:10px;background:rgba(10,15,30,0.95);border:1px solid var(--cyan);border-radius:10px;padding:15px;display:none;flex-direction:column;backdrop-filter:blur(5px);z-index:10;animation:fadeUp 0.3s;box-shadow:0 10px 30px rgba(0,0,0,0.8);';
+  
+  popup.innerHTML = 
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid rgba(123,139,245,0.2);padding-bottom:5px;">' +
+      '<strong style="color:var(--cyan);font-family:\'Orbitron\',monospace;font-size:1.1em;" id="bpTitle">Titre</strong>' +
+      '<button id="bpClose" style="background:none;border:none;color:var(--text-muted);font-size:1.2em;cursor:pointer;">✕</button>' +
+    '</div>' +
+    '<div id="bpDesc" style="font-size:0.82em;color:var(--text);line-height:1.6;margin-bottom:15px;max-height:80px;overflow-y:auto;"></div>' +
+    '<div style="display:flex;gap:10px;margin-top:auto;" id="bpActions">' +
+      '<button id="bpEdit" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px;cursor:pointer;">✏️ Éditer</button>' +
+      '<button id="bpDel" style="flex:1;background:rgba(255,77,109,0.1);border:1px solid #ff4d6d;color:#ff4d6d;padding:6px;border-radius:6px;cursor:pointer;">🗑️ Suppr</button>' +
+    '</div>';
   container.appendChild(popup);
 
-  document.getElementById('brainPopupClose').onclick = function() {
-    popup.style.display = 'none';
-  };
+  var oldBanner = document.getElementById('linkModeBanner');
+  if(oldBanner) oldBanner.remove();
+  var linkModeBanner = document.createElement('div');
+  linkModeBanner.id = 'linkModeBanner';
+  linkModeBanner.style.cssText = 'position:absolute;top:10px;left:10px;right:10px;background:var(--cyan);color:#000;padding:10px;border-radius:8px;text-align:center;font-weight:bold;display:none;z-index:20;cursor:pointer;animation:fadeDown 0.3s;font-size:0.8em;';
+  linkModeBanner.innerHTML = 'Cliquez sur le premier nœud... (Cliquez ici pour annuler)';
+  container.appendChild(linkModeBanner);
 
-  var nodesData = (S.evaMemory && Array.isArray(S.evaMemory.nodes)) ? S.evaMemory.nodes : [];
-  var linksData = (S.evaMemory && Array.isArray(S.evaMemory.links)) ? S.evaMemory.links : [];
+  // Custom Prompt Modal
+  var oldCModal = document.getElementById('brainCustomModal');
+  if(oldCModal) oldCModal.remove();
+  var customModal = document.createElement('div');
+  customModal.id = 'brainCustomModal';
+  customModal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(5px);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;';
+  customModal.innerHTML = 
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:20px;width:100%;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,0.8);">' +
+      '<div id="bcmTitle" style="color:var(--cyan);font-family:\'Orbitron\',monospace;font-size:1.1em;margin-bottom:15px;font-weight:bold;">Titre</div>' +
+      '<div id="bcmFields"></div>' +
+      '<div style="display:flex;gap:10px;margin-top:20px;">' +
+        '<button id="bcmCancel" style="flex:1;padding:10px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;">Annuler</button>' +
+        '<button id="bcmConfirm" style="flex:1;padding:10px;border-radius:8px;background:var(--cyan);border:none;color:#000;font-weight:bold;cursor:pointer;">Valider</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(customModal);
+
+  function openModal(title, fields, onConfirm) {
+    document.getElementById('bcmTitle').innerText = title;
+    var fieldsContainer = document.getElementById('bcmFields');
+    fieldsContainer.innerHTML = '';
+    
+    var inputs = [];
+    fields.forEach(function(f, i) {
+      var wrapper = document.createElement('div');
+      wrapper.style.marginBottom = '10px';
+      var label = document.createElement('div');
+      label.innerText = f.label;
+      label.style.cssText = 'font-size:0.8em;color:var(--text-muted);margin-bottom:5px;';
+      wrapper.appendChild(label);
+      
+      var input = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      if (f.type !== 'textarea') input.type = 'text';
+      input.value = f.value || '';
+      input.placeholder = f.placeholder || '';
+      input.style.cssText = 'width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;outline:none;';
+      if (f.type === 'textarea') {
+          input.style.resize = 'vertical';
+          input.style.minHeight = '80px';
+      }
+      inputs.push(input);
+      wrapper.appendChild(input);
+      fieldsContainer.appendChild(wrapper);
+    });
+
+    customModal.style.display = 'flex';
+    if(inputs[0]) inputs[0].focus();
+
+    document.getElementById('bcmCancel').onclick = function() {
+      customModal.style.display = 'none';
+    };
+    document.getElementById('bcmConfirm').onclick = function() {
+      customModal.style.display = 'none';
+      var results = inputs.map(function(inp) { return inp.value.trim(); });
+      onConfirm(results);
+    };
+  }
 
   var simNodes = [];
   var nodeMap = {};
-
-  if (nodesData.length === 0) {
-    for (var i = 0; i < 5; i++) {
-      simNodes.push({ id: 'fake'+i, label: '???', details: 'Mémoire vide.', x: Math.random()*w, y: Math.random()*h, vx: 0, vy: 0, r: 6, phase: Math.random()*Math.PI*2 });
+  
+  function initSimulation() {
+    simNodes = [];
+    nodeMap = {};
+    
+    // Forcer le noeud central "utilisateur"
+    if (!nodesData.some(function(n) { return n.id === 'utilisateur' || n.id === 'user'; })) {
+        var uName = (S.profile && S.profile.name) || (S.user && S.user.displayName) || 'Utilisateur';
+        nodesData.push({id: 'utilisateur', label: uName, details: 'L\'utilisateur du compte.', x: w/2, y: h/2, group: 1, type: 'user'});
+        saveChanges();
     }
-  } else {
+
     nodesData.forEach(function(n) {
       var sn = {
+        data: n,
         id: n.id,
         label: n.label,
-        details: n.details,
-        x: Math.random() * w,
-        y: Math.random() * h,
+        x: n.x !== undefined ? n.x : Math.random() * w,
+        y: n.y !== undefined ? n.y : Math.random() * h,
         vx: 0, vy: 0,
-        r: (n.id && String(n.id).toLowerCase() === 'utilisateur') || (n.id && String(n.id).toLowerCase() === 'user') ? 14 : 9,
-        phase: Math.random() * Math.PI * 2
+        r: (n.id && (n.id.toLowerCase()==='utilisateur' || n.id.toLowerCase()==='user')) ? 16 : 10,
+        phase: Math.random() * Math.PI * 2,
+        fixed: false
       };
       simNodes.push(sn);
       nodeMap[n.id] = sn;
     });
   }
+  initSimulation();
 
-  var simLinks = [];
-  var linkCounts = {};
-  linksData.forEach(function(l) {
-    if (nodeMap[l.source] && nodeMap[l.target]) {
-      simLinks.push({ source: nodeMap[l.source], target: nodeMap[l.target], label: l.label });
-      linkCounts[l.source] = (linkCounts[l.source] || 0) + 1;
-      linkCounts[l.target] = (linkCounts[l.target] || 0) + 1;
-    }
-  });
-
-  // Schéma Radial : Trouver le hub et positionner
-  var hubNode = null;
-  var maxLinks = -1;
-  simNodes.forEach(function(n) {
-    var c = linkCounts[n.id] || 0;
-    if (c > maxLinks) { maxLinks = c; hubNode = n; }
-    // Start everyone at center for the entrance animation
-    n.x = w/2;
-    n.y = h/2;
-  });
-
-  if (hubNode && simNodes.length > 1) {
-    hubNode.r = 14;
-    hubNode.targetX = w/2;
-    hubNode.targetY = h/2;
-    var satellites = simNodes.filter(function(n) { return n !== hubNode; });
-    var R = 150; // Rayon de base
-    satellites.forEach(function(n, i) {
-      var layer = Math.floor(i / 12);
-      var currentR = R + layer * 100;
-      var itemsInLayer = Math.min(satellites.length - layer * 12, 12);
-      var angle = ((i % 12) / itemsInLayer) * Math.PI * 2;
-      n.targetX = w/2 + currentR * Math.cos(angle);
-      n.targetY = h/2 + currentR * Math.sin(angle);
+  function saveChanges() {
+    simNodes.forEach(function(sn) {
+      sn.data.x = sn.x;
+      sn.data.y = sn.y;
     });
-  } else {
-    // Si aucun lien ou graphe vide
-    simNodes.forEach(function(n, i) {
-      n.targetX = w/2;
-      n.targetY = h/2;
-      if (simNodes.length > 1) {
-        var angle = (i / simNodes.length) * Math.PI * 2;
-        n.targetX = w/2 + 100 * Math.cos(angle);
-        n.targetY = h/2 + 100 * Math.sin(angle);
-      }
-    });
+    S.evaMemory.nodes = nodesData;
+    S.evaMemory.links = linksData;
+    S.evaMemory.lastUpdated = Date.now();
+    try {
+      db.collection('users').doc(S.user.uid).collection('brain').doc('map').set({
+        nodes: S.evaMemory.nodes,
+        links: S.evaMemory.links,
+        last_update: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      db.collection('users').doc(S.user.uid).set({ evaMemory: S.evaMemory }, { merge: true });
+    } catch(e) { console.error("Erreur sauvegarde cerveau:", e); }
+  }
+  
+  var draggedNode = null;
+  var selectedNode = null;
+  var selectedLink = null;
+  
+  var interactionMode = 'default'; // 'default', 'add_node', 'add_link'
+  var linkModeStep = 0; // 0 = wait source, 1 = wait target
+  var linkModeSource = null;
+  
+  var offsetX = 0, offsetY = 0;
+  var scale = 1;
+  var isPanning = false, hasMoved = false;
+  var lastX = 0, lastY = 0;
+  var mouseX = 0, mouseY = 0;
+  var initialPinchDistance = null;
+  var initialScale = 1;
+
+  function resetMode() {
+    interactionMode = 'default';
+    linkModeStep = 0;
+    linkModeSource = null;
+    linkModeBanner.style.display = 'none';
+    btnAddNode.style.background = 'rgba(10,15,30,0.9)';
+    btnAddNode.style.color = 'var(--text)';
+    btnAddLink.style.background = 'rgba(10,15,30,0.9)';
+    btnAddLink.style.color = 'var(--text)';
   }
 
-  var isPanning = false;
-  var hasMoved = false;
-  var lastX = 0;
-  var lastY = 0;
-  var offsetX = 0;
-  var offsetY = 0;
+  function showPopupForNode(node) {
+      selectedNode = node;
+      selectedLink = null;
+      document.getElementById('bpTitle').innerText = node.label || node.id;
+      document.getElementById('bpDesc').innerText = node.data.details || 'Aucune information.';
+      document.getElementById('bpActions').style.display = window._brainEditMode ? 'flex' : 'none';
+      popup.style.display = 'flex';
+  }
 
-  canvas.onmousedown = function(e) {
+  function showPopupForLink(linkData) {
+      selectedNode = null;
+      selectedLink = linkData;
+      var src = nodeMap[linkData.source];
+      var tgt = nodeMap[linkData.target];
+      if(!src || !tgt) return;
+      document.getElementById('bpTitle').innerText = 'Connexion : ' + src.label + ' ➔ ' + tgt.label;
+      document.getElementById('bpDesc').innerText = 'Label actuel : ' + linkData.label;
+      document.getElementById('bpActions').style.display = window._brainEditMode ? 'flex' : 'none';
+      popup.style.display = 'flex';
+  }
+
+  btnAddNode.onclick = function() {
+    if(interactionMode === 'add_node') return resetMode();
+    resetMode();
+    interactionMode = 'add_node';
+    btnAddNode.style.background = 'var(--cyan)';
+    btnAddNode.style.color = '#000';
+    linkModeBanner.innerHTML = '📍 Cliquez n\'importe où pour placer le nœud (ou annuler)';
+    linkModeBanner.style.display = 'block';
+    popup.style.display = 'none';
+  };
+
+  btnAddLink.onclick = function() {
+    if(interactionMode === 'add_link') return resetMode();
+    resetMode();
+    interactionMode = 'add_link';
+    btnAddLink.style.background = 'var(--cyan)';
+    btnAddLink.style.color = '#000';
+    linkModeBanner.innerHTML = '🔗 Cliquez sur le 1er nœud à relier (ou annuler)';
+    linkModeBanner.style.display = 'block';
+    popup.style.display = 'none';
+  };
+
+  linkModeBanner.onclick = resetMode;
+  document.getElementById('bpClose').onclick = function() { popup.style.display = 'none'; selectedNode = null; selectedLink = null; };
+  
+  document.getElementById('bpDel').onclick = function() {
+    if (selectedNode) {
+        if (selectedNode.id.toLowerCase() === 'utilisateur' || selectedNode.id.toLowerCase() === 'user') {
+            return alert("Vous ne pouvez pas supprimer le nœud central utilisateur.");
+        }
+        if(confirm('Supprimer ce nœud et ses connexions ?')) {
+          nodesData = nodesData.filter(function(n) { return n.id !== selectedNode.id; });
+          linksData = linksData.filter(function(l) { return l.source !== selectedNode.id && l.target !== selectedNode.id; });
+          saveChanges();
+          popup.style.display = 'none';
+          selectedNode = null;
+          initSimulation();
+        }
+    } else if (selectedLink) {
+        if(confirm('Supprimer ce lien ?')) {
+            linksData = linksData.filter(function(l) { return l !== selectedLink; });
+            saveChanges();
+            popup.style.display = 'none';
+            selectedLink = null;
+        }
+    }
+  };
+
+  document.getElementById('bpEdit').onclick = function() {
+    popup.style.display = 'none';
+    if (selectedNode) {
+        openModal("Éditer le nœud", [
+          {label: "Nom du nœud", value: selectedNode.data.label, placeholder: "Ex: Maison de vacances"},
+          {label: "Description (3ème personne)", type: "textarea", value: selectedNode.data.details, placeholder: "Ex: L'utilisateur possède une..."}
+        ], function(res) {
+          if(!res[0]) return toast('Le titre est requis', 'warning');
+          selectedNode.data.label = res[0];
+          selectedNode.label = res[0];
+          selectedNode.data.details = res[1] || '';
+          saveChanges();
+          showPopupForNode(selectedNode);
+        });
+    } else if (selectedLink) {
+        openModal("Éditer la connexion", [
+          {label: "Nouveau label du lien", value: selectedLink.label, placeholder: "Ex: possède, ami avec"}
+        ], function(res) {
+          if(!res[0]) return toast('Le label est requis', 'warning');
+          selectedLink.label = res[0];
+          saveChanges();
+          showPopupForLink(selectedLink);
+        });
+    }
+  };
+
+  // --- EVENTS MOUSE & TOUCH ---
+  function getPos(e) {
     var rect = canvas.getBoundingClientRect();
-    lastX = e.clientX - rect.left;
-    lastY = e.clientY - rect.top;
+    var cx = e.touches ? e.touches[0].clientX : e.clientX;
+    var cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: cx - rect.left, y: cy - rect.top };
+  }
+
+  function handleDown(e) {
+    if(e.touches && e.touches.length === 2) {
+      // Pinch to zoom init
+      var t1 = e.touches[0], t2 = e.touches[1];
+      initialPinchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      initialScale = scale;
+      return;
+    }
+    if(e.touches && e.touches.length > 1) return;
+    var p = getPos(e);
+    lastX = p.x;
+    lastY = p.y;
+    var mx = p.x - offsetX;
+    var my = p.y - offsetY;
+    
+    if (interactionMode === 'add_node') {
+        resetMode();
+        openModal("Nouveau Nœud", [
+            {label: "Nom du nœud", placeholder: "Ex: Ma Voiture"},
+            {label: "Description (3ème personne)", type: "textarea", placeholder: "Ex: L'utilisateur possède une Tesla..."}
+        ], function(res) {
+            if(!res[0]) return;
+            var id = 'node_' + Date.now();
+            nodesData.push({id: id, label: res[0], details: res[1]||'', x: mx / scale, y: my / scale, group:2, type:'concept'});
+            saveChanges();
+            initSimulation();
+        });
+        return;
+    }
+
+    // Test node collision
+    var hitNode = null;
+    for(var i=simNodes.length-1; i>=0; i--) {
+      var n = simNodes[i];
+      if(Math.hypot(n.x * scale - mx, n.y * scale - my) <= n.r + 20) { // Tolérance tactile
+        hitNode = n; break;
+      }
+    }
+
+    // Test link collision if no node hit
+    var hitLink = null;
+    if(!hitNode && interactionMode === 'default') {
+        for(var j=0; j<linksData.length; j++) {
+            var l = linksData[j];
+            if (l._lx && l._ly) {
+                var distSq = Math.pow(mx - l._lx, 2) + Math.pow(my - l._ly, 2);
+                if (distSq < 250) { // Rayon de tolérance pour le clic (label)
+                    hitLink = l;
+                    break;
+                }
+            } else {
+                // Fallback (si la boucle de rendu n'a pas encore tourné)
+                var s = nodeMap[l.source], t = nodeMap[l.target];
+                if(s && t) {
+                    var sx = s.x * scale, sy = s.y * scale;
+                    var tx = t.x * scale, ty = t.y * scale;
+                    var l2 = Math.pow(tx - sx, 2) + Math.pow(ty - sy, 2);
+                    var tt = l2 === 0 ? 0 : ((mx - sx) * (tx - sx) + (my - sy) * (ty - sy)) / l2;
+                    tt = Math.max(0, Math.min(1, tt));
+                    var projX = sx + tt * (tx - sx);
+                    var projY = sy + tt * (ty - sy);
+                    var dSq = Math.pow(mx - projX, 2) + Math.pow(my - projY, 2);
+                    if (dSq < 100) { hitLink = l; break; }
+                }
+            }
+        }
+    }
+
+    if (interactionMode === 'add_link') {
+        if(hitNode) {
+            if(linkModeStep === 0) {
+                linkModeSource = hitNode;
+                linkModeStep = 1;
+                linkModeBanner.innerHTML = '🔗 Cliquez sur le 2ème nœud pour finaliser la connexion';
+            } else if (linkModeStep === 1) {
+                if(hitNode.id !== linkModeSource.id) {
+                    var srcNode = linkModeSource;
+                    resetMode();
+                    openModal("Nouvelle connexion", [
+                        {label: "Lien entre '" + srcNode.label + "' et '" + hitNode.label + "'", placeholder: "Ex: possède, est ami avec..."}
+                    ], function(res) {
+                        if(res[0]) {
+                            linksData.push({source: srcNode.id, target: hitNode.id, label: res[0]});
+                            saveChanges();
+                            initSimulation();
+                        }
+                    });
+                } else {
+                    resetMode();
+                }
+            }
+        }
+        return;
+    }
+    
+    if(hitNode) {
+        if(window._brainEditMode) {
+            draggedNode = hitNode;
+            hitNode.fixed = true;
+        } else {
+            selectedNode = hitNode;
+            hasMoved = false;
+        }
+        hasMoved = false;
+        return;
+    }
+    
+    if(hitLink) {
+        showPopupForLink(hitLink);
+        return;
+    }
+
+    // Pan
     isPanning = true;
     hasMoved = false;
-  };
-  
-  canvas.onmousemove = function(e) {
-    var rect = canvas.getBoundingClientRect();
-    var mx = e.clientX - rect.left;
-    var my = e.clientY - rect.top;
-    
-    // Hover effect (en tenant compte de l'offset)
-    var hovering = false;
-    for (var i=0; i<simNodes.length; i++) {
-      if (Math.hypot(simNodes[i].x - (mx - offsetX), simNodes[i].y - (my - offsetY)) < simNodes[i].r + 15) {
-        hovering = true; break;
-      }
-    }
-    canvas.style.cursor = isPanning && hasMoved ? 'grabbing' : (hovering ? 'pointer' : 'grab');
+  }
 
-    if (isPanning) {
-      var dx = mx - lastX;
-      var dy = my - lastY;
-      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-        hasMoved = true;
-      }
+  function handleMove(e) {
+    if(e.touches && e.touches.length === 2 && initialPinchDistance) {
+      e.preventDefault();
+      var t1 = e.touches[0], t2 = e.touches[1];
+      var currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      var rect = canvas.getBoundingClientRect();
+      var pX = (t1.clientX + t2.clientX)/2 - rect.left;
+      var pY = (t1.clientY + t2.clientY)/2 - rect.top;
+      
+      var worldX = (pX - offsetX) / scale;
+      var worldY = (pY - offsetY) / scale;
+      
+      scale = initialScale * (currentDist / initialPinchDistance);
+      scale = Math.min(Math.max(0.1, scale), 4);
+      
+      offsetX = pX - worldX * scale;
+      offsetY = pY - worldY * scale;
+      return;
+    }
+    if(e.touches && e.touches.length > 1) return;
+    if(isPanning || draggedNode) e.preventDefault(); // prevent scrolling
+    var p = getPos(e);
+    mouseX = p.x;
+    mouseY = p.y;
+
+    if(draggedNode) {
+      draggedNode.x = (mouseX - offsetX) / scale;
+      draggedNode.y = (mouseY - offsetY) / scale;
+      hasMoved = true;
+      canvas.style.cursor = 'grabbing';
+      return;
+    }
+    
+    if(isPanning) {
+      var dx = mouseX - lastX;
+      var dy = mouseY - lastY;
+      if(Math.abs(dx)>2 || Math.abs(dy)>2) hasMoved = true;
       offsetX += dx;
       offsetY += dy;
-      lastX = mx;
-      lastY = my;
+      lastX = mouseX;
+      lastY = mouseY;
+      canvas.style.cursor = 'grabbing';
+      return;
     }
-  };
-  
-  canvas.onmouseup = function(e) {
-    if (!hasMoved) {
-      // C'est un clic !
-      var rect = canvas.getBoundingClientRect();
-      var mx = e.clientX - rect.left;
-      var my = e.clientY - rect.top;
-      for (var i=0; i<simNodes.length; i++) {
-        var n = simNodes[i];
-        if (Math.hypot(n.x - (mx - offsetX), n.y - (my - offsetY)) < n.r + 20) {
-          document.getElementById('brainPopupTitle').innerText = n.label || n.id;
-          document.getElementById('brainPopupDesc').innerText = n.details || "Aucune information supplémentaire enregistrée.";
-          popup.style.display = 'flex';
-          break;
+
+    if(!e.touches) {
+        var hovering = false;
+        var smx = mouseX - offsetX;
+        var smy = mouseY - offsetY;
+        for(var i=0; i<simNodes.length; i++) {
+          if(Math.hypot(simNodes[i].x * scale - smx, simNodes[i].y * scale - smy) <= simNodes[i].r + 15) {
+            hovering = true; break;
+          }
+        }
+        if (interactionMode === 'add_link') canvas.style.cursor = hovering ? 'crosshair' : 'default';
+        else if (interactionMode === 'add_node') canvas.style.cursor = 'crosshair';
+        else canvas.style.cursor = hovering ? 'pointer' : 'grab';
+    }
+  }
+
+  function handleUp(e) {
+    if(draggedNode) {
+      draggedNode.fixed = false;
+      if(!hasMoved) {
+        showPopupForNode(draggedNode);
+      } else {
+        saveChanges();
+      }
+      draggedNode = null;
+    } else if (selectedNode && !isPanning && !hasMoved && !window._brainEditMode) {
+      // Pour le mode lecture seule
+      showPopupForNode(selectedNode);
+      selectedNode = null;
+    }
+    isPanning = false;
+    initialPinchDistance = null;
+    if(interactionMode === 'default') canvas.style.cursor = 'grab';
+  }
+
+  canvas.addEventListener('mousedown', handleDown, {passive: false});
+  canvas.addEventListener('mousemove', handleMove, {passive: false});
+  canvas.addEventListener('mouseup', handleUp);
+  canvas.addEventListener('mouseleave', function() {
+    if(draggedNode) { draggedNode.fixed = false; draggedNode = null; }
+    isPanning = false;
+    initialPinchDistance = null;
+    if(interactionMode === 'default') canvas.style.cursor = 'grab';
+  });
+
+  canvas.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var p = getPos(e);
+    var zoomIntensity = 0.001;
+    var delta = e.deltaY;
+    var worldX = (p.x - offsetX) / scale;
+    var worldY = (p.y - offsetY) / scale;
+    scale += delta * -zoomIntensity;
+    scale = Math.min(Math.max(0.1, scale), 4);
+    offsetX = p.x - worldX * scale;
+    offsetY = p.y - worldY * scale;
+  }, {passive: false});
+
+  canvas.addEventListener('touchstart', handleDown, {passive: false});
+  canvas.addEventListener('touchmove', handleMove, {passive: false});
+  canvas.addEventListener('touchend', handleUp, {passive: false});
+  canvas.addEventListener('touchcancel', function() {
+    if(draggedNode) { draggedNode.fixed = false; draggedNode = null; }
+    isPanning = false;
+    initialPinchDistance = null;
+  }, {passive: false});
+
+  // PHYSICS LOOP variables
+  var kSpring = 0.01;
+  var kRepel = 1200;
+  var damping = 0.85;
+  var time = 0;
+  var animId;
+
+  function draw() {
+    if (!document.getElementById('brainCanvas')) {
+      if(animId) cancelAnimationFrame(animId);
+      return;
+    }
+    time += 0.05;
+
+    // PHYSICS ENGINE
+    for(var i=0; i<simNodes.length; i++) {
+      for(var j=i+1; j<simNodes.length; j++) {
+        var ni = simNodes[i], nj = simNodes[j];
+        var dx = nj.x - ni.x;
+        var dy = nj.y - ni.y;
+        var dist = Math.sqrt(dx*dx + dy*dy) || 1;
+        if(dist < 300) {
+           var force = kRepel / (dist * dist);
+           var fx = (dx / dist) * force;
+           var fy = (dy / dist) * force;
+           if(!ni.fixed) { ni.vx -= fx; ni.vy -= fy; }
+           if(!nj.fixed) { nj.vx += fx; nj.vy += fy; }
         }
       }
     }
-    isPanning = false;
-    canvas.style.cursor = 'grab';
-  };
-  
-  canvas.onmouseleave = function() {
-    isPanning = false;
-    canvas.style.cursor = 'grab';
-  };
-  
-  // Set default cursor
-  canvas.style.cursor = 'grab';
-
-  var time = 0;
-
-  function draw() {
-    if (!document.getElementById('brainCanvas')) return;
-    time += 0.05; 
     
-    // Schema Animation (Lerp)
+    linksData.forEach(function(l) {
+      var s = nodeMap[l.source], t = nodeMap[l.target];
+      if(s && t) {
+        var dx = t.x - s.x;
+        var dy = t.y - s.y;
+        var dist = Math.sqrt(dx*dx + dy*dy) || 1;
+        var diff = dist - 120; // rest length
+        var force = diff * kSpring;
+        var fx = (dx / dist) * force;
+        var fy = (dy / dist) * force;
+        if(!s.fixed) { s.vx += fx; s.vy += fy; }
+        if(!t.fixed) { t.vx -= fx; t.vy -= fy; }
+      }
+    });
+    
     simNodes.forEach(function(n) {
-      // Lerp smooth movement vers la position cible
-      n.x += (n.targetX - n.x) * 0.04;
-      n.y += (n.targetY - n.y) * 0.04;
+      if(!n.fixed) {
+        n.vx += (w/2 - n.x) * 0.0002;
+        n.vy += (h/2 - n.y) * 0.0002;
+        n.vx *= damping;
+        n.vy *= damping;
+        n.x += n.vx;
+        n.y += n.vy;
+      }
     });
 
-    // Render
+    // RENDER
     ctx.clearRect(0, 0, w, h);
-    
     ctx.save();
     ctx.translate(offsetX, offsetY);
     
-    // Edges
+    // Draw Links
     ctx.lineWidth = 2;
-    simLinks.forEach(function(l) {
-      ctx.beginPath();
-      ctx.moveTo(l.source.x, l.source.y);
-      ctx.lineTo(l.target.x, l.target.y);
-      var pulse = (Math.sin(time + l.source.phase) + 1) / 2;
-      ctx.strokeStyle = 'rgba(123, 139, 245, ' + (0.3 + pulse * 0.3) + ')';
-      ctx.stroke();
+    
+    // Groupement des liens pour Bézier
+    var linkGroups = {};
+    linksData.forEach(function(l) {
+      var s = l.source, t = l.target;
+      var isCanonical = s < t;
+      var key = isCanonical ? (s + '_' + t) : (t + '_' + s);
+      if(!linkGroups[key]) linkGroups[key] = [];
+      l._groupIndex = linkGroups[key].length;
+      l._isCanonical = isCanonical;
+      linkGroups[key].push(l);
+    });
+    linksData.forEach(function(l) {
+      var key = l._isCanonical ? (l.source + '_' + l.target) : (l.target + '_' + l.source);
+      l._groupTotal = linkGroups[key].length;
+    });
 
-      var dx = l.target.x - l.source.x;
-      var dy = l.target.y - l.source.y;
-      var angle = Math.atan2(dy, dx);
-      var targetR = l.target.r + 6;
-      var arrowX = l.target.x - targetR * Math.cos(angle);
-      var arrowY = l.target.y - targetR * Math.sin(angle);
-      
-      ctx.beginPath();
-      ctx.moveTo(arrowX, arrowY);
-      ctx.lineTo(arrowX - 8 * Math.cos(angle - Math.PI/7), arrowY - 8 * Math.sin(angle - Math.PI/7));
-      ctx.lineTo(arrowX - 8 * Math.cos(angle + Math.PI/7), arrowY - 8 * Math.sin(angle + Math.PI/7));
-      ctx.fillStyle = ctx.strokeStyle;
-      ctx.fill();
+    linksData.forEach(function(l) {
+      var s = nodeMap[l.source], t = nodeMap[l.target];
+      if(s && t) {
+        var sx = s.x * scale, sy = s.y * scale;
+        var tx = t.x * scale, ty = t.y * scale;
+        
+        // Calcul du vecteur normal orthogonal
+        var cx_s = l._isCanonical ? s : t;
+        var cx_t = l._isCanonical ? t : s;
+        var cdx = (cx_t.x - cx_s.x) * scale;
+        var cdy = (cx_t.y - cx_s.y) * scale;
+        var cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
+        var nx = -cdy / cdist;
+        var ny = cdx / cdist;
+        
+        var step = 40;
+        var offset = (l._groupIndex - (l._groupTotal - 1) / 2) * step;
+        
+        var midX = (sx + tx) / 2;
+        var midY = (sy + ty) / 2;
+        
+        var cpX = midX + nx * offset;
+        var cpY = midY + ny * offset;
 
-      if (l.label) {
-        var mx = l.source.x + dx * 0.4;
-        var my = l.source.y + dy * 0.4;
-        
-        ctx.font = '10px sans-serif';
-        var textW = ctx.measureText(l.label).width;
-        
-        ctx.fillStyle = 'rgba(10, 15, 30, 0.85)';
+        // Mode édition de lien : si on clique, on modifie le label
         ctx.beginPath();
-        if (ctx.roundRect) {
-            ctx.roundRect(mx - textW/2 - 6, my - 8, textW + 12, 16, 8);
-        } else {
-            ctx.fillRect(mx - textW/2 - 6, my - 8, textW + 12, 16);
-        }
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(123, 139, 245, 0.4)';
-        ctx.lineWidth = 1;
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo(cpX, cpY, tx, ty);
+        var pulse = (Math.sin(time + s.phase) + 1) / 2;
+        ctx.strokeStyle = 'rgba(123, 139, 245, ' + (0.3 + pulse * 0.4) + ')';
         ctx.stroke();
+
+        var tanX = tx - cpX;
+        var tanY = ty - cpY;
+        var tanDist = Math.sqrt(tanX*tanX + tanY*tanY) || 1;
+        var angle = Math.atan2(tanY, tanX);
+        var targetR = t.r * scale + 6;
+        var arrowX = tx - (tanX / tanDist) * targetR;
+        var arrowY = ty - (tanY / tanDist) * targetR;
         
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.textAlign = 'center';
-        ctx.fillText(l.label, mx, my + 3);
+        ctx.beginPath();
+        ctx.moveTo(arrowX, arrowY);
+        ctx.lineTo(arrowX - 8 * Math.cos(angle - Math.PI/7), arrowY - 8 * Math.sin(angle - Math.PI/7));
+        ctx.lineTo(arrowX - 8 * Math.cos(angle + Math.PI/7), arrowY - 8 * Math.sin(angle + Math.PI/7));
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.fill();
+
+        // Label au centre de la courbe (t=0.5)
+        var lx = (midX + cpX) / 2;
+        var ly = (midY + cpY) / 2;
+        l._lx = lx; // Sauvegarde pour le hit detection
+        l._ly = ly;
+
+        if (l.label) {
+          ctx.font = '10px sans-serif';
+          var textW = ctx.measureText(l.label).width;
+          ctx.fillStyle = 'rgba(10, 15, 30, 0.85)';
+          ctx.beginPath();
+          if(ctx.roundRect) ctx.roundRect(lx - textW/2 - 6, ly - 8, textW + 12, 16, 8);
+          else ctx.fillRect(lx - textW/2 - 6, ly - 8, textW + 12, 16);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(123, 139, 245, 0.4)';
+          ctx.lineWidth = 1; ctx.stroke();
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.textAlign = 'center';
+          ctx.fillText(l.label, lx, ly + 3);
+        }
       }
     });
 
-    // Nodes
+    if(linkModeSource) {
+      ctx.beginPath();
+      ctx.moveTo(linkModeSource.x * scale, linkModeSource.y * scale);
+      ctx.lineTo(mouseX - offsetX, mouseY - offsetY);
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.8)';
+      ctx.setLineDash([5, 5]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Draw Nodes
     simNodes.forEach(function(n) {
       ctx.beginPath();
+      var nx = n.x * scale, ny = n.y * scale;
       var rPulse = n.r + Math.sin(time * 2 + n.phase) * 1.5;
-      ctx.arc(n.x, n.y, Math.max(1, rPulse), 0, Math.PI * 2);
-      ctx.fillStyle = n.r > 9 ? '#06b6d4' : '#7b8bf5';
-      ctx.shadowBlur = 12 + Math.sin(time * 3 + n.phase) * 8;
+      ctx.arc(nx, ny, Math.max(1, rPulse), 0, Math.PI * 2);
+      ctx.fillStyle = (n === selectedNode || n === linkModeSource) ? '#fff' : (n.r > 12 ? '#06b6d4' : '#7b8bf5');
+      ctx.shadowBlur = (n === selectedNode) ? 20 : (12 + Math.sin(time * 3 + n.phase) * 8);
       ctx.shadowColor = ctx.fillStyle;
       ctx.fill();
       ctx.shadowBlur = 0;
 
       if (n.label) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-        ctx.font = 'bold 11px sans-serif';
+        ctx.font = (n === selectedNode) ? 'bold 12px sans-serif' : 'bold 11px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(n.label, n.x, n.y - rPulse - 6);
+        ctx.fillText(n.label, nx, ny - rPulse - 6);
       }
     });
 
@@ -1815,9 +2322,12 @@ function renderBrainMap() {
       ctx.fillText('APPRENTISSAGE DÉSACTIVÉ', w/2, h/2);
     }
 
-    requestAnimationFrame(draw);
+    animId = requestAnimationFrame(draw);
   }
+  
+  if(window._brainAnimId) cancelAnimationFrame(window._brainAnimId);
   draw();
+  window._brainAnimId = animId;
 }
 window.renderBrainMap = renderBrainMap;
 function testVoice() {
@@ -1868,58 +2378,6 @@ window.clearAllConvs = clearAllConvs;
 window.saveProfileSettings = saveProfileSettings;
 window.saveAISettings = saveAISettings;
 window.saveVoiceSettings = saveVoiceSettings;
-
-// Ecouteur pour la connexion Puter via proxy Desktop
-if (window.eva && window.eva.onPuterCallback) {
-  window.eva.onPuterCallback(function(data) {
-    if (data && data.token) {
-      if (window.puter) {
-        window.puter.auth.signIn(data.token);
-      }
-      localStorage.setItem('puter_auth_token', data.token);
-      S.config.puterUsername = "Connecté (Desktop)";
-      saveCfg();
-      toast('Puter connecté avec succès', 'success');
-      renderSettings('ai');
-    }
-  });
-}
-
-window.revokeSession = async function(sid) {
-  if(!confirm("Déconnecter cet appareil ?")) return;
-  try {
-    await db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).update({ revoked: true });
-    toast("Appareil déconnecté", "success");
-  } catch(e) {
-    toast("Erreur", "error");
-  }
-};
-
-window.renderSessionsList = function() {
-  var c = document.getElementById('sessionsListContainer');
-  if(!c) return;
-  if(!S.user) return;
-  db.collection('users').doc(S.user.uid).collection('sessions').orderBy('lastSeen', 'desc').get().then(function(snap) {
-    if(!document.getElementById('sessionsListContainer')) return;
-    var html = '';
-    snap.forEach(function(doc) {
-      var d = doc.data();
-      if (d.revoked) return;
-      var isMe = doc.id === S.sessionId;
-      var dateStr = d.lastSeen && d.lastSeen.toDate ? d.lastSeen.toDate().toLocaleString('fr-FR') : 'Inconnu';
-      html += '<div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">' +
-        '<div>' +
-          '<div style="font-weight:bold;font-size:0.9em;color:'+(d.online ? '#4ade80' : 'var(--text-color)')+'">' + (d.device || 'Inconnu') + (isMe ? ' (Cet appareil)' : '') + '</div>' +
-          '<div style="font-size:0.75em;color:var(--text-muted)">' + (d.browser || '?') + ' sur ' + (d.os || '?') + '</div>' +
-          '<div style="font-size:0.7em;color:var(--text-dim)">Dernière activité: ' + dateStr + '</div>' +
-        '</div>' +
-        (isMe ? '' : '<button class="btn btn-secondary" style="padding:4px 10px;font-size:0.75em" onclick="revokeSession(\''+doc.id+'\')">Déconnecter</button>') +
-      '</div>';
-    });
-    if(!html) html = '<div style="font-size:0.8em;color:var(--text-muted)">Aucune autre session active.</div>';
-    document.getElementById('sessionsListContainer').innerHTML = html;
-  });
-};
 
 
 

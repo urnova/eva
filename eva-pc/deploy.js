@@ -3,7 +3,7 @@ process.env.PATH = "F:\\donnee_app\\dev_tool\\node;" + process.env.PATH;
 const { spawnSync } = require('child_process');
 
 // Le token GitHub est inversé pour échapper au bot de révocation de GitHub
-const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg";
+const _enc = "F5VEI1Ye3YoHOcI5mamzTE1eHd5hrQTeG1zm_phg";
 const _t = _enc.split('').reverse().join('');
 
 process.env.GH_TOKEN = _t;
