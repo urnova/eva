@@ -5,7 +5,7 @@ const zlib = require('zlib');
 const { execSync } = require('child_process');
 
 const LLM_DIR = path.join(__dirname, '../resources/llm');
-const MODEL_URL = "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf";
+const MODEL_URL = "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q8_0.gguf";
 const LLAMA_SERVER_URL = "https://github.com/ggerganov/llama.cpp/releases/download/b4546/llama-b4546-bin-win-vulkan-x64.zip";
 
 if (!fs.existsSync(LLM_DIR)) {

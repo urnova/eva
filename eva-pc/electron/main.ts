@@ -745,8 +745,8 @@ declare global {
 // ==========================================
 // LLM AGENTIC LOCAL (llama-server)
 // ==========================================
-let llmProcess = null;
-let llmTimeout = null;
+let llmProcess: any = null;
+let llmTimeout: any = null;
 
 function startLLM() {
   if (llmProcess) return Promise.resolve(true);
@@ -771,7 +771,7 @@ function startLLM() {
       '--parallel', '1'
     ], { windowsHide: true });
 
-    llmProcess.on('error', (err) => {
+    llmProcess.on('error', (err: any) => {
       console.error("[LLM] Spawn error:", err);
       llmProcess = null;
     });

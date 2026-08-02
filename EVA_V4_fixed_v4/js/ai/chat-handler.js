@@ -143,8 +143,6 @@ async function sendMessage(userMessage, options) {
     return {
       success: true,
       content: cleaned,
-      thinking: response.thinking || null,       /* Vraies pensées (modèles reasoning) */
-      isReasoning: response.isReasoning || false, /* true = gemini-thinking / deepseek-r1 */
       provider: currentConfig ? currentConfig.aiProvider : 'unknown'
     };
 
@@ -292,8 +290,6 @@ window.EVAChatHandler = {
   getLastAssistantMessage,
   getConversationSummary,
   getIsProcessing,
-  getCurrentProvider: function() { return currentProvider; },
-  getCurrentConfig: function() { return currentConfig; },
   retryLastMessage
 };
 
