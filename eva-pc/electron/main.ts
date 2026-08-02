@@ -753,7 +753,7 @@ function startLLM() {
   
   return new Promise((resolve) => {
     // Find the resources path (works in dev and prod)
-    let resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../../');
+    let resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../../eva-pc');
     const llmDir = path.join(resourcesPath, 'resources', 'llm');
     const serverExe = path.join(llmDir, 'llama-server.exe');
     const modelFile = path.join(llmDir, 'eva-model.gguf');
