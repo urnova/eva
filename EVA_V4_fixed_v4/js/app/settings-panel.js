@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════
    SETTINGS
 ═══════════════════════════════════════════════════ */
 function openSettings(section) {
@@ -2524,3 +2524,83 @@ window.revokeSession = async function(deviceId) {
     }
   }
 }
+
+window.loadSessions = function() {
+    var container = document.getElementById('accountSessionsList');
+    if(!container || !S.user) return;
+    db.collection('users').doc(S.user.uid).collection('sessions').orderBy('lastSeen', 'desc').get().then(function(snap) {
+        if(snap.empty) {
+            container.innerHTML = 'Aucune session trouv�e.';
+            return;
+        }
+        var html = '';
+        snap.forEach(function(doc) {
+            var s = doc.data();
+            if(s.revoke === true) return;
+            var isCurrent = doc.id === S.sessionId;
+            var dateStr = s.lastSeen && s.lastSeen.toDate ? s.lastSeen.toDate().toLocaleString('fr-FR') : 'Inconnue';
+            var statusStr = s.online ? '<span style="color:#4ade80">En ligne</span>' : '<span style="color:var(--text-muted)">Derni�re activit�: ' + dateStr + '</span>';
+            var devIcon = s.device === 'Mobile' ? '??' : (s.device === 'Application PC' ? '??' : '??');
+            
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-lighter);padding:10px 14px;border-radius:8px;border:1px solid ' + (isCurrent ? 'var(--cyan)' : 'var(--border)') + ';">' +
+                    '<div style="display:flex;align-items:center;gap:12px;">' +
+                    '<div style="font-size:1.6em;">' + devIcon + '</div>' +
+                    '<div style="display:flex;flex-direction:column;">' +
+                    '<div style="font-weight:600;color:var(--text);">' + (s.browser || 'Inconnu') + ' sur ' + (s.os || 'Inconnu') + (isCurrent ? ' <span style="font-size:0.7em;background:var(--cyan);color:#000;padding:2px 6px;border-radius:10px;margin-left:4px;">Actuelle</span>' : '') + '</div>' +
+                    '<div style="font-size:0.9em;">' + statusStr + '</div>' +
+                    '</div></div>' +
+                    (isCurrent ? '' : '<button class="btn" style="background:transparent;border:1px solid var(--border);color:#f87171;padding:6px 10px;font-size:0.85em;" onclick="revokeSession(\'' + doc.id + '\')">R�voquer</button>') +
+                    '</div>';
+        });
+        container.innerHTML = html || 'Aucune session active.';
+    }).catch(function(e) {
+        container.innerHTML = 'Erreur de chargement des sessions.';
+    });
+};
+
+window.revokeSession = function(sid) {
+    if(!confirm('R�voquer cette session ? Elle sera d�connect�e imm�diatement.')) return;
+    db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).update({revoke: true}).then(function() {
+        window.loadSessions();
+    }).catch(function(e){ alert('Erreur: ' + e.message); });
+};
+
+window.loadSessions = function() {
+    var container = document.getElementById('accountSessionsList');
+    if(!container || !S.user) return;
+    db.collection('users').doc(S.user.uid).collection('sessions').orderBy('lastSeen', 'desc').get().then(function(snap) {
+        if(snap.empty) {
+            container.innerHTML = 'Aucune session trouvée.';
+            return;
+        }
+        var html = '';
+        snap.forEach(function(doc) {
+            var s = doc.data();
+            if(s.revoke === true) return;
+            var isCurrent = doc.id === S.sessionId;
+            var dateStr = s.lastSeen && s.lastSeen.toDate ? s.lastSeen.toDate().toLocaleString('fr-FR') : 'Inconnue';
+            var statusStr = s.online ? '<span style="color:#4ade80">En ligne</span>' : '<span style="color:var(--text-muted)">Dernière activité: ' + dateStr + '</span>';
+            var devIcon = s.device === 'Mobile' ? '📱' : (s.device === 'Application PC' ? '💻' : '🌐');
+            
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-lighter);padding:10px 14px;border-radius:8px;border:1px solid ' + (isCurrent ? 'var(--cyan)' : 'var(--border)') + ';">' +
+                    '<div style="display:flex;align-items:center;gap:12px;">' +
+                    '<div style="font-size:1.6em;">' + devIcon + '</div>' +
+                    '<div style="display:flex;flex-direction:column;">' +
+                    '<div style="font-weight:600;color:var(--text);">' + (s.browser || 'Inconnu') + ' sur ' + (s.os || 'Inconnu') + (isCurrent ? ' <span style="font-size:0.7em;background:var(--cyan);color:#000;padding:2px 6px;border-radius:10px;margin-left:4px;">Actuelle</span>' : '') + '</div>' +
+                    '<div style="font-size:0.9em;">' + statusStr + '</div>' +
+                    '</div></div>' +
+                    (isCurrent ? '' : '<button class="btn" style="background:transparent;border:1px solid var(--border);color:#f87171;padding:6px 10px;font-size:0.85em;" onclick="revokeSession(\'' + doc.id + '\')">Révoquer</button>') +
+                    '</div>';
+        });
+        container.innerHTML = html || 'Aucune session active.';
+    }).catch(function(e) {
+        container.innerHTML = 'Erreur de chargement des sessions.';
+    });
+};
+
+window.revokeSession = function(sid) {
+    if(!confirm('Révoquer cette session ? Elle sera déconnectée immédiatement.')) return;
+    db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).update({revoke: true}).then(function() {
+        window.loadSessions();
+    }).catch(function(e){ alert('Erreur: ' + e.message); });
+};
