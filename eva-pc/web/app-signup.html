@@ -1,12 +1,12 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>E.V.A â€” CrÃ©er un compte</title>
+<title>E.V.A — Créer un compte</title>
 <link rel="icon" type="image/png" href="assets/images/eva-logo.png">
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#7b8bf5">
+<meta name="theme-color" content="#00d4ff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="E.V.A">
@@ -17,7 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <style>
 :root{
-  --cyan:#7b8bf5;--cyan-dim:rgba(123,139,245,0.10);--cyan-glow:rgba(123,139,245,0.28);
+  --cyan:#00d4ff;--cyan-dim:rgba(0,212,255,0.10);--cyan-glow:rgba(0,212,255,0.28);
   --green:#4ade80;--purple:#a78bfa;--red:#f87171;
   --bg:#111113;--surface:rgba(24,24,27,0.97);--surface2:#222228;
   --border:rgba(255,255,255,0.07);--text:#e4e4ef;--text-muted:#88889a;
@@ -26,11 +26,11 @@
 html,body{height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);}
 body::before{
   content:'';position:fixed;inset:0;
-  background-image:linear-gradient(rgba(123,139,245,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.015) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(0,212,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.015) 1px,transparent 1px);
   background-size:60px 60px;pointer-events:none;z-index:0;
 }
 .bg-orb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(100px);z-index:0;}
-.bg-orb-1{width:500px;height:500px;background:rgba(123,139,245,0.06);top:-150px;right:-150px;}
+.bg-orb-1{width:500px;height:500px;background:rgba(0,212,255,0.06);top:-150px;right:-150px;}
 .bg-orb-2{width:400px;height:400px;background:rgba(167,139,250,0.04);bottom:-150px;left:-100px;}
 
 .page{
@@ -43,21 +43,21 @@ body::before{
   gap:0;max-width:920px;width:100%;
   background:var(--surface);border:1px solid var(--border);
   border-radius:24px;overflow:hidden;
-  box-shadow:0 40px 100px rgba(0,0,0,0.7),0 0 0 1px rgba(123,139,245,0.05);
+  box-shadow:0 40px 100px rgba(0,0,0,0.7),0 0 0 1px rgba(0,212,255,0.05);
   backdrop-filter:blur(30px);
   animation:panelIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
 }
 @keyframes panelIn{from{opacity:0;transform:translateY(24px) scale(0.97)}to{opacity:1;transform:none}}
 
 .auth-deco{
-  background:linear-gradient(160deg,rgba(123,139,245,0.06),rgba(183,148,246,0.04));
+  background:linear-gradient(160deg,rgba(0,212,255,0.06),rgba(183,148,246,0.04));
   border-right:1px solid var(--border);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:48px;position:relative;overflow:hidden;
 }
 .auth-deco::before{
   content:'';position:absolute;inset:0;
-  background-image:linear-gradient(rgba(123,139,245,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.04) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);
   background-size:30px 30px;
 }
 .deco-circle{
@@ -67,15 +67,15 @@ body::before{
 }
 .deco-circle img{width:140px;height:auto;object-fit:contain;}
 .deco-sub{font-size:0.72em;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;}
-.deco-badge{margin-top:8px;display:inline-block;font-size:0.6em;color:rgba(123,139,245,0.6);letter-spacing:1.5px;}
+.deco-badge{margin-top:8px;display:inline-block;font-size:0.6em;color:rgba(0,212,255,0.6);letter-spacing:1.5px;}
 .deco-desc{margin-top:28px;font-size:0.78em;color:var(--text-muted);line-height:1.8;text-align:center;max-width:240px;position:relative;z-index:1;}
 .deco-features{margin-top:24px;display:flex;flex-direction:column;gap:10px;position:relative;z-index:1;width:100%;}
 .deco-feature{display:flex;align-items:center;gap:10px;font-size:0.73em;color:var(--text-muted);}
-.deco-feature::before{content:'â–¸';color:var(--cyan);font-size:0.9em;}
+.deco-feature::before{content:'?';color:var(--cyan);font-size:0.9em;}
 
 .platform-banner{
   display:flex;align-items:center;gap:8px;
-  background:rgba(123,139,245,0.06);border:1px solid rgba(123,139,245,0.15);
+  background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);
   border-radius:10px;padding:9px 12px;margin-bottom:18px;font-size:0.73em;color:var(--text-muted);
 }
 .platform-dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);flex-shrink:0;animation:dotPulse 2s ease-in-out infinite;}
@@ -95,7 +95,7 @@ body::before{
   color:var(--text);font-family:'Space Mono',monospace;font-size:0.85em;
   outline:none;transition:all 0.2s;
 }
-.form-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(123,139,245,0.1);}
+.form-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,0.1);}
 .form-input::placeholder{color:rgba(100,110,140,0.5);}
 
 /* Barre de force du mot de passe */
@@ -115,9 +115,9 @@ body::before{
   color:#000;font-family:'Orbitron',monospace;font-weight:700;
   font-size:0.85em;letter-spacing:2px;cursor:pointer;
   transition:all 0.3s;margin-bottom:4px;
-  box-shadow:0 0 25px rgba(123,139,245,0.3);
+  box-shadow:0 0 25px rgba(0,212,255,0.3);
 }
-.btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(123,139,245,0.5);}
+.btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,255,0.5);}
 .btn-submit:active{transform:translateY(0);}
 .btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
 
@@ -140,7 +140,7 @@ body::before{
 .auth-footer{text-align:center;margin-top:16px;font-size:0.72em;color:var(--text-muted);}
 .auth-footer a{color:var(--cyan);text-decoration:none;}
 
-/* Ã‰cran de confirmation */
+/* Écran de confirmation */
 .confirm-screen{display:none;text-align:center;padding:20px 0;}
 .confirm-icon{font-size:3em;margin-bottom:16px;}
 .confirm-title{font-family:'Orbitron',monospace;font-size:1em;letter-spacing:3px;color:var(--cyan);margin-bottom:10px;}
@@ -149,12 +149,12 @@ body::before{
   display:inline-block;background:linear-gradient(135deg,var(--cyan),#0099cc);
   color:#000;padding:12px 28px;border-radius:12px;
   font-family:'Orbitron',monospace;font-weight:700;font-size:0.85em;letter-spacing:2px;
-  text-decoration:none;box-shadow:0 0 25px rgba(123,139,245,0.3);
+  text-decoration:none;box-shadow:0 0 25px rgba(0,212,255,0.3);
   transition:all 0.3s;
 }
-.confirm-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(123,139,245,0.5);}
+.confirm-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,255,0.5);}
 
-/* â”€â”€ TV / Very large â”€â”€ */
+/* -- TV / Very large -- */
 @media(min-width:1800px){
   .auth-wrap{max-width:1100px;grid-template-columns:1fr 540px;}
   .auth-deco{padding:64px;}
@@ -163,7 +163,7 @@ body::before{
   .deco-circle img{width:68px;height:68px;}
   .auth-form-side{padding:48px 56px;}
 }
-/* â”€â”€ Tablet â”€â”€ */
+/* -- Tablet -- */
 @media(min-width:640px) and (max-width:1023px){
   .auth-wrap{max-width:760px;grid-template-columns:1fr 380px;}
   .auth-deco{padding:36px;}
@@ -172,7 +172,7 @@ body::before{
   .deco-circle img{width:44px;height:44px;}
   .auth-form-side{padding:28px 26px;}
 }
-/* â”€â”€ Mobile â”€â”€ */
+/* -- Mobile -- */
 @media(max-width:639px){
   .page{padding:12px;align-items:flex-start;padding-top:clamp(16px,6vh,50px);}
   .auth-wrap{grid-template-columns:1fr;border-radius:20px;min-height:auto;width:100%;}
@@ -192,33 +192,33 @@ body::before{
 <div class="page">
   <div class="auth-wrap">
 
-    <!-- Panneau dÃ©coratif gauche -->
+    <!-- Panneau décoratif gauche -->
     <div class="auth-deco">
       <div class="deco-logo">
         <div class="deco-circle">
           <img src="/assets/images/eva-logo.png" alt="EVA">
         </div>
         <div class="deco-sub">Evolutionary Virtual Assistant</div>
-        <div class="deco-badge">Beta V4 Â· Astral Technologie</div>
+        <div class="deco-badge">Beta V4 · Astral Technologie</div>
       </div>
-      <div class="deco-desc">CrÃ©ez votre compte et accÃ©dez Ã  votre assistante IA personnelle sur tous vos appareils.</div>
+      <div class="deco-desc">Créez votre compte et accédez à votre assistante IA personnelle sur tous vos appareils.</div>
       <div class="deco-features">
-        <div class="deco-feature">Compte unique â€” accÃ¨s partout</div>
-        <div class="deco-feature">Conversations naturelles en franÃ§ais</div>
-        <div class="deco-feature">SynthÃ¨se vocale & reconnaissance</div>
-        <div class="deco-feature">Notes, alarmes et agenda intÃ©grÃ©s</div>
+        <div class="deco-feature">Compte unique — accès partout</div>
+        <div class="deco-feature">Conversations naturelles en français</div>
+        <div class="deco-feature">Synthèse vocale & reconnaissance</div>
+        <div class="deco-feature">Notes, alarmes et agenda intégrés</div>
       </div>
     </div>
 
     <!-- Panneau formulaire droit -->
     <div class="auth-form-side">
       <div class="auth-form-title">INSCRIPTION</div>
-      <div class="auth-form-sub">Rejoignez E.V.A et commencez dÃ¨s maintenant.<br>DÃ©jÃ  inscrit ? <a href="/app-login.html">Se connecter</a></div>
+      <div class="auth-form-sub">Rejoignez E.V.A et commencez dès maintenant.<br>Déjà inscrit ? <a href="/app-login.html">Se connecter</a></div>
 
-      <!-- BanniÃ¨re plateforme -->
+      <!-- Bannière plateforme -->
       <div class="platform-banner">
         <div class="platform-dot"></div>
-        <span id="platformText">DÃ©tection de votre appareilâ€¦</span>
+        <span id="platformText">Détection de votre appareil…</span>
       </div>
 
       <div id="authMessage" class="auth-message"></div>
@@ -227,7 +227,7 @@ body::before{
       <div id="signupSection">
         <form id="signupForm" onsubmit="handleSignup(event)">
           <div class="form-group">
-            <label class="form-label">PrÃ©nom ou pseudo</label>
+            <label class="form-label">Prénom ou pseudo</label>
             <input type="text" class="form-input" id="displayName" placeholder="Enzo" required autocomplete="name">
           </div>
           <div class="form-group">
@@ -236,19 +236,19 @@ body::before{
           </div>
           <div class="form-group">
             <label class="form-label">Mot de passe</label>
-            <input type="password" class="form-input" id="passwordInput" placeholder="Minimum 8 caractÃ¨res" required autocomplete="new-password" oninput="checkStrength(this.value)">
+            <input type="password" class="form-input" id="passwordInput" placeholder="Minimum 8 caractères" required autocomplete="new-password" oninput="checkStrength(this.value)">
             <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
             <div class="strength-label" id="strengthLabel"></div>
           </div>
           <div class="form-group">
             <label class="form-label">Confirmer le mot de passe</label>
-            <input type="password" class="form-input" id="passwordConfirm" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required autocomplete="new-password">
+            <input type="password" class="form-input" id="passwordConfirm" placeholder="••••••••" required autocomplete="new-password">
           </div>
           <div class="cgu-row">
             <input type="checkbox" id="cguCheck" required>
-            <label for="cguCheck">J'accepte les <a href="/conditions.html" target="_blank">Conditions d'utilisation</a> et la <a href="/privacy.html" target="_blank">Politique de confidentialitÃ©</a> d'Astral Technologie.</label>
+            <label for="cguCheck">J'accepte les <a href="/conditions.html" target="_blank">Conditions d'utilisation</a> et la <a href="/privacy.html" target="_blank">Politique de confidentialité</a> d'Astral Technologie.</label>
           </div>
-          <button type="submit" class="btn-submit" id="signupBtn">CRÃ‰ER MON COMPTE</button>
+          <button type="submit" class="btn-submit" id="signupBtn">CRÉER MON COMPTE</button>
         </form>
 
         <div class="auth-divider">ou</div>
@@ -259,17 +259,17 @@ body::before{
         </button>
 
         <div class="auth-footer">
-          <a href="/conditions.html">CGU</a> Â· <a href="/privacy.html">Vie privÃ©e</a> Â· <a href="/cookies.html">Cookies</a><br>
-          Astral Technologie Â© 2026
+          <a href="/conditions.html">CGU</a> · <a href="/privacy.html">Vie privée</a> · <a href="/cookies.html">Cookies</a><br>
+          Astral Technologie © 2026
         </div>
       </div>
 
-      <!-- Ã‰cran de confirmation -->
+      <!-- Écran de confirmation -->
       <div id="confirmScreen" class="confirm-screen">
-        <div class="confirm-icon">âœ…</div>
-        <div class="confirm-title">COMPTE CRÃ‰Ã‰ !</div>
-        <div class="confirm-text" id="confirmText">Bienvenue dans E.V.A. Votre compte est prÃªt.</div>
-        <a href="/app-login.html" id="confirmLink" class="confirm-btn">ACCÃ‰DER Ã€ E.V.A</a>
+        <div class="confirm-icon">?</div>
+        <div class="confirm-title">COMPTE CRÉÉ !</div>
+        <div class="confirm-text" id="confirmText">Bienvenue dans E.V.A. Votre compte est prêt.</div>
+        <a href="/app-login.html" id="confirmLink" class="confirm-btn">ACCÉDER À E.V.A</a>
       </div>
 
     </div>
@@ -294,21 +294,21 @@ var PLATFORM = (function(){
 })();
 
 var platformLabels = {
-  mobile:  '<strong>Mobile dÃ©tectÃ©</strong> â€” Votre compte sera liÃ© Ã  l\'app E.V.A',
-  tablet:  '<strong>Tablette dÃ©tectÃ©e</strong> â€” Votre compte sera liÃ© Ã  l\'app E.V.A',
-  windows: '<strong>PC Windows dÃ©tectÃ©</strong> â€” Votre compte sera liÃ© Ã  E.V.A Desktop',
-  mac:     '<strong>Mac dÃ©tectÃ©</strong> â€” Votre compte sera liÃ© Ã  E.V.A Desktop',
-  linux:   '<strong>Linux dÃ©tectÃ©</strong> â€” Votre compte sera liÃ© Ã  E.V.A Desktop',
-  web:     '<strong>Navigateur web dÃ©tectÃ©</strong> â€” CrÃ©ation de votre compte web'
+  mobile:  '<strong>Mobile détecté</strong> — Votre compte sera lié à l\'app E.V.A',
+  tablet:  '<strong>Tablette détectée</strong> — Votre compte sera lié à l\'app E.V.A',
+  windows: '<strong>PC Windows détecté</strong> — Votre compte sera lié à E.V.A Desktop',
+  mac:     '<strong>Mac détecté</strong> — Votre compte sera lié à E.V.A Desktop',
+  linux:   '<strong>Linux détecté</strong> — Votre compte sera lié à E.V.A Desktop',
+  web:     '<strong>Navigateur web détecté</strong> — Création de votre compte web'
 };
 document.getElementById('platformText').innerHTML = platformLabels[PLATFORM] || platformLabels.web;
 
 var ERR = {
-  'auth/email-already-in-use':'Un compte existe dÃ©jÃ  avec cet email.',
+  'auth/email-already-in-use':'Un compte existe déjà avec cet email.',
   'auth/invalid-email':'Adresse email invalide.',
-  'auth/weak-password':'Mot de passe trop faible (minimum 6 caractÃ¨res).',
-  'auth/network-request-failed':'Erreur rÃ©seau. VÃ©rifiez votre connexion.',
-  'auth/popup-blocked':'Popup bloquÃ©e. Autorisez les popups pour ce site.'
+  'auth/weak-password':'Mot de passe trop faible (minimum 6 caractères).',
+  'auth/network-request-failed':'Erreur réseau. Vérifiez votre connexion.',
+  'auth/popup-blocked':'Popup bloquée. Autorisez les popups pour ce site.'
 };
 
 function showMsg(msg, type){
@@ -325,7 +325,7 @@ function checkStrength(val){
   if (/[0-9]/.test(val)) score++;
   if (/[^A-Za-z0-9]/.test(val)) score++;
   var colors = ['#f87171','#f87171','#fb923c','#facc15','#4ade80'];
-  var labels = ['TrÃ¨s faible','Faible','Moyen','Fort','TrÃ¨s fort'];
+  var labels = ['Très faible','Faible','Moyen','Fort','Très fort'];
   var fill = document.getElementById('strengthFill');
   var lbl  = document.getElementById('strengthLabel');
   fill.style.width  = (score * 20) + '%';
@@ -342,8 +342,8 @@ async function handleSignup(e){
   var passConf = document.getElementById('passwordConfirm').value;
   var btn      = document.getElementById('signupBtn');
   if (pass !== passConf){ showMsg('Les mots de passe ne correspondent pas.','error'); return; }
-  if (pass.length < 8){ showMsg('Le mot de passe doit contenir au moins 8 caractÃ¨res.','error'); return; }
-  btn.disabled = true; btn.textContent = 'CrÃ©ation...';
+  if (pass.length < 8){ showMsg('Le mot de passe doit contenir au moins 8 caractères.','error'); return; }
+  btn.disabled = true; btn.textContent = 'Création...';
   try {
     var cred = await auth.createUserWithEmailAndPassword(email, pass);
     await cred.user.updateProfile({ displayName: name });
@@ -358,7 +358,7 @@ async function handleSignup(e){
     }
     showConfirmation(name);
   } catch(err){
-    btn.disabled = false; btn.textContent = 'CRÃ‰ER MON COMPTE';
+    btn.disabled = false; btn.textContent = 'CRÉER MON COMPTE';
     showMsg(ERR[err.code] || 'Erreur : ' + err.message, 'error');
   }
 }
@@ -397,9 +397,9 @@ function showConfirmation(name){
   screen.style.display = 'block';
 
   if (isDesktop) {
-    var msg = 'âœ… Compte crÃ©Ã© ! Bienvenue ' + (name||'') + ' !<br>Retour vers E.V.A Desktopâ€¦';
+    var msg = '? Compte créé ! Bienvenue ' + (name||'') + ' !<br>Retour vers E.V.A Desktop…';
     document.getElementById('confirmText').innerHTML = msg;
-    // L'utilisateur n'est pas encore connectÃ© (juste inscrit)
+    // L'utilisateur n'est pas encore connecté (juste inscrit)
     // On redirige vers la page de login desktop pour finaliser
     setTimeout(function(){
       var user = auth.currentUser;
@@ -412,7 +412,7 @@ function showConfirmation(name){
     return;
   }
 
-  var msg2 = 'Bienvenue ' + (name||'') + ' ! Votre compte E.V.A est prÃªt.';
+  var msg2 = 'Bienvenue ' + (name||'') + ' ! Votre compte E.V.A est prêt.';
   if (PLATFORM === 'mobile' || PLATFORM === 'tablet') {
     msg2 += ' Ouvrez l\'app E.V.A sur votre mobile pour commencer.';
   } else if (PLATFORM !== 'web') {

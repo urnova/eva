@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" href="/assets/images/eva-icon.png" sizes="32x32">
 <link rel="shortcut icon" type="image/png" href="/assets/images/eva-icon.png">
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#7b8bf5">
+<meta name="theme-color" content="#00d4ff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -31,6 +31,7 @@
 <script src="/js/lib/jspdf.umd.min.js"></script>
 <script src="/js/lib/xlsx.full.min.js"></script>
 <script src="/js/lib/pptxgen.bundle.js"></script>
+<script src="/js/lib/vosk.js"></script>
 
 <link rel="stylesheet" href="/assets/styles/chat.css">
 <link rel="stylesheet" href="/assets/styles/cloudworks.css">
@@ -41,7 +42,7 @@
 <div class="electron-titlebar" style="-webkit-app-region: drag; position: fixed; top: 0; left: 0; right: 0; height: 32px; background: rgba(17,17,19,0.9); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 999999; backdrop-filter: blur(10px);">
   <div style="display: flex; align-items: center; padding-left: 12px; gap: 10px;">
     <img src="/assets/images/eva-logo.png" style="width: 16px; height: 16px; object-fit: contain;">
-    <span style="color: #e4e4ef; font-family: 'Space Mono', monospace; font-size: 11px; font-weight: bold; letter-spacing: 1px;">E.V.A DESKTOP <span id="app-version-display" style="color: #7b8bf5; font-size: 10px; margin-left: 6px;"></span></span>
+    <span style="color: #e4e4ef; font-family: 'Space Mono', monospace; font-size: 11px; font-weight: bold; letter-spacing: 1px;">E.V.A DESKTOP <span id="app-version-display" style="color: #00d4ff; font-size: 10px; margin-left: 6px;"></span></span>
 <script>
   setTimeout(() => {
     if(window.eva && window.eva.app && window.eva.app.version) {
@@ -112,7 +113,7 @@
       <div class="nav-item" data-view="cloudworks" id="navCloudWorks" style="display:none;">
         <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
         Cloud Works
-        <span style="margin-left:auto;background:rgba(123,139,245,0.12);color:var(--cyan);font-size:0.5em;font-family:'Orbitron',monospace;padding:2px 7px;border-radius:20px;font-weight:800;border:1px solid rgba(123,139,245,0.3);letter-spacing:0.5px;">⚗ EXP</span>
+        <span style="margin-left:auto;background:rgba(0,212,255,0.12);color:var(--cyan);font-size:0.5em;font-family:'Orbitron',monospace;padding:2px 7px;border-radius:20px;font-weight:800;border:1px solid rgba(0,212,255,0.3);letter-spacing:0.5px;">⚗ EXP</span>
       </div>
     </div>
 
@@ -224,7 +225,7 @@
       <!-- Section: Génération de fichiers -->
       <div>
         <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">📁 Génération de Fichiers</div>
-        <div style="background:var(--surface2);border:1px solid rgba(123,139,245,0.2);border-radius:12px;padding:14px 16px;">
+        <div style="background:var(--surface2);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:14px 16px;">
           <div style="font-size:0.75em;color:var(--text);margin-bottom:10px;font-weight:600;">Demandez à EVA de créer des fichiers directement dans le chat :</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
             <div style="display:flex;align-items:center;gap:8px;font-size:0.72em;color:var(--text-muted);">
@@ -290,13 +291,13 @@
       <!-- Section: CloudWorks & Desktop -->
       <div>
         <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">☁️ Cloud Works — Contrôle à distance</div>
-        <div style="background:var(--surface2);border:1px solid rgba(123,139,245,0.2);border-radius:12px;padding:14px 16px;">
+        <div style="background:var(--surface2);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:14px 16px;">
           <div style="font-size:0.75em;color:var(--text);margin-bottom:6px;font-weight:600;">Contrôlez votre PC depuis EVA, partout dans le monde</div>
           <div style="font-size:0.68em;color:var(--text-muted);line-height:1.6;">Installez EVA Desktop Agent sur votre PC Windows, macOS ou Linux. Une fois connecté, vous pouvez envoyer des commandes à distance depuis l'interface web.</div>
           <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-            <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(123,139,245,0.1);border:1px solid rgba(123,139,245,0.25);color:var(--cyan);">⚗ Expérimental</span>
-            <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(123,139,245,0.1);border:1px solid rgba(123,139,245,0.25);color:var(--cyan);">Multi-appareils</span>
-            <a href="https://github.com/urnova/eva/releases/latest/download/EVA-Assistant-Setup.exe" target="_blank" style="text-decoration:none;font-size:0.62em;padding:4px 10px;border-radius:20px;background:rgba(123,139,245,0.15);border:1px solid rgba(123,139,245,0.4);color:var(--cyan);font-weight:700;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;" onmouseover="this.style.background='rgba(123,139,245,0.25)'" onmouseout="this.style.background='rgba(123,139,245,0.15)'">
+            <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);">⚗ Expérimental</span>
+            <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);">Multi-appareils</span>
+            <a href="https://github.com/urnova/eva/releases/latest/download/EVA-Assistant-Setup.exe" target="_blank" style="text-decoration:none;font-size:0.62em;padding:4px 10px;border-radius:20px;background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.4);color:var(--cyan);font-weight:700;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;" onmouseover="this.style.background='rgba(0,212,255,0.25)'" onmouseout="this.style.background='rgba(0,212,255,0.15)'">
               <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Télécharger Agent Desktop
             </a>
@@ -935,7 +936,7 @@
           </button>
           <div class="cw-page-icon">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <defs><linearGradient id="cwGrad2" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#7b8bf5"/></linearGradient></defs>
+              <defs><linearGradient id="cwGrad2" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#00d4ff"/></linearGradient></defs>
               <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="url(#cwGrad2)"/>
             </svg>
           </div>
@@ -1218,10 +1219,10 @@
 
 
 <style>
-@keyframes tutoLogoPulse{0%,100%{transform:scale(1);filter:drop-shadow(0 0 8px rgba(123,139,245,0.35))}50%{transform:scale(1.06);filter:drop-shadow(0 0 22px rgba(123,139,245,0.75))}}
+@keyframes tutoLogoPulse{0%,100%{transform:scale(1);filter:drop-shadow(0 0 8px rgba(0,212,255,0.35))}50%{transform:scale(1.06);filter:drop-shadow(0 0 22px rgba(0,212,255,0.75))}}
 @keyframes tmDotBlink{0%,100%{opacity:1}50%{opacity:0.3}}
-@keyframes tmGlow{0%,100%{box-shadow:0 0 0 0 rgba(123,139,245,0)}50%{box-shadow:0 0 0 5px rgba(123,139,245,0)}}
-@keyframes tmGlowBorder{0%,100%{border-color:rgba(123,139,245,0.3);background:rgba(123,139,245,0.08)}50%{border-color:rgba(123,139,245,0.7);background:rgba(123,139,245,0.18)}}
+@keyframes tmGlow{0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,0)}50%{box-shadow:0 0 0 5px rgba(0,212,255,0)}}
+@keyframes tmGlowBorder{0%,100%{border-color:rgba(0,212,255,0.3);background:rgba(0,212,255,0.08)}50%{border-color:rgba(0,212,255,0.7);background:rgba(0,212,255,0.18)}}
 @keyframes tmWave{0%,100%{height:5px}50%{height:28px}}
 @keyframes tmFadeSlide{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes tmBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
@@ -1253,9 +1254,9 @@
 <script src="/js/ai/chat-handler.js"></script>
 <script src="/js/ai/web-search.js"></script>
 <script src="/js/voice/tts.js"></script>
-<script src="/js/voice/kokoro-tts.js" defer></script>
-<script src="/js/voice/eva-custom-tts.js" defer></script>
-<script src="/js/voice/piper-tts.js" defer></script>
+<script type="module" src="/js/voice/kokoro-tts.js"></script>
+<script type="module" src="/js/voice/eva-custom-tts.js"></script>
+<script type="module" src="/js/voice/piper-tts.js"></script>
 <script src="/js/voice/stt.js"></script>
 <script src="/js/voice/wake-word.js"></script>
 <script src="/js/ui/eva-neural.js"></script>

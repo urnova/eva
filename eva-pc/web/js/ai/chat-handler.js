@@ -52,8 +52,16 @@ async function initChatHandler(config) {
       throw new Error('EVAProviders not loaded');
     }
 
+    // Sélection automatique de l'agent local si on est sur PC (Electron)
+    // et qu'on utilise "eva" ou qu'on veut le comportement CloudWorks
+    let providerToUse = config.aiProvider;
+    if (window.eva && window.eva.system && providerToUse === 'eva') {
+        providerToUse = 'evalocal';
+        console.log('[ChatHandler] Switch automatique vers EvaLocalProvider (Agent PC)');
+    }
+
     // Créer le provider
-    currentProvider = window.EVAProviders.createProvider(config.aiProvider, config);
+    currentProvider = window.EVAProviders.createProvider(providerToUse, config);
 
     // Initialiser si nécessaire
     if (currentProvider.initialize) {

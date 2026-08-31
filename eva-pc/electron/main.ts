@@ -247,12 +247,12 @@ app.whenReady().then(async () => {
     handleDeepLink(url)
   })
 
-  // Afficher directement la fenÃªtre principale avec splash.html
+  // Afficher directement la fenêtre principale avec splash.html
   createWindow()
   createOverlayWindow()
   createTray()
 
-  // â”€â”€â”€ Auto-updater (DÃ©pÃ´t PrivÃ©) â”€â”€â”€
+  // ─── Auto-updater (Dépôt Privé) ───
   if (isDev) { mainWindow?.webContents.once('did-finish-load', () => { setTimeout(launchMainApp, 1500); }); return; }
   const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg"
   const _t = _enc.split('').reverse().join('')
@@ -308,6 +308,8 @@ function launchMainApp() {
   if (mainWindow) {
     mainWindow.webContents.send('splash:done')
   }
+  // Démarrer le LLM en arrière-plan (préchargement) après que l'app soit prête
+  startLLM().catch(console.error);
 }
 
 function toggleWindow() {
@@ -496,6 +498,31 @@ ipcMain.handle('system:cpuLoad', async () => {
     const si = await import('systeminformation')
     const [load, mem] = await Promise.all([si.currentLoad(), si.mem()])
     return { load, mem, success: true }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+})
+
+ipcMain.handle('system:stats', async () => {
+  try {
+    const si = await import('systeminformation');
+    const [load, mem, processes] = await Promise.all([si.currentLoad(), si.mem(), si.processes()]);
+    let llmMem = 0;
+    let llmCpu = 0;
+    const llamaProc = processes.list.find(p => p.name.toLowerCase().includes('llama-server'));
+    if (llamaProc) {
+      llmMem = llamaProc.memRss * 1024; // Convertir de KB en Octets
+      llmCpu = llamaProc.cpu;
+    }
+    return { 
+      success: true, 
+      cpu: load.currentLoad,
+      memTotal: mem.total,
+      memUsed: mem.active,
+      llmMem: llmMem,
+      llmCpu: llmCpu,
+      llmActive: !!llmProcess
+    };
   } catch (e) {
     return { success: false, error: String(e) }
   }
@@ -753,7 +780,7 @@ function startLLM() {
   
   return new Promise((resolve) => {
     // Find the resources path (works in dev and prod)
-    let resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../../eva-pc');
+    let resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
     const llmDir = path.join(resourcesPath, 'resources', 'llm');
     const serverExe = path.join(llmDir, 'llama-server.exe');
     const modelFile = path.join(llmDir, 'eva-model.gguf');
@@ -764,10 +791,13 @@ function startLLM() {
     }
 
     console.log("[LLM] Starting local llama-server...");
+    // Lancement du modèle. 
+    // mmap est activé par défaut (le modèle est "figé" dans l'espace virtuel/pagefile de Windows sans saturer la RAM physique).
+    // Configuration optimisée pour processeur (CPU) afin de garantir la compatibilité sur tous les PC.
     llmProcess = child_process.spawn(serverExe, [
       '--model', modelFile,
       '--port', '11434',
-      '--ctx-size', '2048',
+      '--ctx-size', '4096',
       '--parallel', '1'
     ], { windowsHide: true });
 
@@ -820,6 +850,17 @@ ipcMain.handle('llm:chat', async (event, messages) => {
     const data = await response.json();
     return data;
   } catch (err) {
+    console.error("[LLM API] Erreur:", err);
     throw err;
   }
+});
+
+ipcMain.handle('llm:start', async () => {
+  const started = await startLLM();
+  return { success: started };
+});
+
+ipcMain.handle('llm:stop', async () => {
+  stopLLM();
+  return { success: true };
 });

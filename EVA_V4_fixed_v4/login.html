@@ -6,7 +6,7 @@
 <title>E.V.A — Connexion</title>
 <link rel="icon" type="image/png" href="assets/images/eva-logo.png">
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#7b8bf5">
+<meta name="theme-color" content="#00d4ff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="E.V.A">
@@ -17,7 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <style>
 :root{
-  --cyan:#7b8bf5;--cyan-dim:rgba(123,139,245,0.10);--cyan-glow:rgba(123,139,245,0.28);
+  --cyan:#00d4ff;--cyan-dim:rgba(0,212,255,0.10);--cyan-glow:rgba(0,212,255,0.28);
   --green:#4ade80;--purple:#a78bfa;--red:#f87171;
   --bg:#111113;--surface:rgba(24,24,27,0.97);--surface2:#222228;
   --border:rgba(255,255,255,0.07);--text:#e4e4ef;--text-muted:#88889a;
@@ -26,11 +26,11 @@
 html,body{height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);}
 body::before{
   content:'';position:fixed;inset:0;
-  background-image:linear-gradient(rgba(123,139,245,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.015) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(0,212,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.015) 1px,transparent 1px);
   background-size:60px 60px;pointer-events:none;z-index:0;
 }
 .bg-orb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(100px);z-index:0;}
-.bg-orb-1{width:500px;height:500px;background:rgba(123,139,245,0.06);top:-150px;right:-150px;}
+.bg-orb-1{width:500px;height:500px;background:rgba(0,212,255,0.06);top:-150px;right:-150px;}
 .bg-orb-2{width:400px;height:400px;background:rgba(167,139,250,0.04);bottom:-150px;left:-100px;}
 @keyframes orbDrift{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-30px)}}
 
@@ -51,7 +51,7 @@ body::before{
   border:1px solid var(--border);
   border-radius:24px;
   overflow:hidden;
-  box-shadow:0 40px 100px rgba(0,0,0,0.7),0 0 0 1px rgba(123,139,245,0.05);
+  box-shadow:0 40px 100px rgba(0,0,0,0.7),0 0 0 1px rgba(0,212,255,0.05);
   backdrop-filter:blur(30px);
   animation:panelIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
 }
@@ -59,14 +59,14 @@ body::before{
 
 /* Left side - decorative */
 .auth-deco{
-  background:linear-gradient(160deg,rgba(123,139,245,0.06),rgba(183,148,246,0.04));
+  background:linear-gradient(160deg,rgba(0,212,255,0.06),rgba(183,148,246,0.04));
   border-right:1px solid var(--border);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:48px;position:relative;overflow:hidden;
 }
 .auth-deco::before{
   content:'';position:absolute;inset:0;
-  background-image:linear-gradient(rgba(123,139,245,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.04) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);
   background-size:30px 30px;
 }
 .deco-logo{
@@ -74,14 +74,14 @@ body::before{
 }
 .deco-circle{
   width:110px;height:110px;border-radius:50%;
-  background:radial-gradient(circle,rgba(123,139,245,0.2),rgba(123,139,245,0.04));
-  border:1px solid rgba(123,139,245,0.4);
+  background:radial-gradient(circle,rgba(0,212,255,0.2),rgba(0,212,255,0.04));
+  border:1px solid rgba(0,212,255,0.4);
   display:flex;align-items:center;justify-content:center;
   margin:0 auto 20px;
-  box-shadow:0 0 50px rgba(123,139,245,0.2),inset 0 0 30px rgba(123,139,245,0.1);
+  box-shadow:0 0 50px rgba(0,212,255,0.2),inset 0 0 30px rgba(0,212,255,0.1);
   animation:circleGlow 4s ease-in-out infinite;
 }
-@keyframes circleGlow{0%,100%{box-shadow:0 0 50px rgba(123,139,245,0.2),inset 0 0 30px rgba(123,139,245,0.1)}50%{box-shadow:0 0 80px rgba(123,139,245,0.4),inset 0 0 50px rgba(123,139,245,0.2)}}
+@keyframes circleGlow{0%,100%{box-shadow:0 0 50px rgba(0,212,255,0.2),inset 0 0 30px rgba(0,212,255,0.1)}50%{box-shadow:0 0 80px rgba(0,212,255,0.4),inset 0 0 50px rgba(0,212,255,0.2)}}
 .deco-circle svg{width:50px;height:50px;stroke:var(--cyan);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
 .deco-title{
   font-family:'Orbitron',monospace;font-size:2.5em;font-weight:900;
@@ -118,7 +118,7 @@ body::before{
   background:transparent;color:var(--text-muted);
   font-family:'Space Mono',monospace;font-size:0.8em;cursor:pointer;transition:all 0.2s;
 }
-.auth-tab.active{background:var(--cyan-dim);color:var(--cyan);border:1px solid rgba(123,139,245,0.25);}
+.auth-tab.active{background:var(--cyan-dim);color:var(--cyan);border:1px solid rgba(0,212,255,0.25);}
 
 .form-group{margin-bottom:14px;}
 .form-label{display:block;font-size:0.72em;color:var(--text-muted);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;}
@@ -128,7 +128,7 @@ body::before{
   color:var(--text);font-family:'Space Mono',monospace;font-size:0.85em;
   outline:none;transition:all 0.2s;
 }
-.form-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(123,139,245,0.1);}
+.form-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,0.1);}
 .form-input::placeholder{color:rgba(74,96,128,0.5);}
 
 .form-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
@@ -143,9 +143,9 @@ body::before{
   color:#000;font-family:'Orbitron',monospace;font-weight:700;
   font-size:0.85em;letter-spacing:2px;cursor:pointer;
   transition:all 0.3s;margin-bottom:4px;
-  box-shadow:0 0 25px rgba(123,139,245,0.3);
+  box-shadow:0 0 25px rgba(0,212,255,0.3);
 }
-.btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(123,139,245,0.5);}
+.btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,255,0.5);}
 .btn-submit:active{transform:translateY(0);}
 .btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
 

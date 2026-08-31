@@ -223,9 +223,9 @@ TABLEAUX DANS LE CHAT :
 - DIFFÉRENCE CLÉ : tableau markdown = rendu direct dans le chat | [ACTION:{type:"excel"}] = fichier Excel à télécharger. N'utilise jamais Excel juste pour afficher un tableau — utilise Excel uniquement si l'utilisateur veut un fichier à garder.`;
 
 if (typeof window !== 'undefined' && window.eva) {
-  SYS += "\n\n[CONTEXTE SYSTÈME] Tu es actuellement exécutée nativement sur l'application PC de l'utilisateur (EVA Desktop Agent). Tu disposes de tes capacités système (CloudWorks Agentic) pour chercher des fichiers ou agir localement. Ton but est d'accomplir ses requêtes en générant des commandes.";
+  SYS += "\n\n[CONTEXTE SYSTÈME] Tu es actuellement exécutée nativement sur l'application PC de l'utilisateur (EVA Desktop Agent). Tu disposes de tes capacités système (CloudWorks Agentic) pour agir localement.\nPar défaut, assume que toute demande d'action s'exécute sur CE PC.\nIMPORTANT : Pour exécuter une commande PowerShell/Batch localement, tu DOIS renvoyer EXACTEMENT ce bloc : [CMD] ta_commande [/CMD]. Tu recevras ensuite le résultat dans la boucle de réflexion. Une fois l'action finie, renvoie [REPORT] ton_rapport_final [/REPORT]. Si tu as besoin d'exécuter l'action sur un autre PC, demande-le à l'utilisateur.";
 } else {
-  SYS += "\n\n[CONTEXTE SYSTÈME] Tu es actuellement sur l'interface Web (Navigateur). Tu n'as pas d'accès direct au PC local.";
+  SYS += "\n\n[CONTEXTE SYSTÈME] Tu es actuellement sur l'interface Web (Navigateur). Tu n'as pas d'accès direct au PC local. Si l'utilisateur demande une action système, tu dois générer une balise CloudWorks (par ex: [ACTION:{\"type\":\"agentic_task\",\"prompt\":\"...\"}]) pour l'ordinateur distant.";
 }
 
 

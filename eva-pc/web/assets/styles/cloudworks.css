@@ -33,8 +33,8 @@ body[data-view="cloudworks"] .eva-panel {
   align-items: center;
   justify-content: space-between;
   padding: 18px 28px;
-  background: linear-gradient(135deg, rgba(0,212,255,0.04), rgba(123,139,245,0.07));
-  border-bottom: 1px solid rgba(123,139,245,0.14);
+  background: linear-gradient(135deg, rgba(0,212,255,0.04), rgba(0,212,255,0.07));
+  border-bottom: 1px solid rgba(0,212,255,0.14);
   flex-shrink: 0;
 }
 .cw-page-header-left {
@@ -42,8 +42,8 @@ body[data-view="cloudworks"] .eva-panel {
 }
 .cw-page-icon {
   width: 44px; height: 44px; border-radius: 14px;
-  background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(123,139,245,0.2));
-  border: 1px solid rgba(123,139,245,0.28);
+  background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,212,255,0.2));
+  border: 1px solid rgba(0,212,255,0.28);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
@@ -51,7 +51,7 @@ body[data-view="cloudworks"] .eva-panel {
 .cw-page-title {
   font-family: 'Orbitron', monospace;
   font-size: 1.15em; font-weight: 900; letter-spacing: 3px;
-  background: linear-gradient(135deg, #00d4ff, #7b8bf5);
+  background: linear-gradient(135deg, #00d4ff, #00d4ff);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
 }
@@ -60,9 +60,9 @@ body[data-view="cloudworks"] .eva-panel {
 }
 .cw-page-badge {
   font-size: 0.58em; font-weight: 800; letter-spacing: 1.5px;
-  color: var(--cyan); border: 1px solid rgba(123,139,245,0.3);
+  color: var(--cyan); border: 1px solid rgba(0,212,255,0.3);
   border-radius: 20px; padding: 3px 9px;
-  background: rgba(123,139,245,0.08);
+  background: rgba(0,212,255,0.08);
   font-family: 'Orbitron', monospace;
 }
 .cw-page-actions {
@@ -73,13 +73,13 @@ body[data-view="cloudworks"] .eva-panel {
   padding: 9px 18px; border-radius: 10px;
   font-family: 'Space Mono', monospace;
   font-size: 0.78em; font-weight: 700;
-  border: 1px solid rgba(123,139,245,0.28);
-  background: rgba(123,139,245,0.09); color: var(--cyan);
+  border: 1px solid rgba(0,212,255,0.28);
+  background: rgba(0,212,255,0.09); color: var(--cyan);
   cursor: pointer; transition: all 0.2s;
 }
 .cw-add-btn:hover {
-  background: rgba(123,139,245,0.18); border-color: var(--cyan);
-  box-shadow: 0 0 14px rgba(123,139,245,0.18);
+  background: rgba(0,212,255,0.18); border-color: var(--cyan);
+  box-shadow: 0 0 14px rgba(0,212,255,0.18);
 }
 
 /* ── Scrollable content area ── */
@@ -115,14 +115,14 @@ body[data-view="cloudworks"] .eva-panel {
 
 .cw-stat-card {
   background: var(--surface);
-  border: 1px solid rgba(123,139,245,0.12);
+  border: 1px solid rgba(0,212,255,0.12);
   border-radius: 18px; padding: 18px 20px;
   display: flex; align-items: center; gap: 14px;
   transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
   cursor: default;
 }
 .cw-stat-card:hover {
-  border-color: rgba(123,139,245,0.28);
+  border-color: rgba(0,212,255,0.28);
   transform: translateY(-2px);
   box-shadow: 0 8px 28px rgba(0,0,0,0.22);
 }
@@ -131,7 +131,7 @@ body[data-view="cloudworks"] .eva-panel {
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; font-size: 1.3em;
 }
-.cw-stat-icon.total  { background: rgba(123,139,245,0.12); }
+.cw-stat-icon.total  { background: rgba(0,212,255,0.12); }
 .cw-stat-icon.online { background: rgba(74,222,128,0.12); }
 .cw-stat-icon.offline{ background: rgba(255,77,109,0.10); }
 .cw-stat-val {
@@ -156,7 +156,7 @@ body[data-view="cloudworks"] .eva-panel {
 }
 .cw-section-title::after {
   content: ''; flex: 1; height: 1px;
-  background: rgba(123,139,245,0.12);
+  background: rgba(0,212,255,0.12);
 }
 
 /* ══ DEVICE LIST ══ */
@@ -165,13 +165,13 @@ body[data-view="cloudworks"] .eva-panel {
 /* ══ DEVICE CARD ══ */
 .cw-card {
   background: var(--surface);
-  border: 1px solid rgba(123,139,245,0.1);
+  border: 1px solid rgba(0,212,255,0.1);
   border-radius: 16px; overflow: hidden;
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
   position: relative;
 }
 .cw-card:hover {
-  border-color: rgba(123,139,245,0.28);
+  border-color: rgba(0,212,255,0.28);
   transform: translateY(-1px);
   box-shadow: 0 8px 28px rgba(0,0,0,0.25);
 }
@@ -180,7 +180,7 @@ body[data-view="cloudworks"] .eva-panel {
 .cw-card-offline { opacity: 0.72; }
 .cw-card::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, var(--cyan), rgba(123,139,245,0));
+  background: linear-gradient(90deg, var(--cyan), rgba(0,212,255,0));
   opacity: 0; transition: opacity 0.2s;
 }
 .cw-card-online::before {
@@ -197,7 +197,7 @@ body[data-view="cloudworks"] .eva-panel {
 .cw-card-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
 .cw-card-iconwrap {
   width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
-  background: rgba(123,139,245,0.08); border: 1px solid rgba(123,139,245,0.14);
+  background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.14);
   display: flex; align-items: center; justify-content: center; font-size: 1.4em;
 }
 .cw-card-online .cw-card-iconwrap {
@@ -235,12 +235,12 @@ body[data-view="cloudworks"] .eva-panel {
 .cw-cmd-btn {
   display: flex; align-items: center; gap: 5px;
   padding: 5px 12px; border-radius: 8px; font-size: 0.76em; font-weight: 600;
-  border: 1px solid rgba(123,139,245,0.2);
-  background: rgba(123,139,245,0.06); color: var(--text);
+  border: 1px solid rgba(0,212,255,0.2);
+  background: rgba(0,212,255,0.06); color: var(--text);
   cursor: pointer; transition: all 0.18s;
   font-family: 'Space Mono', monospace;
 }
-.cw-cmd-btn:hover { background: rgba(123,139,245,0.14); border-color: var(--cyan); color: var(--cyan); }
+.cw-cmd-btn:hover { background: rgba(0,212,255,0.14); border-color: var(--cyan); color: var(--cyan); }
 .cw-cmd-btn.danger { border-color: rgba(255,77,109,0.25); }
 .cw-cmd-btn.danger:hover { background: rgba(255,77,109,0.1); border-color: #ff4d6d; color: #ff4d6d; }
 
@@ -259,7 +259,7 @@ body[data-view="cloudworks"] .eva-panel {
 }
 .cw-spinner {
   width: 22px; height: 22px; border-radius: 50%;
-  border: 2px solid rgba(123,139,245,0.2);
+  border: 2px solid rgba(0,212,255,0.2);
   border-top-color: var(--cyan);
   animation: cwSpin 0.8s linear infinite;
 }
@@ -268,21 +268,21 @@ body[data-view="cloudworks"] .eva-panel {
 /* ══ CONNECT GUIDE ══ */
 .cw-guide-v2 {
   background: var(--surface);
-  border: 1px solid rgba(123,139,245,0.14);
+  border: 1px solid rgba(0,212,255,0.14);
   border-radius: 20px; overflow: hidden;
   margin-top: 4px;
 }
 .cw-guide-header-v2 {
-  background: linear-gradient(135deg, rgba(123,139,245,0.07), rgba(0,212,255,0.04));
-  border-bottom: 1px solid rgba(123,139,245,0.1);
+  background: linear-gradient(135deg, rgba(0,212,255,0.07), rgba(0,212,255,0.04));
+  border-bottom: 1px solid rgba(0,212,255,0.1);
   padding: 24px 28px; text-align: center;
 }
 .cw-guide-badge {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 0.6em; font-weight: 700; letter-spacing: 2px;
-  color: var(--cyan); border: 1px solid rgba(123,139,245,0.3);
+  color: var(--cyan); border: 1px solid rgba(0,212,255,0.3);
   border-radius: 20px; padding: 3px 12px;
-  background: rgba(123,139,245,0.07);
+  background: rgba(0,212,255,0.07);
   margin-bottom: 12px;
 }
 .cw-guide-title-v2 {
@@ -298,8 +298,8 @@ body[data-view="cloudworks"] .eva-panel {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1px;
-  background: rgba(123,139,245,0.08);
-  border-bottom: 1px solid rgba(123,139,245,0.1);
+  background: rgba(0,212,255,0.08);
+  border-bottom: 1px solid rgba(0,212,255,0.1);
 }
 @media (max-width: 580px) {
   .cw-steps-grid { grid-template-columns: 1fr; }
@@ -315,7 +315,7 @@ body[data-view="cloudworks"] .eva-panel {
   position: absolute; top: 12px; right: 14px;
   font-family: 'Orbitron', monospace;
   font-size: 0.58em; font-weight: 900;
-  color: rgba(123,139,245,0.3); letter-spacing: 1px;
+  color: rgba(0,212,255,0.3); letter-spacing: 1px;
 }
 .cw-step-icon { font-size: 1.8em; margin-bottom: 4px; }
 .cw-step-v2 .cw-step-label { font-weight: 700; font-size: 0.82em; color: var(--text); }
@@ -329,13 +329,13 @@ body[data-view="cloudworks"] .eva-panel {
   flex: 1; min-width: 180px;
   display: flex; align-items: center; gap: 12px;
   padding: 14px 18px;
-  background: rgba(123,139,245,0.06);
-  border: 1px solid rgba(123,139,245,0.2);
+  background: rgba(0,212,255,0.06);
+  border: 1px solid rgba(0,212,255,0.2);
   border-radius: 14px; color: var(--text);
   text-decoration: none; cursor: pointer; transition: all 0.2s;
 }
 .cw-dl-btn-v2:hover {
-  background: rgba(123,139,245,0.12); border-color: var(--cyan);
+  background: rgba(0,212,255,0.12); border-color: var(--cyan);
   transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.2);
 }
 .cw-dl-label { display: flex; flex-direction: column; gap: 2px; }
@@ -344,21 +344,21 @@ body[data-view="cloudworks"] .eva-panel {
 .cw-soon-badge {
   margin-left: auto; flex-shrink: 0;
   font-size: 0.65em; font-weight: 700; letter-spacing: 1px;
-  color: rgba(123,139,245,0.5); border: 1px solid rgba(123,139,245,0.2);
-  border-radius: 20px; padding: 3px 8px; background: rgba(123,139,245,0.05);
+  color: rgba(0,212,255,0.5); border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 20px; padding: 3px 8px; background: rgba(0,212,255,0.05);
 }
 .cw-reg-btn-v2 {
   display: flex; align-items: center; gap: 8px;
   padding: 14px 22px; border-radius: 14px;
-  background: rgba(123,139,245,0.08);
-  border: 1px solid rgba(123,139,245,0.2);
+  background: rgba(0,212,255,0.08);
+  border: 1px solid rgba(0,212,255,0.2);
   color: var(--cyan); font-family: 'Space Mono', monospace;
   font-size: 0.82em; font-weight: 700;
   cursor: pointer; transition: all 0.2s; white-space: nowrap;
 }
 .cw-reg-btn-v2:hover {
-  background: rgba(123,139,245,0.16); border-color: var(--cyan);
-  box-shadow: 0 0 16px rgba(123,139,245,0.22);
+  background: rgba(0,212,255,0.16); border-color: var(--cyan);
+  box-shadow: 0 0 16px rgba(0,212,255,0.22);
 }
 
 /* ══ MOBILE ══ */
@@ -423,7 +423,7 @@ body[data-view="cloudworks"] .eva-panel {
 }
 .cw-meta-dot {
   width: 4px; height: 4px; border-radius: 50%;
-  background: rgba(123,139,245,0.4); flex-shrink: 0;
+  background: rgba(0,212,255,0.4); flex-shrink: 0;
 }
 
 /* Zone des boutons d'action (Capture, Verrouiller, Veille, Éteindre) */
@@ -435,8 +435,8 @@ body[data-view="cloudworks"] .eva-panel {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 13px; border-radius: 9px;
   font-size: 0.76em; font-weight: 600;
-  border: 1px solid rgba(123,139,245,0.2);
-  background: rgba(123,139,245,0.06); color: var(--text);
+  border: 1px solid rgba(0,212,255,0.2);
+  background: rgba(0,212,255,0.06); color: var(--text);
   cursor: pointer; transition: all 0.18s;
   font-family: 'Space Mono', monospace;
 }
@@ -447,7 +447,7 @@ body[data-view="cloudworks"] .eva-panel {
   flex-shrink: 0;
 }
 .cw-action-btn:hover {
-  background: rgba(123,139,245,0.14);
+  background: rgba(0,212,255,0.14);
   border-color: var(--cyan); color: var(--cyan);
 }
 .cw-danger {
@@ -518,7 +518,7 @@ body[data-view="cloudworks"] .eva-panel {
 
 .cw-modal-box {
   background: var(--surface);
-  border: 1px solid rgba(123,139,245,0.22);
+  border: 1px solid rgba(0,212,255,0.22);
   border-radius: 20px;
   padding: 26px 28px 22px;
   width: 100%; max-width: 520px;
@@ -537,8 +537,8 @@ body[data-view="cloudworks"] .eva-panel {
 }
 .cw-modal-input {
   width: 100%; box-sizing: border-box;
-  background: rgba(123,139,245,0.06);
-  border: 1px solid rgba(123,139,245,0.2);
+  background: rgba(0,212,255,0.06);
+  border: 1px solid rgba(0,212,255,0.2);
   border-radius: 10px;
   padding: 10px 14px; color: var(--text);
   font-family: 'Space Mono', monospace; font-size: 0.82em;
@@ -553,25 +553,25 @@ body[data-view="cloudworks"] .eva-panel {
 }
 .cw-modal-cancel {
   padding: 9px 20px; border-radius: 10px;
-  border: 1px solid rgba(123,139,245,0.2);
+  border: 1px solid rgba(0,212,255,0.2);
   background: transparent; color: var(--text-muted);
   font-size: 0.82em; cursor: pointer; transition: all 0.18s;
 }
 .cw-modal-cancel:hover { border-color: var(--cyan); color: var(--text); }
 .cw-modal-confirm {
   padding: 9px 20px; border-radius: 10px;
-  border: 1px solid rgba(123,139,245,0.35);
-  background: rgba(123,139,245,0.12); color: var(--cyan);
+  border: 1px solid rgba(0,212,255,0.35);
+  background: rgba(0,212,255,0.12); color: var(--cyan);
   font-size: 0.82em; font-weight: 700; cursor: pointer; transition: all 0.18s;
 }
-.cw-modal-confirm:hover { background: rgba(123,139,245,0.22); box-shadow: 0 0 14px rgba(123,139,245,0.2); }
+.cw-modal-confirm:hover { background: rgba(0,212,255,0.22); box-shadow: 0 0 14px rgba(0,212,255,0.2); }
 
 /* ── Screenshot modal ── */
 .cw-screenshot-box { max-width: 860px; }
 .cw-screenshot-wrap { text-align: center; }
 .cw-screenshot-img {
   max-width: 100%; max-height: 480px;
-  border-radius: 10px; border: 1px solid rgba(123,139,245,0.18);
+  border-radius: 10px; border: 1px solid rgba(0,212,255,0.18);
   cursor: zoom-in; transition: transform 0.25s;
   display: block; margin: 0 auto;
 }
@@ -607,7 +607,7 @@ body[data-view="cloudworks"] .eva-panel {
 /* ── Script result modal ── */
 .cw-script-box { max-width: 640px; }
 .cw-script-output {
-  background: rgba(0,0,0,0.35); border: 1px solid rgba(123,139,245,0.14);
+  background: rgba(0,0,0,0.35); border: 1px solid rgba(0,212,255,0.14);
   border-radius: 10px; padding: 12px 14px;
   font-family: 'Space Mono', monospace; font-size: 0.74em;
   color: #a8d8a8; line-height: 1.6;
@@ -622,7 +622,7 @@ body[data-view="cloudworks"] .eva-panel {
 ══════════════════════════════════════════════════════════ */
 .cw-activity-box {
   background: var(--surface);
-  border: 1px solid rgba(123,139,245,0.1);
+  border: 1px solid rgba(0,212,255,0.1);
   border-radius: 16px; overflow: hidden;
   margin-bottom: 4px;
 }
@@ -638,7 +638,7 @@ body[data-view="cloudworks"] .eva-panel {
   transition: background 0.15s;
 }
 .cw-log-item:last-child { border-bottom: none; }
-.cw-log-item:hover { background: rgba(123,139,245,0.04); }
+.cw-log-item:hover { background: rgba(0,212,255,0.04); }
 .cw-log-dot {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }

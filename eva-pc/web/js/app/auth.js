@@ -1,7 +1,14 @@
 /* ═══ AUTH ═══ */
 function initAuth() {
   auth.onAuthStateChanged(function(user) {
-    if (!user) { window.location.href = 'app-login.html'; return; }
+    if (!user) {
+        setTimeout(function() {
+            if (!auth.currentUser) {
+                window.location.href = 'app-login.html';
+            }
+        }, 1500); // Laisse le temps à Firebase/IndexedDB de charger en local
+        return;
+    }
     S.user = user;
 
     
@@ -55,11 +62,6 @@ function initAuth() {
     // Écouter si la session a été révoquée
     db.collection('users').doc(user.uid).collection('sessions').doc(S.sessionId).onSnapshot(function(doc) {
       if (doc.exists && doc.data().revoke === true) {
-        auth.signOut().then(function() {
-          localStorage.removeItem('eva_session_id');
-          window.location.reload();
-        });
-      } else if (!doc.exists) {
         auth.signOut().then(function() {
           localStorage.removeItem('eva_session_id');
           window.location.reload();

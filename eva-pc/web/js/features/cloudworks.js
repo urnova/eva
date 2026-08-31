@@ -1,4 +1,4 @@
-﻿(function() {
+(function() {
 'use strict';
 
 async function loadCloudWorks() {
@@ -89,6 +89,10 @@ async function loadCloudWorks() {
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           Verrouiller PC
         </button>
+        <button class="btn btn-secondary" style="border-radius:8px;padding:10px 16px;font-weight:500;display:flex;align-items:center;gap:8px;color:#a78bfa;" onclick="cwRestartLLM()">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Redémarrer LLM
+        </button>
       </div>
     </div>`;
     
@@ -136,6 +140,40 @@ async function loadCloudWorks() {
           }
       }).catch(()=>{});
   }
+
+  // Polling des vraies statistiques
+  function pollStats() {
+      if (!window.eva || !window.eva.system) return;
+      window.eva.system.stats().then(res => {
+          if (res && res.success) {
+              const cpuEl = document.getElementById('cwRealCpu');
+              const ramEl = document.getElementById('cwRealRam');
+              const statusEl = document.getElementById('cwLlmStatus');
+              const iconEl = document.getElementById('cwLlmIcon');
+
+              if (cpuEl) cpuEl.textContent = (res.cpu || 0).toFixed(1) + '%';
+              if (ramEl) {
+                  const usedGB = (res.memUsed || 0) / (1024 ** 3);
+                  const totalGB = (res.memTotal || 0) / (1024 ** 3);
+                  ramEl.textContent = `${usedGB.toFixed(1)} Go / ${totalGB.toFixed(1)} Go`;
+              }
+              if (statusEl && iconEl) {
+                  if (res.llmActive) {
+                      statusEl.textContent = "LLM Agentique : Actif";
+                      iconEl.style.background = "#4ade80";
+                      iconEl.style.boxShadow = "0 0 10px #4ade80";
+                  } else {
+                      statusEl.textContent = "LLM Agentique : Inactif / En veille";
+                      iconEl.style.background = "#fbbf24";
+                      iconEl.style.boxShadow = "0 0 10px #fbbf24";
+                  }
+              }
+          }
+      }).catch(()=>{});
+  }
+
+  pollStats();
+  setInterval(pollStats, 3000);
 }
 
 window.loadCloudWorks = loadCloudWorks;
@@ -181,6 +219,27 @@ window.cwTestLocalLock = async function() {
         await window.eva.system.lock();
     } else {
         toast("Non disponible en mode web", "error");
+    }
+};
+
+window.cwRestartLLM = async function() {
+    if(window.eva && window.eva.system && window.eva.system.llmStop && window.eva.system.llmStart) {
+        toast("Redémarrage du LLM en cours...", "info");
+        try {
+            await window.eva.system.llmStop();
+            setTimeout(async () => {
+                const res = await window.eva.system.llmStart();
+                if (res && res.success) {
+                    toast("LLM redémarré avec succès !", "success");
+                } else {
+                    toast("Erreur lors du démarrage du LLM", "error");
+                }
+            }, 1500);
+        } catch(e) {
+            toast("Erreur critique: " + String(e), "error");
+        }
+    } else {
+        toast("Service LLM non disponible", "error");
     }
 };
 

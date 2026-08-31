@@ -18,9 +18,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
 <style>
 :root {
-  --cyan: #7b8bf5;
-  --cyan-dim: rgba(123,139,245,0.09);
-  --cyan-glow: rgba(123,139,245,0.45);
+  --cyan: #00d4ff;
+  --cyan-dim: rgba(0,212,255,0.09);
+  --cyan-glow: rgba(0,212,255,0.45);
   --green: #4ade80;
   --purple: #b794f6;
   --red: #ff4d6d;
@@ -28,7 +28,7 @@
   --surface: #18181b;
   --surface2: #222228;
   --surface3: #2a2a33;
-  --border: rgba(123,139,245,0.12);
+  --border: rgba(0,212,255,0.12);
   --text: #e2e2f0;
   --text-muted: #71717a;
 }
@@ -36,11 +36,11 @@
 html,body{min-height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);}
 body::before{
   content:'';position:fixed;inset:0;
-  background-image:linear-gradient(rgba(123,139,245,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.018) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(0,212,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.018) 1px,transparent 1px);
   background-size:55px 55px;pointer-events:none;z-index:0;
 }
 .bg-orb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(120px);z-index:0;}
-.bg-orb-1{width:600px;height:600px;top:-200px;right:-200px;background:rgba(123,139,245,0.04);animation:orbDrift 16s ease-in-out infinite;}
+.bg-orb-1{width:600px;height:600px;top:-200px;right:-200px;background:rgba(0,212,255,0.04);animation:orbDrift 16s ease-in-out infinite;}
 .bg-orb-2{width:500px;height:500px;bottom:-200px;left:-100px;background:rgba(183,148,246,0.03);animation:orbDrift 20s ease-in-out infinite reverse;}
 @keyframes orbDrift{0%,100%{transform:translate(0,0)}50%{transform:translate(25px,-25px)}}
 
@@ -94,7 +94,7 @@ body::before{
   font-family:'Space Mono',monospace;font-size:0.85em;outline:none;
   transition:border-color 0.2s,box-shadow 0.2s;
 }
-.field-input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(123,139,245,0.08);}
+.field-input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,212,255,0.08);}
 .field-input.error{border-color:var(--red);}
 
 .pass-strength{height:3px;border-radius:10px;margin-top:6px;transition:all 0.3s;background:var(--surface3);}
@@ -104,7 +104,7 @@ body::before{
 .pass-strength-label{font-size:0.68em;color:var(--text-muted);margin-top:3px;}
 
 .pass-info-box{
-  background:rgba(123,139,245,0.05);border:1px solid rgba(123,139,245,0.12);
+  background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.12);
   border-radius:10px;padding:12px 14px;margin-bottom:16px;
   font-size:0.78em;color:var(--text-muted);line-height:1.6;
 }
@@ -139,9 +139,9 @@ body::before{
   border:none;padding:12px;border-radius:10px;
   font-family:'Orbitron',monospace;font-size:0.82em;font-weight:700;
   letter-spacing:2px;cursor:pointer;transition:all 0.2s;
-  box-shadow:0 0 20px rgba(123,139,245,0.3);
+  box-shadow:0 0 20px rgba(0,212,255,0.3);
 }
-.btn-next:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(123,139,245,0.5);}
+.btn-next:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(0,212,255,0.5);}
 .btn-next:active{transform:translateY(0);}
 .btn-next:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
 
@@ -207,14 +207,14 @@ body::before{
 
 /* ── Toggle switch ── */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);margin-bottom:10px;gap:12px;}
-.toggle-row:hover{border-color:rgba(123,139,245,0.25);}
+.toggle-row:hover{border-color:rgba(0,212,255,0.25);}
 .toggle-info .toggle-name{font-size:0.85em;font-weight:700;color:var(--text);}
 .toggle-info .toggle-desc{font-size:0.72em;color:var(--text-muted);margin-top:3px;line-height:1.4;}
 .toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0;}
 .toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
 .toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--surface3);border-radius:24px;transition:0.25s;}
 .toggle-slider:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.25s;}
-.toggle-switch input:checked + .toggle-slider{background:var(--cyan);box-shadow:0 0 10px rgba(123,139,245,0.4);}
+.toggle-switch input:checked + .toggle-slider{background:var(--cyan);box-shadow:0 0 10px rgba(0,212,255,0.4);}
 .toggle-switch input:checked + .toggle-slider:before{transform:translateX(20px);}
 
 /* ── PC note ── */
@@ -309,7 +309,7 @@ body::before{
       </div>
       <div class="ob-actions">
         <button class="btn-skip" onclick="goStep(1)">← Retour</button>
-        <button class="btn-skip" onclick="goStep(3)" style="border-color:rgba(123,139,245,0.2);color:var(--text-muted)">Passer</button>
+        <button class="btn-skip" onclick="goStep(3)" style="border-color:rgba(0,212,255,0.2);color:var(--text-muted)">Passer</button>
         <button class="btn-next" onclick="savePasswordAndContinue()" id="obPassBtn">CRÉER →</button>
       </div>
     </div>
@@ -332,7 +332,7 @@ body::before{
             <div style="font-weight:700;font-size:0.8em;margin-bottom:2px;">Navigateur</div>
             <div style="font-size:0.63em;color:var(--text-muted);">Web Speech<br>Sans config</div>
           </div>
-          <div id="obttsc-piper" onclick="obSelectTTS('piper')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid var(--cyan);background:rgba(123,139,245,0.07);text-align:center;position:relative;transition:all 0.2s;">
+          <div id="obttsc-piper" onclick="obSelectTTS('piper')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid var(--cyan);background:rgba(0,212,255,0.07);text-align:center;position:relative;transition:all 0.2s;">
             <div style="position:absolute;top:5px;right:5px;display:flex;flex-direction:column;gap:2px;align-items:flex-end;">
               <span style="font-size:0.44em;font-weight:800;background:#4ade80;color:#000;border-radius:4px;padding:1px 5px;">LOCAL</span>
               <span style="font-size:0.44em;font-weight:800;background:#06b6d4;color:#000;border-radius:4px;padding:1px 5px;">GRATUIT</span>
@@ -368,7 +368,7 @@ body::before{
           </div>
         </div>
 
-        <div id="obTTSDetail" style="background:rgba(123,139,245,0.04);border:1px solid rgba(123,139,245,0.15);border-radius:12px;padding:14px 16px;"></div>
+        <div id="obTTSDetail" style="background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.15);border-radius:12px;padding:14px 16px;"></div>
       </div>
       <div class="ob-actions">
         <button class="btn-skip" onclick="goStep(isGoogleOnlyUser ? 2 : 1)">← Retour</button>
@@ -387,7 +387,7 @@ body::before{
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;">
 
           <!-- Puter (RECOMMANDÉ : gratuit, sans clé API, GPT-4o + Claude) -->
-          <div id="obcard-puter" onclick="obSelectProvider('puter')" style="cursor:pointer;border-radius:12px;padding:14px 12px;border:2px solid var(--cyan);background:rgba(123,139,245,0.07);text-align:center;position:relative;transition:all 0.2s;">
+          <div id="obcard-puter" onclick="obSelectProvider('puter')" style="cursor:pointer;border-radius:12px;padding:14px 12px;border:2px solid var(--cyan);background:rgba(0,212,255,0.07);text-align:center;position:relative;transition:all 0.2s;">
             <span style="font-size:0.55em;font-weight:700;letter-spacing:0.06em;background:#06b6d4;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:8px;right:8px;">GRATUIT</span>
             <div id="obcheck-puter" style="position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;">✓</div>
             <div style="font-size:1.4em;margin-bottom:5px;">☁️</div>
@@ -439,8 +439,8 @@ body::before{
         </div>
 
         <!-- Puter connect (visible si Puter sélectionné) -->
-        <div id="obPuterSection" style="background:rgba(123,139,245,0.05);border:1px solid rgba(123,139,245,0.15);border-radius:10px;padding:12px 14px;">
-          <div id="obPuterStatus" style="font-size:0.74em;color:rgba(123,139,245,0.6);margin-bottom:8px;">Vérification du statut Puter...</div>
+        <div id="obPuterSection" style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:12px 14px;">
+          <div id="obPuterStatus" style="font-size:0.74em;color:rgba(0,212,255,0.6);margin-bottom:8px;">Vérification du statut Puter...</div>
           <button id="obPuterBtn" class="voice-test-btn" onclick="obConnectPuter(event)">🔗 Connexion Puter</button>
         </div>
       </div>
@@ -487,9 +487,9 @@ body::before{
         </label>
       </div>
 
-      <div style="height:1px;background:rgba(123,139,245,0.1);margin:10px 0 16px;"></div>
-      <div style="font-size:0.62em;letter-spacing:2px;color:rgba(123,139,245,0.5);text-transform:uppercase;margin-bottom:10px;font-family:'Orbitron',monospace;">⚗️ Expérimental</div>
-      <div class="toggle-row" style="border:1px solid rgba(123,139,245,0.14);border-radius:12px;padding:12px 14px;background:rgba(123,139,245,0.03);">
+      <div style="height:1px;background:rgba(0,212,255,0.1);margin:10px 0 16px;"></div>
+      <div style="font-size:0.62em;letter-spacing:2px;color:rgba(0,212,255,0.5);text-transform:uppercase;margin-bottom:10px;font-family:'Orbitron',monospace;">⚗️ Expérimental</div>
+      <div class="toggle-row" style="border:1px solid rgba(0,212,255,0.14);border-radius:12px;padding:12px 14px;background:rgba(0,212,255,0.03);">
         <div class="toggle-info">
           <div class="toggle-name" style="color:var(--cyan);">☁️ Fonctions expérimentales</div>
           <div class="toggle-desc">Active CloudWorks et d'autres modules en cours de développement. Modifiable à tout moment dans Paramètres → Expérimental.</div>
@@ -524,7 +524,7 @@ body::before{
         Écrivez toujours : <i>"Luna est la meilleure amie de l'utilisateur"</i>.
       </div>
 
-      <div id="brainMapContainer" style="width:100%;height:350px;background:rgba(10,15,30,0.8);border:1px solid rgba(123,139,245,0.3);border-radius:12px;position:relative;overflow:hidden;margin-bottom:15px;box-shadow:inset 0 0 20px rgba(0,0,0,0.5);">
+      <div id="brainMapContainer" style="width:100%;height:350px;background:rgba(10,15,30,0.8);border:1px solid rgba(0,212,255,0.3);border-radius:12px;position:relative;overflow:hidden;margin-bottom:15px;box-shadow:inset 0 0 20px rgba(0,0,0,0.5);">
          <canvas id="brainCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
       </div>
 
@@ -561,7 +561,7 @@ body::before{
       <div id="obNotifDefault">
         <button onclick="requestObNotifPermission()" style="
           width:100%;padding:16px;border-radius:14px;
-          border:2px solid var(--cyan);background:rgba(123,139,245,0.07);
+          border:2px solid var(--cyan);background:rgba(0,212,255,0.07);
           color:var(--cyan);font-family:'Orbitron',monospace;font-size:0.82em;
           font-weight:700;letter-spacing:2px;cursor:pointer;
           transition:all 0.25s;margin-bottom:12px;
@@ -602,7 +602,7 @@ body::before{
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
         <!-- Option: Activé -->
         <div id="obAvatarOn" onclick="obSelectAvatar(true)" style="
-          border:2px solid var(--cyan);background:rgba(123,139,245,0.07);
+          border:2px solid var(--cyan);background:rgba(0,212,255,0.07);
           border-radius:14px;padding:16px 18px;cursor:pointer;transition:all 0.2s;
           display:flex;align-items:center;gap:14px;position:relative;
         ">
@@ -739,7 +739,7 @@ function renderOnboardingBrainMap() {
   popup.style.cssText = 'position:absolute;top:10px;left:10px;right:10px;background:rgba(10,15,30,0.95);border:1px solid var(--cyan);border-radius:10px;padding:15px;display:none;flex-direction:column;backdrop-filter:blur(5px);z-index:10;animation:fadeUp 0.3s;box-shadow:0 10px 30px rgba(0,0,0,0.8);';
   
   popup.innerHTML = 
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid rgba(123,139,245,0.2);padding-bottom:5px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid rgba(0,212,255,0.2);padding-bottom:5px;">' +
       '<strong style="color:var(--cyan);font-family:\'Orbitron\',monospace;font-size:1.1em;" id="bpTitle">Titre</strong>' +
       '<button id="bpClose" style="background:none;border:none;color:var(--text-muted);font-size:1.2em;cursor:pointer;">✕</button>' +
     '</div>' +
@@ -1299,7 +1299,7 @@ function renderOnboardingBrainMap() {
         ctx.moveTo(sx, sy);
         ctx.quadraticCurveTo(cpX, cpY, tx, ty);
         var pulse = (Math.sin(time + s.phase) + 1) / 2;
-        ctx.strokeStyle = 'rgba(123, 139, 245, ' + (0.3 + pulse * 0.4) + ')';
+        ctx.strokeStyle = 'rgba(0, 212, 255, ' + (0.3 + pulse * 0.4) + ')';
         ctx.stroke();
 
         var tanX = tx - cpX;
@@ -1331,7 +1331,7 @@ function renderOnboardingBrainMap() {
           if(ctx.roundRect) ctx.roundRect(lx - textW/2 - 6, ly - 8, textW + 12, 16, 8);
           else ctx.fillRect(lx - textW/2 - 6, ly - 8, textW + 12, 16);
           ctx.fill();
-          ctx.strokeStyle = 'rgba(123, 139, 245, 0.4)';
+          ctx.strokeStyle = 'rgba(0, 212, 255, 0.4)';
           ctx.lineWidth = 1; ctx.stroke();
           ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
           ctx.textAlign = 'center';
@@ -1355,7 +1355,7 @@ function renderOnboardingBrainMap() {
       var nx = n.x * scale, ny = n.y * scale;
       var rPulse = n.r + Math.sin(time * 2 + n.phase) * 1.5;
       ctx.arc(nx, ny, Math.max(1, rPulse), 0, Math.PI * 2);
-      ctx.fillStyle = (n === selectedNode || n === linkModeSource) ? '#fff' : (n.r > 12 ? '#06b6d4' : '#7b8bf5');
+      ctx.fillStyle = (n === selectedNode || n === linkModeSource) ? '#fff' : (n.r > 12 ? '#06b6d4' : '#00d4ff');
       ctx.shadowBlur = (n === selectedNode) ? 20 : (12 + Math.sin(time * 3 + n.phase) * 8);
       ctx.shadowColor = ctx.fillStyle;
       ctx.fill();
@@ -1629,7 +1629,7 @@ function obSelectAvatar(enabled) {
   if (!onCard) return;
   if (enabled) {
     onCard.style.border  = '2px solid var(--cyan)';
-    onCard.style.background = 'rgba(123,139,245,0.07)';
+    onCard.style.background = 'rgba(0,212,255,0.07)';
     offCard.style.border = '2px solid rgba(255,255,255,0.08)';
     offCard.style.background = 'rgba(255,255,255,0.02)';
     onChk.style.display  = '';
@@ -1638,7 +1638,7 @@ function obSelectAvatar(enabled) {
     onCard.style.border  = '2px solid rgba(255,255,255,0.08)';
     onCard.style.background = 'rgba(255,255,255,0.02)';
     offCard.style.border = '2px solid var(--cyan)';
-    offCard.style.background = 'rgba(123,139,245,0.07)';
+    offCard.style.background = 'rgba(0,212,255,0.07)';
     onChk.style.display  = 'none';
     offChk.style.display = '';
   }
@@ -1707,7 +1707,7 @@ function obSelectProvider(prov) {
     if (!card) return;
     var active = k === prov;
     card.style.border  = '2px solid ' + (active ? 'var(--cyan)' : 'rgba(255,255,255,0.08)');
-    card.style.background = active ? 'rgba(123,139,245,0.07)' : 'rgba(255,255,255,0.02)';
+    card.style.background = active ? 'rgba(0,212,255,0.07)' : 'rgba(255,255,255,0.02)';
     if (chk) chk.style.display = active ? '' : 'none';
   });
   /* Bloc connexion Puter — visible seulement si Puter sélectionné */
@@ -1729,7 +1729,7 @@ async function checkObPuterStatus() {
       statusEl.textContent = '✓ Connecté : ' + user.username;
       if (btnEl) { btnEl.textContent = '🔌 Déconnecter'; btnEl.onclick = function(e){e.stopPropagation();obDisconnectPuter();}; }
     } else {
-      statusEl.style.color = 'rgba(123,139,245,0.6)';
+      statusEl.style.color = 'rgba(0,212,255,0.6)';
       statusEl.textContent = 'Non connecté à Puter';
       if (btnEl) btnEl.textContent = '🔗 Connexion Puter';
     }
@@ -1764,7 +1764,7 @@ function obSelectTTS(v) {
     if (!card) return;
     var active = k === v;
     card.style.border     = '2px solid '+(active ? 'var(--cyan)' : 'rgba(255,255,255,0.08)');
-    card.style.background = active ? 'rgba(123,139,245,0.07)' : 'rgba(255,255,255,0.02)';
+    card.style.background = active ? 'rgba(0,212,255,0.07)' : 'rgba(255,255,255,0.02)';
     if (chk) chk.style.display = active ? '' : 'none';
   });
   var detail = document.getElementById('obTTSDetail');

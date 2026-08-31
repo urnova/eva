@@ -201,13 +201,47 @@ async function executeEvaAction(action) {
           }
         if (onlineDevice) {
           if(window.setEvaStatus) window.setEvaStatus('🚀 MISSION AGENTIQUE...', 'action');
-          await window.db.collection('cloudworks').doc(uid).collection('commands').add({
+          
+          var docRef = await window.db.collection('cloudworks').doc(uid).collection('commands').add({
             deviceId: onlineDevice,
             type: 'agentic_task',
             payload: { prompt: action.prompt || "Trouve un moyen de le faire." },
             status: 'pending',
+            step: 'En attente du PC...',
             createdAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
           });
+          
+          // Ajouter un bloc interactif dans le chat Web pour suivre l'avancement
+          if (typeof window.appendMsg === 'function') {
+             var trackHtml = '<div id="cw-track-'+docRef.id+'" style="margin-top:10px;padding:12px;background:rgba(123,139,245,0.1);border-left:3px solid var(--cyan);border-radius:0 8px 8px 0;font-family:monospace;font-size:0.85em;">' +
+                             '<div style="color:var(--cyan);font-weight:bold;margin-bottom:5px;">🚀 CloudWorks — Agent PC engagé</div>' +
+                             '<div id="cw-status-'+docRef.id+'" style="color:#aaa;">En attente de connexion...</div>' +
+                             '</div>';
+             window.appendMsg('eva', trackHtml);
+             
+             // Écouter les mises à jour
+             window.db.collection('cloudworks').doc(uid).collection('commands').doc(docRef.id).onSnapshot(function(snap) {
+                 if (!snap.exists) return;
+                 var d = snap.data();
+                 var statusEl = document.getElementById('cw-status-'+docRef.id);
+                 if (statusEl) {
+                     if (d.status === 'pending') {
+                         statusEl.innerHTML = d.step || 'En attente...';
+                         statusEl.style.color = '#aaa';
+                     } else if (d.status === 'running') {
+                         statusEl.innerHTML = '🔄 ' + (d.step || 'Exécution...');
+                         statusEl.style.color = 'var(--gold, #fbbf24)';
+                     } else if (d.status === 'success' || d.status === 'completed' || (d.result && d.result.output)) {
+                         statusEl.innerHTML = '✅ Terminé : ' + (d.result ? (d.result.output || 'Succès') : 'Terminé');
+                         statusEl.style.color = 'var(--green, #10b981)';
+                     } else if (d.status === 'error') {
+                         statusEl.innerHTML = '❌ Erreur : ' + (d.result ? d.result.error : 'Inconnue');
+                         statusEl.style.color = 'var(--red, #f43f5e)';
+                     }
+                 }
+             });
+          }
+
           if (window.toast) window.toast('Agent Local : Tâche envoyée avec succès au PC !', 'success');
         } else {
           if (window.toast) window.toast('Action échouée : Le PC Agent est déconnecté.', 'error');

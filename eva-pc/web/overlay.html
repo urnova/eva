@@ -8,8 +8,8 @@
     
     :root {
       --bg: rgba(12, 14, 20, 0.6);
-      --border: rgba(123, 139, 245, 0.25);
-      --cyan: #7b8bf5;
+      --border: rgba(0, 212, 255, 0.25);
+      --cyan: #00d4ff;
       --pink: #ff4d6d;
       --gold: #ffd700;
       --text: #e4e4ef;
@@ -37,7 +37,7 @@
       display: flex;
       align-items: center;
       gap: 14px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(123, 139, 245, 0.05);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(0, 212, 255, 0.05);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
       transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -52,7 +52,7 @@
       inset: 0;
       border-radius: 16px;
       padding: 1px;
-      background: linear-gradient(135deg, rgba(123,139,245,0.4), rgba(255,255,255,0) 50%, rgba(255,77,109,0.2));
+      background: linear-gradient(135deg, rgba(0,212,255,0.4), rgba(255,255,255,0) 50%, rgba(255,77,109,0.2));
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
@@ -84,11 +84,11 @@
       position: absolute;
       inset: 0;
       border-radius: 50%;
-      border: 1px solid rgba(123, 139, 245, 0.5);
+      border: 1px solid rgba(0, 212, 255, 0.5);
       animation: ringSpin 3s linear infinite;
     }
     .ring:nth-child(2) {
-      border-color: rgba(123, 139, 245, 0.2);
+      border-color: rgba(0, 212, 255, 0.2);
       animation: ringSpin 4s linear infinite reverse;
       transform: scale(1.2);
     }
@@ -110,7 +110,7 @@
       letter-spacing: 1px;
       text-transform: uppercase;
       margin-bottom: 3px;
-      text-shadow: 0 0 10px rgba(123,139,245,0.3);
+      text-shadow: 0 0 10px rgba(0,212,255,0.3);
     }
 
     .subtitle {

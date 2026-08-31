@@ -1,0 +1,66 @@
+{
+	"default": "/dist/vosk.min.js",
+	"files": [
+		{
+			"type": "directory",
+			"name": "dist",
+			"files": [
+				{
+					"type": "directory",
+					"name": "utils",
+					"files": [
+						{
+							"type": "file",
+							"name": "logging.d.ts",
+							"hash": "GZwNghoJ2HIjV/9SJivdHGvfWUPaB4m5FL+lQ7wRtso=",
+							"time": "1985-10-26T08:15:00.000Z",
+							"size": 336
+						}
+					]
+				},
+				{
+					"type": "file",
+					"name": "interfaces.d.ts",
+					"hash": "y2xbD7LO6vXJyGnXe3XdPQxOecAKXzjzlApRpWyVon8=",
+					"time": "1985-10-26T08:15:00.000Z",
+					"size": 3361
+				},
+				{
+					"type": "file",
+					"name": "model.d.ts",
+					"hash": "BPom0Vkm8NlGSRvsKS7+8mPGm0CBvzXzuhd91rvuRzM=",
+					"time": "1985-10-26T08:15:00.000Z",
+					"size": 1853
+				},
+				{
+					"type": "file",
+					"name": "vosk.d.ts",
+					"hash": "MzLKHXbHuOKi5YGR9FgFT7/J2RSyLlKgTFpsCgkIdZY=",
+					"time": "1985-10-26T08:15:00.000Z",
+					"size": 26
+				},
+				{
+					"type": "file",
+					"name": "vosk.js",
+					"hash": "KVBFFVJul09MsFPPCIEcTeX7KnQAfApalX21DqqNXQw=",
+					"time": "1985-10-26T08:15:00.000Z",
+					"size": 5804767
+				}
+			]
+		},
+		{
+			"type": "file",
+			"name": "package.json",
+			"hash": "N5GYOxDkbxRXpbB7lqi7Yz2aqW1Ph+Q4GIvUmdI5BDM=",
+			"time": "1985-10-26T08:15:00.000Z",
+			"size": 980
+		},
+		{
+			"type": "file",
+			"name": "README.md",
+			"hash": "IsgmliMUhUUi1yfNubots3AFStaHNSREixuxbaXUFCA=",
+			"time": "1985-10-26T08:15:00.000Z",
+			"size": 6136
+		}
+	]
+}

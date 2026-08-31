@@ -1,85 +1,130 @@
 (function() {
 'use strict';
 
-var recognition  = null;
 var isListening  = false;
 var _shouldKeepListening = false;
 var _committed   = '';
 var onResultCallback = null;
 var onEndCallback    = null;
 
+var audioContext = null;
+var mediaStream = null;
+var sourceNode = null;
+var processorNode = null;
+var voskModel = null;
+var recognizer = null;
+
 function isSupported() {
-  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  return true; // Supported via Vosk WASM
 }
 
-function initSTT() {
-  if (!isSupported()) return false;
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SR();
-  recognition.lang = 'fr-FR';
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
-  recognition.continuous = true;
-
-  recognition.onresult = function(event) {
-    var interim  = '';
-    var newFinal = '';
-    for (var i = event.resultIndex; i < event.results.length; i++) {
-      var t = event.results[i][0].transcript;
-      if (event.results[i].isFinal) { newFinal += t; }
-      else                          { interim  += t; }
-    }
-    if (newFinal) {
-      _committed += (_committed ? ' ' : '') + newFinal.trim();
-    }
-    var display = _committed + (interim ? (_committed ? ' ' : '') + interim : '');
-    if (onResultCallback) onResultCallback(display, false);
-  };
-
-  recognition.onstart = function() { isListening = true; };
-
-  recognition.onend = function() {
-    isListening = false;
-    if (_shouldKeepListening) {
-      try { recognition.start(); isListening = true; }
-      catch(e) {
-        _shouldKeepListening = false;
-        if (onEndCallback) onEndCallback();
-      }
-    } else {
-      if (onEndCallback) onEndCallback();
-    }
-  };
-
-  recognition.onerror = function(e) {
-    if (e.error === 'no-speech' && _shouldKeepListening) return;
-    isListening = false;
-    console.warn('STT error:', e.error);
-    if (!_shouldKeepListening && onEndCallback) onEndCallback();
-  };
-
-  return true;
+async function initSTT() {
+  if (voskModel) return true;
+  if (!window.Vosk) {
+    console.error('[STT] Vosk non chargé.');
+    return false;
+  }
+  try {
+    voskModel = await window.Vosk.createModel('/models/vosk-model-small-fr.tar.gz');
+    return true;
+  } catch (err) {
+    console.error('[STT] Erreur chargement modèle Vosk:', err);
+    return false;
+  }
 }
 
-function startListening(onResult, onEnd) {
+async function startListening(onResult, onEnd) {
   onResultCallback = onResult || null;
   onEndCallback    = onEnd   || null;
   _committed       = '';
   _shouldKeepListening = true;
-  if (!recognition) initSTT();
-  if (!recognition) return false;
+  
+  if (!voskModel) await initSTT();
+  if (!voskModel) return false;
+  
   if (isListening) return true;
-  try { recognition.start(); isListening = true; return true; }
-  catch(e) { return false; }
+
+  try {
+      if (!recognizer) {
+          recognizer = new voskModel.KaldiRecognizer(16000);
+          recognizer.setWords(true);
+      } else {
+          recognizer.reset();
+      }
+
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1, sampleRate: 16000 }
+      });
+      
+      audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      sourceNode = audioContext.createMediaStreamSource(mediaStream);
+      processorNode = audioContext.createScriptProcessor(4096, 1, 1);
+      
+      sourceNode.connect(processorNode);
+      processorNode.connect(audioContext.destination);
+      
+      isListening = true;
+
+      processorNode.onaudioprocess = function(e) {
+          if (!isListening) return;
+          var data = e.inputBuffer.getChannelData(0);
+          var isFinal = recognizer.acceptWaveform(data);
+          
+          if (isFinal) {
+              var finalRes = recognizer.result().text || '';
+              if (finalRes) {
+                  _committed += (_committed ? ' ' : '') + finalRes.trim();
+              }
+              if (onResultCallback) onResultCallback(_committed, false);
+          } else {
+              var interimRes = recognizer.partialResult().partial || '';
+              var display = _committed + (interimRes ? (_committed ? ' ' : '') + interimRes : '');
+              if (onResultCallback) onResultCallback(display, false);
+          }
+      };
+      
+      return true;
+  } catch(e) {
+      console.error('[STT] Erreur microphone:', e);
+      isListening = false;
+      return false;
+  }
 }
 
 function stopListening() {
   _shouldKeepListening = false;
-  if (recognition && isListening) {
-    try { recognition.stop(); } catch(e) {}
-    isListening = false;
+  isListening = false;
+  
+  if (processorNode) {
+      processorNode.disconnect();
+      processorNode = null;
   }
-  _committed = '';
+  if (sourceNode) {
+      sourceNode.disconnect();
+      sourceNode = null;
+  }
+  if (mediaStream) {
+      mediaStream.getTracks().forEach(function(t) { t.stop(); });
+      mediaStream = null;
+  }
+  if (audioContext) {
+      audioContext.close();
+      audioContext = null;
+  }
+  
+  // Renvoyer le texte final si on vient de couper
+  if (recognizer) {
+      var finalRes = recognizer.finalResult().text || '';
+      if (finalRes) {
+          _committed += (_committed ? ' ' : '') + finalRes.trim();
+      }
+      if (onResultCallback) onResultCallback(_committed, true); // true = done
+  }
+  
+  if (onEndCallback) {
+      onEndCallback();
+      onEndCallback = null;
+  }
 }
 
 function getIsListening()   { return isListening || _shouldKeepListening; }

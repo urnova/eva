@@ -1,4 +1,4 @@
-﻿import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 
 // â”€â”€â”€ API EVA exposÃ©e au renderer via contextBridge â”€â”€â”€
 // Pas de nodeIntegration â†’ sÃ©curitÃ© maximale
@@ -72,7 +72,10 @@ const evaAPI = {
   // â”€â”€ System â”€â”€
   system: {
     info: () => ipcRenderer.invoke('system:info'),
-      llmChat: (messages: any) => ipcRenderer.invoke('llm:chat', messages),
+    stats: () => ipcRenderer.invoke('system:stats'),
+    llmChat: (messages: any) => ipcRenderer.invoke('llm:chat', messages),
+    llmStart: () => ipcRenderer.invoke('llm:start'),
+    llmStop: () => ipcRenderer.invoke('llm:stop'),
     cpuLoad: () => ipcRenderer.invoke('system:cpuLoad'),
     screenshot: () => ipcRenderer.invoke('system:screenshot'),
     exec: (cmd: string) => ipcRenderer.invoke('system:exec', cmd),

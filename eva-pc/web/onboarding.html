@@ -1,9 +1,9 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Configuration ‚Äî E.V.A</title>
+<title>Configuration ó E.V.A</title>
 <link rel="icon" type="image/png" href="assets/images/eva-logo.png">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="var(--cyan)">
@@ -18,9 +18,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
 <style>
 :root {
-  --cyan: #7b8bf5;
-  --cyan-dim: rgba(123,139,245,0.09);
-  --cyan-glow: rgba(123,139,245,0.45);
+  --cyan: #00d4ff;
+  --cyan-dim: rgba(0,212,255,0.09);
+  --cyan-glow: rgba(0,212,255,0.45);
   --green: #4ade80;
   --purple: #b794f6;
   --red: #ff4d6d;
@@ -28,7 +28,7 @@
   --surface: #18181b;
   --surface2: #222228;
   --surface3: #2a2a33;
-  --border: rgba(123,139,245,0.12);
+  --border: rgba(0,212,255,0.12);
   --text: #e2e2f0;
   --text-muted: #71717a;
 }
@@ -36,11 +36,11 @@
 html,body{min-height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);}
 body::before{
   content:'';position:fixed;inset:0;
-  background-image:linear-gradient(rgba(123,139,245,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(123,139,245,0.018) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(0,212,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.018) 1px,transparent 1px);
   background-size:55px 55px;pointer-events:none;z-index:0;
 }
 .bg-orb{position:fixed;border-radius:50%;pointer-events:none;filter:blur(120px);z-index:0;}
-.bg-orb-1{width:600px;height:600px;top:-200px;right:-200px;background:rgba(123,139,245,0.04);animation:orbDrift 16s ease-in-out infinite;}
+.bg-orb-1{width:600px;height:600px;top:-200px;right:-200px;background:rgba(0,212,255,0.04);animation:orbDrift 16s ease-in-out infinite;}
 .bg-orb-2{width:500px;height:500px;bottom:-200px;left:-100px;background:rgba(183,148,246,0.03);animation:orbDrift 20s ease-in-out infinite reverse;}
 @keyframes orbDrift{0%,100%{transform:translate(0,0)}50%{transform:translate(25px,-25px)}}
 
@@ -94,7 +94,7 @@ body::before{
   font-family:'Space Mono',monospace;font-size:0.85em;outline:none;
   transition:border-color 0.2s,box-shadow 0.2s;
 }
-.field-input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(123,139,245,0.08);}
+.field-input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,212,255,0.08);}
 .field-input.error{border-color:var(--red);}
 
 .pass-strength{height:3px;border-radius:10px;margin-top:6px;transition:all 0.3s;background:var(--surface3);}
@@ -104,7 +104,7 @@ body::before{
 .pass-strength-label{font-size:0.68em;color:var(--text-muted);margin-top:3px;}
 
 .pass-info-box{
-  background:rgba(123,139,245,0.05);border:1px solid rgba(123,139,245,0.12);
+  background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.12);
   border-radius:10px;padding:12px 14px;margin-bottom:16px;
   font-size:0.78em;color:var(--text-muted);line-height:1.6;
 }
@@ -139,9 +139,9 @@ body::before{
   border:none;padding:12px;border-radius:10px;
   font-family:'Orbitron',monospace;font-size:0.82em;font-weight:700;
   letter-spacing:2px;cursor:pointer;transition:all 0.2s;
-  box-shadow:0 0 20px rgba(123,139,245,0.3);
+  box-shadow:0 0 20px rgba(0,212,255,0.3);
 }
-.btn-next:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(123,139,245,0.5);}
+.btn-next:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(0,212,255,0.5);}
 .btn-next:active{transform:translateY(0);}
 .btn-next:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
 
@@ -154,7 +154,7 @@ body::before{
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:10px}
-/* ‚îÄ‚îÄ TV / Very large screens (‚â•1800px) ‚îÄ‚îÄ */
+/* -- TV / Very large screens (=1800px) -- */
 @media(min-width:1800px){
   .ob-card{max-width:640px;padding:56px;}
   .ob-title{font-size:1.8em;letter-spacing:5px;}
@@ -166,14 +166,14 @@ body::before{
   .ava-preview{width:120px;height:120px;font-size:2.8em;}
 }
 
-/* ‚îÄ‚îÄ Tablet (640px ‚Äì 1023px) ‚îÄ‚îÄ */
+/* -- Tablet (640px ñ 1023px) -- */
 @media(min-width:560px) and (max-width:1023px){
   .ob-card{max-width:480px;padding:36px 36px;}
   .ob-title{font-size:1.4em;}
   .ob-logo img{width:110px;}
 }
 
-/* ‚îÄ‚îÄ Mobile (‚â§559px) ‚îÄ‚îÄ */
+/* -- Mobile (=559px) -- */
 @media(max-width:559px){
   .page{padding:14px;align-items:flex-start;padding-top:clamp(16px,6vh,48px);}
   .ob-card{padding:26px 18px;border-radius:18px;margin:0;}
@@ -197,7 +197,7 @@ body::before{
   .pass-info-box{padding:10px 12px;font-size:0.75em;}
 }
 
-/* ‚îÄ‚îÄ Small mobile (‚â§380px) ‚îÄ‚îÄ */
+/* -- Small mobile (=380px) -- */
 @media(max-width:380px){
   .ob-card{padding:22px 14px;}
   .ob-title{font-size:1.05em;}
@@ -205,25 +205,25 @@ body::before{
   .btn-next,.btn-skip{padding:11px;font-size:0.76em;}
 }
 
-/* ‚îÄ‚îÄ Toggle switch ‚îÄ‚îÄ */
+/* -- Toggle switch -- */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);margin-bottom:10px;gap:12px;}
-.toggle-row:hover{border-color:rgba(123,139,245,0.25);}
+.toggle-row:hover{border-color:rgba(0,212,255,0.25);}
 .toggle-info .toggle-name{font-size:0.85em;font-weight:700;color:var(--text);}
 .toggle-info .toggle-desc{font-size:0.72em;color:var(--text-muted);margin-top:3px;line-height:1.4;}
 .toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0;}
 .toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
 .toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--surface3);border-radius:24px;transition:0.25s;}
 .toggle-slider:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.25s;}
-.toggle-switch input:checked + .toggle-slider{background:var(--cyan);box-shadow:0 0 10px rgba(123,139,245,0.4);}
+.toggle-switch input:checked + .toggle-slider{background:var(--cyan);box-shadow:0 0 10px rgba(0,212,255,0.4);}
 .toggle-switch input:checked + .toggle-slider:before{transform:translateX(20px);}
 
-/* ‚îÄ‚îÄ PC note ‚îÄ‚îÄ */
+/* -- PC note -- */
 .pc-note{background:rgba(183,148,246,0.07);border:1px solid rgba(183,148,246,0.22);border-radius:10px;padding:13px 15px;margin:14px 0 0;}
 .pc-note-title{font-size:0.8em;font-weight:700;color:var(--purple);margin-bottom:5px;}
 .pc-note-body{font-size:0.76em;color:var(--text-muted);line-height:1.65;}
 .pc-note-body strong{color:var(--purple);}
 
-/* ‚îÄ‚îÄ Legal acceptance ‚îÄ‚îÄ */
+/* -- Legal acceptance -- */
 .legal-section{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:4px;}
 .legal-check{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:0.8em;color:var(--text-muted);line-height:1.55;}
 .legal-check:last-child{margin-bottom:0;}
@@ -247,7 +247,7 @@ body::before{
         <img src="/assets/images/eva-logo.png" alt="EVA">
       </div>
       <div class="ob-title">CONFIGURATION</div>
-      <div class="ob-sub">Personnalisez votre exp√©rience EVA</div>
+      <div class="ob-sub">Personnalisez votre expÈrience EVA</div>
     </div>
 
     <div class="ob-progress">
@@ -263,7 +263,7 @@ body::before{
 
     <!-- Step 1: Profil -->
     <div class="ob-view active" id="ob1">
-      <div class="step-label">√âtape 1 ‚Äî Profil</div>
+      <div class="step-label">…tape 1 ó Profil</div>
       <div class="ava-wrap">
         <div>
           <div class="ava-preview" id="avaPreview" onclick="document.getElementById('avaFile').click()">
@@ -276,7 +276,7 @@ body::before{
       <div class="field">
         <label class="field-label">Nom complet *</label>
         <input type="text" class="field-input" id="displayName" placeholder="Jean Dupont">
-        <div class="field-hint">Votre identit√© dans E.V.A</div>
+        <div class="field-hint">Votre identitÈ dans E.V.A</div>
       </div>
       <div class="field">
         <label class="field-label">Surnom</label>
@@ -285,20 +285,20 @@ body::before{
       </div>
       <div class="ob-actions">
         <button class="btn-skip" onclick="skipAll()">Passer tout</button>
-        <button class="btn-next" onclick="goStep(2)">SUIVANT ‚Üí</button>
+        <button class="btn-next" onclick="goStep(2)">SUIVANT ?</button>
       </div>
     </div>
 
     <!-- Step 2: Mot de passe (Google uniquement) -->
     <div class="ob-view" id="ob2">
-      <div class="step-label">√âtape 2 ‚Äî S√©curit√©</div>
+      <div class="step-label">…tape 2 ó SÈcuritÈ</div>
       <div class="pass-info-box" id="passInfoBox">
-        Vous √™tes connect√© via <strong>Google</strong>.<br>
-        Cr√©ez un mot de passe optionnel pour pouvoir aussi vous connecter directement avec votre email.
+        Vous Ítes connectÈ via <strong>Google</strong>.<br>
+        CrÈez un mot de passe optionnel pour pouvoir aussi vous connecter directement avec votre email.
       </div>
       <div class="field">
         <label class="field-label">Nouveau mot de passe</label>
-        <input type="password" class="field-input" id="obNewPass" placeholder="Minimum 6 caract√®res" oninput="checkPassStrength()">
+        <input type="password" class="field-input" id="obNewPass" placeholder="Minimum 6 caractËres" oninput="checkPassStrength()">
         <div class="pass-strength" id="passStrength"></div>
         <div class="pass-strength-label" id="passStrengthLabel"></div>
       </div>
@@ -307,18 +307,18 @@ body::before{
         <input type="password" class="field-input" id="obConfPass" placeholder="Idem ci-dessus">
       </div>
       <div class="ob-actions">
-        <button class="btn-skip" onclick="goStep(1)">‚Üê Retour</button>
-        <button class="btn-skip" onclick="goStep(3)" style="border-color:rgba(123,139,245,0.2);color:var(--text-muted)">Passer</button>
-        <button class="btn-next" onclick="savePasswordAndContinue()" id="obPassBtn">CR√âER ‚Üí</button>
+        <button class="btn-skip" onclick="goStep(1)">? Retour</button>
+        <button class="btn-skip" onclick="goStep(3)" style="border-color:rgba(0,212,255,0.2);color:var(--text-muted)">Passer</button>
+        <button class="btn-next" onclick="savePasswordAndContinue()" id="obPassBtn">CR…ER ?</button>
       </div>
     </div>
 
     <!-- Step 3: Voix -->
     <div class="ob-view" id="ob3">
-      <div class="step-label">√âtape 3 ‚Äî Synth√®se vocale</div>
+      <div class="step-label">…tape 3 ó SynthËse vocale</div>
       <div class="field">
         <label class="field-label" style="margin-bottom:8px;display:block;">Service de voix</label>
-        <div class="field-hint" style="margin-bottom:14px;">Choisissez comment EVA vous parlera. Vous pourrez changer ce r√©glage √† tout moment dans les param√®tres.</div>
+        <div class="field-hint" style="margin-bottom:14px;">Choisissez comment EVA vous parlera. Vous pourrez changer ce rÈglage ‡ tout moment dans les paramËtres.</div>
 
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;">
           <div id="obttsc-native" onclick="obSelectTTS('native')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
@@ -326,81 +326,81 @@ body::before{
               <span style="font-size:0.44em;font-weight:800;background:#4ade80;color:#fff;border-radius:4px;padding:1px 5px;">LOCAL</span>
               <span style="font-size:0.44em;font-weight:800;background:#06b6d4;color:#000;border-radius:4px;padding:1px 5px;">GRATUIT</span>
             </div>
-            <div id="obc-native" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">‚úì</div>
-            <div style="font-size:1.4em;margin-bottom:5px;">üéôÔ∏è</div>
+            <div id="obc-native" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">?</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">???</div>
             <div style="font-weight:700;font-size:0.8em;margin-bottom:2px;">Navigateur</div>
             <div style="font-size:0.63em;color:var(--text-muted);">Web Speech<br>Sans config</div>
           </div>
-          <div id="obttsc-piper" onclick="obSelectTTS('piper')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid var(--cyan);background:rgba(123,139,245,0.07);text-align:center;position:relative;transition:all 0.2s;">
+          <div id="obttsc-piper" onclick="obSelectTTS('piper')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid var(--cyan);background:rgba(0,212,255,0.07);text-align:center;position:relative;transition:all 0.2s;">
             <div style="position:absolute;top:5px;right:5px;display:flex;flex-direction:column;gap:2px;align-items:flex-end;">
               <span style="font-size:0.44em;font-weight:800;background:#4ade80;color:#000;border-radius:4px;padding:1px 5px;">LOCAL</span>
               <span style="font-size:0.44em;font-weight:800;background:#06b6d4;color:#000;border-radius:4px;padding:1px 5px;">GRATUIT</span>
             </div>
-            <div id="obc-piper" style="position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">‚úì</div>
-            <div style="font-size:1.4em;margin-bottom:5px;">üá´üá∑</div>
+            <div id="obc-piper" style="position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">?</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">????</div>
             <div style="font-weight:700;font-size:0.8em;margin-bottom:2px;">Piper TTS</div>
-            <div style="font-size:0.63em;color:var(--text-muted);">Voix fran√ßaise f√©minine<br>100% local ¬∑ sans cl√©</div>
+            <div style="font-size:0.63em;color:var(--text-muted);">Voix franÁaise fÈminine<br>100% local ∑ sans clÈ</div>
           </div>
           <div id="obttsc-eva" onclick="obSelectTTS('eva')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
             <div style="position:absolute;top:5px;right:5px;display:flex;flex-direction:column;gap:2px;align-items:flex-end;">
               <span style="font-size:0.44em;font-weight:800;background:#8b5cf6;color:#fff;border-radius:4px;padding:1px 5px;">LOCAL</span>
               <span style="font-size:0.44em;font-weight:800;background:#06b6d4;color:#000;border-radius:4px;padding:1px 5px;">GRATUIT</span>
             </div>
-            <div id="obc-eva" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">‚úì</div>
-            <div style="font-size:1.4em;margin-bottom:5px;">üß†</div>
+            <div id="obc-eva" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">?</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">??</div>
             <div style="font-weight:700;font-size:0.8em;margin-bottom:2px;">Kokoro Neural</div>
             <div style="font-size:0.63em;color:var(--text-muted);">TTS Neuronal<br>100% local</div>
           </div>
           <div id="obttsc-elevenlabs" onclick="obSelectTTS('elevenlabs')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
             <span style="font-size:0.44em;font-weight:800;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
-            <div id="obc-elevenlabs" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">‚úì</div>
-            <div style="font-size:1.4em;margin-bottom:5px;">‚ö°</div>
+            <div id="obc-elevenlabs" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">?</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">?</div>
             <div style="font-weight:700;font-size:0.8em;margin-bottom:2px;">ElevenLabs</div>
-            <div style="font-size:0.63em;color:var(--text-muted);">Ultra-r√©aliste<br>Cl√© API</div>
+            <div style="font-size:0.63em;color:var(--text-muted);">Ultra-rÈaliste<br>ClÈ API</div>
           </div>
           <div id="obttsc-openai" onclick="obSelectTTS('openai')" style="cursor:pointer;border-radius:12px;padding:14px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
             <span style="font-size:0.44em;font-weight:800;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
-            <div id="obc-openai" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">‚úì</div>
-            <div style="font-size:1.4em;margin-bottom:5px;">ü§ñ</div>
+            <div id="obc-openai" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.8em;">?</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">??</div>
             <div style="font-weight:700;font-size:0.8em;margin-bottom:2px;">OpenAI TTS</div>
-            <div style="font-size:0.63em;color:var(--text-muted);">Voix GPT<br>Cl√© API</div>
+            <div style="font-size:0.63em;color:var(--text-muted);">Voix GPT<br>ClÈ API</div>
           </div>
         </div>
 
-        <div id="obTTSDetail" style="background:rgba(123,139,245,0.04);border:1px solid rgba(123,139,245,0.15);border-radius:12px;padding:14px 16px;"></div>
+        <div id="obTTSDetail" style="background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.15);border-radius:12px;padding:14px 16px;"></div>
       </div>
       <div class="ob-actions">
-        <button class="btn-skip" onclick="goStep(isGoogleOnlyUser ? 2 : 1)">‚Üê Retour</button>
-        <button class="btn-next" onclick="goStep(4)">SUIVANT ‚Üí</button>
+        <button class="btn-skip" onclick="goStep(isGoogleOnlyUser ? 2 : 1)">? Retour</button>
+        <button class="btn-next" onclick="goStep(4)">SUIVANT ?</button>
       </div>
     </div>
 
     <!-- Step 4: IA & Puter -->
     <div class="ob-view" id="ob4">
-      <div class="step-label">√âtape 4 ‚Äî Intelligence artificielle</div>
+      <div class="step-label">…tape 4 ó Intelligence artificielle</div>
       <div class="field">
         <div class="field-hint" style="margin-bottom:12px">Comment E.V.A va traiter vos conversations.</div>
 
-        <!-- RECOMMAND√âS -->
-        <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">‚≠ê Recommand√©s</div>
+        <!-- RECOMMAND…S -->
+        <div style="font-size:0.62em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">? RecommandÈs</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;">
 
-          <!-- Puter (RECOMMAND√â : gratuit, sans cl√© API, GPT-4o + Claude) -->
-          <div id="obcard-puter" onclick="obSelectProvider('puter')" style="cursor:pointer;border-radius:12px;padding:14px 12px;border:2px solid var(--cyan);background:rgba(123,139,245,0.07);text-align:center;position:relative;transition:all 0.2s;">
+          <!-- Puter (RECOMMAND… : gratuit, sans clÈ API, GPT-4o + Claude) -->
+          <div id="obcard-puter" onclick="obSelectProvider('puter')" style="cursor:pointer;border-radius:12px;padding:14px 12px;border:2px solid var(--cyan);background:rgba(0,212,255,0.07);text-align:center;position:relative;transition:all 0.2s;">
             <span style="font-size:0.55em;font-weight:700;letter-spacing:0.06em;background:#06b6d4;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:8px;right:8px;">GRATUIT</span>
-            <div id="obcheck-puter" style="position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;">‚úì</div>
-            <div style="font-size:1.4em;margin-bottom:5px;">‚òÅÔ∏è</div>
+            <div id="obcheck-puter" style="position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;">?</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">??</div>
             <div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">Puter Cloud</div>
-            <div style="font-size:0.65em;color:var(--text-muted);line-height:1.4;">Sans cl√© API<br>GPT-4o ¬∑ Claude ¬∑ Quota partag√©</div>
+            <div style="font-size:0.65em;color:var(--text-muted);line-height:1.4;">Sans clÈ API<br>GPT-4o ∑ Claude ∑ Quota partagÈ</div>
           </div>
 
           <!-- Local -->
           <div id="obcard-qwen" onclick="obSelectProvider('qwen')" style="cursor:pointer;border-radius:12px;padding:14px 12px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
             <span style="font-size:0.55em;font-weight:700;letter-spacing:0.06em;background:#f59e0b;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:8px;right:8px;">LOCAL</span>
-            <div id="obcheck-qwen" style="display:none;position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;">‚úì</div>
-            <div style="font-size:1.4em;margin-bottom:5px;">üñ•Ô∏è</div>
-            <div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">Local Priv√©</div>
-            <div style="font-size:0.65em;color:var(--text-muted);line-height:1.4;">100% priv√©<br>Limit√©</div>
+            <div id="obcheck-qwen" style="display:none;position:absolute;top:8px;left:8px;color:var(--cyan);font-size:0.85em;">?</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">???</div>
+            <div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">Local PrivÈ</div>
+            <div style="font-size:0.65em;color:var(--text-muted);line-height:1.4;">100% privÈ<br>LimitÈ</div>
           </div>
         </div>
 
@@ -411,42 +411,42 @@ body::before{
           <!-- OpenAI -->
           <div id="obcard-openai" onclick="obSelectProvider('openai')" style="cursor:pointer;border-radius:12px;padding:12px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
             <span style="font-size:0.52em;font-weight:700;letter-spacing:0.06em;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
-            <div id="obcheck-openai" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.85em;">‚úì</div>
-            <div style="font-size:1.2em;margin-bottom:4px;">ü§ñ</div>
+            <div id="obcheck-openai" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.85em;">?</div>
+            <div style="font-size:1.2em;margin-bottom:4px;">??</div>
             <div style="font-weight:700;font-size:0.76em;margin-bottom:2px;">OpenAI</div>
-            <div style="font-size:0.62em;color:var(--text-muted);">GPT-4o ¬∑ Cl√© API</div>
+            <div style="font-size:0.62em;color:var(--text-muted);">GPT-4o ∑ ClÈ API</div>
           </div>
 
           <!-- Claude -->
           <div id="obcard-claude" onclick="obSelectProvider('claude')" style="cursor:pointer;border-radius:12px;padding:12px 10px;border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);text-align:center;position:relative;transition:all 0.2s;">
             <span style="font-size:0.52em;font-weight:700;letter-spacing:0.06em;background:#10b981;color:#000;border-radius:4px;padding:2px 5px;position:absolute;top:7px;right:7px;">PAYANT</span>
-            <div id="obcheck-claude" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.85em;">‚úì</div>
-            <div style="font-size:1.2em;margin-bottom:4px;">üß†</div>
+            <div id="obcheck-claude" style="display:none;position:absolute;top:7px;left:7px;color:var(--cyan);font-size:0.85em;">?</div>
+            <div style="font-size:1.2em;margin-bottom:4px;">??</div>
             <div style="font-weight:700;font-size:0.76em;margin-bottom:2px;">Claude</div>
-            <div style="font-size:0.62em;color:var(--text-muted);">Anthropic ¬∑ Cl√© API</div>
+            <div style="font-size:0.62em;color:var(--text-muted);">Anthropic ∑ ClÈ API</div>
           </div>
 
         </div>
 
-        <!-- Puter connect (visible si Puter s√©lectionn√©) -->
-        <div id="obPuterSection" style="background:rgba(123,139,245,0.05);border:1px solid rgba(123,139,245,0.15);border-radius:10px;padding:12px 14px;">
-          <div id="obPuterStatus" style="font-size:0.74em;color:rgba(123,139,245,0.6);margin-bottom:8px;">V√©rification du statut Puter...</div>
-          <button id="obPuterBtn" class="voice-test-btn" onclick="obConnectPuter(event)">üîó Connexion Puter</button>
+        <!-- Puter connect (visible si Puter sÈlectionnÈ) -->
+        <div id="obPuterSection" style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:12px 14px;">
+          <div id="obPuterStatus" style="font-size:0.74em;color:rgba(0,212,255,0.6);margin-bottom:8px;">VÈrification du statut Puter...</div>
+          <button id="obPuterBtn" class="voice-test-btn" onclick="obConnectPuter(event)">?? Connexion Puter</button>
         </div>
       </div>
       <div class="ob-actions">
-        <button class="btn-skip" onclick="goStep(3)">‚Üê Retour</button>
-        <button class="btn-next" onclick="goStep(5)">SUIVANT ‚Üí</button>
+        <button class="btn-skip" onclick="goStep(3)">? Retour</button>
+        <button class="btn-next" onclick="goStep(5)">SUIVANT ?</button>
       </div>
     </div>
 
-    <!-- Step 5: Pr√©f√©rences -->
+    <!-- Step 5: PrÈfÈrences -->
     <div class="ob-view" id="ob5">
-      <div class="step-label">√âtape 5 ‚Äî Pr√©f√©rences</div>
+      <div class="step-label">…tape 5 ó PrÈfÈrences</div>
 
       <div class="toggle-row">
         <div class="toggle-info">
-          <div class="toggle-name">üéôÔ∏è Wake Word "Hey EVA"</div>
+          <div class="toggle-name">??? Wake Word "Hey EVA"</div>
           <div class="toggle-desc">E.V.A s'active automatiquement quand vous dites "Hey EVA"</div>
         </div>
         <label class="toggle-switch">
@@ -457,8 +457,8 @@ body::before{
 
       <div class="toggle-row">
         <div class="toggle-info">
-          <div class="toggle-name">‚ö° Lancer E.V.A directement</div>
-          <div class="toggle-desc">Acc√©der automatiquement au chat apr√®s la connexion</div>
+          <div class="toggle-name">? Lancer E.V.A directement</div>
+          <div class="toggle-desc">AccÈder automatiquement au chat aprËs la connexion</div>
         </div>
         <label class="toggle-switch">
           <input type="checkbox" id="prefAutoLaunch" checked>
@@ -468,8 +468,8 @@ body::before{
 
       <div class="toggle-row">
         <div class="toggle-info">
-          <div class="toggle-name">üß† M√©moire √âvolutive</div>
-          <div class="toggle-desc">EVA apprend qui vous √™tes au fil des conversations pour s'adapter de mieux en mieux √† vous</div>
+          <div class="toggle-name">?? MÈmoire …volutive</div>
+          <div class="toggle-desc">EVA apprend qui vous Ítes au fil des conversations pour s'adapter de mieux en mieux ‡ vous</div>
         </div>
         <label class="toggle-switch">
           <input type="checkbox" id="prefAdaptation" checked>
@@ -477,12 +477,12 @@ body::before{
         </label>
       </div>
 
-      <div style="height:1px;background:rgba(123,139,245,0.1);margin:10px 0 16px;"></div>
-      <div style="font-size:0.62em;letter-spacing:2px;color:rgba(123,139,245,0.5);text-transform:uppercase;margin-bottom:10px;font-family:'Orbitron',monospace;">‚öóÔ∏è Exp√©rimental</div>
-      <div class="toggle-row" style="border:1px solid rgba(123,139,245,0.14);border-radius:12px;padding:12px 14px;background:rgba(123,139,245,0.03);">
+      <div style="height:1px;background:rgba(0,212,255,0.1);margin:10px 0 16px;"></div>
+      <div style="font-size:0.62em;letter-spacing:2px;color:rgba(0,212,255,0.5);text-transform:uppercase;margin-bottom:10px;font-family:'Orbitron',monospace;">?? ExpÈrimental</div>
+      <div class="toggle-row" style="border:1px solid rgba(0,212,255,0.14);border-radius:12px;padding:12px 14px;background:rgba(0,212,255,0.03);">
         <div class="toggle-info">
-          <div class="toggle-name" style="color:var(--cyan);">‚òÅÔ∏è Fonctions exp√©rimentales</div>
-          <div class="toggle-desc">Active CloudWorks et d'autres modules en cours de d√©veloppement. Modifiable √† tout moment dans Param√®tres ‚Üí Exp√©rimental.</div>
+          <div class="toggle-name" style="color:var(--cyan);">?? Fonctions expÈrimentales</div>
+          <div class="toggle-desc">Active CloudWorks et d'autres modules en cours de dÈveloppement. Modifiable ‡ tout moment dans ParamËtres ? ExpÈrimental.</div>
         </div>
         <label class="toggle-switch">
           <input type="checkbox" id="prefExperimental">
@@ -491,123 +491,123 @@ body::before{
       </div>
 
       <div class="ob-actions">
-        <button class="btn-skip" onclick="goStep(4)">‚Üê Retour</button>
-        <button class="btn-next" onclick="goStep(6)">SUIVANT ‚Üí</button>
+        <button class="btn-skip" onclick="goStep(4)">? Retour</button>
+        <button class="btn-next" onclick="goStep(6)">SUIVANT ?</button>
       </div>
     </div>
 
     <!-- Step 6: Notifications push -->
     <div class="ob-view" id="ob6">
-      <div class="step-label">√âtape 6 ‚Äî Notifications</div>
+      <div class="step-label">…tape 6 ó Notifications</div>
 
       <div style="text-align:center;margin-bottom:20px">
-        <div style="font-size:2.8em;margin-bottom:10px">üîî</div>
+        <div style="font-size:2.8em;margin-bottom:10px">??</div>
         <div style="font-family:'Orbitron',monospace;font-size:1.05em;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:8px">NOTIFICATIONS PUSH</div>
         <div style="font-size:0.82em;color:var(--text-muted);line-height:1.6;max-width:340px;margin:0 auto">
-          Recevez vos alarmes, rappels et √©v√©nements calendrier <strong style="color:var(--cyan)">quand le site est ouvert</strong> dans votre navigateur.<br>Fonctionne sur PC et Android.
+          Recevez vos alarmes, rappels et ÈvÈnements calendrier <strong style="color:var(--cyan)">quand le site est ouvert</strong> dans votre navigateur.<br>Fonctionne sur PC et Android.
         </div>
       </div>
 
       <div id="obNotifGranted" style="display:none;background:rgba(0,220,100,0.08);border:1px solid rgba(0,220,100,0.3);border-radius:14px;padding:16px;margin-bottom:16px;text-align:center">
-        <div style="font-size:1.5em;margin-bottom:6px">‚úÖ</div>
-        <div style="font-size:0.85em;color:#4ade80;font-weight:600">Push activ√© avec succ√®s</div>
-        <div style="font-size:0.74em;color:var(--text-muted);margin-top:4px" id="obNotifTokenStatus">Enregistrement en cours‚Ä¶</div>
+        <div style="font-size:1.5em;margin-bottom:6px">?</div>
+        <div style="font-size:0.85em;color:#4ade80;font-weight:600">Push activÈ avec succËs</div>
+        <div style="font-size:0.74em;color:var(--text-muted);margin-top:4px" id="obNotifTokenStatus">Enregistrement en coursÖ</div>
       </div>
 
       <div id="obNotifDenied" style="display:none;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.3);border-radius:14px;padding:16px;margin-bottom:16px;text-align:center">
-        <div style="font-size:1.5em;margin-bottom:6px">‚ö†Ô∏è</div>
-        <div style="font-size:0.83em;color:#ff4d6d;font-weight:600">Notifications bloqu√©es par le navigateur</div>
-        <div style="font-size:0.73em;color:var(--text-muted);margin-top:4px">Cliquez sur üîí dans la barre d'adresse ‚Üí autoriser les notifications pour E.V.A</div>
+        <div style="font-size:1.5em;margin-bottom:6px">??</div>
+        <div style="font-size:0.83em;color:#ff4d6d;font-weight:600">Notifications bloquÈes par le navigateur</div>
+        <div style="font-size:0.73em;color:var(--text-muted);margin-top:4px">Cliquez sur ?? dans la barre d'adresse ? autoriser les notifications pour E.V.A</div>
       </div>
 
       <div id="obNotifDefault">
         <button onclick="requestObNotifPermission()" style="
           width:100%;padding:16px;border-radius:14px;
-          border:2px solid var(--cyan);background:rgba(123,139,245,0.07);
+          border:2px solid var(--cyan);background:rgba(0,212,255,0.07);
           color:var(--cyan);font-family:'Orbitron',monospace;font-size:0.82em;
           font-weight:700;letter-spacing:2px;cursor:pointer;
           transition:all 0.25s;margin-bottom:12px;
-        ">üîî ACTIVER LES NOTIFICATIONS PUSH</button>
+        ">?? ACTIVER LES NOTIFICATIONS PUSH</button>
         <div style="font-size:0.72em;color:var(--text-dim);text-align:center;line-height:1.6">
-          Une fen√™tre du navigateur va s'ouvrir pour demander votre permission.<br>
-          Vous pouvez d√©sactiver √† tout moment dans Param√®tres ‚Üí Notifications.
+          Une fenÍtre du navigateur va s'ouvrir pour demander votre permission.<br>
+          Vous pouvez dÈsactiver ‡ tout moment dans ParamËtres ? Notifications.
         </div>
       </div>
 
       <div style="margin-top:18px;padding:14px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.06)">
         <div style="font-size:0.72em;color:var(--text-muted);line-height:1.75">
-          <div style="font-weight:600;color:var(--text-base);margin-bottom:6px">Compatibilit√©</div>
-          ‚úÖ Chrome, Edge, Firefox, Opera ‚Äî PC &amp; Android<br>
-          ‚úÖ Safari iOS 16.4+ (iPhone &amp; iPad)<br>
-          ‚ùå Safari macOS ‚Äî non support√© (limitation Apple)
+          <div style="font-weight:600;color:var(--text-base);margin-bottom:6px">CompatibilitÈ</div>
+          ? Chrome, Edge, Firefox, Opera ó PC &amp; Android<br>
+          ? Safari iOS 16.4+ (iPhone &amp; iPad)<br>
+          ? Safari macOS ó non supportÈ (limitation Apple)
         </div>
       </div>
 
       <div class="ob-actions" style="margin-top:20px">
-        <button class="btn-skip" onclick="goStep(5)">‚Üê Retour</button>
-        <button class="btn-next" id="obNotifNextBtn" onclick="goStep(7)">SUIVANT ‚Üí</button>
+        <button class="btn-skip" onclick="goStep(5)">? Retour</button>
+        <button class="btn-next" id="obNotifNextBtn" onclick="goStep(7)">SUIVANT ?</button>
       </div>
     </div>
 
     <!-- Step 7: Avatar / Personnage EVA (PC uniquement) -->
     <div class="ob-view" id="ob7">
-      <div class="step-label">√âtape 7 ‚Äî Pr√©sence d'E.V.A</div>
+      <div class="step-label">…tape 7 ó PrÈsence d'E.V.A</div>
 
       <div style="text-align:center;margin-bottom:20px">
-        <div style="font-size:2.8em;margin-bottom:10px">üîÆ</div>
+        <div style="font-size:2.8em;margin-bottom:10px">??</div>
         <div style="font-family:'Orbitron',monospace;font-size:1.05em;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:8px">L'ORBE D'E.V.A</div>
         <div style="font-size:0.82em;color:var(--text-muted);line-height:1.6;max-width:340px;margin:0 auto">
-          L'orbe holographique d'E.V.A est sa <strong style="color:var(--cyan)">pr√©sence visuelle √† l'√©cran</strong> ‚Äî une sph√®re lumineuse qui pulse et change de couleur selon son √©tat. Vous pouvez la d√©sactiver pour gagner en performance.
+          L'orbe holographique d'E.V.A est sa <strong style="color:var(--cyan)">prÈsence visuelle ‡ l'Ècran</strong> ó une sphËre lumineuse qui pulse et change de couleur selon son Ètat. Vous pouvez la dÈsactiver pour gagner en performance.
         </div>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
-        <!-- Option: Activ√© -->
+        <!-- Option: ActivÈ -->
         <div id="obAvatarOn" onclick="obSelectAvatar(true)" style="
-          border:2px solid var(--cyan);background:rgba(123,139,245,0.07);
+          border:2px solid var(--cyan);background:rgba(0,212,255,0.07);
           border-radius:14px;padding:16px 18px;cursor:pointer;transition:all 0.2s;
           display:flex;align-items:center;gap:14px;position:relative;
         ">
-          <div style="font-size:2em;flex-shrink:0">üßä</div>
+          <div style="font-size:2em;flex-shrink:0">??</div>
           <div>
-            <div style="font-weight:700;font-size:0.88em;color:var(--cyan)">Avatar activ√© <span style="font-size:0.75em;color:var(--text-muted)">(recommand√©)</span></div>
-            <div style="font-size:0.74em;color:var(--text-muted);margin-top:3px;line-height:1.5">E.V.A appara√Æt en haut √† droite de l'√©cran. Exp√©rience compl√®te et immersive.</div>
+            <div style="font-weight:700;font-size:0.88em;color:var(--cyan)">Avatar activÈ <span style="font-size:0.75em;color:var(--text-muted)">(recommandÈ)</span></div>
+            <div style="font-size:0.74em;color:var(--text-muted);margin-top:3px;line-height:1.5">E.V.A apparaÓt en haut ‡ droite de l'Ècran. ExpÈrience complËte et immersive.</div>
           </div>
-          <div id="obAvatarOnChk" style="position:absolute;top:10px;right:12px;color:var(--cyan);font-size:0.85em">‚úì</div>
+          <div id="obAvatarOnChk" style="position:absolute;top:10px;right:12px;color:var(--cyan);font-size:0.85em">?</div>
         </div>
 
-        <!-- Option: D√©sactiv√© -->
+        <!-- Option: DÈsactivÈ -->
         <div id="obAvatarOff" onclick="obSelectAvatar(false)" style="
           border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);
           border-radius:14px;padding:16px 18px;cursor:pointer;transition:all 0.2s;
           display:flex;align-items:center;gap:14px;position:relative;
         ">
-          <div style="font-size:2em;flex-shrink:0">‚ö°</div>
+          <div style="font-size:2em;flex-shrink:0">?</div>
           <div>
-            <div style="font-weight:700;font-size:0.88em;color:var(--text-base)">Avatar d√©sactiv√©</div>
+            <div style="font-weight:700;font-size:0.88em;color:var(--text-base)">Avatar dÈsactivÈ</div>
             <div style="font-size:0.74em;color:var(--text-muted);margin-top:3px;line-height:1.5">Interface chat uniquement. Meilleures performances, moins de ressources CPU/GPU.</div>
           </div>
-          <div id="obAvatarOffChk" style="display:none;position:absolute;top:10px;right:12px;color:var(--cyan);font-size:0.85em">‚úì</div>
+          <div id="obAvatarOffChk" style="display:none;position:absolute;top:10px;right:12px;color:var(--cyan);font-size:0.85em">?</div>
         </div>
       </div>
 
       <div style="font-size:0.71em;color:var(--text-dim);text-align:center;line-height:1.6">
-        Ce r√©glage peut √™tre modifi√© √† tout moment dans Param√®tres ‚Üí Apparence.
+        Ce rÈglage peut Ítre modifiÈ ‡ tout moment dans ParamËtres ? Apparence.
       </div>
 
       <div class="ob-actions" style="margin-top:20px">
-        <button class="btn-skip" onclick="goStep(6)">‚Üê Retour</button>
-        <button class="btn-next" onclick="goStep(8)">SUIVANT ‚Üí</button>
+        <button class="btn-skip" onclick="goStep(6)">? Retour</button>
+        <button class="btn-next" onclick="goStep(8)">SUIVANT ?</button>
       </div>
     </div>
 
-    <!-- Step 8: Termin√© -->
+    <!-- Step 8: TerminÈ -->
     <div class="ob-view" id="ob8">
-      <div class="finish-icon">üéâ</div>
-      <div class="finish-title">Tout est pr√™t !</div>
+      <div class="finish-icon">??</div>
+      <div class="finish-title">Tout est prÍt !</div>
       <div class="finish-text">
-        Votre profil E.V.A a √©t√© configur√© avec succ√®s.<br>
-        Derni√®re √©tape avant d'entrer dans votre monde intelligent.
+        Votre profil E.V.A a ÈtÈ configurÈ avec succËs.<br>
+        DerniËre Ètape avant d'entrer dans votre monde intelligent.
       </div>
 
       <div class="legal-section">
@@ -617,19 +617,19 @@ body::before{
         </div>
         <div class="legal-check">
           <input type="checkbox" id="acceptPrivacy">
-          <label for="acceptPrivacy">J'ai lu et j'accepte la <a href="/privacy" target="_blank">Politique de confidentialit√©</a> *</label>
+          <label for="acceptPrivacy">J'ai lu et j'accepte la <a href="/privacy" target="_blank">Politique de confidentialitÈ</a> *</label>
         </div>
         <div class="legal-check">
           <input type="checkbox" id="acceptCookies">
-          <label for="acceptCookies">J'accepte l'utilisation des <a href="/cookies" target="_blank">Cookies</a> pour am√©liorer mon exp√©rience</label>
+          <label for="acceptCookies">J'accepte l'utilisation des <a href="/cookies" target="_blank">Cookies</a> pour amÈliorer mon expÈrience</label>
         </div>
-        <div class="legal-required" id="legalError">‚ö† Veuillez accepter les conditions et la politique de confidentialit√© pour continuer.</div>
+        <div class="legal-required" id="legalError">? Veuillez accepter les conditions et la politique de confidentialitÈ pour continuer.</div>
       </div>
 
       <button class="btn-next" style="width:100%;font-size:0.9em;margin-top:16px" onclick="finish()">
-        ‚ö° ACC√âDER √Ä E.V.A
+        ? ACC…DER ¿ E.V.A
       </button>
-      <button class="btn-skip" style="width:100%;margin-top:8px" onclick="goStep(7)">‚Üê Retour</button>
+      <button class="btn-skip" style="width:100%;margin-top:8px" onclick="goStep(7)">? Retour</button>
     </div>
 
   </div>
@@ -752,7 +752,7 @@ async function savePasswordAndContinue() {
   var confPass = document.getElementById('obConfPass').value;
   if (!newPass && !confPass) { goStep(3); return; }
   if (!newPass) { showFieldError('obNewPass', 'Entrez un mot de passe'); return; }
-  if (newPass.length < 6) { showFieldError('obNewPass', 'Minimum 6 caract√®res'); return; }
+  if (newPass.length < 6) { showFieldError('obNewPass', 'Minimum 6 caractËres'); return; }
   if (newPass !== confPass) { showFieldError('obConfPass', 'Les mots de passe ne correspondent pas'); return; }
 
   var btn = document.getElementById('obPassBtn');
@@ -765,7 +765,7 @@ async function savePasswordAndContinue() {
     goStep(3);
   } catch(e) {
     btn.disabled = false;
-    btn.textContent = 'CR√âER ‚Üí';
+    btn.textContent = 'CR…ER ?';
     if (e.code === 'auth/provider-already-linked') {
       goStep(3);
     } else if (e.code === 'auth/weak-password') {
@@ -782,13 +782,13 @@ function showFieldError(id, msg) {
   el.classList.add('error');
   el.placeholder = msg;
   el.value = '';
-  setTimeout(function(){ el.classList.remove('error'); el.placeholder = id === 'obNewPass' ? 'Minimum 6 caract√®res' : 'Idem ci-dessus'; }, 2500);
+  setTimeout(function(){ el.classList.remove('error'); el.placeholder = id === 'obNewPass' ? 'Minimum 6 caractËres' : 'Idem ci-dessus'; }, 2500);
 }
 
 var obAvatarEnabled = true;
 var _obIsMobile = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) && window.innerWidth < 900;
 
-/* Sur mobile : masquer l'indicateur de l'√©tape Avatar (√©tape 7) */
+/* Sur mobile : masquer l'indicateur de l'Ètape Avatar (Ètape 7) */
 if (_obIsMobile) {
   var _sb7 = document.getElementById('step-bar-7');
   if (_sb7) _sb7.style.display = 'none';
@@ -851,13 +851,13 @@ async function _obRegisterFCMToken() {
         fcmTokenUpdated: new Date().toISOString(),
         timezoneOffset:  new Date().getTimezoneOffset()
       }, { merge: true });
-      if (statusEl) statusEl.textContent = '‚úÖ Notifications enregistr√©es ‚Äî actives quand le site est ouvert';
+      if (statusEl) statusEl.textContent = '? Notifications enregistrÈes ó actives quand le site est ouvert';
     } else {
-      if (statusEl) statusEl.textContent = '‚ö† Token non obtenu ‚Äî v√©rifiez le navigateur';
+      if (statusEl) statusEl.textContent = '? Token non obtenu ó vÈrifiez le navigateur';
     }
   } catch(e) {
     console.warn('[FCM onboarding]', e);
-    if (statusEl) statusEl.textContent = '‚ö† Erreur d\'enregistrement FCM';
+    if (statusEl) statusEl.textContent = '? Erreur d\'enregistrement FCM';
   }
 }
 
@@ -872,7 +872,7 @@ function _obNotifShowState(state) {
     granted.style.display = 'none'; denied.style.display = ''; dflt.style.display = 'none';
     if (state === 'unavailable') {
       var d = document.getElementById('obNotifDenied');
-      if (d) d.querySelector('div:nth-child(2)').textContent = '‚ö† Votre navigateur ne supporte pas les notifications push';
+      if (d) d.querySelector('div:nth-child(2)').textContent = '? Votre navigateur ne supporte pas les notifications push';
     }
   } else {
     granted.style.display = 'none'; denied.style.display = 'none'; dflt.style.display = '';
@@ -896,7 +896,7 @@ function obSelectAvatar(enabled) {
   if (!onCard) return;
   if (enabled) {
     onCard.style.border  = '2px solid var(--cyan)';
-    onCard.style.background = 'rgba(123,139,245,0.07)';
+    onCard.style.background = 'rgba(0,212,255,0.07)';
     offCard.style.border = '2px solid rgba(255,255,255,0.08)';
     offCard.style.background = 'rgba(255,255,255,0.02)';
     onChk.style.display  = '';
@@ -905,7 +905,7 @@ function obSelectAvatar(enabled) {
     onCard.style.border  = '2px solid rgba(255,255,255,0.08)';
     onCard.style.background = 'rgba(255,255,255,0.02)';
     offCard.style.border = '2px solid var(--cyan)';
-    offCard.style.background = 'rgba(123,139,245,0.07)';
+    offCard.style.background = 'rgba(0,212,255,0.07)';
     onChk.style.display  = 'none';
     offChk.style.display = '';
   }
@@ -913,20 +913,20 @@ function obSelectAvatar(enabled) {
 window.obSelectAvatar = obSelectAvatar;
 
 function goStep(n) {
-  /* Sauter √©tape 2 pour comptes Google-only sans mot de passe */
+  /* Sauter Ètape 2 pour comptes Google-only sans mot de passe */
   if (!isGoogleOnlyUser && n === 2) { n = 3; }
 
-  /* √âtape 7 (Avatar) ‚Äî sauter automatiquement sur mobile */
+  /* …tape 7 (Avatar) ó sauter automatiquement sur mobile */
   if (n === 7 && _obIsMobile) {
     n = (currentStep > 7) ? 6 : 8;
   }
 
-  /* Hooks sur certaines √©tapes */
+  /* Hooks sur certaines Ètapes */
   if (n === 3) { setTimeout(function(){ obSelectTTS(selectedTTSProvider); }, 50); }
   if (n === 4) { setTimeout(checkObPuterStatus, 200); }
   if (n === 6) { setTimeout(updateObNotifState, 100); }
 
-  /* Validation √©tape 1 avant d'avancer */
+  /* Validation Ètape 1 avant d'avancer */
   if (currentStep === 1 && n > 1) {
     var name = document.getElementById('displayName').value.trim();
     if (!name) {
@@ -944,7 +944,7 @@ function goStep(n) {
     saveProfile(profileData);
   }
 
-  /* Ajuster le bouton Retour de l'√©tape 8 si mobile (pas d'√©tape 7) */
+  /* Ajuster le bouton Retour de l'Ètape 8 si mobile (pas d'Ètape 7) */
   if (n === 8) {
     var backBtn = document.querySelector('#ob8 .btn-skip');
     if (backBtn) backBtn.onclick = function(){ goStep(_obIsMobile ? 6 : 7); };
@@ -966,33 +966,33 @@ function obSelectProvider(prov) {
     if (!card) return;
     var active = k === prov;
     card.style.border  = '2px solid ' + (active ? 'var(--cyan)' : 'rgba(255,255,255,0.08)');
-    card.style.background = active ? 'rgba(123,139,245,0.07)' : 'rgba(255,255,255,0.02)';
+    card.style.background = active ? 'rgba(0,212,255,0.07)' : 'rgba(255,255,255,0.02)';
     if (chk) chk.style.display = active ? '' : 'none';
   });
-  /* Bloc connexion Puter ‚Äî visible seulement si Puter s√©lectionn√© */
+  /* Bloc connexion Puter ó visible seulement si Puter sÈlectionnÈ */
   var puterSec = document.getElementById('obPuterSection');
   if (puterSec) puterSec.style.display = prov === 'puter' ? '' : 'none';
 }
-/* Alias pour compatibilit√© ancienne fonction */
+/* Alias pour compatibilitÈ ancienne fonction */
 function selectProvider(prov, el) { obSelectProvider(prov); }
 
 async function checkObPuterStatus() {
   var statusEl = document.getElementById('obPuterStatus');
   var btnEl = document.getElementById('obPuterBtn');
   if (!statusEl) return;
-  if (!window.puter) { statusEl.textContent = '‚ö†Ô∏è SDK Puter non charg√©'; return; }
+  if (!window.puter) { statusEl.textContent = '?? SDK Puter non chargÈ'; return; }
   try {
     var user = await puter.auth.getUser();
     if (user && user.username) {
       statusEl.style.color = 'var(--green)';
-      statusEl.textContent = '‚úì Connect√© : ' + user.username;
-      if (btnEl) { btnEl.textContent = 'üîå D√©connecter'; btnEl.onclick = function(e){e.stopPropagation();obDisconnectPuter();}; }
+      statusEl.textContent = '? ConnectÈ : ' + user.username;
+      if (btnEl) { btnEl.textContent = '?? DÈconnecter'; btnEl.onclick = function(e){e.stopPropagation();obDisconnectPuter();}; }
     } else {
-      statusEl.style.color = 'rgba(123,139,245,0.6)';
-      statusEl.textContent = 'Non connect√© √† Puter';
-      if (btnEl) btnEl.textContent = 'üîó Connexion Puter';
+      statusEl.style.color = 'rgba(0,212,255,0.6)';
+      statusEl.textContent = 'Non connectÈ ‡ Puter';
+      if (btnEl) btnEl.textContent = '?? Connexion Puter';
     }
-  } catch(e) { statusEl.textContent = 'Non connect√© √† Puter'; }
+  } catch(e) { statusEl.textContent = 'Non connectÈ ‡ Puter'; }
 }
 
 async function obConnectPuter(e) {
@@ -1023,7 +1023,7 @@ function obSelectTTS(v) {
     if (!card) return;
     var active = k === v;
     card.style.border     = '2px solid '+(active ? 'var(--cyan)' : 'rgba(255,255,255,0.08)');
-    card.style.background = active ? 'rgba(123,139,245,0.07)' : 'rgba(255,255,255,0.02)';
+    card.style.background = active ? 'rgba(0,212,255,0.07)' : 'rgba(255,255,255,0.02)';
     if (chk) chk.style.display = active ? '' : 'none';
   });
   var detail = document.getElementById('obTTSDetail');
@@ -1032,50 +1032,50 @@ function obSelectTTS(v) {
     native:
       '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;">'
       +'<div><div style="font-weight:600;font-size:0.85em;color:var(--text);">Voix native du navigateur</div>'
-      +'<div style="font-size:0.72em;color:var(--text-muted);margin-top:4px;">Synth√®se vocale int√©gr√©e ‚Äî aucune configuration requise.</div></div>'
-      +'<button onclick="obTestTTS(\'native\')" class="voice-test-btn" style="flex-shrink:0;">‚ñ∂ Tester</button>'
+      +'<div style="font-size:0.72em;color:var(--text-muted);margin-top:4px;">SynthËse vocale intÈgrÈe ó aucune configuration requise.</div></div>'
+      +'<button onclick="obTestTTS(\'native\')" class="voice-test-btn" style="flex-shrink:0;">? Tester</button>'
       +'</div>',
     eva:
       '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;">'
-      +'<div><div style="font-weight:600;font-size:0.85em;color:var(--text);">Kokoro Neural ‚Äî TTS neuronal local</div>'
-      +'<div style="font-size:0.72em;color:var(--text-muted);margin-top:4px;">Moteur neuronal MMS-TTS (Meta) ‚Äî 100% local, ~30 Mo, mis en cache au premier lancement. Voix clairement diff√©rente du navigateur.</div></div>'
-      +'<button onclick="obTestTTS(\'eva\')" class="voice-test-btn" style="flex-shrink:0;">‚ñ∂ Tester</button>'
+      +'<div><div style="font-weight:600;font-size:0.85em;color:var(--text);">Kokoro Neural ó TTS neuronal local</div>'
+      +'<div style="font-size:0.72em;color:var(--text-muted);margin-top:4px;">Moteur neuronal MMS-TTS (Meta) ó 100% local, ~30 Mo, mis en cache au premier lancement. Voix clairement diffÈrente du navigateur.</div></div>'
+      +'<button onclick="obTestTTS(\'eva\')" class="voice-test-btn" style="flex-shrink:0;">? Tester</button>'
       +'</div>'
       +'<div id="obEvaTestMsg" style="font-size:0.72em;margin-top:8px;display:none;"></div>',
     elevenlabs:
       '<div>'
-      +'<div style="font-weight:600;font-size:0.85em;color:var(--text);margin-bottom:10px;">Cl√© API ElevenLabs</div>'
+      +'<div style="font-weight:600;font-size:0.85em;color:var(--text);margin-bottom:10px;">ClÈ API ElevenLabs</div>'
       +'<input id="obElKey" type="password" autocomplete="off" placeholder="sk-..." class="field-input" style="width:100%;box-sizing:border-box;margin-bottom:10px;">'
-      +'<div style="font-weight:600;font-size:0.78em;color:var(--text-muted);margin-bottom:6px;">Voice ID <span style="font-weight:400;opacity:0.7;">(optionnel ‚Äî laissez vide pour la voix par d√©faut)</span></div>'
+      +'<div style="font-weight:600;font-size:0.78em;color:var(--text-muted);margin-bottom:6px;">Voice ID <span style="font-weight:400;opacity:0.7;">(optionnel ó laissez vide pour la voix par dÈfaut)</span></div>'
       +'<input id="obElVoiceId" type="text" autocomplete="off" placeholder="21m00Tcm4TlvDq8ikWAM" class="field-input" style="width:100%;box-sizing:border-box;margin-bottom:10px;">'
       +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-      +'<button onclick="obTestTTS(\'elevenlabs\')" class="voice-test-btn">‚ñ∂ Tester</button>'
+      +'<button onclick="obTestTTS(\'elevenlabs\')" class="voice-test-btn">? Tester</button>'
       +'<span id="obElTestMsg" style="font-size:0.72em;color:var(--text-muted);"></span></div></div>',
     openai:
       '<div>'
-      +'<div style="font-weight:600;font-size:0.85em;color:var(--text);margin-bottom:10px;">Cl√© API OpenAI</div>'
+      +'<div style="font-weight:600;font-size:0.85em;color:var(--text);margin-bottom:10px;">ClÈ API OpenAI</div>'
       +'<input id="obOAIKey" type="password" autocomplete="off" placeholder="sk-..." class="field-input" style="width:100%;box-sizing:border-box;margin-bottom:10px;">'
       +'<div style="font-weight:600;font-size:0.78em;color:var(--text-muted);margin-bottom:6px;">Voix</div>'
       +'<select id="obOAIVoice" class="field-input" style="width:100%;box-sizing:border-box;background:#0d1117;color:var(--text);margin-bottom:10px;">'
-      +'<option value="nova">Nova (f√©minine ‚Äî recommand√©e)</option>'
+      +'<option value="nova">Nova (fÈminine ó recommandÈe)</option>'
       +'<option value="alloy">Alloy</option><option value="echo">Echo</option>'
       +'<option value="fable">Fable</option><option value="onyx">Onyx</option>'
       +'<option value="shimmer">Shimmer</option>'
       +'</select>'
       +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-      +'<button onclick="obTestTTS(\'openai\')" class="voice-test-btn">‚ñ∂ Tester</button>'
+      +'<button onclick="obTestTTS(\'openai\')" class="voice-test-btn">? Tester</button>'
       +'<span id="obOAITestMsg" style="font-size:0.72em;color:var(--text-muted);"></span></div></div>',
     piper:
       '<div>'
-      +'<div style="font-weight:600;font-size:0.85em;color:var(--text);margin-bottom:6px;">Piper TTS ‚Äî Voix fran√ßaise neuronale üá´üá∑</div>'
-      +'<div style="font-size:0.72em;color:var(--text-muted);margin-bottom:10px;">Synth√®se vocale neuronale 100 % locale (WebAssembly). Voix fran√ßaise f√©minine claire et naturelle. Aucune cl√© requise. Au premier usage, ~63 Mo se t√©l√©chargent et sont mis en cache, puis tout fonctionne hors-ligne.</div>'
-      +'<div style="font-weight:600;font-size:0.78em;color:var(--text-muted);margin-bottom:6px;">Voix fran√ßaise</div>'
+      +'<div style="font-weight:600;font-size:0.85em;color:var(--text);margin-bottom:6px;">Piper TTS ó Voix franÁaise neuronale ????</div>'
+      +'<div style="font-size:0.72em;color:var(--text-muted);margin-bottom:10px;">SynthËse vocale neuronale 100 % locale (WebAssembly). Voix franÁaise fÈminine claire et naturelle. Aucune clÈ requise. Au premier usage, ~63 Mo se tÈlÈchargent et sont mis en cache, puis tout fonctionne hors-ligne.</div>'
+      +'<div style="font-weight:600;font-size:0.78em;color:var(--text-muted);margin-bottom:6px;">Voix franÁaise</div>'
       +'<select id="obPiperVoice" class="field-input" style="width:100%;box-sizing:border-box;background:#0d1117;color:var(--text);margin-bottom:10px;">'
-      +'<option value="fr_FR-siwis-medium">Siwis (f√©minine, classique) ‚≠ê</option>'
-      +'<option value="fr_FR-upmc-medium">UPMC (f√©minine, autre timbre)</option>'
+      +'<option value="fr_FR-siwis-medium">Siwis (fÈminine, classique) ?</option>'
+      +'<option value="fr_FR-upmc-medium">UPMC (fÈminine, autre timbre)</option>'
       +'</select>'
       +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-      +'<button onclick="obTestTTS(\'piper\')" class="voice-test-btn">‚ñ∂ Tester</button>'
+      +'<button onclick="obTestTTS(\'piper\')" class="voice-test-btn">? Tester</button>'
       +'<span id="obPiperTestMsg" style="font-size:0.72em;color:var(--text-muted);"></span></div></div>'
   };
   detail.innerHTML = panels[v] || '';
@@ -1095,21 +1095,21 @@ async function obTestTTS(provider) {
     var msgEl = document.getElementById('obEvaTestMsg');
     function _showEvaMsg(color, txt) { if (msgEl){ msgEl.style.display=''; msgEl.style.color=color; msgEl.textContent=txt; } }
     if (!window.KokoroTTS) {
-      /* Charger le module Kokoro √† la demande */
-      _showEvaMsg('var(--text-muted)', '‚è≥ Chargement EVA Voice‚Ä¶');
+      /* Charger le module Kokoro ‡ la demande */
+      _showEvaMsg('var(--text-muted)', '? Chargement EVA VoiceÖ');
       var s = document.createElement('script');
       s.src = '/js/voice/kokoro-tts.js';
       s.onload = function(){ obTestTTS('eva'); };
-      s.onerror = function(){ _showEvaMsg('var(--red)', 'Impossible de charger EVA Voice ‚Äî voix Navigateur utilis√©e √† la place'); var u=new SpeechSynthesisUtterance(phrase); u.lang='fr-FR'; speechSynthesis.speak(u); };
+      s.onerror = function(){ _showEvaMsg('var(--red)', 'Impossible de charger EVA Voice ó voix Navigateur utilisÈe ‡ la place'); var u=new SpeechSynthesisUtterance(phrase); u.lang='fr-FR'; speechSynthesis.speak(u); };
       document.head.appendChild(s);
       return;
     }
-    _showEvaMsg('var(--text-muted)', '‚è≥ Synth√®se neurale en cours (premier d√©marrage : ~30 Mo √† t√©l√©charger)‚Ä¶');
+    _showEvaMsg('var(--text-muted)', '? SynthËse neurale en cours (premier dÈmarrage : ~30 Mo ‡ tÈlÈcharger)Ö');
     try {
       await window.KokoroTTS.speak(phrase);
-      _showEvaMsg('#4ade80', '‚úì Moteur neuronal pr√™t ¬∑ ' + (window.KokoroTTS.modelName ? window.KokoroTTS.modelName() || 'MMS-TTS' : 'MMS-TTS'));
+      _showEvaMsg('#4ade80', '? Moteur neuronal prÍt ∑ ' + (window.KokoroTTS.modelName ? window.KokoroTTS.modelName() || 'MMS-TTS' : 'MMS-TTS'));
     } catch(e) {
-      _showEvaMsg('var(--red)', 'EVA Voice indisponible ‚Äî voix Navigateur utilis√©e √† la place');
+      _showEvaMsg('var(--red)', 'EVA Voice indisponible ó voix Navigateur utilisÈe ‡ la place');
       var u2 = new SpeechSynthesisUtterance(phrase);
       u2.lang = 'fr-FR'; speechSynthesis.speak(u2);
     }
@@ -1120,7 +1120,7 @@ async function obTestTTS(provider) {
     var pMsg   = document.getElementById('obPiperTestMsg');
     function _pShow(c, t) { if (pMsg){ pMsg.style.color=c; pMsg.textContent=t; } }
     if (!window.PiperTTS) {
-      _pShow('var(--text-muted)', '‚è≥ Chargement de Piper TTS‚Ä¶');
+      _pShow('var(--text-muted)', '? Chargement de Piper TTSÖ');
       var ps = document.createElement('script');
       ps.src = '/js/voice/piper-tts.js';
       ps.onload  = function(){ obTestTTS('piper'); };
@@ -1128,19 +1128,19 @@ async function obTestTTS(provider) {
       document.head.appendChild(ps);
       return;
     }
-    _pShow('var(--text-muted)', '‚è≥ Pr√©paration de la voix fran√ßaise (t√©l√©chargement ~63 Mo au premier usage)‚Ä¶');
+    _pShow('var(--text-muted)', '? PrÈparation de la voix franÁaise (tÈlÈchargement ~63 Mo au premier usage)Ö');
     try {
       var progressTimer = setInterval(function() {
         if (window.PiperTTS && window.PiperTTS.getDownloadProgress) {
           var p = window.PiperTTS.getDownloadProgress();
           if (p && p.loaded > 0) {
-            _pShow('var(--text-muted)', '‚è≥ T√©l√©chargement mod√®le fran√ßais : ' + Math.round(p.percent || 0) + '%');
+            _pShow('var(--text-muted)', '? TÈlÈchargement modËle franÁais : ' + Math.round(p.percent || 0) + '%');
           }
         }
       }, 400);
       await window.PiperTTS.speak(phrase, { piperVoice: pVoice });
       clearInterval(progressTimer);
-      _pShow('#4ade80', '‚úì Voix fran√ßaise "' + pVoice + '" pr√™te ‚Äî 100% locale');
+      _pShow('#4ade80', '? Voix franÁaise "' + pVoice + '" prÍte ó 100% locale');
     } catch(e) {
       _pShow('var(--red)', 'Erreur : ' + (e && e.message ? e.message.slice(0, 120) : 'inconnue'));
     }
@@ -1150,28 +1150,28 @@ async function obTestTTS(provider) {
     var key    = (document.getElementById('obElKey')||{}).value||'';
     var vid    = (document.getElementById('obElVoiceId')||{}).value||'21m00Tcm4TlvDq8ikWAM';
     var msgEl  = document.getElementById('obElTestMsg');
-    if (!key) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='Entrez votre cl√© API.';} return; }
-    if (msgEl){msgEl.style.color='var(--text-muted)';msgEl.textContent='‚è≥ Test en cours‚Ä¶';}
+    if (!key) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='Entrez votre clÈ API.';} return; }
+    if (msgEl){msgEl.style.color='var(--text-muted)';msgEl.textContent='? Test en coursÖ';}
     try {
       var r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid+'/stream',{method:'POST',headers:{'Content-Type':'application/json','xi-api-key':key},body:JSON.stringify({text:phrase,model_id:'eleven_multilingual_v2',voice_settings:{stability:0.5,similarity_boost:0.75}})});
       if (!r.ok) throw new Error('api_error');
       new Audio(URL.createObjectURL(await r.blob())).play();
-      if (msgEl){msgEl.style.color='#4ade80';msgEl.textContent='‚úì Cl√© valide ‚Äî voix ElevenLabs active';}
-    } catch(e) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='Cl√© API invalide ou Voice ID introuvable.';} }
+      if (msgEl){msgEl.style.color='#4ade80';msgEl.textContent='? ClÈ valide ó voix ElevenLabs active';}
+    } catch(e) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='ClÈ API invalide ou Voice ID introuvable.';} }
     return;
   }
   if (provider === 'openai') {
     var key   = (document.getElementById('obOAIKey')||{}).value||'';
     var voice = (document.getElementById('obOAIVoice')||{}).value||'nova';
     var msgEl = document.getElementById('obOAITestMsg');
-    if (!key) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='Entrez votre cl√© API.';} return; }
-    if (msgEl){msgEl.style.color='var(--text-muted)';msgEl.textContent='‚è≥ Test en cours‚Ä¶';}
+    if (!key) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='Entrez votre clÈ API.';} return; }
+    if (msgEl){msgEl.style.color='var(--text-muted)';msgEl.textContent='? Test en coursÖ';}
     try {
       var r = await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'tts-1',input:phrase,voice:voice})});
       if (!r.ok) throw new Error('api_error');
       new Audio(URL.createObjectURL(await r.blob())).play();
-      if (msgEl){msgEl.style.color='#4ade80';msgEl.textContent='‚úì Cl√© valide ‚Äî voix OpenAI active';}
-    } catch(e) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='Cl√© API invalide.';} }
+      if (msgEl){msgEl.style.color='#4ade80';msgEl.textContent='? ClÈ valide ó voix OpenAI active';}
+    } catch(e) { if (msgEl){msgEl.style.color='var(--red)';msgEl.textContent='ClÈ API invalide.';} }
     return;
   }
 }

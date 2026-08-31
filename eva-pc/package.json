@@ -1,7 +1,7 @@
 {
   "name": "eva-assistant-pc",
-  "version": "5.3.0",
-  "description": "E.V.A — Evolutionary Virtual Assistant by Astral Technologie",
+  "version": "5.4.0",
+  "description": "Assistant Virtuel IA E.V.A — Evolutionary Virtual Assistant by Astral Technologie",
   "author": "Astral Technologie",
   "main": "dist-electron/main.js",
   "homepage": "https://eva-assistant.app",
@@ -89,6 +89,8 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "perMachine": true,
+      "allowElevation": true,
       "installerIcon": "public/installer-icon.ico",
       "uninstallerIcon": "public/installer-icon.ico",
       "uninstallDisplayName": "Désinstaller E.V.A",
