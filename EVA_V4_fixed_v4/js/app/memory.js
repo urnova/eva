@@ -44,17 +44,16 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     var extractPrompt = 'Tu es l\'ARCHIVISTE STRICT du Cerveau Neuronal de l\'IA EVA. Ton but est de modéliser la vie de ' + nick + ' sous forme de graphe.\n' +
       'À partir de la conversation ci-dessous et du graphe actuel, renvoie UNIQUEMENT un JSON représentant les **MODIFICATIONS** (Patch) à apporter au graphe.\n' +
       'RÈGLES ABSOLUES :\n' +
-        '0. N\'enregistre QUE les informations durables et personnelles de l\'utilisateur central. Ignore totalement les scénarios hypothétiques, les questions générales, ou les recommandations (ex: config PC) à moins que l\'utilisateur dise explicitement "C\'est MON PC".\n' +
-      '1. Structure exacte : {"_etape1_analyse": "Liste les nouveaux faits", "_etape2_actions": "Explication des ajouts/modifs", "add_nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "update_nodes": [{"id":"...", "label":"Nouveau nom optionnel", "details":"Nouveau texte qui remplace l\'ancien"}], "remove_nodes": ["id_du_noeud_a_supprimer"], "add_links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
-      '  - _etape1_analyse : Copie TOUTES les entités et faits de la conversation récente (Utilisateur ET Eva). (PÉNALITÉ EXTRÊME SI TU RESSUMES OU OUBLIES UNE INFO).\n' +
-      '  - _etape2_actions : Explication des ajouts/modifs/suppressions.\n' +
+        '0. N\'enregistre QUE LES INFORMATIONS PERSONNELLES INTIMES ET DURABLES de l\'utilisateur (famille, amis, couple, domicile, profession, études, projets de vie datés). IGNORE TOUT LE RESTE.\n' +
+      '1. INTERDICTION FORMELLE d\'enregistrer du contexte de discussion, des recherches internet, des recommandations de matériel (ex: modèles de PC, Thinkpad), des tutoriels ou des questions générales.\n' +
+      '2. Structure exacte : {"_etape1_analyse": "Liste les nouveaux faits intimes", "_etape2_actions": "Explication des ajouts/modifs/suppressions", "add_nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "update_nodes": [{"id":"...", "label":"Nouveau nom optionnel", "details":"Nouveau texte qui remplace l\'ancien"}], "remove_nodes": ["id_du_noeud_a_supprimer"], "add_links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
       '3. NE RENVOIE JAMAIS LE GRAPHE ENTIER. Renvoie uniquement ce qui change :\n' +
       '   - "add_nodes" : pour les entités totalement nouvelles.\n' +
-      '   - "update_nodes" : pour modifier le champ "details" ou renommer ("label") d\'une entité existante (utilise son "id" exact).\n' +
-      '   - "remove_nodes" : pour SUPPRIMER DÉFINITIVEMENT un nœud (ex: si l\'utilisateur demande de l\'oublier ou de le fusionner et détruire l\'ancien). Mets juste les IDs dans un tableau.\n' +
-      '   - "add_links" : pour lier de nouvelles choses. RÈGLE CRUCIALE : Le "label" d\'un lien DOIT FAIRE ENTRE 1 ET 3 MOTS MAXIMUM (ex: "aime", "travaille pour", "déteste"). Les explications longues vont dans "details" du nœud.\n' +
+      '   - "update_nodes" : pour modifier le champ "details" d\'une entité existante.\n' +
+      '   - "remove_nodes" : pour SUPPRIMER DÉFINITIVEMENT un nœud (mets juste les IDs dans un tableau).\n' +
+      '   - "add_links" : pour lier de nouvelles choses. RÈGLE CRUCIALE : Le "label" d\'un lien DOIT FAIRE ENTRE 1 ET 3 MOTS MAXIMUM.\n' +
       '4. DÉDUPLICATION OBLIGATOIRE : Avant de créer dans "add_nodes", vérifie si ça n\'existe pas déjà. Si oui, utilise "update_nodes".\n' +
-      '5. SUPPRESSION : Si tu dois regrouper deux nœuds, copie les infos du mauvais dans le bon via "update_nodes", puis mets l\'ID du mauvais dans "remove_nodes".\n' +
+      '5. SUPPRESSION : Si l\'utilisateur demande d\'oublier ou si c\'est hors-sujet, utilise "remove_nodes".\n' +
       '6. NŒUD CENTRAL OBLIGATOIRE : L\'entité centrale de l\'utilisateur a TOUJOURS l\'id "utilisateur". Tu ne dois JAMAIS créer un nouveau nœud avec son prénom pour le représenter lui-même.\n' +
       '7. RAMIFICATIONS COMPLEXES (TRÈS IMPORTANT) : Ne force pas tous les liens vers "utilisateur". Si l\'utilisateur dit "Ma mère habite à Paris", tu DOIS créer un lien [mère] -> habite à -> [Paris], ET un lien [utilisateur] -> a pour mère -> [mère]. Il est crucial de créer un vrai réseau connecté (graphe), et pas juste une étoile centrée sur l\'utilisateur.\n' +
       '8. TEMPORALITÉ ET HISTORIQUE : Si une information change ou évolue (ex: déménagement, rupture, changement de goût), NE SUPPRIME PAS l\'ancienne information. Garde l\'historique ! Utilise "update_nodes" pour ajouter la nouvelle info tout en mentionnant l\'ancienne dans le champ "details", ou modifie les "add_links" avec des labels au passé (ex: "habitait à", "ex-copine").\n\n' +
@@ -238,3 +237,4 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
   }
 }
 window.extractUserInsights = extractUserInsights;
+

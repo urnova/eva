@@ -80,7 +80,7 @@
           ]
         }
       ],
-      "icon": "public/eva-icon.png",
+      "icon": "public/installer-icon.ico",
       "artifactName": "E.V.A-Setup.exe",
       "legalTrademarks": "Astral Technologie",
       "publisherName": "Astral Technologie",

@@ -1,7 +1,17 @@
 process.env.PATH = "F:\\donnee_app\\dev_tool\\node;" + process.env.PATH;
 const { spawnSync } = require('child_process');
+const fs = require('fs');
 
-// Le token est d√©coup√© en plusieurs variables pour tromper les bots d'analyse
+// Auto-increment version patch
+const packagePath = 'package.json';
+const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+const versionParts = pkg.version.split('.');
+versionParts[2] = parseInt(versionParts[2], 10) + 1;
+pkg.version = versionParts.join('.');
+fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + '\n');
+console.log("?? Version bumpÈe ‡ " + pkg.version);
+
+// Le token est dÈcoupÈ en plusieurs variables pour tromper les bots d'analyse
 const t1 = "ghp";
 const t2 = "_rLk9FnX";
 const t3 = "2Cdsr8G";
@@ -10,20 +20,20 @@ const t5 = "zEGQTPE";
 const t6 = "oJ3Q2S2g";
 
 process.env.GH_TOKEN = t1 + t2 + t3 + t4 + t5 + t6;
-console.log("üì¶ [1/2] Compilation du code source (Vite & TypeScript)...");
+console.log("?? [1/2] Compilation du code source (Vite & TypeScript)...");
 const buildRes = spawnSync('F:\\donnee_app\\dev_tool\\node\\npm.cmd', ['run', 'build'], { stdio: 'inherit', shell: true });
 
 if (buildRes.status !== 0) {
-    console.error("‚ùå √âchec de la compilation.");
+    console.error("? …chec de la compilation.");
     process.exit(1);
 }
 
-console.log("\nüöÄ [2/2] Construction de l'installeur NSIS et Publication sur GitHub Releases...");
+console.log("\n?? [2/2] Construction de l'installeur NSIS et Publication sur GitHub Releases...");
 const deployRes = spawnSync('F:\\donnee_app\\dev_tool\\node\\npx.cmd', ['electron-builder', '--win', '--publish', 'always'], { stdio: 'inherit', shell: true });
 
 if (deployRes.status === 0) {
-    console.log("\n‚úÖ D√©ploiement r√©ussi avec succ√®s sur GitHub Releases !");
+    console.log("\n? DÈploiement rÈussi avec succËs sur GitHub Releases !");
 } else {
-    console.error("\n‚ùå √âchec de la publication sur GitHub Releases.");
+    console.error("\n? …chec de la publication sur GitHub Releases.");
     process.exit(1);
 }
