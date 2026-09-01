@@ -433,114 +433,80 @@ function _detectPdfStyle(action) {
 }
 
 async function _evaGeneratePdf(action) {
-  setEvaStatus('GÉNÉRATION PDF…', 'action');
+  setEvaStatus('GÉNÉRATION PDF/SLIDES (MARP)...', 'action');
   var filename = action.filename || 'document.pdf';
   var card = _evaGenCard('pdf', filename);
   try {
-    /* Charger html2pdf.js si non présent */
     if (!window.html2pdf) {
       await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js', 'html2pdf');
     }
-    if (!window.html2pdf) throw new Error('html2pdf.js introuvable après chargement CDN');
+    if (!window.MarpBundle) {
+      await _loadScript('./js/lib/marp.bundle.min.js', 'marp');
+    }
 
-        var contentHtml = action.content || '';
-    
-    // Load marked.js if not available (to parse Markdown)
-    if (!window.marked) {
-      await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js', 'marked');
+    var content = action.content || '';
+    content = content.replace(/^\s*```(html|pdf|markdown|marp)\s*/i, '').replace(/\s*```\s*$/i, '');
+
+    if (!content.includes('marp: true')) {
+      content = "---\nmarp: true\ntheme: default\npaginate: true\n---\n\n" + content;
     }
     
-    contentHtml = contentHtml.replace(/^\s*```html\s*/i, '').replace(/\s*```\s*$/i, '');
-    contentHtml = contentHtml.replace(/^\s*```pdf\s*/i, '').replace(/\s*```\s*$/i, '');
+    const marp = new window.MarpBundle.Marp({ html: true });
+    const { html, css } = marp.render(content);
+
+    var fullHtml = `
+      <style>
+        ${css}
+        section { page-break-after: always; box-shadow: none !important; margin: 0 !important; }
+      </style>
+      <div class="marpit" style="width: 100%; height: auto; min-width: 800px;">
+        ${html}
+      </div>
+    `;
+
+    var container = document.createElement('div');
+    container.innerHTML = fullHtml;
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    document.body.appendChild(container);
     
-    // Parse Markdown if it looks like Markdown (no major HTML tags like <div, <p, etc.)
-    if (window.marked && !/<[a-z][\s\S]*>/i.test(contentHtml)) {
-      contentHtml = window.marked.parse(contentHtml);
-    } else if (window.marked && contentHtml.indexOf('**') !== -1) {
-      contentHtml = window.marked.parse(contentHtml);
+    if (action.type === 'marp_pptx' || action.type === 'pptx') {
+      var standaloneHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${filename}</title><style>${css} body { margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; background: #333; } section { margin: 20px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }</style></head><body><div class="marpit">${html}</div></body></html>`;
+      
+      var blob = new Blob([standaloneHtml], { type: 'text/html' });
+      var reader = new FileReader();
+      reader.onloadend = function() {
+        document.body.removeChild(container);
+        var realFilename = filename.replace('.pptx', '.html');
+        _evaFinalizeCard(card, 'code', reader.result, realFilename);
+        setEvaStatus('Prêt', 'idle');
+      };
+      reader.readAsDataURL(blob);
+      return;
     }
-    
-    // Extract body if it's a full document
-    var bodyMatch = contentHtml.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-    if (bodyMatch) contentHtml = bodyMatch[1];
 
-    var theme = action.theme || 'corporate';
-    
-    var cssThemes = {
-      corporate: 'body{font-family:"Segoe UI",Arial,sans-serif;padding:40px;color:#333;font-size:14px;line-height:1.6;background:#fff;}' +
-                 'h1{font-size:28px;color:#0056b3;border-bottom:2px solid #0056b3;padding-bottom:10px;margin-bottom:20px;}' +
-                 'h2{font-size:20px;color:#0056b3;margin-top:25px;margin-bottom:10px;}' +
-                 'h3{font-size:16px;color:#444;}' +
-                 'p{margin:10px 0;} ul,ol{padding-left:25px;margin:10px 0;} li{margin:5px 0;}' +
-                 'table{width:100%;border-collapse:collapse;margin:20px 0;} td,th{border:1px solid #ddd;padding:12px;text-align:left;} th{background:#f8f9fa;color:#0056b3;font-weight:bold;}' +
-                 'blockquote{border-left:4px solid #0056b3;margin:0;padding-left:15px;color:#666;font-style:italic;}',
-                 
-      minimal:   'body{font-family:Georgia,serif;padding:50px;color:#111;font-size:15px;line-height:1.8;background:#fff;}' +
-                 'h1{font-size:32px;font-weight:normal;text-align:center;margin-bottom:40px;letter-spacing:1px;}' +
-                 'h2{font-size:22px;font-weight:normal;border-bottom:1px solid #eee;padding-bottom:5px;margin-top:30px;}' +
-                 'p{margin:15px 0;} table{width:100%;border-collapse:collapse;margin:20px 0;} td,th{border-bottom:1px solid #eee;padding:10px;text-align:left;}',
-                 
-      modern:    'body{font-family:"Helvetica Neue",Helvetica,sans-serif;padding:40px;color:#222;font-size:14px;line-height:1.6;background:#fdfdfd;}' +
-                 'h1{font-size:36px;color:#111;font-weight:900;letter-spacing:-1px;margin-bottom:20px;}' +
-                 'h2{font-size:24px;color:#ff4d4d;font-weight:bold;margin-top:30px;}' +
-                 'table{width:100%;border-collapse:collapse;margin:20px 0;box-shadow:0 4px 6px rgba(0,0,0,0.05);} td,th{padding:15px;text-align:left;border-bottom:1px solid #eee;} th{background:#111;color:#fff;}'
-    };
-    
-    var css = cssThemes[theme] || cssThemes['corporate'];
-
-    contentHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body>' + contentHtml + '</body></html>';
-
-    /* Approche iframe : rend le HTML complet dans un iframe invisible
-       → garantit que DOCTYPE, <head> et <style> sont correctement appliqués */
-    var iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:794px;height:1123px;border:none;visibility:hidden;';
-    document.body.appendChild(iframe);
-
-    /* Écrire le HTML complet dans l'iframe */
-    iframe.contentDocument.open();
-    iframe.contentDocument.write(contentHtml);
-    iframe.contentDocument.close();
-
-    /* Attendre que le contenu soit rendu */
-    await new Promise(function(resolve) {
-      if (iframe.contentDocument.readyState === 'complete') { resolve(); return; }
-      iframe.contentWindow.addEventListener('load', resolve);
-      setTimeout(resolve, 1200); /* timeout de sécurité */
-    });
-
-    var iframeBody = iframe.contentDocument.body;
-
-    /* Options html2pdf */
     var opt = {
-      margin:       [8, 8, 8, 8],
+      margin:       0,
       filename:     filename,
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollY: 0 },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
     };
 
-    /* Générer le PDF → blob */
-    var blob = await window.html2pdf().set(opt).from(iframeBody).outputPdf('blob');
-    document.body.removeChild(iframe);
-
-    if (!blob || blob.size < 200) {
-      throw new Error('PDF vide généré (taille < 200 bytes). Le HTML fourni par l\'IA est peut-être invalide.');
-    }
-
-    var url = URL.createObjectURL(blob);
-    toast('📄 PDF prêt : ' + filename, 'success');
-    setEvaStatus('PDF CRÉÉ', 'action');
-    setTimeout(function(){ setEvaStatus(null); }, 3000);
-    _evaCardReady(card, 'pdf', filename, url);
-  } catch(e) {
-    console.error('[EVA PDF]', e);
-    toast('Erreur génération PDF : ' + (e.message || e), 'error');
-    if (card) card.innerHTML = '<span style="color:#f87171;font-size:0.75em;">❌ Erreur PDF : ' + esc(e.message || 'inconnue') + '</span>';
-    setEvaStatus(null);
+    html2pdf().set(opt).from(container).output('datauristring').then(function(pdfAsString) {
+      document.body.removeChild(container);
+      _evaFinalizeCard(card, 'pdf', pdfAsString, filename);
+      setEvaStatus('Prêt', 'idle');
+    }).catch(function(err) {
+      if(container.parentNode) document.body.removeChild(container);
+      _evaFinalizeCard(card, 'pdf', null, filename, err.toString());
+      setEvaStatus('Prêt', 'idle');
+    });
+  } catch (err) {
+    _evaFinalizeCard(card, 'pdf', null, filename, err.toString());
+    setEvaStatus('Prêt', 'idle');
   }
 }
-
-
 
 function _evaGenerateExcel(action) {
   setEvaStatus('GÉNÉRATION EXCEL…', 'action');
@@ -584,98 +550,9 @@ function _evaGenerateExcel(action) {
   }
 }
 
-function _evaGeneratePptx(action) {
-  setEvaStatus('GÉNÉRATION PPTX…', 'action');
-  var filename = action.filename || 'eva_presentation.pptx';
-  var card = _evaGenCard('pptx', filename);
-  try {
-    var PptxCtor = window.PptxGenJS || (typeof PptxGenJS !== 'undefined' ? PptxGenJS : null);
-    if (!PptxCtor) { toast('Librairie PPTX non chargée', 'error'); setEvaStatus(null); return; }
-    var pptx = new PptxCtor();
-    try { pptx.layout = 'LAYOUT_WIDE'; } catch(_) {}
-
-        var mainTitle = action.title || filename.replace(/\.pptx$/i, '');
-    var slides = action.slides || [];
-    if (!Array.isArray(slides) || !slides.length) {
-      slides = [{ title: mainTitle, points: action.content ? action.content.split('\n').filter(function(l){ return l.trim(); }) : ['Contenu'] }];
-    }
-    
-    var theme = action.theme || 'corporate';
-    
-    // Themes definition
-    var themes = {
-      corporate: { bgCover: 'FFFFFF', bgSlide: 'F8F9FA', accent: '0056B3', text: '333333', dim: '6C757D', font: 'Helvetica' },
-      minimal: { bgCover: 'FFFFFF', bgSlide: 'FFFFFF', accent: '000000', text: '000000', dim: '888888', font: 'Arial' },
-      modern: { bgCover: '0E0E12', bgSlide: '111113', accent: '7B8BF5', text: 'D8D9E8', dim: '5A5A72', font: 'Calibri' }
-    };
-    var t = themes[theme] || themes['corporate'];
-
-    pptx.defineSlideMaster({
-      title: "MASTER_COVER",
-      background: { color: t.bgCover },
-      objects: [
-        { rect: { x:0, y:0, w:0.18, h:7.5, fill:{ color: t.accent } } },
-        { rect: { x:0, y:7.22, w:13.33, h:0.28, fill:{ color: t.accent } } },
-        { placeholder: { options: { name: "title", type: "title", x:0.48, y:2.0, w:12.3, h:2.2, fontSize:42, bold:true, color: t.accent, fontFace: t.font, align:'left' }, text: "" } },
-        { placeholder: { options: { name: "subtitle", type: "body", x:0.48, y:4.3, w:12.3, h:1.0, fontSize:20, color: t.dim, fontFace: t.font, align:'left' }, text: "" } }
-      ]
-    });
-
-    pptx.defineSlideMaster({
-      title: "MASTER_SLIDE",
-      background: { color: t.bgSlide },
-      objects: [
-        { rect: { x:0, y:0, w:13.33, h:0.08, fill:{ color: t.accent } } },
-        { placeholder: { options: { name: "title", type: "title", x:0.5, y:0.4, w:12.3, h:0.8, fontSize:32, bold:true, color: t.accent, fontFace: t.font }, text: "" } },
-        { placeholder: { options: { name: "body", type: "body", x:0.5, y:1.5, w:12.3, h:5.5, fontSize:18, color: t.text, fontFace: t.font, valign:'top' }, text: "" } }
-      ]
-    });
-
-    if (slides.length > 1) {
-      var cover = pptx.addSlide({ masterName: "MASTER_COVER" });
-      cover.addText([{text: mainTitle}], { placeholder: "title" });
-      cover.addText([{text: 'Présenté par E.V.A - Astral Technologie'}], { placeholder: "subtitle" });
-    }
-
-    slides.forEach(function(sData, i) {
-      var s = pptx.addSlide({ masterName: "MASTER_SLIDE" });
-      if (sData.title) s.addText([{text: sData.title}], { placeholder: "title" });
-      
-      var content = sData.content || (sData.points && sData.points.join('\n')) || '';
-      if (content) {
-        var lines = content.split('\n');
-        var textObjs = lines.map(function(l) {
-          var isBullet = l.trim().startsWith('-') || l.trim().startsWith('*');
-          var txt = l.replace(/^[-*]\s*/, '').trim();
-          return { text: txt, options: { bullet: isBullet } };
-        });
-        s.addText(textObjs, { placeholder: "body" });
-      }
-    });
-
-      /* Écriture */
-    var writeResult = pptx.write({ outputType: 'blob' });
-    Promise.resolve(writeResult).then(function(blob) {
-      if (blob && !(blob instanceof Blob)) {
-        blob = new Blob([blob], { type:'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
-      }
-      var url = URL.createObjectURL(blob);
-      toast('PowerPoint prêt : ' + filename, 'success');
-      setEvaStatus('PPTX CRÉÉ', 'action');
-      setTimeout(function(){ setEvaStatus(null); }, 3000);
-      _evaCardReady(card, 'pptx', filename, url);
-    }).catch(function(e) {
-      console.error('[EVA PPTX]', e);
-      toast('Erreur PowerPoint : ' + (e.message || e), 'error');
-      if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Erreur PPTX : ' + (e.message || 'inconnue') + '</span>';
-      setEvaStatus(null);
-    });
-  } catch(e) {
-    console.error('[EVA PPTX]', e);
-    toast('Erreur génération PowerPoint : ' + (e.message || e), 'error');
-    if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Erreur PPTX : ' + (e.message || 'inconnue') + '</span>';
-    setEvaStatus(null);
-  }
+async function _evaGeneratePptx(action) {
+  action.type = 'marp_pptx';
+  return _evaGeneratePdf(action);
 }
 
 function _evaGenerateTxt(action) {
