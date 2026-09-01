@@ -118,7 +118,10 @@ var _pendingResolve = null;
 var _overlay = null;
 
 function _buildOverlay() {
-  if (document.getElementById('cwConfirmOverlay')) return;
+  // Toujours relire depuis le DOM pour éviter les références obsolètes (SPA navigation)
+  var existing = document.getElementById('cwConfirmOverlay');
+  if (existing) { _overlay = existing; return; }
+
   var el = document.createElement('div');
   el.id = 'cwConfirmOverlay';
   el.innerHTML = `
@@ -146,7 +149,7 @@ function _buildOverlay() {
   document.body.appendChild(el);
   _overlay = el;
 
-  // Fermer en cliquant à l'extérieur
+  // Fermer en cliquant à l'extérieur du box uniquement
   el.addEventListener('click', function(e) {
     if (e.target === el) window._cwModalRespond(false);
   });
@@ -163,9 +166,28 @@ window._cwModalRespond = function(confirmed) {
 
 function _showConfirmModal(action, deviceName) {
   _buildOverlay();
-  document.getElementById('cwcmPrompt').textContent =
-    action.prompt || action.label || action.type || 'Action système';
-  document.getElementById('cwcmDevice').textContent = deviceName || 'Ce PC';
+
+  var promptEl = document.getElementById('cwcmPrompt');
+  var deviceEl = document.getElementById('cwcmDevice');
+  if (!promptEl || !deviceEl) {
+    console.error('[CW Modal] Éléments du modal introuvables — abandon');
+    return Promise.resolve(false);
+  }
+
+  promptEl.textContent = action.prompt || action.label || action.type || 'Action système';
+  deviceEl.textContent = deviceName || 'Ce PC';
+
+  if (!_overlay) {
+    console.error('[CW Modal] _overlay null après _buildOverlay');
+    return Promise.resolve(false);
+  }
+
+  // Toast de notification AVANT le modal pour alerter l'utilisateur
+  if (typeof window.toast === 'function') {
+    window.toast('⚡ CloudWorks — Confirmation requise', 'info');
+  }
+  console.log('[CW Modal] Affichage modal pour action:', action.type, action.prompt);
+
   _overlay.classList.add('open');
   return new Promise(function(resolve) {
     _pendingResolve = resolve;
@@ -275,7 +297,11 @@ window.cwConfirmAndExecute = async function(action) {
 
   // Exécuter via executeEvaAction (définie dans file-gen.js)
   if (typeof executeEvaAction === 'function') {
+    console.log('[CW Modal] Confirmation OK — exécution de:', action.type);
     executeEvaAction(action);
+  } else {
+    console.error('[CW Modal] executeEvaAction introuvable — action non exécutée');
+    if (typeof window.toast === 'function') window.toast('Erreur: executeEvaAction non défini', 'error');
   }
 };
 

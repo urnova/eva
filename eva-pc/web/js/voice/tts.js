@@ -158,7 +158,46 @@ function _ensureVoices(cb) {
 }
 
 function _speakNative(text, config) {
-  if (typeof speechSynthesis === 'undefined') return;
+  // === Sur l'app Electron Windows : utiliser PowerShell TTS (System.Speech) ===
+  // C'est 100% fiable — ne dépend pas des voix Chromium ou de onvoiceschanged
+  if (window.eva && window.eva.system && window.eva.system.exec) {
+    _speakPowerShell(text, config);
+    return;
+  }
+  // === Fallback Web Speech API (navigateur ou Electron sans exec) ===
+  _speakWebSpeech(text, config);
+}
+
+// TTS via PowerShell Windows Speech API — fonctionne toujours sur Windows
+function _speakPowerShell(text, config) {
+  if (!window.eva || !window.eva.system || !window.eva.system.exec) return;
+  // Échapper les guillemets simples pour PowerShell
+  var safe = text.replace(/'/g, "''").replace(/[\r\n]+/g, ' ').substring(0, 800);
+  var rate = parseFloat(config && config.speechRate);
+  // Rate PowerShell: -10 (lent) à +10 (rapide), 0 = normal, 2 = légèrement plus rapide
+  var psRate = (rate && rate !== 1.0) ? Math.round((rate - 1.0) * 5) : 1;
+  var cmd = [
+    'Add-Type -AssemblyName System.Speech;',
+    '$s=New-Object System.Speech.Synthesis.SpeechSynthesizer;',
+    'try { $s.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::Female,[System.Speech.Synthesis.VoiceAge]::Adult,0,[System.Globalization.CultureInfo]::new("fr-FR")) } catch {};',
+    '$s.Rate=' + psRate + ';',
+    "$s.Speak('" + safe + "');"
+  ].join(' ');
+
+  _speaking = true;
+  _updateSkipBtn();
+  window.eva.system.exec('powershell -Command "' + cmd + '"')
+    .then(function() { _speaking = false; _updateSkipBtn(); _onSpeakEnd(); })
+    .catch(function(e) {
+      console.warn('[EVA TTS] PowerShell TTS échoué:', e && e.message);
+      // Fallback Web Speech API
+      _speakWebSpeech(text, config);
+    });
+}
+
+// TTS via Web Speech API (navigateur standard)
+function _speakWebSpeech(text, config) {
+  if (typeof speechSynthesis === 'undefined') { _speaking = false; return; }
   try { speechSynthesis.cancel(); } catch(e) {}
 
   _ensureVoices(function(voices) {
@@ -180,7 +219,6 @@ function _speakNative(text, config) {
         if (best) break;
       }
       if (!best && frVoices.length) best = frVoices[0];
-      /* Sur Electron, essayer aussi toutes les voix si pas de fr-FR */
       if (!best && voices.length) {
         best = voices.find(function(v) { return v.lang && v.lang.startsWith('fr'); }) || null;
       }
