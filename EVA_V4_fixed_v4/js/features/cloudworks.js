@@ -1,4 +1,4 @@
-/* EVA V4 — CLOUDWORKS.JS — Paths: cloudworks/{uid}/devices & cloudworks/{uid}/commands */
+﻿/* EVA V4 — CLOUDWORKS.JS — Paths: cloudworks/{uid}/devices & cloudworks/{uid}/commands */
 (function() {
 'use strict';
 
@@ -493,3 +493,4 @@ window.cwShowScreenshot  = cwShowScreenshot;
 window.cwShowSysInfo     = cwShowSysInfo;
 window.cwShowScriptResult= cwShowScriptResult;
 })();
+

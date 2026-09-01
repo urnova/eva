@@ -766,8 +766,14 @@ function renderSettings(section) {
       '<div class="form-field"><label class="form-label">Nouveau mot de passe</label><input type="password" class="form-input" id="sNewPassword" placeholder="Minimum 6 caractères"></div>' +
       '<div class="form-field"><label class="form-label">Confirmer le mot de passe</label><input type="password" class="form-input" id="sConfPassword" placeholder="Idem ci-dessus"></div>' +
       '<button class="btn btn-secondary" onclick="changePassword()" style="margin-top:4px">'+(isGoogleOnly ? 'Créer le mot de passe' : 'Mettre à jour le mot de passe')+'</button>' +
-      '<div class="settings-section">' +
-      '<div class="settings-section-title">Danger zone</div>' +
+              '</div>' +
+        '<div class="settings-section">' +
+        '<div class="settings-section-title">Sessions Actives</div>' +
+        '<div style="font-size:0.74em;color:var(--text-muted);margin-bottom:10px">Où votre compte est actuellement connecté.</div>' +
+        '<div id="accountSessionsList" style="display:flex;flex-direction:column;gap:8px;font-size:0.85em;color:var(--text-dim);">Chargement...</div>' +
+        '</div>' +
+        '<div class="settings-section">' +
+        '<div class="settings-section-title">Danger zone</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
       '<button class="btn btn-secondary" onclick="auth.signOut().then(function(){window.location.href=\'/\';})">🚪 Se déconnecter</button>' +
       '<button class="btn btn-danger" onclick="if(confirm(\'Supprimer toutes les conversations ? Cette action est irréversible.\'))clearAllConvs()">🗑️ Effacer toutes les conversations</button>' +
@@ -2604,3 +2610,4 @@ window.revokeSession = function(sid) {
         window.loadSessions();
     }).catch(function(e){ alert('Erreur: ' + e.message); });
 };
+

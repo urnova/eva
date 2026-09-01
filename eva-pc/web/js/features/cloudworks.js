@@ -1,4 +1,4 @@
-(function() {
+﻿(function() {
 'use strict';
 
 async function loadCloudWorks() {
@@ -252,3 +252,5 @@ window.cwShowSysInfo = function(){};
 window.cwShowScriptResult = function(){};
 
 })();
+
+

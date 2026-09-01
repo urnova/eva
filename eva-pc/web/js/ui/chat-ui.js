@@ -25,13 +25,26 @@ export function addMessage(role, content, options = {}) {
   // Avatar
   const avatar = document.createElement('div');
   avatar.className = 'message-avatar';
-  
-  if (options.avatarUrl) {
-    avatar.innerHTML = `<img src="${options.avatarUrl}" alt="${role}">`;
-  } else {
-    const initial = role === 'user' ? (options.userInitial || 'U') : 'E';
-    avatar.textContent = initial;
-  }
+    let userAvatarUrl = options.avatarUrl;
+    let userInitial = options.userInitial || 'U';
+    
+    if (role === 'user' && window.S && window.S.user) {
+      if (window.S.user.photoURL) {
+        userAvatarUrl = window.S.user.photoURL;
+      }
+      if (window.S.user.displayName) {
+        userInitial = window.S.user.displayName.charAt(0).toUpperCase();
+      } else if (window.S.user.email) {
+        userInitial = window.S.user.email.charAt(0).toUpperCase();
+      }
+    }
+
+    if (userAvatarUrl) {
+      avatar.innerHTML = `<img src="${userAvatarUrl}" alt="${role}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+    } else {
+      const initial = role === 'user' ? userInitial : 'E';
+      avatar.textContent = initial;
+    }
   
   // Content wrapper
   const contentWrap = document.createElement('div');
@@ -389,3 +402,5 @@ export default {
   hideEmptyState,
   initChatUI
 };
+
+

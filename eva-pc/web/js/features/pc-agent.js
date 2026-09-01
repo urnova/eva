@@ -1,4 +1,4 @@
-(async function() {
+﻿(async function() {
   'use strict';
 
   let unsubCmds = null;
@@ -35,11 +35,13 @@
       
       const docRef = window.db.collection('cloudworks').doc(uid).collection('devices').doc(deviceId);
 window.pcAgentDocRef = docRef;
-      await docRef.set({
-        deviceId: deviceId,
-        deviceName: 'EVA Desktop',
-        deviceType: 'windows',
-        localIP: localIP,
+              const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        await docRef.set({
+          deviceId: deviceId,
+          deviceName: isDev ? 'EVA Desktop (Dev)' : 'EVA Desktop',
+          deviceType: 'windows',
+          localIP: localIP,
+          isDev: isDev,
         osVersion: osInfo,
         online: true,
         lastSeen: ts
@@ -256,3 +258,4 @@ window.pcAgentDocRef = docRef;
   }
 
 })();
+

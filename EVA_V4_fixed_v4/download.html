@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -438,5 +438,18 @@ auth.onAuthStateChanged(function(user) {
   }
 });
 </script>
+<script>
+fetch('https://api.github.com/repos/urnova/eva/releases/latest')
+  .then(response => response.json())
+  .then(data => {
+    const vTag = data.tag_name || data.name;
+    const dlEl = document.getElementById('dl-version');
+    if (dlEl && vTag) dlEl.textContent = '(' + vTag + ')';
+  })
+  .catch(console.error);
+</script>
 </body>
 </html>
+
+
+
