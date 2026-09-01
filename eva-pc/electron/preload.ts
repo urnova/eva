@@ -96,6 +96,11 @@ const evaAPI = {
     disable: () => ipcRenderer.invoke('cloudworks:disable')
   },
 
+  // ── LLM status (événement temps réel depuis main) ──
+  onLLMStatusChanged: (callback: (status: { running: boolean }) => void) => {
+    ipcRenderer.on('llm:status-changed', (_: unknown, status: { running: boolean }) => callback(status))
+  },
+
 
   // ── Auto Launch ──
   autoLaunch: {

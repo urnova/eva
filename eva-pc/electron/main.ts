@@ -992,6 +992,7 @@ function startLLM(): Promise<boolean> {
         const r = await fetch('http://127.0.0.1:11434/health', { signal: AbortSignal.timeout(1000) });
         if (r.ok) {
           console.log('[LLM] Serveur prêt après', attempts, 'secondes');
+          _notifyLLMReady();
           resolve(true);
           return;
         }
@@ -1011,16 +1012,34 @@ function startLLM(): Promise<boolean> {
 
 function stopLLM() {
   if (llmProcess) {
-    console.log("[LLM] Stopping local llama-server due to inactivity...");
+    console.log('[LLM] Arrêt du llama-server...');
     llmProcess.kill();
     llmProcess = null;
+    // Notifier le renderer
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('llm:status-changed', { running: false });
+    }
+    _rebuildTrayMenu();
   }
 }
 
 function resetLLMTimer() {
+  // Ne pas tuer le LLM si CloudWorks est actif — le modèle doit rester chargé en permanence
+  if (store.get('cwEnabled', false)) {
+    if (llmTimeout) { clearTimeout(llmTimeout); llmTimeout = null; }
+    return;
+  }
+  // CloudWorks désactivé → kill après 5 min d'inactivité
   if (llmTimeout) clearTimeout(llmTimeout);
-  // Box the LLM after 5 minutes of inactivity (300000 ms)
   llmTimeout = setTimeout(stopLLM, 300000);
+}
+
+// Notifier le renderer que le LLM est prêt (appelé depuis startLLM après health-check)
+function _notifyLLMReady() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('llm:status-changed', { running: true });
+  }
+  _rebuildTrayMenu();
 }
 
 ipcMain.handle('llm:chat', async (event, messages) => {

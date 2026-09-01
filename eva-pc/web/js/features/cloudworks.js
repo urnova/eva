@@ -121,46 +121,80 @@ function _renderPCLayout(container, uid) {
 ══════════════════════════════════════════ */
 async function _initLLMPanel() {
   // CloudWorks est actif = LLM DOIT être actif sans exception
-  _updateLLMStatus();
-  if (_llmPollInterval) clearInterval(_llmPollInterval);
-  _llmPollInterval = setInterval(_updateLLMStatus, 5000);
-  // Démarrer le LLM automatiquement si pas déjà actif
+  _updateLLMBadge(null);  // Afficher "En chargement..." initialement
+
+  // Écouter les événements temps réel de main.ts (health-check confirmé)
+  if (window.eva && window.eva.onLLMStatusChanged) {
+    window.eva.onLLMStatusChanged(function(status) {
+      console.log('[CloudWorks] Événement LLM status:', status);
+      _updateLLMBadge(status.running);
+      if (status.running) {
+        _addActivity('LLM local prêt et opérationnel', 'done');
+      }
+    });
+  }
+
+  // Vérification initiale via IPC (process state)
   if (window.eva && window.eva.system && window.eva.system.llmStatus) {
     try {
       var res = await window.eva.system.llmStatus();
       if (!res || !res.running) {
         console.log('[CloudWorks] LLM inactif → démarrage automatique');
+        _updateLLMBadge('starting');
         window._cwStartLLM();
+      } else {
+        // Process existe → vérifier health aussi
+        _checkLLMHealth();
       }
     } catch(e) {
       window._cwStartLLM();
     }
   }
+
+  // Polling léger toutes les 10s pour resynchroniser si besoin
+  if (_llmPollInterval) clearInterval(_llmPollInterval);
+  _llmPollInterval = setInterval(_checkLLMHealth, 10000);
 }
 
-async function _updateLLMStatus() {
+// Vérifie si le serveur répond vraiment (health endpoint)
+async function _checkLLMHealth() {
+  try {
+    var r = await fetch('http://127.0.0.1:11434/health', { signal: AbortSignal.timeout(1500) });
+    _updateLLMBadge(r.ok);
+  } catch(e) {
+    // Serveur pas encore prêt ou arrêté
+    var res2 = await window.eva.system.llmStatus().catch(() => null);
+    _updateLLMBadge(res2 && res2.running ? 'starting' : false);
+  }
+}
+
+// Met à jour le badge LLM selon l'état : true=actif, false=arrêté, 'starting'=en chargement, null=inconnu
+function _updateLLMBadge(state) {
   var badge = document.getElementById('cwLLMBadge');
   var statusEl = document.getElementById('cwLLMStatus');
   if (!badge) return;
 
-  if (window.eva && window.eva.system && window.eva.system.llmStatus) {
-    try {
-      var res = await window.eva.system.llmStatus();
-      if (res && res.running) {
-        badge.textContent = '● Actif';
-        badge.className = 'cw-badge cw-badge-on';
-        if (statusEl) statusEl.textContent = 'En cours d\'exécution (PID ' + (res.pid || '?') + ')';
-      } else {
-        badge.textContent = '○ Arrêté';
-        badge.className = 'cw-badge cw-badge-off';
-        if (statusEl) statusEl.textContent = 'Non démarré';
-      }
-    } catch(e) {
-      badge.textContent = '? Inconnu';
-      badge.className = 'cw-badge cw-badge-unknown';
-    }
+  if (state === true) {
+    badge.textContent = '● Actif';
+    badge.className = 'cw-badge cw-badge-on';
+    if (statusEl) statusEl.textContent = 'Serveur opérationnel — port 11434';
+  } else if (state === 'starting') {
+    badge.textContent = '⟳ En chargement...';
+    badge.className = 'cw-badge cw-badge-starting';
+    if (statusEl) statusEl.textContent = 'Chargement du modèle en mémoire...';
+  } else if (state === false) {
+    badge.textContent = '○ Arrêté';
+    badge.className = 'cw-badge cw-badge-off';
+    if (statusEl) statusEl.textContent = 'Non démarré';
+  } else {
+    badge.textContent = '? Vérification...';
+    badge.className = 'cw-badge cw-badge-unknown';
+    if (statusEl) statusEl.textContent = 'Vérification en cours...';
   }
 }
+
+// Compatibilité avec l'ancien code qui appelle _updateLLMStatus
+async function _updateLLMStatus() { await _checkLLMHealth(); }
 
 window._cwStartLLM = async function() {
   var badge = document.getElementById('cwLLMBadge');
