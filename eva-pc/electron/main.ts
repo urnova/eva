@@ -690,8 +690,22 @@ ipcMain.handle('system:screenshot', async () => {
   try {
     // @ts-ignore
     const screenshot = await import('screenshot-desktop')
-    const img = await screenshot.default()
-    return { success: true, data: img.toString('base64') }
+    const img = await screenshot.default()  // Buffer PNG full-res
+
+    // Redimensionner + convertir en JPEG pour rester sous 1 MB Firestore
+    const { nativeImage } = require('electron')
+    const native = nativeImage.createFromBuffer(img)
+    const size = native.getSize()
+    // Max 1024px large en conservant le ratio
+    const maxW = 1024
+    const scale = size.width > maxW ? maxW / size.width : 1
+    const resized = native.resize({
+      width:  Math.floor(size.width  * scale),
+      height: Math.floor(size.height * scale),
+      quality: 'good'
+    })
+    const jpeg = resized.toJPEG(55) // JPEG ~55% qualité → ~80-200 KB
+    return { success: true, data: jpeg.toString('base64'), mimeType: 'image/jpeg' }
   } catch (e) {
     return { success: false, error: String(e) }
   }
@@ -1139,5 +1153,69 @@ ipcMain.handle('cloudworks:disable', async () => {
   store.set('cwEnabled', false);
   stopLLM();
   if (tray) tray.setToolTip('E.V.A - Evolutionary Virtual Assistant');
+  return { success: true };
+});
+
+// ─── IPC Handlers — STT (Speech-to-Text via PowerShell Windows SR) ───
+// webkitSpeechRecognition ne fonctionne pas dans Electron (pas de clé API Google)
+// → Utilise System.Speech.Recognition de Windows, 100% offline
+let _sttProcess: any = null;
+
+ipcMain.handle('stt:start', async (event) => {
+  if (_sttProcess) return { success: true, alreadyRunning: true };
+
+  // Script PowerShell : reconnaissance vocale continue en français
+  const psLines = [
+    "Add-Type -AssemblyName System.Speech",
+    "try { $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine([System.Globalization.CultureInfo]::GetCultureInfo('fr-FR')) } catch { $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine }",
+    "$grammar = New-Object System.Speech.Recognition.DictationGrammar",
+    "$r.LoadGrammar($grammar)",
+    "$r.SetInputToDefaultAudioDevice()",
+    "Register-ObjectEvent -InputObject $r -EventName 'SpeechRecognized' -Action { param($s,$e); $txt=$e.Result.Text; [Console]::Out.WriteLine($txt); [Console]::Out.Flush() } | Out-Null",
+    "$r.RecognizeAsync([System.Speech.Recognition.RecognizeMode]::Multiple)",
+    "while($true) { Start-Sleep -Seconds 1 }"
+  ];
+  const psCmd = psLines.join('; ');
+
+  try {
+    const { spawn: _spawn } = require('child_process');
+    _sttProcess = _spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', psCmd], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true
+    });
+
+    _sttProcess.stdout.on('data', (data: Buffer) => {
+      const text = data.toString().trim();
+      if (text && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('stt:result', { text });
+      }
+    });
+
+    _sttProcess.stderr.on('data', (data: Buffer) => {
+      const msg = data.toString().trim();
+      if (msg) console.warn('[STT] PowerShell stderr:', msg);
+    });
+
+    _sttProcess.on('exit', (code: number) => {
+      console.log('[STT] PowerShell exited, code:', code);
+      _sttProcess = null;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('stt:stopped', {});
+      }
+    });
+
+    console.log('[STT] PowerShell Windows STT démarré');
+    return { success: true };
+  } catch(e) {
+    console.error('[STT] Erreur spawn PowerShell:', e);
+    return { success: false, error: String(e) };
+  }
+});
+
+ipcMain.handle('stt:stop', async () => {
+  if (_sttProcess) {
+    try { _sttProcess.kill(); } catch(e) {}
+    _sttProcess = null;
+  }
   return { success: true };
 });

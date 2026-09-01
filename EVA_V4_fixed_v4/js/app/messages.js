@@ -570,7 +570,7 @@ async function handleSend() {
     userCtx += '\nENVIRONNEMENT : Tu tournes sur la version Web/Navigateur. Pour agir sur un PC, tu dois utiliser CloudWorks.\n';
 
     if (onlinePCs.length === 0 && offlinePCs.length === 0) {
-      userCtx += 'CloudWorks : Aucun appareil PC enregistré. Propose à l\'utilisateur d\'installer EVA Desktop.\n';
+      userCtx += 'CloudWorks : Aucun appareil PC enregistré. Pour utiliser CloudWorks, l\'utilisateur doit installer EVA Desktop (disponible sur https://github.com/urnova/eva/releases/latest). Une fois l\'application installée et connectée avec le même compte, le PC apparaîtra automatiquement ici.\n';
     } else if (onlinePCs.length === 0) {
       userCtx += 'CloudWorks : Aucun PC en ligne (' + offlinePCs.length + ' hors ligne). Tu ne peux pas exécuter de tâches PC en ce moment. Informe l\'utilisateur.\n';
     } else if (onlinePCs.length === 1) {

@@ -1,4 +1,4 @@
-﻿/* EVA V4 — CLOUDWORKS.JS — Paths: cloudworks/{uid}/devices & cloudworks/{uid}/commands */
+/* EVA V4 — CLOUDWORKS.JS — Paths: cloudworks/{uid}/devices & cloudworks/{uid}/commands */
 (function() {
 'use strict';
 
@@ -10,7 +10,88 @@ var MAX_LOG = 20;
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');}
 
 /* ══════════════════════════════════════════
-   LOAD — initialise listeners
+   LISTENER DE FOND — démarre dès l'auth
+   Peuple S.cwDevices MÊME si le panneau CW n'est jamais ouvert
+   (mobile, nav directe, etc.)
+══════════════════════════════════════════ */
+var _bgDeviceUnsub = null;
+
+function _startBackgroundDeviceListener(uid) {
+  if (_bgDeviceUnsub) return; // déjà actif
+  if (!window.db) return;
+  try {
+    _bgDeviceUnsub = window.db.collection('cloudworks').doc(uid).collection('devices')
+      .onSnapshot(function(snap) {
+        var arr = [];
+        snap.forEach(function(doc) {
+          var d = Object.assign({ id: doc.id, deviceId: doc.id }, doc.data());
+          var online = d.online === true;
+          if (online && d.lastSeen && d.lastSeen.toDate) {
+            if (Date.now() - d.lastSeen.toDate().getTime() > 120000) online = false;
+          }
+          arr.push(Object.assign({}, d, { online: online }));
+        });
+        if (window.S) window.S.cwDevices = arr;
+        window._cwDevicesCache = arr;
+        var nb = arr.filter(function(d) { return d.online; }).length;
+        console.log('[CW] Listener fond: ' + arr.length + ' appareils, ' + nb + ' en ligne');
+      }, function(err) {
+        console.warn('[CW] Listener fond erreur:', err);
+      });
+  } catch(e) {
+    console.warn('[CW] Impossible de démarrer le listener fond:', e);
+  }
+}
+
+// Se branche sur l'auth Firebase dès que possible
+function _hookAuthForDeviceListener() {
+  var maxRetry = 30, attempt = 0;
+  var check = setInterval(function() {
+    attempt++;
+    if (attempt > maxRetry) { clearInterval(check); return; }
+    if (window.firebase && window.firebase.auth) {
+      clearInterval(check);
+      window.firebase.auth().onAuthStateChanged(function(user) {
+        if (user) {
+          _startBackgroundDeviceListener(user.uid);
+        } else {
+          // Déconnexion → reset
+          if (_bgDeviceUnsub) { _bgDeviceUnsub(); _bgDeviceUnsub = null; }
+          if (window.S) window.S.cwDevices = [];
+        }
+      });
+    } else if (window.S && window.S.user) {
+      clearInterval(check);
+      _startBackgroundDeviceListener(window.S.user.uid);
+    }
+  }, 500);
+}
+_hookAuthForDeviceListener();
+
+// Listener de fond pour les RÉSULTATS — s'active dès l'auth, même si panneau CW fermé
+var _bgResultsUnsub = null;
+function _startBackgroundResultsListener(uid) {
+  if (_bgResultsUnsub) return;
+  if (!window.db) return;
+  try {
+    _bgResultsUnsub = window.db.collection('cloudworks').doc(uid).collection('commands')
+      .orderBy('updatedAt', 'desc').limit(20)
+      .onSnapshot(function(snap) {
+        _handleResultsSnap(snap);
+      }, function(err) {
+        console.warn('[CW] Listener résultats fond erreur:', err);
+      });
+  } catch(e) {}
+}
+// Déclencher ce listener en même temps que le listener d'appareils
+var _origHook = _startBackgroundDeviceListener;
+_startBackgroundDeviceListener = function(uid) {
+  _origHook(uid);
+  _startBackgroundResultsListener(uid);
+};
+
+/* ══════════════════════════════════════════
+   LOAD — initialise listeners (panneau CW ouvert)
 ══════════════════════════════════════════ */
   async function loadCloudWorks() {
   if (!window.S || !window.S.user) return;
@@ -268,14 +349,15 @@ function cwShowInputModal(opts) {
    RESULT LISTENER — Firestore real-time
 ══════════════════════════════════════════ */
 function _handleResultsSnap(snap) {
-    if (isInitialLoad) return;
+  // Traite tous les changements (added + modified) de statut done/error
   snap.docChanges().forEach(function(change) {
     if (change.type !== 'added' && change.type !== 'modified') return;
     var data = change.doc.data();
     if (data.status !== 'done' && data.status !== 'error') return;
     _updateLogEntry(change.doc.id, data);
     if (data.type === 'screenshot' && data.status === 'done' && data.result && data.result.imageBase64) {
-      cwShowScreenshot(data.result.imageBase64, data.deviceId);
+      var mime = (data.result.mimeType || 'image/jpeg');
+      cwShowScreenshot(data.result.imageBase64, data.deviceId, mime);
     }
     if (data.type === 'sysinfo' && data.status === 'done' && data.result) {
       cwShowSysInfo(data.result, data.deviceId);
@@ -290,7 +372,8 @@ function _handleResultsSnap(snap) {
 /* ══════════════════════════════════════════
    SCREENSHOT MODAL
 ══════════════════════════════════════════ */
-function cwShowScreenshot(base64, deviceId) {
+function cwShowScreenshot(base64, deviceId, mimeType) {
+  mimeType = mimeType || 'image/jpeg';
   var existing = document.getElementById('cwScreenModal');
   if (existing) existing.remove();
 
@@ -303,7 +386,7 @@ function cwShowScreenshot(base64, deviceId) {
       '<div class="cw-modal-title" style="margin-bottom:8px;">📸 Capture d\'écran <span style="font-size:0.75em;opacity:0.5;font-weight:400;">' + ts + '</span></div>' +
       '<div style="font-size:0.72em;color:var(--text-muted);margin-bottom:14px;">Appareil : ' + esc(deviceId) + '</div>' +
       '<div class="cw-screenshot-wrap">' +
-        '<img src="data:image/png;base64,' + base64 + '" class="cw-screenshot-img" alt="Capture d\'écran" onclick="this.classList.toggle(\'cw-screenshot-zoomed\')">' +
+        '<img src="data:' + mimeType + ';base64,' + base64 + '" class="cw-screenshot-img" alt="Capture d\'écran" onclick="this.classList.toggle(\'cw-screenshot-zoomed\')">' +
         '<div class="cw-screenshot-hint">Cliquer sur l\'image pour zoomer</div>' +
       '</div>' +
       '<div class="cw-modal-actions" style="margin-top:16px;">' +

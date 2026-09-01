@@ -1,12 +1,10 @@
 (function() {
 'use strict';
 
-var recognition = null;
 var isActive = false;
 var state = 'idle';
 var wakeWords = ['eva', 'éva', 'hey eva', 'e.v.a'];
 var onCommandCallback = null;
-var restartTimer = null;
 var commandBuffer = '';
 
 function init(config) {
@@ -34,6 +32,66 @@ function extractCommand(transcript) {
   var after = transcript.substring(best + bestLen).replace(/^[\s,\.!?]+/, '').trim();
   return after || null;
 }
+
+function fireCommand(cmd) {
+  if (!cmd || !cmd.trim()) return;
+  if (onCommandCallback) onCommandCallback(cmd.trim());
+}
+
+/* ════════════════════════════════════════════════════════
+   MODE ELECTRON : réutilise le STT PowerShell via stt.js
+   (webkitSpeechRecognition ne fonctionne pas en Electron)
+════════════════════════════════════════════════════════ */
+function _isElectron() {
+  return !!(window.eva && window.eva.stt && typeof window.eva.stt.start === 'function');
+}
+
+function _startElectronWakeWord() {
+  window.eva.stt.onResult(function(result) {
+    if (!isActive || !result || !result.text) return;
+    var text = result.text;
+
+    if (state === 'idle') {
+      if (hasWakeWord(text)) {
+        var cmd = extractCommand(text);
+        if (cmd && cmd.length > 1) {
+          fireCommand(cmd);
+        } else {
+          state = 'triggered';
+          commandBuffer = '';
+          if (window.setEvaStatusHeader) window.setEvaStatusHeader('🎤 PARLEZ...', 'listening');
+        }
+      }
+    } else if (state === 'triggered') {
+      commandBuffer = text;
+      if (commandBuffer.trim().length > 1) {
+        var finalCmd = commandBuffer.trim();
+        state = 'idle';
+        commandBuffer = '';
+        if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+        fireCommand(finalCmd);
+      }
+    }
+  });
+
+  window.eva.stt.start().then(function(res) {
+    if (res && res.success) {
+      console.log('[WakeWord] PowerShell STT actif pour la wake word');
+    } else {
+      console.error('[WakeWord] Impossible de démarrer le STT PowerShell:', res && res.error);
+      isActive = false;
+    }
+  }).catch(function(e) {
+    console.error('[WakeWord] Erreur STT:', e);
+    isActive = false;
+  });
+}
+
+/* ════════════════════════════════════════════════════════
+   MODE WEB : webkitSpeechRecognition (navigateur seulement)
+════════════════════════════════════════════════════════ */
+var recognition = null;
+var restartTimer = null;
 
 function buildRecognition() {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -103,6 +161,11 @@ function buildRecognition() {
       state = 'idle';
       return;
     }
+    if (e.error === 'network') {
+      console.warn('[WakeWord] webkitSpeechRecognition: erreur réseau — clé API Google absente dans Electron.');
+      isActive = false;
+      return;
+    }
     state = 'idle';
     commandBuffer = '';
     if (!isActive) return;
@@ -117,21 +180,26 @@ function buildRecognition() {
   return r;
 }
 
-function fireCommand(cmd) {
-  if (!cmd || !cmd.trim()) return;
-  if (onCommandCallback) onCommandCallback(cmd.trim());
-}
-
+/* ════════════════════════════════════════════════════════
+   API PUBLIQUE
+════════════════════════════════════════════════════════ */
 function isSupported() {
-  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  return _isElectron() || !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
 function start() {
-  if (!isSupported()) { console.warn('[WakeWord] Non supporté par ce navigateur.'); return; }
+  if (!isSupported()) { console.warn('[WakeWord] Non supporté.'); return; }
   if (isActive) return;
   isActive = true;
   state = 'idle';
   commandBuffer = '';
+
+  if (_isElectron()) {
+    _startElectronWakeWord();
+    return;
+  }
+
+  // Mode web
   if (!recognition) recognition = buildRecognition();
   try {
     recognition.start();
@@ -150,9 +218,17 @@ function stop() {
   state = 'idle';
   commandBuffer = '';
   if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
-  if (recognition) {
-    try { recognition.stop(); } catch(e) {}
-    recognition = null;
+
+  if (_isElectron()) {
+    if (window.eva && window.eva.stt) {
+      window.eva.stt.stop();
+      window.eva.stt.offAll();
+    }
+  } else {
+    if (recognition) {
+      try { recognition.stop(); } catch(e) {}
+      recognition = null;
+    }
   }
   if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
 }

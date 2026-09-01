@@ -1,4 +1,135 @@
-(function() {
+import sys, re
+sys.stdout.reconfigure(encoding='utf-8')
+
+# ═══════════════════════════════════════════════════════════
+# FIX STT : PowerShell Windows Speech Recognition dans Electron
+# Remplace webkitSpeechRecognition qui nécessite la clé API Google
+# ═══════════════════════════════════════════════════════════
+
+# ─── 1. main.ts : ajouter handlers IPC stt:start et stt:stop ───
+with open(r'eva-pc/electron/main.ts', 'r', encoding='utf-8', errors='replace') as f:
+    mt = f.read()
+
+STT_IPC = """
+// ─── IPC Handlers — STT (Speech-to-Text via PowerShell Windows SR) ───
+// webkitSpeechRecognition ne fonctionne pas dans Electron (pas de clé API Google)
+// → Utilise System.Speech.Recognition de Windows, 100% offline
+let _sttProcess: any = null;
+
+ipcMain.handle('stt:start', async (event) => {
+  if (_sttProcess) return { success: true, alreadyRunning: true };
+
+  // Script PowerShell : reconnaissance vocale continue en français
+  const psLines = [
+    "Add-Type -AssemblyName System.Speech",
+    "try { $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine([System.Globalization.CultureInfo]::GetCultureInfo('fr-FR')) } catch { $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine }",
+    "$grammar = New-Object System.Speech.Recognition.DictationGrammar",
+    "$r.LoadGrammar($grammar)",
+    "$r.SetInputToDefaultAudioDevice()",
+    "Register-ObjectEvent -InputObject $r -EventName 'SpeechRecognized' -Action { param($s,$e); $txt=$e.Result.Text; [Console]::Out.WriteLine($txt); [Console]::Out.Flush() } | Out-Null",
+    "$r.RecognizeAsync([System.Speech.Recognition.RecognizeMode]::Multiple)",
+    "while($true) { Start-Sleep -Seconds 1 }"
+  ];
+  const psCmd = psLines.join('; ');
+
+  try {
+    const { spawn: _spawn } = require('child_process');
+    _sttProcess = _spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', psCmd], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true
+    });
+
+    _sttProcess.stdout.on('data', (data: Buffer) => {
+      const text = data.toString().trim();
+      if (text && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('stt:result', { text });
+      }
+    });
+
+    _sttProcess.stderr.on('data', (data: Buffer) => {
+      const msg = data.toString().trim();
+      if (msg) console.warn('[STT] PowerShell stderr:', msg);
+    });
+
+    _sttProcess.on('exit', (code: number) => {
+      console.log('[STT] PowerShell exited, code:', code);
+      _sttProcess = null;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('stt:stopped', {});
+      }
+    });
+
+    console.log('[STT] PowerShell Windows STT démarré');
+    return { success: true };
+  } catch(e) {
+    console.error('[STT] Erreur spawn PowerShell:', e);
+    return { success: false, error: String(e) };
+  }
+});
+
+ipcMain.handle('stt:stop', async () => {
+  if (_sttProcess) {
+    try { _sttProcess.kill(); } catch(e) {}
+    _sttProcess = null;
+  }
+  return { success: true };
+});
+"""
+
+# Insérer après le handler screenshot
+ANCHOR = "// ─── IPC Handlers — Filesystem ───"
+if ANCHOR in mt:
+    mt = mt.replace(ANCHOR, STT_IPC + '\n' + ANCHOR, 1)
+    print('FIX main.ts: stt:start et stt:stop IPC handlers ajoutés')
+else:
+    print('WARN: Anchor not found in main.ts, appending at end before last line')
+    # Fallback: append before the last closing brace
+    mt = mt.rstrip() + '\n' + STT_IPC
+
+with open(r'eva-pc/electron/main.ts', 'w', encoding='utf-8') as f:
+    f.write(mt)
+print('main.ts saved')
+
+
+# ─── 2. preload.ts : exposer stt bridge ───
+with open(r'eva-pc/electron/preload.ts', 'r', encoding='utf-8', errors='replace') as f:
+    pre = f.read()
+
+STT_BRIDGE = """
+  // ── STT (Speech-to-Text — PowerShell Windows) ──
+  stt: {
+    start: () => ipcRenderer.invoke('stt:start'),
+    stop: () => ipcRenderer.invoke('stt:stop'),
+    onResult: (callback: (result: {text: string}) => void) => {
+      ipcRenderer.removeAllListeners('stt:result');
+      ipcRenderer.on('stt:result', (_: unknown, result: {text: string}) => callback(result));
+    },
+    onStopped: (callback: () => void) => {
+      ipcRenderer.removeAllListeners('stt:stopped');
+      ipcRenderer.on('stt:stopped', () => callback());
+    },
+    offAll: () => {
+      ipcRenderer.removeAllListeners('stt:result');
+      ipcRenderer.removeAllListeners('stt:stopped');
+    }
+  },
+"""
+
+# Insérer après le bloc cloudworks
+ANCHOR2 = "  // ── LLM status"
+if ANCHOR2 in pre:
+    pre = pre.replace(ANCHOR2, STT_BRIDGE + '  // ── LLM status', 1)
+    print('FIX preload.ts: stt bridge ajouté')
+else:
+    print('WARN: LLM status anchor not found in preload.ts')
+
+with open(r'eva-pc/electron/preload.ts', 'w', encoding='utf-8') as f:
+    f.write(pre)
+print('preload.ts saved')
+
+
+# ─── 3. stt.js : réécrire pour utiliser PowerShell dans Electron ───
+NEW_STT_JS = r"""(function() {
 'use strict';
 
 var _onResultCallback = null;
@@ -161,3 +292,10 @@ window.EVAVoice.startSTT       = startListening;
 window.EVAVoice.stopSTT        = stopListening;
 
 })();
+"""
+
+with open(r'eva-pc/web/js/voice/stt.js', 'w', encoding='utf-8') as f:
+    f.write(NEW_STT_JS)
+print('FIX stt.js: réécrit pour PowerShell Windows STT (offline)')
+
+print('\nTous les FIX STT appliqués.')

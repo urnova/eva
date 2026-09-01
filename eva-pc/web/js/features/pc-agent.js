@@ -138,17 +138,28 @@
         await _updateStep(cmdRef, 'Récupération infos système...');
         const res = await window.eva.system.info();
         if (res.success) {
+          var osInfo = res.os || {};
+          var cpuInfo = res.cpu || {};
+          var memInfo = res.mem || {};
+          var netInfo = (res.net && res.net.length) ? res.net[0] : {};
+          var diskInfo = (res.disk && res.disk.length) ? res.disk[0] : {};
           resultData = {
-            os: res.os.distro,
-            hostname: res.os.hostname,
-            uptime: Math.floor(res.os.uptime / 3600) + 'h',
-            cpu: res.cpu.brand,
-            ramTotal: Math.floor(res.mem.total / 1e9) + ' GB',
-            ramFree: Math.floor(res.mem.free / 1e9) + ' GB',
-            localIP: res.net[0]?.ip4 || '127.0.0.1'
+            os: osInfo.distro || osInfo.platform || osInfo.release || 'Windows',
+            hostname: osInfo.hostname || 'EVA Desktop',
+            uptime: osInfo.uptime ? Math.floor(osInfo.uptime / 3600) + 'h' : '—',
+            cpu: cpuInfo.brand || cpuInfo.manufacturer || 'CPU inconnu',
+            cpuUsage: null,
+            ramTotal: memInfo.total ? Math.floor(memInfo.total / 1e9) + ' GB' : '—',
+            ramFree: memInfo.free ? Math.floor(memInfo.free / 1e9) + ' GB' : '—',
+            ramUsage: (memInfo.total && memInfo.used) ? Math.round(memInfo.used / memInfo.total * 100) : null,
+            diskTotal: diskInfo.size ? Math.floor(diskInfo.size / 1e9) + ' GB' : '—',
+            diskFree: diskInfo.available ? Math.floor(diskInfo.available / 1e9) + ' GB' : '—',
+            diskUsage: (diskInfo.size && diskInfo.used) ? Math.round(diskInfo.used / diskInfo.size * 100) : null,
+            localIP: netInfo.ip4 || '127.0.0.1',
+            publicIP: '—'
           };
           await _updateStep(cmdRef, 'Infos récupérées ✓');
-        } else throw new Error(res.error);
+        } else throw new Error(res.error || 'sysinfo failed');
       }
       else if (data.type === 'run_script') {
         const cmd = data.payload?.command;
@@ -189,12 +200,41 @@
       console.error('[CloudWorks] Erreur commande:', err);
     }
 
+    // Sanitiser les undefined pour Firestore (rejette undefined silencieusement)
+    function _sanitize(obj) {
+      if (obj === null || obj === undefined) return null;
+      if (typeof obj !== 'object') return obj;
+      var out = {};
+      Object.keys(obj).forEach(function(k) {
+        var v = obj[k];
+        if (v === undefined) out[k] = null;
+        else if (v !== null && typeof v === 'object' && !Array.isArray(v)) out[k] = _sanitize(v);
+        else out[k] = v;
+      });
+      return out;
+    }
+
     // Mettre à jour Firebase avec le résultat final
-    await cmdRef.update({
-      status: status,
-      result: resultData,
-      updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
-    });
+    try {
+      await cmdRef.update({
+        status: status,
+        result: _sanitize(resultData),
+        updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+      });
+      console.log('[CloudWorks] Commande terminée:', data.type, '→', status);
+    } catch(updateErr) {
+      console.error('[CloudWorks] ERREUR mise à jour Firestore:', updateErr.message, '| status:', status, '| result size:', JSON.stringify(resultData || {}).length);
+      // Fallback : stocker seulement le statut sans le résultat (évite les 1MB+ errors)
+      try {
+        await cmdRef.update({
+          status: status,
+          result: { error: 'Résultat trop volumineux pour Firestore: ' + updateErr.message },
+          updatedAt: new Date()
+        });
+      } catch(e2) {
+        console.error('[CloudWorks] DOUBLE ERREUR Firestore:', e2.message);
+      }
+    }
 
     // Notifier le chat de la fin
     window.dispatchEvent(new CustomEvent('cw:task-done', {

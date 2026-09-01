@@ -96,6 +96,24 @@ const evaAPI = {
     disable: () => ipcRenderer.invoke('cloudworks:disable')
   },
 
+
+  // ── STT (Speech-to-Text — PowerShell Windows) ──
+  stt: {
+    start: () => ipcRenderer.invoke('stt:start'),
+    stop: () => ipcRenderer.invoke('stt:stop'),
+    onResult: (callback: (result: {text: string}) => void) => {
+      ipcRenderer.removeAllListeners('stt:result');
+      ipcRenderer.on('stt:result', (_: unknown, result: {text: string}) => callback(result));
+    },
+    onStopped: (callback: () => void) => {
+      ipcRenderer.removeAllListeners('stt:stopped');
+      ipcRenderer.on('stt:stopped', () => callback());
+    },
+    offAll: () => {
+      ipcRenderer.removeAllListeners('stt:result');
+      ipcRenderer.removeAllListeners('stt:stopped');
+    }
+  },
   // ── LLM status (événement temps réel depuis main) ──
   onLLMStatusChanged: (callback: (status: { running: boolean }) => void) => {
     ipcRenderer.on('llm:status-changed', (_: unknown, status: { running: boolean }) => callback(status))
