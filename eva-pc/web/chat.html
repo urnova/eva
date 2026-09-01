@@ -36,6 +36,34 @@
 <link rel="stylesheet" href="/assets/styles/cloudworks.css">
 </head>
 <body>
+
+<div class="electron-titlebar" style="-webkit-app-region: drag; position: fixed; top: 0; left: 0; right: 0; height: 32px; background: rgba(17,17,19,0.9); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 999999; backdrop-filter: blur(10px);">
+    <div style="display: flex; align-items: center; padding-left: 12px; gap: 10px;">
+      <img src="/assets/images/eva-logo.png" style="width: 16px; height: 16px; object-fit: contain;">
+      <span style="color: #e4e4ef; font-family: 'Space Mono', monospace; font-size: 11px; font-weight: bold; letter-spacing: 1px;">E.V.A DESKTOP <span id="app-version-display" style="color: #7b8bf5; font-size: 10px; margin-left: 6px;"></span></span>
+  <script>
+    setTimeout(() => {
+      if(window.eva && window.eva.app && window.eva.app.version) {
+        window.eva.app.version().then(v => {
+          const el = document.getElementById('app-version-display');
+          if(el) el.innerText = "v" + v;
+        }).catch(e=>console.error('Error fetching version:', e));
+      }
+    }, 100);
+  </script>
+    </div>
+    <div style="-webkit-app-region: no-drag; display: flex; height: 100%;">
+      <button onclick="if(window.eva) window.eva.window.minimize()" style="width: 46px; height: 100%; background: transparent; border: none; color: #88889a; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#88889a'">&#x2014;</button>
+      <button onclick="if(window.eva) window.eva.window.maximize()" style="width: 46px; height: 100%; background: transparent; border: none; color: #88889a; cursor: pointer; transition: all 0.2s; font-size: 15px;" onmouseover="this.style.background='rgba(255,255,255,0.1)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#88889a'">&#x25A1;</button>
+      <button onclick="if(window.pcAgentDocRef){window.pcAgentDocRef.update({online:false}).finally(()=>{if(window.eva)window.eva.window.close()})}else if(window.eva){window.eva.window.close()}" style="width: 46px; height: 100%; background: transparent; border: none; color: #88889a; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e81123';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#88889a'">&#x2715;</button>
+    </div>
+  </div>
+  <style>
+    body { padding-top: 32px !important; box-sizing: border-box; height: 100vh; overflow: hidden; display: flex; flex-direction: row; }
+    .sidebar { height: calc(100vh - 32px) !important; top: 32px !important; }
+    .main-wrapper, .main-content, #appContainer, .app-main { height: calc(100vh - 32px) !important; }
+  </style>
+
 <div class="bg-orb bg-orb-1"></div>
 <div class="bg-orb bg-orb-2"></div>
 
@@ -257,23 +285,21 @@
         </div>
       </div>
 
-      <!-- Section: CloudWorks & Desktop -->
-      <div>
-        <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">☁️ Cloud Works — Contrôle à distance</div>
-        <div style="background:var(--surface2);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:14px 16px;">
-          <div style="font-size:0.75em;color:var(--text);margin-bottom:6px;font-weight:600;">Contrôlez votre PC depuis EVA, partout dans le monde</div>
-          <div style="font-size:0.68em;color:var(--text-muted);line-height:1.6;">Installez E.V.A Desktop sur votre PC Windows, macOS ou Linux. Une fois connecté, vous pouvez envoyer des commandes à distance depuis l'interface web.</div>
-          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-            <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);">⚗ Expérimental</span>
-            <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);">Multi-appareils</span>
-            <a href="https://github.com/urnova/eva/releases/latest/download/EVA-Assistant-Setup.exe" target="_blank" style="text-decoration:none;font-size:0.62em;padding:4px 10px;border-radius:20px;background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.4);color:var(--cyan);font-weight:700;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;" onmouseover="this.style.background='rgba(0,212,255,0.25)'" onmouseout="this.style.background='rgba(0,212,255,0.15)'">
-              <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Télécharger E.V.A Desktop
-            </a>
+      
+        <!-- Section: CloudWorks & Desktop -->
+        <div>
+          <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">☁️ Cloud Works Node</div>
+          <div style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:14px 16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+              <div style="width:10px;height:10px;border-radius:50%;background:#4ade80;box-shadow:0 0 10px #4ade80;"></div>
+              <div style="font-size:0.75em;color:var(--text);font-weight:600;">Agent Local Connecté</div>
+            </div>
+            <div style="font-size:0.68em;color:var(--text-muted);line-height:1.6;">Ce PC (E.V.A Desktop) est actif sur CloudWorks. Les commandes à distance envoyées depuis le site web seront exécutées ici.</div>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+              <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.25);color:#4ade80;">Prêt</span>
+            </div>
           </div>
         </div>
-      </div>
-
       <!-- Section: Comment parler à EVA -->
       <div>
         <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">💡 Exemples de commandes</div>
@@ -1218,6 +1244,7 @@
 <!-- ════════════════ SCRIPTS ════════════════ -->
 <script src="/js/core/firebase-config.js"></script>
 <script src="/js/features/cloudworks.js"></script>
+<script src="/js/features/pc-agent.js"></script>
 <script src="/js/ai/providers.js"></script>
 <script src="/js/ai/chat-handler.js"></script>
 <script src="/js/ai/web-search.js"></script>
@@ -1247,14 +1274,11 @@
 <!-- File Viewer Overlay -->
 <div id="fileViewerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(5px);z-index:999999;align-items:center;justify-content:center;flex-direction:column;opacity:0;transition:opacity 0.2s;">
   <div style="position:absolute;top:20px;right:20px;display:flex;gap:15px;z-index:10;">
-    <button id="fileViewerDownloadBtn" onclick="downloadCurrentFile()" style="display:none;background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:8px;padding:8px 15px;cursor:pointer;align-items:center;justify-content:center;font-size:14px;font-family:'Space Mono',monospace;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Télécharger</button>
-    <button id="fileViewerPrintBtn" onclick="printCurrentFile()" style="display:none;background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:8px;padding:8px 15px;cursor:pointer;align-items:center;justify-content:center;font-size:14px;font-family:'Space Mono',monospace;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Imprimer</button>
     <button onclick="closeFileViewer()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:50%;width:40px;height:40px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">✖</button>
   </div>
   <div id="fileViewerHeader" style="position:absolute;top:25px;left:25px;color:#fff;font-family:'Space Mono',monospace;font-size:16px;background:rgba(0,0,0,0.5);padding:8px 15px;border-radius:8px;"></div>
   
   <div id="fileViewerContent" style="width:90%;height:85%;background:var(--surface);border-radius:12px;overflow:auto;padding:30px;color:var(--text);font-family:sans-serif;font-size:14px;line-height:1.6;box-shadow:0 10px 40px rgba(0,0,0,0.5);display:none;white-space:pre-wrap;"></div>
-  <iframe id="fileViewerIframe" style="width:90%;height:85%;background:#fff;border-radius:12px;border:none;box-shadow:0 10px 40px rgba(0,0,0,0.5);display:none;"></iframe>
   
   <img id="imageViewerContent" style="max-width:90%;max-height:85%;object-fit:contain;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.5);display:none;" />
 </div>

@@ -578,7 +578,8 @@ async function handleSend() {
         '- PowerPoint (Marp) \u2192 [ACTION:{"type":"marp_pptx","filename":"p.pptx","content":"---\nmarp: true\ntheme: default\n---\n\n# Titre\n\nContenu de la slide"}]\n' +
         '- CSV \u2192 [ACTION:{"type":"csv","filename":"data.csv","headers":["Col1"],"rows":[["val"]]}]\n' +
         '- Fichier texte \u2192 [ACTION:{"type":"txt","filename":"fichier.txt","content":"Contenu"}]\n' +
-        '- PDF (Marp) \u2192 [ACTION:{"type":"marp_pdf","filename":"doc.pdf","content":"---\nmarp: true\ntheme: default\n---\n\n# Titre\n\nContenu de la slide"}]\n' +\n{"type":"bar","data":{"labels":["A","B"],"datasets":[{"label":"Ventes","data":[10,20],"backgroundColor":["#5b77f7","#06b6d4"]}]}}\n```\n' +
+        '- PDF (Marp) \u2192 [ACTION:{"type":"marp_pdf","filename":"doc.pdf","content":"---\nmarp: true\ntheme: default\n---\n\n# Titre\n\nContenu de la slide"}]\n' +
+      '- Graphique \u2192 bloc ``json\n{"type":"bar","data":{"labels":["A","B"],"datasets":[{"label":"Ventes","data":[10,20],"backgroundColor":["#5b77f7","#06b6d4"]}]}}\n``\n' +
       'Pour toute génération de fichier : UNE phrase courte + le bloc ACTION. Rien d\'autre après.\n' +
         'QUESTIONS SUGGÉRÉES : À la fin de TA RÉPONSE, ajoute TOUJOURS [SUGGESTIONS: ["Q1?","Q2?","Q3?"]] (tableau JSON strict de 3 questions de suivi).\n' +
       '\nFORMATAGE : Utilise le markdown (##, listes, **gras**, tableaux) quand utile. Blocs spéciaux :\n' +
@@ -1556,3 +1557,5 @@ window.cancelCwCmd = function(cmdId) {
       }).catch(function(e) { console.error('Erreur annulation', e); });
   }
 };
+
+
