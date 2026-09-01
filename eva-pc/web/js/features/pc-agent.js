@@ -218,83 +218,148 @@
      Boucle agentique LLM local
   ═══════════════════════════════════════════ */
   async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef) {
-    const systemPrompt = `Tu es l'Agent PC Autonome d'EVA. Ton rôle est d'accomplir des tâches sur le système Windows de l'utilisateur.
-Tu as accès à un exécuteur de commandes PowerShell.
-Pour exécuter une commande, renvoie EXACTEMENT ce bloc : [CMD] ta_commande_ici [/CMD]
-Tu recevras ensuite le résultat de la commande.
-Raisonne étape par étape. Enchaîne plusieurs commandes si nécessaire. Une fois la tâche ENTIÈREMENT terminée, renvoie : [REPORT] ton_rapport_final [/REPORT]
-Sois concis et direct.`;
+    const systemPrompt = `Tu es l'Agent PC Autonome d'EVA. Tu opères directement sur Windows via PowerShell.
+CAPACITÉS COMPLÈTES :
+- Créer/lire/modifier/déplacer/renommer/supprimer des fichiers et dossiers
+- Ouvrir des applications (notepad, chrome, explorer, calc, vscode, etc.)
+- Naviguer sur le web (ouvrir un navigateur sur une URL précise)
+- Rechercher des informations sur internet via Start-Process
+- Récupérer des informations système
+- Gérer des processus Windows
 
-    let history = [
+SÉCURITÉ : Avant de supprimer un fichier important (Documents, Bureau, fichier non-temporaire), demande confirmation avec [CONFIRM] description_action [/CONFIRM]. Attends la réponse avant d'agir.
+
+RÈGLES D'EXÉCUTION :
+- Pour exécuter une commande PowerShell : [CMD] commande_ici [/CMD]
+- Pour ouvrir une URL dans le navigateur : [CMD] Start-Process "https://..." [/CMD]
+- Pour ouvrir une appli : [CMD] Start-Process "nom_appli.exe" [/CMD]
+- Tu recevras le résultat de chaque commande
+- Enchaîne autant de commandes que nécessaire — pas de limite
+- Une fois TOUT terminé : [REPORT] résumé_complet [/REPORT]
+- Sois concis, efficace, professionnel`;
+
+    const history = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ];
-    let finalReport = '';
     const steps = [];
+    let finalReport = '';
+    let iteration = 0;
 
-    for (let i = 0; i < 15; i++) {
+    // Vérifier si LLM déjà actif pour le message initial
+    let llmWasRunning = false;
+    try {
+      const s = await window.eva.system.llmStatus();
+      llmWasRunning = !!(s && s.running);
+    } catch(e) {}
+
+    const firstStep = llmWasRunning
+      ? 'LLM actif — Analyse de la tâche...'
+      : 'Démarrage du LLM local...';
+    steps.push({ text: firstStep, ts: new Date().toISOString() });
+    await cmdRef.update({ step: firstStep, steps, updatedAt: new Date() });
+    window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: firstStep } }));
+
+    // Boucle infinie — seul [REPORT] ou une erreur l'arrête
+    while (true) {
+      iteration++;
       try {
-        // Notifier l'utilisateur de l'étape en cours
-        const stepWait = i === 0 ? 'Démarrage du LLM local...' : 'Raisonnement en cours (' + i + ')...';
-        await cmdRef.update({ step: stepWait, updatedAt: new Date() });
-        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepWait } }));
+        const raisonnement = iteration > 1 ? `Raisonnement étape ${iteration}...` : firstStep;
+        if (iteration > 1) {
+          await cmdRef.update({ step: raisonnement, updatedAt: new Date() });
+          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: raisonnement } }));
+        }
 
         const data = await window.eva.system.llmChat(history);
-        // Adapter format OpenAI → texte
         if (data.choices && data.choices[0] && data.choices[0].message) {
           data.message = data.choices[0].message;
         }
         const text = (data.message && data.message.content) ? data.message.content : '';
-        if (!text) {
-          history.push({ role: 'user', content: 'Utilise [CMD] ou [REPORT].' });
-          continue;
-        }
+        if (!text) { history.push({ role: 'user', content: 'Utilise [CMD] ou [REPORT].' }); continue; }
         history.push({ role: 'assistant', content: text });
 
         // Rapport final ?
         var reportMatch = text.match(/\[REPORT\]([\s\S]*?)\[\/REPORT\]/i);
         if (reportMatch) {
           finalReport = reportMatch[1].trim();
-          steps.push({ text: '\u2713 ' + finalReport.substring(0, 100), ts: new Date().toISOString() });
-          await cmdRef.update({ step: 'Terminé \u2713', steps, updatedAt: new Date() });
+          steps.push({ text: '\u2713 ' + finalReport.substring(0, 120), ts: new Date().toISOString() });
+          await cmdRef.update({ step: 'Termin\u00e9 \u2713', steps, updatedAt: new Date() });
           break;
         }
 
-        // Commandes à exécuter ?
+        // Demande de confirmation (fichiers sensibles)
+        var confirmMatch = text.match(/\[CONFIRM\]([\s\S]*?)\[\/CONFIRM\]/i);
+        if (confirmMatch) {
+          var confirmText = confirmMatch[1].trim();
+          var stepConf = '\u26a0\ufe0f Confirmation requise: ' + confirmText.substring(0, 80);
+          steps.push({ text: stepConf, ts: new Date().toISOString() });
+          await cmdRef.update({ step: stepConf, steps, updatedAt: new Date() });
+          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepConf } }));
+          // Demander confirmation à l'utilisateur
+          var confirmed = await _askConfirmation(confirmText, cmdRef);
+          history.push({ role: 'user', content: confirmed ? 'Oui, confirmé. Continue.' : 'Non, annulé. Ne supprime pas ce fichier.' });
+          continue;
+        }
+
+        // Commandes à exécuter (plusieurs possibles)
         var allCmds = [];
-        var regex = /\[CMD\]([\s\S]*?)\[\/CMD\]/gi;
+        var cmdRegex = /\[CMD\]([\s\S]*?)\[\/CMD\]/gi;
         var m;
-        while ((m = regex.exec(text)) !== null) allCmds.push(m[1].trim());
+        while ((m = cmdRegex.exec(text)) !== null) allCmds.push(m[1].trim());
 
         if (allCmds.length > 0) {
           var results = [];
           for (var ci = 0; ci < allCmds.length; ci++) {
             var cmd = allCmds[ci];
-            var stepText = 'Exécution [' + (ci+1) + '/' + allCmds.length + ']: ' + cmd.substring(0, 70) + (cmd.length > 70 ? '...' : '');
+            var stepText = 'Ex\u00e9cution [' + (ci+1) + '/' + allCmds.length + ']: ' + cmd.substring(0, 80) + (cmd.length > 80 ? '...' : '');
             steps.push({ text: stepText, ts: new Date().toISOString() });
             await cmdRef.update({ step: stepText, steps, updatedAt: new Date() });
             window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepText } }));
             try {
               var res = await window.eva.system.exec(cmd);
-              var out = res.success ? (res.stdout || '(succès, pas de sortie)') : ('ERREUR: ' + (res.stderr || res.error));
+              var out = res.success
+                ? (res.stdout ? res.stdout.substring(0, 500) : '(succ\u00e8s, pas de sortie)')
+                : ('ERREUR: ' + (res.stderr || res.error || 'Inconnue').substring(0, 300));
+              var stepResult = (res.success ? '\u2713 ' : '\u2717 ') + cmd.substring(0, 40) + ': ' + out.substring(0, 60);
+              steps.push({ text: stepResult, ts: new Date().toISOString() });
+              await cmdRef.update({ step: stepResult, steps, updatedAt: new Date() });
               results.push('$ ' + cmd + '\n' + out);
-            } catch(e) { results.push('$ ' + cmd + '\nErreur: ' + e.message); }
+            } catch(e) {
+              results.push('$ ' + cmd + '\nErreur: ' + e.message);
+            }
           }
-          history.push({ role: 'user', content: 'Résultats:\n' + results.join('\n---\n') + '\n\nContinue ou termine avec [REPORT].' });
+          history.push({ role: 'user', content: 'R\u00e9sultats des commandes:\n' + results.join('\n---\n') + '\n\nContinue ou termine avec [REPORT].' });
         } else {
-          // Pas de [CMD] ni [REPORT] → forcer
-          history.push({ role: 'user', content: 'Utilise [CMD] commande [/CMD] pour agir ou [REPORT] résumé [/REPORT] pour finir.' });
+          history.push({ role: 'user', content: 'Utilise [CMD] commande [/CMD] pour agir, ou [REPORT] r\u00e9sum\u00e9 [/REPORT] pour finir.' });
         }
       } catch(e) {
         var errMsg = e && e.message ? e.message : String(e);
-        var stepErr = 'Erreur LLM: ' + errMsg.substring(0, 100);
-        steps.push({ text: '\u2717 ' + stepErr, ts: new Date().toISOString() });
+        var stepErr = '\u2717 Erreur: ' + errMsg.substring(0, 120);
+        steps.push({ text: stepErr, ts: new Date().toISOString() });
         await cmdRef.update({ step: stepErr, steps, updatedAt: new Date() });
         return { error: errMsg, steps };
       }
     }
-    if (!finalReport) finalReport = 'Tâche terminée (limite de 15 itérations atteinte).';
+
+    if (!finalReport) finalReport = 'T\u00e2che termin\u00e9e.';
     return { output: finalReport, steps };
+  }
+
+  // Demande de confirmation utilisateur pour actions sensibles
+  async function _askConfirmation(message, cmdRef) {
+    return new Promise(function(resolve) {
+      // Dispatcher un event pour que l'UI affiche une modale de confirmation
+      var evt = new CustomEvent('cw:confirm-request', {
+        detail: {
+          message: message,
+          onConfirm: function() { resolve(true); },
+          onCancel: function() { resolve(false); }
+        }
+      });
+      window.dispatchEvent(evt);
+      // Timeout de sécurité 60s → auto-annuler si pas de réponse
+      setTimeout(function() { resolve(false); }, 60000);
+    });
   }
 
 

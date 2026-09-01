@@ -1045,10 +1045,9 @@ function _notifyLLMReady() {
 ipcMain.handle('llm:chat', async (event, messages) => {
   resetLLMTimer();
 
-  // Notify the renderer that LLM is loading (only if it needs to start)
+  // Notify the renderer only if LLM needs to actually start (not already running)
   const wasRunning = !!llmProcess;
   if (!wasRunning && mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('overlay:setState', 'thinking', 'LLM en cours de chargement...');
     mainWindow.webContents.send('overlay:show', 'thinking');
   }
 

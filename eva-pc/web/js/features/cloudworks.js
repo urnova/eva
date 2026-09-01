@@ -6,7 +6,7 @@
 var _cwUnsub = null;
 var _cwResultUnsub = null;
 var _cwActivityLog = [];
-var MAX_LOG = 20;
+var MAX_LOG = 5;
 var _llmPollInterval = null;
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -277,34 +277,72 @@ window._cwRunAgenticTask = async function() {
   if (!prompt) return;
 
   statusEl.style.display = 'block';
-  statusEl.textContent = '⟳ Envoi au LLM local...';
+  statusEl.innerHTML = '<div class="cw-task-header">⟳ Envoi au LLM local...</div><div class="cw-task-steps" id="cwTaskSteps"></div>';
   statusEl.className = 'cw-agentic-status running';
+  var stepsEl = document.getElementById('cwTaskSteps');
+
+  function _appendStep(text, cls) {
+    if (!stepsEl) return;
+    var d = document.createElement('div');
+    d.className = 'cw-task-step ' + (cls || '');
+    d.textContent = text;
+    stepsEl.appendChild(d);
+    stepsEl.scrollTop = stepsEl.scrollHeight;
+    // Max 20 steps visible
+    while (stepsEl.children.length > 20) stepsEl.removeChild(stepsEl.firstChild);
+  }
 
   try {
     var cmdId = await window.pcAgent.sendCommand('agentic_task', { prompt }, window.S.user.uid);
-    statusEl.textContent = '⟳ LLM en cours de traitement...';
+    _appendStep('⟳ LLM en cours de traitement...', 'pending');
 
-    // Écouter les étapes en temps réel
+    var _seenSteps = new Set();
     var stepUnsub = window.db.collection('cloudworks').doc(window.S.user.uid)
       .collection('commands').doc(cmdId)
       .onSnapshot(function(doc) {
         var d = doc.data();
         if (!d) return;
-        if (d.step) statusEl.textContent = '⟳ ' + d.step;
+
+        // Afficher le step courant s'il est nouveau
+        if (d.step && !_seenSteps.has(d.step)) {
+          _seenSteps.add(d.step);
+          var hdr = statusEl.querySelector('.cw-task-header');
+          if (hdr) hdr.textContent = '⟳ ' + d.step;
+          _appendStep(d.step, 'running');
+        }
+
+        // Afficher chaque étape de l'historique (steps[])
+        if (d.steps && Array.isArray(d.steps)) {
+          d.steps.forEach(function(s) {
+            var key = s.ts + '|' + s.text;
+            if (!_seenSteps.has(key)) {
+              _seenSteps.add(key);
+              _appendStep(s.text, s.text.startsWith('✓') ? 'done' : s.text.startsWith('✗') ? 'error' : 'running');
+            }
+          });
+        }
+
         if (d.status === 'done') {
           stepUnsub();
-          statusEl.textContent = '✓ ' + (d.result?.output || 'Tâche terminée');
+          var out = (d.result && d.result.output) ? d.result.output : 'Tâche terminée';
+          _appendStep('✓ ' + out.substring(0, 120), 'done');
+          var hdr2 = statusEl.querySelector('.cw-task-header');
+          if (hdr2) hdr2.textContent = '✓ Terminé';
           statusEl.className = 'cw-agentic-status done';
           promptEl.value = '';
-          _updateLLMStatus();
+          _addActivity('Tâche IA: ' + prompt.substring(0, 50), 'done');
         } else if (d.status === 'error') {
           stepUnsub();
-          statusEl.textContent = '✗ Erreur: ' + (d.result?.error || 'Inconnue');
+          var err = (d.result && d.result.error) ? d.result.error : 'Inconnue';
+          _appendStep('✗ Erreur: ' + err.substring(0, 120), 'error');
+          var hdr3 = statusEl.querySelector('.cw-task-header');
+          if (hdr3) hdr3.textContent = '✗ Erreur';
           statusEl.className = 'cw-agentic-status error';
+          _addActivity('Tâche IA erreur: ' + err.substring(0, 40), 'error');
         }
       });
   } catch(e) {
-    statusEl.textContent = '✗ Erreur: ' + e.message;
+    statusEl.innerHTML = '<div class="cw-task-header">✗ ' + esc(e.message) + '</div>';
     statusEl.className = 'cw-agentic-status error';
   }
 };
@@ -385,7 +423,7 @@ function _loadActivity(uid) {
   try {
     _cwResultUnsub = window.db.collection('cloudworks').doc(uid).collection('commands')
       .orderBy('updatedAt', 'desc')
-      .limit(MAX_LOG)
+      .limit(5)
       .onSnapshot(function(snap) { _renderActivity(snap); });
   } catch(e) {}
 }
@@ -415,6 +453,8 @@ function _addActivity(text, status) {
   entry.className = 'cw-activity-item ' + (status || '');
   entry.innerHTML = `<span class="cw-act-icon">${icon}</span><span class="cw-act-label">${esc(text)}</span><span class="cw-act-time">${new Date().toLocaleString('fr-FR')}</span>`;
   el.prepend(entry);
+  // Garder seulement les 5 dernières entrées
+  while (el.children.length > 5) el.removeChild(el.lastChild);
 }
 
 /* ══════════════════════════════════════════
@@ -504,6 +544,13 @@ window.loadCloudWorks = loadCloudWorks;
     .cw-act-label { flex:1; color:#e4e4ef; }
     .cw-act-time { color:#88889a; font-size:0.9em; white-space:nowrap; }
     .cw-empty { padding:20px; text-align:center; color:#88889a; font-size:0.78em; }
+    .cw-task-header { font-weight:700; margin-bottom:6px; }
+    .cw-task-steps { max-height:180px; overflow-y:auto; border-top:1px solid rgba(0,212,255,0.1); margin-top:6px; padding-top:6px; }
+    .cw-task-step { padding:3px 0; font-size:0.9em; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .cw-task-step.done { color:#00ff88; }
+    .cw-task-step.error { color:#ff4d6d; }
+    .cw-task-step.running { color:#ffc800; }
+    .cw-task-step.pending { color:#88889a; }
     .cw-spinner { width:20px; height:20px; border:2px solid rgba(0,212,255,0.2); border-top-color:var(--cyan,#00d4ff); border-radius:50%; animation:cwSpin 0.8s linear infinite; margin:0 auto 8px; }
     @keyframes cwSpin { to { transform:rotate(360deg); } }
   `;
