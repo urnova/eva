@@ -1,4 +1,4 @@
-/* ═══ AUTH ═══ */
+﻿/* ═══ AUTH ═══ */
 function initAuth() {
   auth.onAuthStateChanged(function(user) {
     if (!user) { window.location.href = '/login'; return; }
@@ -321,8 +321,7 @@ function renderUserUI(p) {
       ava.textContent = name.split(' ').map(function(n){return n[0]||'';}).join('').toUpperCase().slice(0,2);
     }
   }
-
-  // Update existing messages in the DOM
+  
   var msgAvas = document.querySelectorAll('.message.user .msg-ava');
   msgAvas.forEach(function(avaNode) {
     if (p.photoURL) {

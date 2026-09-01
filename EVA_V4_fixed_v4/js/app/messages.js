@@ -1,6 +1,6 @@
-﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════════════════════
    MESSAGES
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+═══════════════════════════════════════════════════ */
 var _renderedMsgOffset = 0;
 var MSG_PAGE = 40;
 
@@ -9,12 +9,12 @@ function renderMsgs() {
   if (!list) return;
   list.innerHTML = '';
   _renderedMsgOffset = Math.max(0, S.messages.length - MSG_PAGE);
-  /* Bouton "Charger les messages prÃ©cÃ©dents" si historique tronquÃ© */
+  /* Bouton "Charger les messages précédents" si historique tronqué */
   if (_renderedMsgOffset > 0) {
     var loadBtn = document.createElement('div');
     loadBtn.id = 'loadOlderBtn';
     loadBtn.style.cssText = 'text-align:center;padding:8px 0 4px;';
-    loadBtn.innerHTML = '<button onclick="loadOlderMsgs()" style="background:rgba(0,195,230,0.1);border:1px solid rgba(0,195,230,0.3);color:#00c3e6;border-radius:20px;padding:4px 18px;font-size:0.78em;cursor:pointer;font-family:inherit;">â¬† Charger les messages prÃ©cÃ©dents ('+_renderedMsgOffset+')</button>';
+    loadBtn.innerHTML = '<button onclick="loadOlderMsgs()" style="background:rgba(0,195,230,0.1);border:1px solid rgba(0,195,230,0.3);color:#00c3e6;border-radius:20px;padding:4px 18px;font-size:0.78em;cursor:pointer;font-family:inherit;">⬆ Charger les messages précédents ('+_renderedMsgOffset+')</button>';
     list.appendChild(loadBtn);
   }
   for (var i = _renderedMsgOffset; i < S.messages.length; i++) {
@@ -37,16 +37,16 @@ function loadOlderMsgs() {
     frag.appendChild(_md2);
   }
   _renderedMsgOffset = newOffset;
-  /* InsÃ©rer avant le premier message existant */
+  /* Insérer avant le premier message existant */
   var firstMsg = list.querySelector('.message');
   if (firstMsg) list.insertBefore(frag, firstMsg);
   else list.appendChild(frag);
-  /* Mettre Ã  jour ou supprimer le bouton */
+  /* Mettre à jour ou supprimer le bouton */
   var btn = document.getElementById('loadOlderBtn');
   if (_renderedMsgOffset === 0) {
     if (btn) btn.remove();
   } else {
-    if (btn) btn.querySelector('button').textContent = 'â¬† Charger les messages prÃ©cÃ©dents (' + _renderedMsgOffset + ')';
+    if (btn) btn.querySelector('button').textContent = '⬆ Charger les messages précédents (' + _renderedMsgOffset + ')';
   }
   /* Maintenir la position de scroll */
   list.scrollTop = list.scrollHeight - prevTop;
@@ -65,7 +65,7 @@ function buildMsgHTML(msg, idx) {
     '<div class="msg-content">' +
       '<div class="msg-bubble"'+mdAttr+'>'+content+'</div>' +
       (time ? '<div class="msg-time">'+time+'</div>' : '') +
-      (isEva ? '<div class="msg-actions"><button class="msg-act" onclick="copyMsg(this)"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copier</button><button class="msg-act" onclick="speakMsg(this)" title="Ã‰couter"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>' : '') +
+      (isEva ? '<div class="msg-actions"><button class="msg-act" onclick="copyMsg(this)"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copier</button><button class="msg-act" onclick="speakMsg(this)" title="Écouter"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div>' : '') +
     '</div>' +
   '</div>';
 }
@@ -82,7 +82,7 @@ function appendMsg(role, content, imgUrlOrArr, docOrArr) {
   div.dataset.msgIdx = S.messages.length - 1;
   var bubble = div.querySelector('.msg-bubble');
 
-  /* â”€â”€ Images (accepte string URL legacy OU tableau) â”€â”€ */
+  /* ── Images (accepte string URL legacy OU tableau) ── */
   if (bubble) {
     var images = Array.isArray(imgUrlOrArr)
       ? imgUrlOrArr
@@ -114,7 +114,7 @@ function appendMsg(role, content, imgUrlOrArr, docOrArr) {
     }
   }
 
-  /* â”€â”€ Documents (accepte objet legacy OU tableau) â”€â”€ */
+  /* ── Documents (accepte objet legacy OU tableau) ── */
   if (bubble) {
     var docs = Array.isArray(docOrArr)
       ? docOrArr.filter(function(d){ return d && d.name; })
@@ -124,14 +124,14 @@ function appendMsg(role, content, imgUrlOrArr, docOrArr) {
       var docsWrap = document.createElement('div');
       docsWrap.className = 'msg-docs-wrap';
       docs.forEach(function(doc) {
-        var icon = (typeof _docIconExt === 'function') ? _docIconExt(doc.ext) : 'ðŸ“Ž';
+        var icon = (typeof _docIconExt === 'function') ? _docIconExt(doc.ext) : '📎';
         var chip = document.createElement('div');
         chip.className = 'msg-doc-multi';
         chip.innerHTML =
           '<span style="font-size:1.3em;flex-shrink:0;">' + icon + '</span>' +
           '<div style="display:flex;flex-direction:column;min-width:0;">' +
             '<span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">' + esc(doc.name) + '</span>' +
-            (doc.ext ? '<span style="font-size:0.68em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">' + doc.ext + (doc.size ? ' Â· ' + (doc.size > 1024*1024 ? (doc.size/(1024*1024)).toFixed(1)+' Mo' : Math.round(doc.size/1024)+' Ko') : '') + '</span>' : '') +
+            (doc.ext ? '<span style="font-size:0.68em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">' + doc.ext + (doc.size ? ' · ' + (doc.size > 1024*1024 ? (doc.size/(1024*1024)).toFixed(1)+' Mo' : Math.round(doc.size/1024)+' Ko') : '') + '</span>' : '') +
           '</div>';
         docsWrap.appendChild(chip);
       });
@@ -184,45 +184,45 @@ var _SVG_THINK_SEARCH = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/
 var _SVG_THINK_PEN    = '<svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
 var _SVG_THINK_SPARK  = '<svg viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4M22 5h-4M4 17v2M5 18H3"/></svg>';
 var _THINK_STEPS = [
-  { icon: _SVG_THINK_BRAIN,  label: 'RÃ©flÃ©chis...' },
+  { icon: _SVG_THINK_BRAIN,  label: 'Réfléchis...' },
   { icon: _SVG_THINK_SEARCH, label: 'Analyse...'   },
-  { icon: _SVG_THINK_PEN,    label: 'RÃ©dige...'    },
-  { icon: _SVG_THINK_SPARK,  label: 'GÃ©nÃ¨re...'    }
+  { icon: _SVG_THINK_PEN,    label: 'Rédige...'    },
+  { icon: _SVG_THINK_SPARK,  label: 'Génère...'    }
 ];
 var _thinkTimer = null;
 var _thinkIdx = 0;
-var _thinkHistory = []; /* Historique des Ã©tapes de rÃ©flexion pour le panneau dÃ©roulable */
+var _thinkHistory = []; /* Historique des étapes de réflexion pour le panneau déroulable */
 var _generationAborted = false;
-var _lastUserMsg = ''; /* MÃ©morise le dernier message user pour l'analyse contextuelle */
+var _lastUserMsg = ''; /* Mémorise le dernier message user pour l'analyse contextuelle */
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   ANALYSE CONTEXTUELLE â€” gÃ©nÃ¨re des pensÃ©es adaptÃ©es au message user
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════════
+   ANALYSE CONTEXTUELLE — génère des pensées adaptées au message user
+   ═══════════════════════════════════════════════════════════════════ */
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   VRAIES PENSÃ‰ES â€” appelÃ© quand le modÃ¨le expose sa chain-of-thought
+/* ═══════════════════════════════════════════════════════════
+   VRAIES PENSÉES — appelé quand le modèle expose sa chain-of-thought
    (gemini-thinking, deepseek-r1, etc.)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════════════════════════════ */
 window.setRealThinking = function(rawThinking) {
   if (!rawThinking) return;
-  /* Nettoyer et dÃ©couper en Ã©tapes lisibles */
+  /* Nettoyer et découper en étapes lisibles */
   var lines = rawThinking.replace(/\r\n/g,'\n').split('\n').filter(function(l){ return l.trim().length > 8; });
-  /* Afficher les 60 premiers chars de chaque ligne comme Ã©tape */
+  /* Afficher les 60 premiers chars de chaque ligne comme étape */
   lines.forEach(function(line, i) {
-    if (i > 20) return; /* Limiter Ã  20 lignes */
-    var clean = line.trim().replace(/^[-*â€¢]\s*/, '').slice(0, 80);
+    if (i > 20) return; /* Limiter à 20 lignes */
+    var clean = line.trim().replace(/^[-*•]\s*/, '').slice(0, 80);
     _thinkHistory.push({ label: clean, detail: '', ts: Date.now(), isReal: true });
   });
-  /* Mettre Ã  jour l'indicateur avec la derniÃ¨re vraie pensÃ©e */
+  /* Mettre à jour l'indicateur avec la dernière vraie pensée */
   if (lines.length > 0) {
     var lb = document.getElementById('thinkLabel');
     var dt = document.getElementById('thinkDetail');
     var ic = document.getElementById('thinkIcon');
     var last = lines[lines.length > 3 ? lines.length - 1 : 0].trim().slice(0, 70);
-    if (ic) ic.textContent = 'ðŸ§ ';
+    if (ic) ic.textContent = '🧠';
     if (lb) lb.textContent = last;
-    if (dt) dt.textContent = 'â€” Raisonnement rÃ©el â€”';
+    if (dt) dt.textContent = '— Raisonnement réel —';
   }
 };
 
@@ -238,8 +238,8 @@ function showTyping(userMsg) {
   div.className = 'typing-bubble';
   div.id = 'typingInd';
 
-  /* PensÃ©e de dÃ©part : icÃ´ne SVG personnalisÃ©e, Ã©tat GÃ©nÃ¨re */
-  var firstThought = { icon: _SVG_THINK_SPARK, label: 'GÃ©nÃ¨re...', detail: 'Composition de la rÃ©ponse...' };
+  /* Pensée de départ : icône SVG personnalisée, état Génère */
+  var firstThought = { icon: _SVG_THINK_SPARK, label: 'Génère...', detail: 'Composition de la réponse...' };
 
   div.innerHTML =
     '<div class="thinking-wrap">' +
@@ -254,10 +254,10 @@ function showTyping(userMsg) {
   scrollDown();
   _thinkIdx = 0;
 
-  /* Enregistrer la premiÃ¨re pensÃ©e */
+  /* Enregistrer la première pensée */
   _thinkHistory.push({ label: firstThought.label, detail: firstThought.detail, ts: Date.now() });
 
-  /* Pas de boucle alÃ©atoire de mots gÃ©nÃ©riques : on garde l\'Ã©tat "GÃ©nÃ¨re" statique sauf si mis Ã  jour par l\'API */
+  /* Pas de boucle aléatoire de mots génériques : on garde l\'état "Génère" statique sauf si mis à jour par l\'API */
   if (_thinkTimer) {
     clearInterval(_thinkTimer);
     _thinkTimer = null;
@@ -272,10 +272,10 @@ function showTyping(userMsg) {
   }
 
   if (window.EvaCharacter) window.EvaCharacter.setThinking();
-  setEvaStatus('EVA RÃ‰FLÃ‰CHIT...', 'thinking');
+  setEvaStatus('EVA RÉFLÉCHIT...', 'thinking');
 }
 
-/* Met Ã  jour l'indicateur de rÃ©flexion avec une vraie phase en cours */
+/* Met à jour l'indicateur de réflexion avec une vraie phase en cours */
 window.setThinkingPhase = function(iconSvg, label, detail) {
   var ic = document.getElementById('thinkIcon');
   var lb = document.getElementById('thinkLabel');
@@ -286,7 +286,7 @@ window.setThinkingPhase = function(iconSvg, label, detail) {
   if (label) _thinkHistory.push({ label: label, detail: detail || '', ts: Date.now() });
 };
 
-/* Ajoute une Ã©tape Ã  la boÃ®te de rÃ©flexion du dernier message, mÃªme une fois terminÃ© (utile pour les process en background comme la mÃ©moire) */
+/* Ajoute une étape à la boîte de réflexion du dernier message, même une fois terminé (utile pour les process en background comme la mémoire) */
 window.addFinalThinkingStep = function(label, detail) {
   var tb = document.getElementById('lastThoughtBody');
   if (!tb) return;
@@ -297,17 +297,17 @@ window.addFinalThinkingStep = function(label, detail) {
   tb.appendChild(item);
   if (tb.previousElementSibling) {
     var headerCount = tb.previousElementSibling.querySelector('span:last-child');
-    if (headerCount) headerCount.innerHTML = count + ' Ã©tape' + (count > 1 ? 's' : '') + ' â†“';
+    if (headerCount) headerCount.innerHTML = count + ' étape' + (count > 1 ? 's' : '') + ' ↓';
   }
 };
 
-/* Stoppe la gÃ©nÃ©ration en cours */
+/* Stoppe la génération en cours */
 window.stopGeneration = function() {
   if (!S.busy) return;
   _generationAborted = true;
   hideTyping();
-  streamEvaMsg('*GÃ©nÃ©ration interrompue par l\'utilisateur.*');
-  toast('GÃ©nÃ©ration arrÃªtÃ©e', 'info');
+  streamEvaMsg('*Génération interrompue par l\'utilisateur.*');
+  toast('Génération arrêtée', 'info');
 };
 
 function hideTyping() {
@@ -340,24 +340,24 @@ function scrollDown() {
 function copyMsg(btn) {
   var bubble = btn.closest('.message').querySelector('.msg-bubble');
   if (!bubble) return;
-  navigator.clipboard.writeText(bubble.innerText).then(function() { toast('CopiÃ© !','success'); });
+  navigator.clipboard.writeText(bubble.innerText).then(function() { toast('Copié !','success'); });
 }
 window.copyMsg = copyMsg;
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════════════════════
    ROLLBACK / EDIT / RETRY
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+═══════════════════════════════════════════════════ */
 function rollbackToMsg(idxOrStr) {
   var idx = parseInt(idxOrStr, 10);
   if (isNaN(idx) || idx < 0) return;
   var keepCount = idx + 1;
-  if (keepCount >= S.messages.length) { toast('DÃ©jÃ  au dernier message','info'); return; }
+  if (keepCount >= S.messages.length) { toast('Déjà au dernier message','info'); return; }
   var removed = S.messages.length - keepCount;
-  if (!confirm('Revenir Ã  ce point et supprimer ' + removed + ' message(s) suivant(s) ?')) return;
+  if (!confirm('Revenir à ce point et supprimer ' + removed + ' message(s) suivant(s) ?')) return;
 
   S.messages = S.messages.slice(0, keepCount);
 
-  /* RÃ©initialiser le contexte du handler IA */
+  /* Réinitialiser le contexte du handler IA */
   if (window.EVAChatHandler) {
     window.EVAChatHandler.clearContext();
     S.messages.forEach(function(m) {
@@ -368,7 +368,7 @@ function rollbackToMsg(idxOrStr) {
     });
   }
 
-  /* Supprimer les messages aprÃ¨s idx dans Firestore */
+  /* Supprimer les messages après idx dans Firestore */
   if (S.convId && S.user) {
     db.collection('users').doc(S.user.uid)
       .collection('conversations').doc(S.convId)
@@ -385,7 +385,7 @@ function rollbackToMsg(idxOrStr) {
   }
 
   renderMsgs();
-  toast('Conversation ramenÃ©e Ã  ce point âœ“', 'success');
+  toast('Conversation ramenée à ce point ✓', 'success');
 }
 window.rollbackToMsg = rollbackToMsg;
 
@@ -403,7 +403,7 @@ function editMsg(idxOrStr) {
     input.focus();
   }
 
-  /* Tronquer S.messages Ã  ce point (sans inclure ce message) */
+  /* Tronquer S.messages à ce point (sans inclure ce message) */
   S.messages = S.messages.slice(0, idx);
 
   if (window.EVAChatHandler) {
@@ -417,7 +417,7 @@ function editMsg(idxOrStr) {
   }
 
   renderMsgs();
-  toast('Message prÃªt Ã  Ãªtre modifiÃ© â€” appuyez sur Envoyer', 'info');
+  toast('Message prêt à être modifié — appuyez sur Envoyer', 'info');
 }
 window.editMsg = editMsg;
 
@@ -427,7 +427,7 @@ function retryMsg(idxOrStr) {
   var msg = S.messages[idx];
   if (!msg || msg.role === 'eva' || msg.role === 'assistant') return;
 
-  /* Tronquer S.messages Ã  ce point (sans inclure ce message) */
+  /* Tronquer S.messages à ce point (sans inclure ce message) */
   S.messages = S.messages.slice(0, idx);
 
   if (window.EVAChatHandler) {
@@ -459,20 +459,20 @@ function speakMsg(btn) {
 }
 window.speakMsg = speakMsg;
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════════════════════
    SEND MESSAGE
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+═══════════════════════════════════════════════════ */
 async function handleSend() {
   var input = document.getElementById('msgInput');
   var text = (input.value || '').trim();
   var img = S.image || (S.images && S.images[0]) || null;
   var docPending = S.document || (S.documents && S.documents[0]) || null;
   if (!text && !img && !docPending) return;
-  if (S.busy) { toast('Eva rÃ©flÃ©chit...','info'); return; }
-  if (!window.EVAChatHandler) { toast('SystÃ¨me non initialisÃ©','error'); return; }
+  if (S.busy) { toast('Eva réfléchit...','info'); return; }
+  if (!window.EVAChatHandler) { toast('Système non initialisé','error'); return; }
     if (S.documents && S.documents.some(function(d) { return d._loading; })) { toast('Lecture du document en cours...','warning'); return; }
 
-  /* ArrÃªter le micro s'il est actif â€” l'utilisateur envoie manuellement */
+  /* Arrêter le micro s'il est actif — l'utilisateur envoie manuellement */
   if (window.EVASTS && window.EVASTS.getIsListening()) {
     window.EVASTS.stopListening();
     var micBtn = document.getElementById('micBtn');
@@ -492,17 +492,17 @@ async function handleSend() {
   S.image = null; S.images = [];
   S.document = null; S.documents = [];
 
-  var displayText = text || (allImages.length > 1 ? 'ðŸ“· ' + allImages.length + ' photos jointes' : allImages.length === 1 ? 'ðŸ“· Photo jointe' : allDocs.length > 1 ? '' : allDocs.length === 1 ? '' : '');
+  var displayText = text || (allImages.length > 1 ? '📷 ' + allImages.length + ' photos jointes' : allImages.length === 1 ? '📷 Photo jointe' : allDocs.length > 1 ? '' : allDocs.length === 1 ? '' : '');
   appendMsg('user', displayText, allImages, allDocs);
-  showTyping(text); /* Passe le message pour l'analyse contextuelle des pensÃ©es */
-  window.setThinkingPhase(_SVG_THINK_BRAIN, 'RÃ©flÃ©chis...', 'Je lis votre message...');
+  showTyping(text); /* Passe le message pour l'analyse contextuelle des pensées */
+  window.setThinkingPhase(_SVG_THINK_BRAIN, 'Réfléchis...', 'Je lis votre message...');
 
   var toneInstruction = '';
   var _hasActiveTone = TONES[S.tone] && S.tone !== 'normal';
   if (_hasActiveTone) {
     toneInstruction = TONES[S.tone];
   } else if (TONES['normal']) {
-    toneInstruction = '\n\nSTYLE DE RÃ‰PONSE :\n' + TONES['normal'];
+    toneInstruction = '\n\nSTYLE DE RÉPONSE :\n' + TONES['normal'];
   }
 
   var userCtx = '';
@@ -515,10 +515,10 @@ async function handleSend() {
     }
   }
   if (window._userBio) userCtx += '\nNote personnelle : ' + window._userBio;
-  /* MÃ©moire Ã‰volutive â€” injectÃ©e si activÃ©e et non vide */
+  /* Mémoire Évolutive — injectée si activée et non vide */
   if (S.adaptationEnabled && S.evaMemory && S.evaMemory.nodes) {
     var formatGraphToText = function(mem) {
-        var txt = 'EntitÃ©s:\n';
+        var txt = 'Entités:\n';
         var nodeMap = {};
         (mem.nodes || []).forEach(function(n) {
             var lbl = (n.id === 'utilisateur' ? 'Utilisateur' : (n.label || n.id));
@@ -529,75 +529,75 @@ async function handleSend() {
         (mem.links || []).forEach(function(l) {
             var src = nodeMap[l.source] || l.source;
             var tgt = nodeMap[l.target] || l.target;
-            txt += '[' + src + '] -> ' + (l.label || 'liÃ© Ã ') + ' -> [' + tgt + ']\n';
+            txt += '[' + src + '] -> ' + (l.label || 'lié à') + ' -> [' + tgt + ']\n';
         });
         return txt;
     };
     
-    userCtx += '\n\nMÃ‰MOIRE Ã‰VOLUTIVE (Graphe de Connaissances) :\n' + 
-               'Note vitale: Dans ce graphe, le nÅ“ud [Utilisateur] te reprÃ©sente TOI (l\'interlocuteur humain). Toutes les connexions Ã  [Utilisateur] sont tes caractÃ©ristiques et ton entourage.\n' +
-               'INSTRUCTION SPÃ‰CIALE : Tu dois activement analyser ce graphe. Si ce que l\'utilisateur vient de dire contredit une information de la mÃ©moire (ex: un dÃ©mÃ©nagement, un changement de goÃ»t, une nouvelle relation amoureuse), tu DOIS rÃ©agir humainement dans ta rÃ©ponse en relevant la contradiction avec Ã©tonnement ou curiositÃ© (ex: "Oh ? Tu ne m\'avais pas dit que tu habitais Ã  Feurs ?"). Agis comme une vraie amie qui a de la mÃ©moire !\n\n' +
+    userCtx += '\n\nMÉMOIRE ÉVOLUTIVE (Graphe de Connaissances) :\n' + 
+               'Note vitale: Dans ce graphe, le nœud [Utilisateur] te représente TOI (l\'interlocuteur humain). Toutes les connexions à [Utilisateur] sont tes caractéristiques et ton entourage.\n' +
+               'INSTRUCTION SPÉCIALE : Tu dois activement analyser ce graphe. Si ce que l\'utilisateur vient de dire contredit une information de la mémoire (ex: un déménagement, un changement de goût, une nouvelle relation amoureuse), tu DOIS réagir humainement dans ta réponse en relevant la contradiction avec étonnement ou curiosité (ex: "Oh ? Tu ne m\'avais pas dit que tu habitais à Feurs ?"). Agis comme une vraie amie qui a de la mémoire !\n\n' +
                formatGraphToText(S.evaMemory);
   }
 
-  // Injection date/heure courante â€” EVA connaÃ®t ainsi l'heure pour crÃ©er alarmes/rappels
+  // Injection date/heure courante — EVA connaît ainsi l'heure pour créer alarmes/rappels
   var _now = new Date();
   var _dateStr = _now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   var _timeStr = _now.getHours().toString().padStart(2,'0') + ':' + _now.getMinutes().toString().padStart(2,'0');
-  var _dateCtx = '\n\n[ DONNÃ‰ES TEMPS RÃ‰EL INJECTÃ‰ES PAR LE SYSTÃˆME ]\nDate : ' + _dateStr + '\nHeure actuelle : ' + _timeStr + '\nTimezone : ' + Intl.DateTimeFormat().resolvedOptions().timeZone + '\n(Utilise ces informations pour calculer les heures d\'alarmes et de rappels demandÃ©es.)';
+  var _dateCtx = '\n\n[ DONNÉES TEMPS RÉEL INJECTÉES PAR LE SYSTÈME ]\nDate : ' + _dateStr + '\nHeure actuelle : ' + _timeStr + '\nTimezone : ' + Intl.DateTimeFormat().resolvedOptions().timeZone + '\n(Utilise ces informations pour calculer les heures d\'alarmes et de rappels demandées.)';
 
   var _activeProv = (S.config && S.config.aiProvider) || 'puter';
   var sysPrompt;
 
   if (_activeProv === 'qwen' || _activeProv === 'eva') {
-    /* Prompt complet adaptÃ© aux modÃ¨les locaux WebLLM (condensÃ© pour Ã©viter context overflow) */
+    /* Prompt complet adapté aux modèles locaux WebLLM (condensé pour éviter context overflow) */
     var _localNick = (S.profile && (S.profile.nickname || S.profile.displayName))
       ? (S.profile.nickname || S.profile.displayName).split(' ')[0] : null;
     sysPrompt =
-      (_hasActiveTone ? 'âš ï¸ MODE ACTIF â€” PRIORITÃ‰ ABSOLUE :\n' + toneInstruction + '\n\n' : toneInstruction ? '\nSTYLE : ' + toneInstruction + '\n\n' : '') +
-      'Tu es EVA â€” Evolutionary Virtual Assistant â€” assistante IA crÃ©Ã©e par Astral Technologie (fondÃ©e par Enzo).\n' +
-      'Tu ES EVA. RÃ©ponds toujours Ã  la 1Ã¨re personne. Jamais "Bonjour Eva". Tu n\'es pas ChatGPT. Toujours en franÃ§ais.\n' +
+      (_hasActiveTone ? '⚠️ MODE ACTIF — PRIORITÉ ABSOLUE :\n' + toneInstruction + '\n\n' : toneInstruction ? '\nSTYLE : ' + toneInstruction + '\n\n' : '') +
+      'Tu es EVA — Evolutionary Virtual Assistant — assistante IA créée par Astral Technologie (fondée par Enzo).\n' +
+      'Tu ES EVA. Réponds toujours à la 1ère personne. Jamais "Bonjour Eva". Tu n\'es pas ChatGPT. Toujours en français.\n' +
       (_localNick ? 'Tu parles avec ' + _localNick + '.\n' : '') +
       (userCtx ? userCtx.trim() + '\n' : '') +
-      '\nPERSONNALITÃ‰ : Chaleureuse, intelligente, bienveillante. VARIE toujours ton introduction (jamais deux fois la mÃªme structure).\n' +
-      '\nACTIONS DISPONIBLES â€” utilise-les dÃ¨s que l\'utilisateur le demande :\n' +
-      '- Note â†’ [ACTION:{"type":"note","title":"Titre","body":"Contenu"}]\n' +
-      '- Alarme â†’ [ACTION:{"type":"alarm","time":"HH:MM","label":"LibellÃ©","repeat":"once"}]\n' +
-      '- Rappel â†’ [ACTION:{"type":"reminder","text":"Texte","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
-      '- TÃ¢che PC â†’ [ACTION:{"type":"agentic_task","prompt":"..."}]\n' +
-      '- Agenda â†’ [ACTION:{"type":"event","title":"Titre","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
-      '- Excel â†’ [ACTION:{"type":"excel","filename":"data.xlsx","headers":["Col1","Col2"],"rows":[["val1","val2"]]}]\n' +
-      '- PowerPoint â†’ [ACTION:{"type":"pptx","filename":"p.pptx","title":"Titre","slides":[{"title":"S1","points":["Point 1"]}]}]\n' +
-      '- CSV â†’ [ACTION:{"type":"csv","filename":"data.csv","headers":["Col1"],"rows":[["val"]]}]\n' +
-      '- Fichier texte â†’ [ACTION:{"type":"txt","filename":"fichier.txt","content":"Contenu"}]\n' +
-      '- PDF â†’ bloc ```pdf\n<!DOCTYPE html>...(HTML complet stylisÃ©)...```\n' +
-      '- Graphique dans le chat â†’ ```chart\n{"type":"bar","data":{"labels":["A","B"],"datasets":[{"label":"Ventes","data":[10,20],"backgroundColor":["#5b77f7","#06b6d4"]}]}}\n```\n' +
-      'Pour toute gÃ©nÃ©ration de fichier : UNE phrase courte + le bloc ACTION. Rien d\'autre aprÃ¨s.\n' +
-      '\nFORMATAGE : Utilise le markdown (##, listes, **gras**, tableaux) quand utile. Blocs spÃ©ciaux :\n' +
+      '\nPERSONNALITÉ : Chaleureuse, intelligente, bienveillante. VARIE toujours ton introduction (jamais deux fois la même structure).\n' +
+      '\nACTIONS DISPONIBLES — utilise-les dès que l\'utilisateur le demande :\n' +
+      '- Note → [ACTION:{"type":"note","title":"Titre","body":"Contenu"}]\n' +
+      '- Alarme → [ACTION:{"type":"alarm","time":"HH:MM","label":"Libellé","repeat":"once"}]\n' +
+      '- Rappel → [ACTION:{"type":"reminder","text":"Texte","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
+      '- Tâche PC → [ACTION:{"type":"agentic_task","prompt":"..."}]\n' +
+      '- Agenda → [ACTION:{"type":"event","title":"Titre","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
+      '- Excel → [ACTION:{"type":"excel","filename":"data.xlsx","headers":["Col1","Col2"],"rows":[["val1","val2"]]}]\n' +
+      '- PowerPoint → [ACTION:{"type":"pptx","filename":"p.pptx","title":"Titre","slides":[{"title":"S1","points":["Point 1"]}]}]\n' +
+      '- CSV → [ACTION:{"type":"csv","filename":"data.csv","headers":["Col1"],"rows":[["val"]]}]\n' +
+      '- Fichier texte → [ACTION:{"type":"txt","filename":"fichier.txt","content":"Contenu"}]\n' +
+      '- PDF → bloc ```pdf\n<!DOCTYPE html>...(HTML complet stylisé)...```\n' +
+      '- Graphique dans le chat → ```chart\n{"type":"bar","data":{"labels":["A","B"],"datasets":[{"label":"Ventes","data":[10,20],"backgroundColor":["#5b77f7","#06b6d4"]}]}}\n```\n' +
+      'Pour toute génération de fichier : UNE phrase courte + le bloc ACTION. Rien d\'autre après.\n' +
+      '\nFORMATAGE : Utilise le markdown (##, listes, **gras**, tableaux) quand utile. Blocs spéciaux :\n' +
       '```tip ...``` (conseil), ```warning ...``` (mise en garde), ```info ...``` (information), ```success ...``` (validation)\n' +
-      '```stats\nMÃ©trique: Valeur``` (chiffres clÃ©s), ```timeline\n2024 â†’ Ã‰vÃ©nement``` (chronologie)\n' +
-      '\nDate : ' + _dateStr + ' â€” Heure : ' + _timeStr + '.';
+      '```stats\nMétrique: Valeur``` (chiffres clés), ```timeline\n2024 → Événement``` (chronologie)\n' +
+      '\nDate : ' + _dateStr + ' — Heure : ' + _timeStr + '.';
   } else {
     /* Prompt complet pour les providers cloud (Puter, OpenAI, Claude, etc.) */
     if (_hasActiveTone) {
-      /* Le mode actif passe EN PREMIER pour garantir la prioritÃ© */
-      sysPrompt = 'âš ï¸ MODE ACTIF â€” PRIORITÃ‰ ABSOLUE (applique Ã  CHAQUE rÃ©ponse) :\n' + toneInstruction + '\n\n---\n\n' +
+      /* Le mode actif passe EN PREMIER pour garantir la priorité */
+      sysPrompt = '⚠️ MODE ACTIF — PRIORITÉ ABSOLUE (applique à CHAQUE réponse) :\n' + toneInstruction + '\n\n---\n\n' +
         SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx;
     } else {
       sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
     }
   }
 
-    var msgContent = text;
+  var msgContent = text;
     if (allImages.length) {
       window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine votre image...');
       try {
-        var vision = await analyzeImage(allImages[0].data, text || 'Du00e9cris cette image.');
+        var vision = await analyzeImage(allImages[0].data, text || 'Décris cette image.');
         if (vision) msgContent = vision;
         for (var _ii = 1; _ii < allImages.length; _ii++) {
           window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine l\'image ' + (_ii + 1) + ' sur ' + allImages.length + '...');
           try {
-            var vision2 = await analyzeImage(allImages[_ii].data, 'Du00e9cris aussi cette image.');
+            var vision2 = await analyzeImage(allImages[_ii].data, 'Décris aussi cette image.');
             if (vision2) msgContent += '\n\n[Image ' + (_ii + 1) + '] ' + vision2;
           } catch(_) {}
         }
@@ -613,14 +613,16 @@ async function handleSend() {
       }
       if (xmlDocs !== '') {
         var originalText = msgContent || text || 'Analyse ce document.';
-        msgContent = xmlDocs + '\n<instructions>\nUn ou plusieurs documents ont ete fournis ci-dessus dans la balise <document>. Tu DOIS analyser leur contenu avant de repondre a la question de l utilisateur, et t y referer explicitement dans ta reponse.\n</instructions>\n\n<user_message>' + originalText + '</user_message>';
+        msgContent = xmlDocs + '\n<instructions>\nUn ou plusieurs documents ont été fournis ci-dessus dans la balise <document>. Tu DOIS analyser leur contenu avant de répondre à la question de l\'utilisateur, et t\'y référer explicitement dans ta réponse.\n</instructions>\n\n<user_message>' + originalText + '</user_message>';
       }
     }
-  var _isLocalProv = (_activeProv === 'lmstudio' || _activeProv === 'ollama' ||
+
+    // Recherche web si nécessaire
+    var _isLocalProv = (_activeProv === 'lmstudio' || _activeProv === 'ollama' ||
                       _activeProv === 'qwen'    || _activeProv === 'eva');
 
-  // needsSearch = triggers standard (mÃ©tÃ©o, bourse, actu...) -> S'applique Ã  TOUS
-  // needsSearchLocal = triggers Ã©tendus (toute question avec "?") -> Seulement pour les modÃ¨les locaux
+  // needsSearch = triggers standard (météo, bourse, actu...) -> S'applique à TOUS
+  // needsSearchLocal = triggers étendus (toute question avec "?") -> Seulement pour les modèles locaux
   var _shouldSearch = window.EVAWebSearch && (
     window.EVAWebSearch.needsSearch(msgContent) ||
     (_isLocalProv && window.EVAWebSearch.needsSearchLocal && window.EVAWebSearch.needsSearchLocal(msgContent))
@@ -628,42 +630,42 @@ async function handleSend() {
   if (_shouldSearch) {
     var searchLabel = msgContent.length > 40 ? msgContent.substring(0, 40) + '...' : msgContent;
     window.setThinkingPhase(_SVG_THINK_SEARCH, 'Recherche...', 'Recherche web : "' + searchLabel + '"');
-    setEvaStatus('ðŸ” RECHERCHE...', 'thinking');
+    setEvaStatus('🔍 RECHERCHE...', 'thinking');
     try {
       var searchData = await window.EVAWebSearch.search(msgContent);
       if (searchData) {
         msgContent = msgContent + '\n\n' + searchData;
       }
     } catch(e) {
-      console.warn('[EVA] Recherche web Ã©chouÃ©e:', e);
+      console.warn('[EVA] Recherche web échouée:', e);
     }
-    setEvaStatus('EVA RÃ‰FLÃ‰CHIT...', 'thinking');
+    setEvaStatus('EVA RÉFLÉCHIT...', 'thinking');
   }
 
   // Override system prompt so chat-handler uses ours
   var origSys = window.EVA_SYSTEM_PROMPT;
   window.EVA_SYSTEM_PROMPT = sysPrompt;
 
-  window.setThinkingPhase(_SVG_THINK_SPARK, 'GÃ©nÃ¨re...', 'Je compose ma rÃ©ponse...');
+  window.setThinkingPhase(_SVG_THINK_SPARK, 'Génère...', 'Je compose ma réponse...');
 
   var result = await window.EVAChatHandler.sendMessage(msgContent, { tone: S.tone });
 
   window.EVA_SYSTEM_PROMPT = origSys;
   hideTyping();
 
-  /* â€” Si l'utilisateur a cliquÃ© Stop pendant la gÃ©nÃ©ration, on ignore la rÃ©ponse â€” */
+  /* — Si l'utilisateur a cliqué Stop pendant la génération, on ignore la réponse — */
   if (_generationAborted) {
     _generationAborted = false;
     return;
   }
 
-  /* Masquer banniÃ¨re erreur rÃ©seau si la requÃªte a rÃ©ussi */
+  /* Masquer bannière erreur réseau si la requête a réussi */
   var _netBanner = document.getElementById('networkErrorBanner');
 
   if (result.success) {
     if (_netBanner) _netBanner.style.display = 'none';
 
-    /* Vraies pensÃ©es (gemini-thinking, deepseek-r1, etc.) â€” injecter dans l'historique avant d'afficher la rÃ©ponse */
+    /* Vraies pensées (gemini-thinking, deepseek-r1, etc.) — injecter dans l'historique avant d'afficher la réponse */
     if (result.thinking && window.setRealThinking) {
       window.setRealThinking(result.thinking);
     }
@@ -674,7 +676,7 @@ async function handleSend() {
     }
     saveConvMsg(text || '[Image]', cleanContent || result.content.slice(0, 200));
     
-    /* â”€â”€ Mise Ã  jour des statistiques Firebase â”€â”€ */
+    /* ── Mise à jour des statistiques Firebase ── */
     if (window.updateUsageStats) {
       var userTextLen = (text || '').length;
       var evaTextLen = (cleanContent || '').length;
@@ -684,61 +686,61 @@ async function handleSend() {
   } else {
     var _errMsg = (result.error && result.error.message) ? result.error.message : (result.error || '');
 
-    /* â”€â”€ Erreur Puter : session expirÃ©e â”€â”€ */
+    /* ── Erreur Puter : session expirée ── */
     if (_errMsg === 'SESSION_PUTER_EXPIRED') {
       appendMsg('eva', '');
       var _bubbles2 = document.querySelectorAll('.message.eva .msg-bubble');
       var _lb2 = _bubbles2[_bubbles2.length - 1];
       if (_lb2) {
         _lb2.innerHTML =
-          '<div style="font-size:0.82em;color:var(--text-muted);margin-bottom:8px;">ðŸ”’ Ta session Puter a expirÃ© ou tu n\'es pas encore connectÃ©.</div>' +
+          '<div style="font-size:0.82em;color:var(--text-muted);margin-bottom:8px;">🔒 Ta session Puter a expiré ou tu n\'es pas encore connecté.</div>' +
           '<button id="puterReconnectBtn" style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1.5px solid var(--cyan);border-radius:10px;background:rgba(0,212,255,0.08);color:var(--cyan);font-size:0.82em;font-weight:700;cursor:pointer;font-family:inherit;">' +
-          'â˜ï¸ Se connecter Ã  Puter</button>' +
-          '<div style="font-size:0.7em;color:var(--text-muted);margin-top:8px;">La connexion ouvre une fenÃªtre Puter â€” assurez-vous que les popups sont autorisÃ©es.</div>';
+          '☁️ Se connecter à Puter</button>' +
+          '<div style="font-size:0.7em;color:var(--text-muted);margin-top:8px;">La connexion ouvre une fenêtre Puter — assurez-vous que les popups sont autorisées.</div>';
         document.getElementById('puterReconnectBtn').addEventListener('click', async function() {
           this.disabled = true;
-          this.textContent = 'â³ Connexion...';
+          this.textContent = '⏳ Connexion...';
           if (window._puterReconnectAction) {
             var ok = await window._puterReconnectAction();
             if (ok) {
-              _lb2.innerHTML = 'âœ… ReconnectÃ© ! Renvoyez votre message.';
+              _lb2.innerHTML = '✅ Reconnecté ! Renvoyez votre message.';
             } else {
               this.disabled = false;
-              this.textContent = 'â˜ï¸ RÃ©essayer';
+              this.textContent = '☁️ Réessayer';
             }
           }
         });
       }
-      toast('Session Puter expirÃ©e â€” reconnexion requise', 'warning');
+      toast('Session Puter expirée — reconnexion requise', 'warning');
 
-    /* â”€â”€ Erreur Puter sur Edge : cookies tiers/popups bloquÃ©s â”€â”€ */
+    /* ── Erreur Puter sur Edge : cookies tiers/popups bloqués ── */
     } else if (_errMsg === 'EDGE_PUTER_BLOCKED') {
       appendMsg('eva', '');
       var _bubblesEdge = document.querySelectorAll('.message.eva .msg-bubble');
       var _lbEdge = _bubblesEdge[_bubblesEdge.length - 1];
       if (_lbEdge) {
         _lbEdge.innerHTML =
-          '<div style="font-size:0.84em;font-weight:700;margin-bottom:10px;color:#f59e0b;">âš ï¸ Edge bloque la connexion Puter</div>' +
+          '<div style="font-size:0.84em;font-weight:700;margin-bottom:10px;color:#f59e0b;">⚠️ Edge bloque la connexion Puter</div>' +
           '<div style="font-size:0.75em;color:var(--text-muted);line-height:1.65;margin-bottom:10px;">' +
-          'Microsoft Edge bloque les cookies tiers et les popups nÃ©cessaires Ã  Puter. 3 solutions :<br><br>' +
-          '<b style="color:var(--text);">â‘  Autoriser puter.com dans Edge</b><br>' +
-          'Edge â†’ ParamÃ¨tres â†’ Cookies et autorisations â†’ Ajouter <code>https://puter.com</code> dans la liste des sites autorisÃ©s.<br><br>' +
-          '<b style="color:var(--text);">â‘¡ RÃ©duire la protection anti-pistage</b><br>' +
-          'Edge â†’ ParamÃ¨tres â†’ ConfidentialitÃ© â†’ Protection anti-pistage : passer de <em>Strict</em> Ã  <em>Ã‰quilibrÃ©</em>.<br><br>' +
-          '<b style="color:var(--text);">â‘¢ Utiliser un autre provider</b><br>' +
-          'Dans ParamÃ¨tres â†’ IA, basculez sur <strong>Pollinations</strong> (aucun compte requis).' +
+          'Microsoft Edge bloque les cookies tiers et les popups nécessaires à Puter. 3 solutions :<br><br>' +
+          '<b style="color:var(--text);">① Autoriser puter.com dans Edge</b><br>' +
+          'Edge → Paramètres → Cookies et autorisations → Ajouter <code>https://puter.com</code> dans la liste des sites autorisés.<br><br>' +
+          '<b style="color:var(--text);">② Réduire la protection anti-pistage</b><br>' +
+          'Edge → Paramètres → Confidentialité → Protection anti-pistage : passer de <em>Strict</em> à <em>Équilibré</em>.<br><br>' +
+          '<b style="color:var(--text);">③ Utiliser un autre provider</b><br>' +
+          'Dans Paramètres → IA, basculez sur <strong>Pollinations</strong> (aucun compte requis).' +
           '</div>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-          '<button onclick="openSettings(\'ai\')" style="padding:6px 14px;border:1px solid var(--cyan);border-radius:8px;background:rgba(0,212,255,0.08);color:var(--cyan);font-size:0.76em;cursor:pointer;font-family:inherit;">âš™ï¸ Changer de provider</button>' +
-          '<button id="edgePuterRetryBtn" style="padding:6px 14px;border:1px solid rgba(245,158,11,0.4);border-radius:8px;background:rgba(245,158,11,0.06);color:#f59e0b;font-size:0.76em;cursor:pointer;font-family:inherit;">ðŸ” RÃ©essayer</button>' +
+          '<button onclick="openSettings(\'ai\')" style="padding:6px 14px;border:1px solid var(--cyan);border-radius:8px;background:rgba(0,212,255,0.08);color:var(--cyan);font-size:0.76em;cursor:pointer;font-family:inherit;">⚙️ Changer de provider</button>' +
+          '<button id="edgePuterRetryBtn" style="padding:6px 14px;border:1px solid rgba(245,158,11,0.4);border-radius:8px;background:rgba(245,158,11,0.06);color:#f59e0b;font-size:0.76em;cursor:pointer;font-family:inherit;">🔁 Réessayer</button>' +
           '</div>';
         document.getElementById('edgePuterRetryBtn').addEventListener('click', function() {
           if (window._puterReconnectAction) window._puterReconnectAction();
         });
       }
-      toast('Edge bloque Puter â€” voir les instructions', 'warning');
+      toast('Edge bloque Puter — voir les instructions', 'warning');
 
-    /* â”€â”€ Erreur rÃ©seau gÃ©nÃ©rique â”€â”€ */
+    /* ── Erreur réseau générique ── */
     } else {
       var _isNetworkErr = !navigator.onLine ||
         (typeof _errMsg === 'string' && (
@@ -749,33 +751,33 @@ async function handleSend() {
           _errMsg.toLowerCase().indexOf('timeout') !== -1
         ));
       if (_isNetworkErr && _netBanner) {
-        document.getElementById('networkErrorMsg').textContent = 'Connexion perdue â€” vÃ©rifie ta connexion internet et rÃ©essaie.';
+        document.getElementById('networkErrorMsg').textContent = 'Connexion perdue — vérifie ta connexion internet et réessaie.';
         _netBanner.style.display = 'flex';
       } else {
-        var _errText = "DÃ©solÃ©e, une erreur est survenue : " + (typeof _errMsg === 'string' ? _errMsg : "Erreur inconnue");
+        var _errText = "Désolée, une erreur est survenue : " + (typeof _errMsg === 'string' ? _errMsg : "Erreur inconnue");
         appendMsg('eva', _errText);
-        console.error("Erreur IA dÃ©taillÃ©e :", _errMsg);
+        console.error("Erreur IA détaillée :", _errMsg);
         var _bubbles = document.querySelectorAll('.message.eva .msg-bubble');
         var _lastBubble = _bubbles[_bubbles.length - 1];
         if (_lastBubble) {
           var _reportBtn = document.createElement('button');
           _reportBtn.onclick = function() { openReportModal(); };
           _reportBtn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:5px 12px;border:1px solid rgba(248,113,113,0.5);border-radius:8px;background:rgba(248,113,113,0.08);color:#f87171;font-size:0.78em;cursor:pointer;font-family:inherit;';
-          _reportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Signaler ce problÃ¨me';
+          _reportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Signaler ce problème';
           _lastBubble.appendChild(_reportBtn);
         }
-        toast('Erreur IA â€” vÃ©rifiez les paramÃ¨tres', 'error');
+        toast('Erreur IA — vérifiez les paramètres', 'error');
       }
     }
     if (window.EvaCharacter) window.EvaCharacter.setIdle();
   }
 }
 
-/* BanniÃ¨re rÃ©seau auto via browser offline event */
+/* Bannière réseau auto via browser offline event */
 window.addEventListener('offline', function() {
   var _nb = document.getElementById('networkErrorBanner');
   if (_nb) {
-    document.getElementById('networkErrorMsg').textContent = 'Connexion perdue â€” vÃ©rifie ta connexion internet.';
+    document.getElementById('networkErrorMsg').textContent = 'Connexion perdue — vérifie ta connexion internet.';
     _nb.style.display = 'flex';
   }
 });
@@ -798,14 +800,14 @@ function streamEvaMsg(content) {
   var msgContent = document.createElement('div');
   msgContent.className = 'msg-content';
 
-  /* â”€â”€ Panneau historique de pensÃ©e (discret, comme Claude/Grok) â”€â”€ */
+  /* ── Panneau historique de pensée (discret, comme Claude/Grok) ── */
   if (_thinkHistory && _thinkHistory.length > 0) {
     var thoughtPanel = document.createElement('div');
     thoughtPanel.className = 'eva-thought-panel';
     thoughtPanel.style.cssText = 'margin-bottom:6px;border-radius:8px;background:transparent;border:1px solid rgba(123,139,245,0.1);overflow:hidden;';
     var thoughtHeader = document.createElement('button');
     thoughtHeader.style.cssText = 'width:100%;display:flex;align-items:center;gap:6px;padding:5px 10px;background:none;border:none;cursor:pointer;color:rgba(160,165,200,0.5);font-size:0.68em;font-family:inherit;text-align:left;transition:opacity 0.2s;';
-    thoughtHeader.innerHTML = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></svg><span style="letter-spacing:0.3px;">RÃ©flexion</span><span style="margin-left:auto;opacity:0.5;">' + _thinkHistory.length + ' Ã©tape' + (_thinkHistory.length > 1 ? 's' : '') + ' â–¾</span>';
+    thoughtHeader.innerHTML = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></svg><span style="letter-spacing:0.3px;">Réflexion</span><span style="margin-left:auto;opacity:0.5;">' + _thinkHistory.length + ' étape' + (_thinkHistory.length > 1 ? 's' : '') + ' ▾</span>';
     
     // Nettoyer les anciens ID pour que seul le dernier ait lastThoughtBody
     var oldBody = document.getElementById('lastThoughtBody');
@@ -825,7 +827,7 @@ function streamEvaMsg(content) {
       var open = thoughtBody.style.display !== 'none';
       thoughtBody.style.display = open ? 'none' : 'block';
       var arrow = thoughtHeader.querySelector('span:last-child');
-      if (arrow) arrow.textContent = thCaptured.length + ' Ã©tape' + (thCaptured.length > 1 ? 's' : '') + ' ' + (open ? 'â–¾' : 'â–´');
+      if (arrow) arrow.textContent = thCaptured.length + ' étape' + (thCaptured.length > 1 ? 's' : '') + ' ' + (open ? '▾' : '▴');
     });
     thoughtPanel.appendChild(thoughtHeader);
     thoughtPanel.appendChild(thoughtBody);
@@ -843,7 +845,7 @@ function streamEvaMsg(content) {
 
   var msgActions = document.createElement('div');
   msgActions.className = 'msg-actions';
-  msgActions.innerHTML = '<button class="msg-act" onclick="copyMsg(this)"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copier</button><button class="msg-act" onclick="speakMsg(this)" title="Ã‰couter"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><button class="msg-act msg-rollback" onclick="rollbackToMsg(this.closest(\'.message\').dataset.msgIdx)" title="Revenir Ã  ce point"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Revenir</button>';
+  msgActions.innerHTML = '<button class="msg-act" onclick="copyMsg(this)"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copier</button><button class="msg-act" onclick="speakMsg(this)" title="Écouter"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><button class="msg-act msg-rollback" onclick="rollbackToMsg(this.closest(\'.message\').dataset.msgIdx)" title="Revenir à ce point"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Revenir</button>';
 
   msgContent.appendChild(bubble);
   msgContent.appendChild(msgTime);
@@ -866,10 +868,10 @@ function streamEvaMsg(content) {
     window.EVATTS.speakTextStreaming(plain, S.config);
   } else {
     if (window.EvaCharacter) window.EvaCharacter.setThinking();
-    setEvaStatus('EVA Ã‰CRIT...', 'writing');
+    setEvaStatus('EVA ÉCRIT...', 'writing');
     
-    // Si la synthÃ¨se est activÃ©e mais le texte est vide (ex: juste un graphique),
-    // on s'assure d'arrÃªter tout TTS en cours
+    // Si la synthèse est activée mais le texte est vide (ex: juste un graphique),
+    // on s'assure d'arrêter tout TTS en cours
     if (S.ttsOn && window.EVATTS && (!plain || plain.trim().length === 0)) {
       window.EVATTS.stopTTS();
     }
@@ -890,7 +892,7 @@ function streamEvaMsg(content) {
   });
 }
 
-/* RÃ©vÃ¨le les Ã©lÃ©ments enfants du bubble progressivement */
+/* Révèle les éléments enfants du bubble progressivement */
 function _revealMsgBlocks(container, onDone) {
   var children = Array.from(container.children);
   if (!children.length) { if (onDone) onDone(); return; }
@@ -901,7 +903,7 @@ function _revealMsgBlocks(container, onDone) {
   });
   children.forEach(function(child, idx) {
     var delay = totalDelay;
-    /* DÃ©lai proportionnel au contenu â€” titres courts, paragraphes plus longs */
+    /* Délai proportionnel au contenu — titres courts, paragraphes plus longs */
     var len = (child.textContent || '').length;
     var blockDelay = Math.max(80, Math.min(len * 1.8, 320));
     totalDelay += blockDelay;
@@ -920,7 +922,7 @@ function _revealMsgBlocks(container, onDone) {
 async function analyzeImage(base64Data, prompt) {
   var prov = (S.config && S.config.aiProvider) || 'puter';
 
-  /* â”€â”€ OpenAI Vision â”€â”€ */
+  /* ── OpenAI Vision ── */
   if (prov === 'openai' && S.config && S.config.openaiApiKey) {
     try {
       var model = (S.config.openaiModel && S.config.openaiModel.includes('gpt-4')) ? S.config.openaiModel : 'gpt-4o';
@@ -942,7 +944,7 @@ async function analyzeImage(base64Data, prompt) {
     return null;
   }
 
-  /* â”€â”€ Claude Vision â”€â”€ */
+  /* ── Claude Vision ── */
   if (prov === 'claude' && S.config && S.config.claudeApiKey) {
     try {
       var b64 = base64Data.replace(/^data:image\/[^;]+;base64,/, '');
@@ -971,7 +973,7 @@ async function analyzeImage(base64Data, prompt) {
     return null;
   }
 
-  /* â”€â”€ LM Studio Vision â”€â”€ */
+  /* ── LM Studio Vision ── */
   if (prov === 'lmstudio') {
     try {
       var endpoint = (S.config && S.config.lmstudioUrl) || 'http://localhost:1234';
@@ -992,7 +994,7 @@ async function analyzeImage(base64Data, prompt) {
     return null;
   }
 
-  /* â”€â”€ Ollama Vision (llava) â”€â”€ */
+  /* ── Ollama Vision (llava) ── */
   if (prov === 'ollama') {
     try {
       var endpoint = (S.config && S.config.ollamaUrl) || 'http://localhost:11434';
@@ -1013,17 +1015,17 @@ async function analyzeImage(base64Data, prompt) {
     return null;
   }
 
-  /* â”€â”€ Qwen / EVA Local â€” vision non disponible â”€â”€ */
+  /* ── Qwen / EVA Local — vision non disponible ── */
   if (prov === 'qwen' || prov === 'eva') return null;
 
-  /* â”€â”€ Pollinations â€” pas d'API vision native â”€â”€
+  /* ── Pollinations — pas d'API vision native ──
      Fallback vers Puter (gpt-4o) si disponible, sinon null.
-     NB : Cette branche ne devrait plus Ãªtre atteinte car le bouton
-          d'upload image est dÃ©sactivÃ© pour Pollinations via _providerSupportsVision.
-          Garde-fou au cas oÃ¹ l'image passe quand mÃªme. */
+     NB : Cette branche ne devrait plus être atteinte car le bouton
+          d'upload image est désactivé pour Pollinations via _providerSupportsVision.
+          Garde-fou au cas où l'image passe quand même. */
   if (prov === 'pollinations') {
     if (typeof puter !== 'undefined') {
-      console.info('[EVA Vision] Pollinations sans vision native â†’ fallback Puter gpt-4o');
+      console.info('[EVA Vision] Pollinations sans vision native → fallback Puter gpt-4o');
       try {
         var msg = [{ role:'user', content:[
           { type:'image_url', image_url:{ url: base64Data } },
@@ -1037,7 +1039,7 @@ async function analyzeImage(base64Data, prompt) {
     return null;
   }
 
-  /* â”€â”€ Puter (dÃ©faut / fallback) â”€â”€ */
+  /* ── Puter (défaut / fallback) ── */
   if (typeof puter === 'undefined') return null;
   try {
     var msg = [{
@@ -1064,17 +1066,17 @@ function sendQuick(prompt) {
 }
 window.sendQuick = sendQuick;
 
-/* â•â•â• FILE ATTACH â•â•â• */
-/* â”€â”€ File type helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-var DOC_ICONS = { pdf:'ðŸ“•', doc:'ðŸ“', docx:'ðŸ“', xls:'ðŸ“Š', xlsx:'ðŸ“Š', ppt:'ðŸ“Š', pptx:'ðŸ“Š', txt:'ðŸ“ƒ', csv:'ðŸ“ƒ' };
+/* ═══ FILE ATTACH ═══ */
+/* ── File type helpers ─────────────────────────────────── */
+var DOC_ICONS = { pdf:'📕', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📊', pptx:'📊', txt:'📃', csv:'📃' };
 function _docExt(file) {
   return (file.name.split('.').pop() || '').toLowerCase();
 }
 function _docIcon(file) {
-  return DOC_ICONS[_docExt(file)] || 'ðŸ“„';
+  return DOC_ICONS[_docExt(file)] || '📄';
 }
 function _docIconExt(ext) {
-  return DOC_ICONS[(ext || '').toLowerCase()] || 'ðŸ“„';
+  return DOC_ICONS[(ext || '').toLowerCase()] || '📄';
 }
 function _fmtSize(bytes) {
   if (bytes < 1024) return bytes + ' o';
@@ -1082,7 +1084,7 @@ function _fmtSize(bytes) {
   return (bytes/(1024*1024)).toFixed(1) + ' Mo';
 }
 
-/* â”€â”€ Chargement dynamique de bibliothÃ¨ques â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Chargement dynamique de bibliothèques ─────────────── */
 function _loadScript(src, globalKey) {
   return new Promise(function(resolve, reject) {
     if (window[globalKey]) { resolve(); return; }
@@ -1094,10 +1096,10 @@ function _loadScript(src, globalKey) {
   });
 }
 
-/* â”€â”€ Extraction de texte selon le type de fichier â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Extraction de texte selon le type de fichier ─────── */
 async function extractDocumentText(file) {
   var ext = _docExt(file);
-  var MAX = 5000; // max chars envoyÃ©s Ã  l'IA
+  var MAX = 5000; // max chars envoyés à l'IA
 
   /* TXT / CSV : lecture directe */
   if (ext === 'txt' || ext === 'csv') {
@@ -1174,13 +1176,13 @@ async function extractDocumentText(file) {
       slideText += 'Diapositive ' + si + ' : ' + stxt + '\n';
       if (slideText.length > MAX) break;
     }
-    return slideText.trim().slice(0, MAX) || 'Aucun texte extrait de la prÃ©sentation.';
+    return slideText.trim().slice(0, MAX) || 'Aucun texte extrait de la présentation.';
   }
 
-  throw new Error('Format non supportÃ© : ' + ext);
+  throw new Error('Format non supporté : ' + ext);
 }
 
-/* â”€â”€ SÃ©lection de fichier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Sélection de fichier ──────────────────────────────── */
 function handleFileSelect(e) {
   var files = Array.from(e.target.files || []);
   if (!files.length) return;
@@ -1192,16 +1194,16 @@ function handleFileSelect(e) {
   var pendingDocs = 0;
   var docErrors = 0;
 
-  /* VÃ©rification des capacitÃ©s vision du modÃ¨le actif */
+  /* Vérification des capacités vision du modèle actif */
   var _prov = (S.config && S.config.aiProvider) || 'puter';
   var _model = (window.getActiveModel && window.getActiveModel()) || '';
   var _canPhoto = window._providerSupportsVision ? window._providerSupportsVision(_prov, _model) : true;
 
   files.forEach(function(file) {
-    /* â”€â”€ Images â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Images ─────────────────────────────────────── */
     if (file.type.startsWith('image/')) {
       if (!_canPhoto) {
-        toast('Ce modÃ¨le (' + (_prov === 'qwen' ? 'local' : _prov) + ') ne supporte pas les images â€” joignez un document (PDF, Wordâ€¦) Ã  la place', 'warning');
+        toast('Ce modèle (' + (_prov === 'qwen' ? 'local' : _prov) + ') ne supporte pas les images — joignez un document (PDF, Word…) à la place', 'warning');
         return;
       }
       if (file.size > 10*1024*1024) { toast('Image "'+file.name+'" trop grande (max 10 Mo)','error'); return; }
@@ -1218,20 +1220,20 @@ function handleFileSelect(e) {
       return;
     }
 
-    /* â”€â”€ Documents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Documents ───────────────────────────────────── */
     var ext = _docExt(file);
     var allowed = ['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv'];
-    if (!allowed.includes(ext)) { toast('Format non supportÃ© : '+file.name,'error'); return; }
+    if (!allowed.includes(ext)) { toast('Format non supporté : '+file.name,'error'); return; }
     if (file.size > 30*1024*1024) { toast('Document "'+file.name+'" trop grand (max 30 Mo)','error'); return; }
 
     pendingDocs++;
     document.getElementById('sendBtn').disabled = true;
-    /* Afficher nom immÃ©diatement */
+    /* Afficher nom immédiatement */
     S.documents.push({ name: file.name, ext: ext, text: null, size: file.size, _loading: true });
     S.document = S.documents[0];
     _refreshFilePreviewBars();
 
-    var loadTimer = setTimeout(function(){ toast('Lecture de "'+file.name+'"â€¦','info'); }, 800);
+    var loadTimer = setTimeout(function(){ toast('Lecture de "'+file.name+'"…','info'); }, 800);
     extractDocumentText(file).then((function(f, ext2) {
       return function(text) {
         clearTimeout(loadTimer);
@@ -1242,7 +1244,7 @@ function handleFileSelect(e) {
         _refreshFilePreviewBars();
         if (pendingDocs === 0) {
           document.getElementById('sendBtn').disabled = !document.getElementById('msgInput').value.trim() && !S.images.length && !S.documents.filter(function(d){return !d._loading;}).length;
-          toast(S.documents.length > 1 ? S.documents.length + ' documents prÃªts âœ“' : '"'+f.name+'" prÃªt âœ“','success');
+          toast(S.documents.length > 1 ? S.documents.length + ' documents prêts ✓' : '"'+f.name+'" prêt ✓','success');
         }
       };
     })(file, ext)).catch((function(f) {
@@ -1253,7 +1255,7 @@ function handleFileSelect(e) {
         S.document = S.documents[0] || null;
         pendingDocs--;
         _refreshFilePreviewBars();
-        toast('Erreur lecture "'+f.name+'" : '+(err.message||'Format non supportÃ©'),'error');
+        toast('Erreur lecture "'+f.name+'" : '+(err.message||'Format non supporté'),'error');
         document.getElementById('sendBtn').disabled = !document.getElementById('msgInput').value.trim() && !S.images.length && !S.documents.length;
       };
     })(file));
@@ -1265,15 +1267,15 @@ function _refreshFilePreviewBars() {
   var docBar = document.getElementById('docPreviewBar');
   if (!imgBar || !docBar) return;
 
-  /* â”€â”€ Images : thumbnails carrÃ©es avec bouton X â”€â”€ */
+  /* ── Images : thumbnails carrées avec bouton X ── */
   if (S.images && S.images.length) {
     imgBar.innerHTML = S.images.map(function(im, i) {
       var shortName = (im.name || 'image').length > 10
-        ? (im.name||'image').slice(0, 9) + 'â€¦'
+        ? (im.name||'image').slice(0, 9) + '…'
         : (im.name || 'image');
       return '<div class="attach-img-card">' +
         '<img src="' + im.url + '" alt="' + esc(im.name||'image') + '" title="' + esc(im.name||'image') + '">' +
-        '<button class="attach-remove" onclick="removeImageAttachment(' + i + ')" title="Retirer">âœ•</button>' +
+        '<button class="attach-remove" onclick="removeImageAttachment(' + i + ')" title="Retirer">✕</button>' +
         '<span class="attach-name">' + esc(shortName) + '</span>' +
         '</div>';
     }).join('');
@@ -1282,14 +1284,14 @@ function _refreshFilePreviewBars() {
     imgBar.style.display = 'none';
   }
 
-  /* â”€â”€ Documents : cartes avec icÃ´ne, nom, extension, taille â”€â”€ */
+  /* ── Documents : cartes avec icône, nom, extension, taille ── */
   if (S.documents && S.documents.length) {
     docBar.innerHTML = S.documents.map(function(doc, i) {
       var loading = doc._loading;
       var sizeStr = doc.size ? (doc.size > 1024*1024
         ? (doc.size/(1024*1024)).toFixed(1) + ' Mo'
         : Math.round(doc.size/1024) + ' Ko') : '';
-      var icon = loading ? 'â³' : _docIconExt(doc.ext || '');
+      var icon = loading ? '⏳' : _docIconExt(doc.ext || '');
       return '<div class="attach-doc-card">' +
         '<span class="attach-doc-icon">' + icon + '</span>' +
         '<div class="attach-doc-info">' +
@@ -1300,7 +1302,7 @@ function _refreshFilePreviewBars() {
             (loading ? '<span class="attach-doc-loading">Lecture...</span>' : '') +
           '</div>' +
         '</div>' +
-        (!loading ? '<button class="attach-remove" onclick="removeDocAttachment(' + i + ')" title="Retirer">âœ•</button>' : '') +
+        (!loading ? '<button class="attach-remove" onclick="removeDocAttachment(' + i + ')" title="Retirer">✕</button>' : '') +
         '</div>';
     }).join('');
     docBar.style.display = 'flex';
@@ -1311,8 +1313,8 @@ function _refreshFilePreviewBars() {
 window._refreshFilePreviewBars = _refreshFilePreviewBars;
 
 function _docIconExt(ext) {
-  var icons = { pdf:'ðŸ“„', doc:'ðŸ“', docx:'ðŸ“', xls:'ðŸ“Š', xlsx:'ðŸ“Š', ppt:'ðŸ“‹', pptx:'ðŸ“‹', txt:'ðŸ“ƒ', csv:'ðŸ“Š' };
-  return icons[ext] || 'ðŸ“Ž';
+  var icons = { pdf:'📄', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📋', pptx:'📋', txt:'📃', csv:'📊' };
+  return icons[ext] || '📎';
 }
 
 function clearImageAttachment() {
@@ -1355,10 +1357,10 @@ function removeDocAttachment(idx) {
 }
 window.removeDocAttachment = removeDocAttachment;
 
-/* â•â•â• MIC â•â•â• */
+/* ═══ MIC ═══ */
 function handleMic() {
   var btn = document.getElementById('micBtn');
-  if (!window.EVASTS) { toast('Micro non supportÃ©','error'); return; }
+  if (!window.EVASTS) { toast('Micro non supporté','error'); return; }
   if (window.EVASTS.getIsListening()) {
     window.EVASTS.stopListening();
     btn.classList.remove('recording');
@@ -1369,22 +1371,22 @@ function handleMic() {
   }
   var perm = window.EVASTS.requestMicPermission();
   perm.then(function(ok) {
-    if (!ok) { toast('Permission micro refusÃ©e','error'); return; }
+    if (!ok) { toast('Permission micro refusée','error'); return; }
     if (S.wakeWordOn && window.EVAWakeWord) window.EVAWakeWord.stop();
     btn.classList.add('recording');
     if (window.EvaCharacter) window.EvaCharacter.setListening();
-    setEvaStatusHeader('ðŸŽ¤ Ã‰COUTE...', 'listening');
+    setEvaStatusHeader('🎤 ÉCOUTE...', 'listening');
     window.EVASTS.startListening(
       function(transcript, isFinal) {
-        /* Mise Ã  jour en temps rÃ©el dans la barre â€” pas d'envoi automatique */
+        /* Mise à jour en temps réel dans la barre — pas d'envoi automatique */
         var input = document.getElementById('msgInput');
         input.value = transcript;
         document.getElementById('sendBtn').disabled = !transcript.trim();
         autoResize(input);
-        /* On continue d'Ã©couter â€” isFinal ne dÃ©clenche plus d'envoi ni d'arrÃªt */
+        /* On continue d'écouter — isFinal ne déclenche plus d'envoi ni d'arrêt */
       },
       function() {
-        /* ArrÃªt dÃ©finitif (erreur non rÃ©cupÃ©rable) */
+        /* Arrêt définitif (erreur non récupérable) */
         btn.classList.remove('recording');
         if (window.EvaCharacter) window.EvaCharacter.setIdle();
         setEvaStatusHeader(null);
@@ -1394,9 +1396,9 @@ function handleMic() {
   });
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════════════════════════
    DRAG & DROP + PASTE D'IMAGES
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+══════════════════════════════════════════════════════════ */
 function _processDroppedOrPastedFiles(files) {
   if (!S.images) S.images = [];
   if (!S.documents) S.documents = [];
@@ -1409,7 +1411,7 @@ function _processDroppedOrPastedFiles(files) {
     if (!file) return;
     if (file.type.startsWith('image/')) {
       if (!_canPhoto) {
-        toast('Ce modÃ¨le ne supporte pas les images â€” joignez un document (PDF, Wordâ€¦) Ã  la place', 'warning');
+        toast('Ce modèle ne supporte pas les images — joignez un document (PDF, Word…) à la place', 'warning');
         return;
       }
       if (file.size > 10 * 1024 * 1024) { toast('Image "' + file.name + '" trop grande (max 10 Mo)', 'error'); return; }
@@ -1420,7 +1422,7 @@ function _processDroppedOrPastedFiles(files) {
           S.image = S.images[0];
           _refreshFilePreviewBars();
           document.getElementById('sendBtn').disabled = false;
-          toast('ðŸ“· Image ajoutÃ©e â€” ' + f.name, 'success');
+          toast('📷 Image ajoutée — ' + f.name, 'success');
         };
       })(file);
       reader.readAsDataURL(file);
@@ -1433,7 +1435,7 @@ function _processDroppedOrPastedFiles(files) {
 }
 
 function initChatDragDropPaste() {
-  /* CrÃ©er l'overlay de drop */
+  /* Créer l'overlay de drop */
   var overlay = document.createElement('div');
   overlay.id = 'dropOverlay';
   overlay.className = 'drop-overlay';
@@ -1444,7 +1446,7 @@ function initChatDragDropPaste() {
         '<polyline points="17 8 12 3 7 8"/>' +
         '<line x1="12" y1="3" x2="12" y2="15"/>' +
       '</svg>' +
-      '<span>DÃ©poser une image ou un fichier</span>' +
+      '<span>Déposer une image ou un fichier</span>' +
     '</div>';
   document.body.appendChild(overlay);
 
@@ -1499,11 +1501,11 @@ window.appendCloudWorksTracker = function(cmdId, promptText) {
   div.className = 'msg-bubble system-bubble cw-tracker-bubble';
   div.id = 'cw-tracker-' + cmdId;
   div.innerHTML =
-    '<div class="cw-tracker-header">â˜ï¸ Agent CloudWorks : En cours</div>' +
+    '<div class="cw-tracker-header">☁️ Agent CloudWorks : En cours</div>' +
     '<div class="cw-tracker-prompt">"' + window.esc(promptText) + '"</div>' +
-    '<div class="cw-tracker-step" id="cw-step-' + cmdId + '">â³ En attente du PC...</div>' +
+    '<div class="cw-tracker-step" id="cw-step-' + cmdId + '">⏳ En attente du PC...</div>' +
     '<div class="cw-tracker-actions" id="cw-actions-' + cmdId + '">' +
-       '<button class="cw-tracker-cancel" onclick="window.cancelCwCmd(\'' + cmdId + '\')">âŒ Annuler la tÃ¢che</button>' +
+       '<button class="cw-tracker-cancel" onclick="window.cancelCwCmd(\'' + cmdId + '\')">❌ Annuler la tâche</button>' +
     '</div>';
   list.appendChild(div);
   if (window.scrollDown) window.scrollDown();
@@ -1518,19 +1520,19 @@ window.appendCloudWorksTracker = function(cmdId, promptText) {
         if (!stepEl) return;
 
         if (data.status === 'pending') {
-          stepEl.innerHTML = 'â³ En attente de rÃ©ception par le PC...';
+          stepEl.innerHTML = '⏳ En attente de réception par le PC...';
         } else if (data.status === 'running') {
-          stepEl.innerHTML = 'ðŸ”„ ' + (data.step || 'ExÃ©cution en cours...');
+          stepEl.innerHTML = '🔄 ' + (data.step || 'Exécution en cours...');
         } else if (data.status === 'done') {
-          stepEl.innerHTML = 'âœ… TÃ¢che terminÃ©e avec succÃ¨s !';
+          stepEl.innerHTML = '✅ Tâche terminée avec succès !';
           stepEl.style.color = '#10b981';
           if (actionsEl) actionsEl.style.display = 'none';
         } else if (data.status === 'error') {
-          stepEl.innerHTML = 'âŒ Erreur : ' + window.esc(data.error || 'Erreur inconnue');
+          stepEl.innerHTML = '❌ Erreur : ' + window.esc(data.error || 'Erreur inconnue');
           stepEl.style.color = '#ef4444';
           if (actionsEl) actionsEl.style.display = 'none';
         } else if (data.status === 'cancelled') {
-          stepEl.innerHTML = 'ðŸ›‘ TÃ¢che annulÃ©e par l\'utilisateur.';
+          stepEl.innerHTML = '🛑 Tâche annulée par l\'utilisateur.';
           stepEl.style.color = '#f59e0b';
           if (actionsEl) actionsEl.style.display = 'none';
         }
@@ -1542,11 +1544,7 @@ window.cancelCwCmd = function(cmdId) {
   if (window.db && window.S && window.S.user) {
     window.db.collection('cloudworks').doc(window.S.user.uid).collection('commands').doc(cmdId)
       .update({ status: 'cancelled' }).then(function() {
-        if (window.toast) window.toast('TÃ¢che annulÃ©e.', 'info');
+        if (window.toast) window.toast('Tâche annulée.', 'info');
       }).catch(function(e) { console.error('Erreur annulation', e); });
   }
 };
-
-
-
-
