@@ -2336,13 +2336,10 @@ body::before{
   filter: drop-shadow(0 0 10px rgba(99, 215, 255, 0.5));
 }
 
- / *   C l o u d W o r k s   T r a c k e r   i n   C h a t   * / 
- . c w - t r a c k e r - b u b b l e   {   b o r d e r :   1 p x   s o l i d   r g b a ( 1 6 8 , 8 5 , 2 4 7 , 0 . 3 ) ;   b a c k g r o u n d :   r g b a ( 1 6 8 , 8 5 , 2 4 7 , 0 . 0 5 ) ;   f l e x - d i r e c t i o n :   c o l u m n ;   p a d d i n g :   1 2 p x ;   g a p :   8 p x ;   b o r d e r - r a d i u s :   1 2 p x ;   } 
- . c w - t r a c k e r - h e a d e r   {   f o n t - s i z e :   0 . 9 e m ;   f o n t - w e i g h t :   b o l d ;   c o l o r :   # a 8 5 5 f 7 ;   d i s p l a y :   f l e x ;   a l i g n - i t e m s :   c e n t e r ;   g a p :   6 p x ;   } 
- . c w - t r a c k e r - p r o m p t   {   f o n t - s i z e :   0 . 8 5 e m ;   c o l o r :   v a r ( - - t e x t - m u t e d ) ;   f o n t - s t y l e :   i t a l i c ;   b o r d e r - l e f t :   2 p x   s o l i d   r g b a ( 1 6 8 , 8 5 , 2 4 7 , 0 . 4 ) ;   p a d d i n g - l e f t :   8 p x ;   m a r g i n :   4 p x   0 ;   } 
- . c w - t r a c k e r - s t e p   {   f o n t - s i z e :   0 . 8 5 e m ;   c o l o r :   v a r ( - - t e x t ) ;   f o n t - f a m i l y :   ' S p a c e   M o n o ' ,   m o n o s p a c e ;   d i s p l a y :   f l e x ;   a l i g n - i t e m s :   c e n t e r ;   g a p :   6 p x ;   } 
- . c w - t r a c k e r - a c t i o n s   {   d i s p l a y :   f l e x ;   g a p :   8 p x ;   m a r g i n - t o p :   6 p x ;   } 
- . c w - t r a c k e r - c a n c e l   {   b a c k g r o u n d :   r g b a ( 2 3 9 , 6 8 , 6 8 , 0 . 1 ) ;   c o l o r :   # e f 4 4 4 4 ;   b o r d e r :   1 p x   s o l i d   r g b a ( 2 3 9 , 6 8 , 6 8 , 0 . 3 ) ;   b o r d e r - r a d i u s :   6 p x ;   p a d d i n g :   5 p x   1 2 p x ;   f o n t - s i z e :   0 . 8 e m ;   c u r s o r :   p o i n t e r ;   t r a n s i t i o n :   a l l   0 . 2 s ;   } 
- . c w - t r a c k e r - c a n c e l : h o v e r   {   b a c k g r o u n d :   r g b a ( 2 3 9 , 6 8 , 6 8 , 0 . 2 ) ;   } 
-  
- 
+/* CloudWorks Tracker in Chat */
+.cw-tracker-bubble { border: 1px solid rgba(168,85,247,0.3); background: rgba(168,85,247,0.05); flex-direction: column; padding: 12px; gap: 8px; border-radius: 12px; }
+.cw-tracker-header { font-size: 0.9em; font-weight: bold; color: #a855f7; display: flex; align-items: center; gap: 6px; }
+.cw-tracker-prompt { font-size: 0.85em; color: var(--text-muted); font-style: italic; border-left: 2px solid rgba(168,85,247,0.4); padding-left: 8px; margin: 4px 0; }
+.cw-tracker-step { font-size: 0.85em; color: var(--text); font-family: 'Space Mono', monospace; display: flex; align-items: center; gap: 6px; }
+.cw-tracker-actions { display: flex; gap: 8px; margin-top: 6px; }
+.cw-tracker-cancel { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; padding: 5px 12px; font-size: 0.8em; cursor: pointer; transition: all 0.2s; }
