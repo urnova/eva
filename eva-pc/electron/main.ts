@@ -208,6 +208,11 @@ function createWindow() {
   mainWindow.on('moved', saveBounds)
 
   // â”€â”€â”€ Minimize to tray â”€â”€â”€
+  mainWindow.on('show', () => {
+    if (!isDev) {
+      autoUpdater.checkForUpdatesAndNotify().catch(console.error);
+    }
+  })
   mainWindow.on('close', (event) => {
     if (store.get('minimizeToTray') && !app.isQuitting) {
       event.preventDefault()
@@ -807,6 +812,24 @@ ipcMain.handle('app:version', () => app.getVersion())
 ipcMain.handle('app:platform', () => process.platform)
 ipcMain.handle('app:name', () => app.getName())
 ipcMain.handle('app:path', () => app.getPath('userData'))
+
+// --- Updater IPC ---
+ipcMain.handle('updater:start-download', () => {
+  if (!isDev) {
+    autoUpdater.downloadUpdate().catch(console.error);
+  }
+})
+ipcMain.handle('updater:quit-and-install', () => {
+  if (!isDev) {
+    autoUpdater.quitAndInstall(true, true);
+  }
+})
+autoUpdater.on('download-progress', (progressObj) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updater:progress', progressObj);
+  }
+});
+
 
 // Augment Electron app type
 declare global {

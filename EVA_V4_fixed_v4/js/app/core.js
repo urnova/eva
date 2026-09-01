@@ -945,3 +945,48 @@ window.getDynamicSysPrompt = async function() {
   } catch(e) {}
   return prompt;
 };
+
+
+window.openDocumentViewer = function(doc) {
+  var overlay = document.getElementById('fileViewerOverlay');
+  var header = document.getElementById('fileViewerHeader');
+  var content = document.getElementById('fileViewerContent');
+  var imgContent = document.getElementById('imageViewerContent');
+  if(!overlay) return;
+  
+  header.innerText = doc.name || 'Document';
+  content.style.display = 'block';
+  imgContent.style.display = 'none';
+  
+  if (doc.text) {
+    content.textContent = doc.text;
+  } else {
+    content.innerHTML = '<div style="color:var(--text-muted);text-align:center;margin-top:20px;">Contenu du document non disponible (non lu ou non sauvegardé dans cette session).</div>';
+  }
+  
+  overlay.style.display = 'flex';
+  setTimeout(function(){ overlay.style.opacity = '1'; }, 10);
+};
+
+window.openImageViewer = function(url) {
+  var overlay = document.getElementById('fileViewerOverlay');
+  var header = document.getElementById('fileViewerHeader');
+  var content = document.getElementById('fileViewerContent');
+  var imgContent = document.getElementById('imageViewerContent');
+  if(!overlay) return;
+  
+  header.innerText = 'Image';
+  content.style.display = 'none';
+  imgContent.style.display = 'block';
+  imgContent.src = url;
+  
+  overlay.style.display = 'flex';
+  setTimeout(function(){ overlay.style.opacity = '1'; }, 10);
+};
+
+window.closeFileViewer = function() {
+  var overlay = document.getElementById('fileViewerOverlay');
+  if(!overlay) return;
+  overlay.style.opacity = '0';
+  setTimeout(function(){ overlay.style.display = 'none'; }, 200);
+};

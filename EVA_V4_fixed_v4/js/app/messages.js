@@ -94,6 +94,8 @@ function appendMsg(role, content, imgUrlOrArr, docOrArr) {
       gallery.className = 'msg-img-gallery single';
       var im = document.createElement('img');
       im.src = images[0].url || images[0]; im.className = 'msg-image'; im.alt = images[0].name || 'Image';
+        im.style.cursor = 'pointer';
+        im.onclick = function() { window.openImageViewer(images[0].url || images[0]); };
       gallery.appendChild(im);
       bubble.appendChild(gallery);
     } else if (images.length > 1) {
@@ -126,13 +128,15 @@ function appendMsg(role, content, imgUrlOrArr, docOrArr) {
       docs.forEach(function(doc) {
         var icon = (typeof _docIconExt === 'function') ? _docIconExt(doc.ext) : '📎';
         var chip = document.createElement('div');
-        chip.className = 'msg-doc-multi';
-        chip.innerHTML =
-          '<span style="font-size:1.3em;flex-shrink:0;">' + icon + '</span>' +
-          '<div style="display:flex;flex-direction:column;min-width:0;">' +
-            '<span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">' + esc(doc.name) + '</span>' +
-            (doc.ext ? '<span style="font-size:0.68em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">' + doc.ext + (doc.size ? ' · ' + (doc.size > 1024*1024 ? (doc.size/(1024*1024)).toFixed(1)+' Mo' : Math.round(doc.size/1024)+' Ko') : '') + '</span>' : '') +
-          '</div>';
+          chip.className = 'msg-doc-multi';
+          chip.style.cursor = 'pointer';
+          chip.onclick = function() { window.openDocumentViewer(doc); };
+          chip.innerHTML =
+            '<span style="font-size:1.3em;flex-shrink:0;">' + icon + '</span>' +
+            '<div style="display:flex;flex-direction:column;min-width:0;">' +
+              '<span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">' + esc(doc.name) + '</span>' +
+              (doc.ext ? '<span style="font-size:0.68em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">' + doc.ext + (doc.size ? ' · ' + (doc.size > 1024*1024 ? (doc.size/(1024*1024)).toFixed(1)+' Mo' : Math.round(doc.size/1024)+' Ko') : '') + '</span>' : '') +
+            '</div>';
         docsWrap.appendChild(chip);
       });
       bubble.appendChild(docsWrap);
