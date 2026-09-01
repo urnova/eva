@@ -1,4 +1,4 @@
-﻿/* ═══ AUTH ═══ */
+/* ═══ AUTH ═══ */
 function initAuth() {
   auth.onAuthStateChanged(function(user) {
     if (!user) { window.location.href = '/login'; return; }
@@ -68,10 +68,10 @@ function initAuth() {
     });
 
     loadProfile(user.uid).then(() => {
-      initChatSession();
-      loadConvs();
       setTimeout(function(){ loadReminders(); }, 2000);
     });
+    initChatSession();
+    loadConvs();
     setTimeout(function(){ initFCM(); }, 3000);
     // Init wake word (stays off until user activates)
     if (window.EVAWakeWord) {
@@ -321,6 +321,17 @@ function renderUserUI(p) {
       ava.textContent = name.split(' ').map(function(n){return n[0]||'';}).join('').toUpperCase().slice(0,2);
     }
   }
+
+  // Update existing messages in the DOM
+  var msgAvas = document.querySelectorAll('.message.user .msg-ava');
+  msgAvas.forEach(function(avaNode) {
+    if (p.photoURL) {
+      avaNode.innerHTML = '<img src="' + p.photoURL + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">';
+    } else {
+      var un = p.displayName || p.nickname || p.email || 'U';
+      avaNode.innerHTML = '<span>' + un.charAt(0).toUpperCase() + '</span>';
+    }
+  });
 }
 /* ── Wrapper pour l'auth Puter (Popup Native) ── */
 window.evaSafePuterSignIn = async function() {
