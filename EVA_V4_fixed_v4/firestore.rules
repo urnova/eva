@@ -19,9 +19,13 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if isOwner(userId);
 
+      // ════ Sessions Actives ════
+      match /sessions/{sessionId} {
+        allow read, write: if isOwner(userId);
+      }
+
       match /conversations/{convId} {
         allow read, write: if isOwner(userId);
-
         match /messages/{msgId} {
           allow read, write: if isOwner(userId);
         }
@@ -43,11 +47,6 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
 
-      // ════ Sessions Actives ════
-      match /sessions/{sessionId} {
-        allow read, write: if isOwner(userId);
-      }
-
       // ════ Statistiques d'utilisation CloudWorks ════
       match /stats/{statDoc} {
         allow read, write: if isOwner(userId);
@@ -65,8 +64,6 @@ service cloud.firestore {
     }
 
     // ════ Rapports / Signalements ════
-    // Tout utilisateur connecté peut créer ET lire les rapports.
-    // Le contrôle du rôle admin est géré côté client (isAdminRole).
     match /reports/{reportId} {
       allow create: if isAuth();
       allow read, update, delete: if isAuth();
@@ -78,6 +75,18 @@ service cloud.firestore {
       allow create, update, delete: if isCreator();
     }
 
+    // ════ EVA CLOUDWORKS ════
+    match /cloudworks/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /devices/{deviceId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /commands/{commandId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
   }
 }
-
