@@ -232,37 +232,7 @@ async function executeEvaAction(action) {
           if (window.toast) window.toast('Action échouée : Le PC Agent est déconnecté.', 'error');
         }
       } catch(e) { console.error('Erreur agentic_task:', e); }
-    } else if (action.type === 'run_script') {
-      /* Commande PowerShell directe — plus rapide que agentic_task, ne nécessite pas le LLM */
-      try {
-        var onlineDeviceRS = action.deviceId || null;
-        if (!onlineDeviceRS) {
-          var snapRS = await window.db.collection('cloudworks').doc(uid).collection('devices').where('deviceType','==','windows').get();
-          snapRS.forEach(function(d) { if (d.data().online) onlineDeviceRS = d.id; });
-        }
-        if (onlineDeviceRS) {
-          var cmd = action.command || action.script || action.cmd || '';
-          /* Nettoyer le préfixe "PowerShell: " si EVA l'a ajouté */
-          cmd = cmd.replace(/^PowerShell:\s*/i, '').trim();
-          if (cmd) {
-            if (window.setEvaStatus) window.setEvaStatus('⚡ SCRIPT EN COURS...', 'action');
-            var rsRef = await window.db.collection('cloudworks').doc(uid).collection('commands').add({
-              deviceId: onlineDeviceRS,
-              type: 'run_script',
-              payload: { command: cmd },
-              status: 'pending',
-              createdAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
-            });
-            if (window.appendCloudWorksTracker) window.appendCloudWorksTracker(rsRef.id, 'PowerShell: ' + cmd.substring(0, 80));
-            if (window.toast) window.toast('Script envoyé au PC !', 'success');
-          } else {
-            if (window.toast) window.toast('Commande vide.', 'error');
-          }
-        } else {
-          if (window.toast) window.toast('PC Agent déconnecté.', 'error');
-        }
-      } catch(e) { console.error('Erreur run_script:', e); }
-    } else if (action.type === 'note') {
+        } else if (action.type === 'note') {
       setEvaStatus('📝 CRÉATION NOTE...', 'action');
       await db.collection('users').doc(uid).collection('notes').add({
         title: action.title || 'Note d\'EVA',

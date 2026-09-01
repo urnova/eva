@@ -937,46 +937,77 @@ declare global {
 let llmProcess: any = null;
 let llmTimeout: any = null;
 
-function startLLM() {
+
+function startLLM(): Promise<boolean> {
   if (llmProcess) return Promise.resolve(true);
   
   return new Promise((resolve) => {
     // Find the resources path (works in dev and prod)
-    let resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
+    const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
     const llmDir = path.join(resourcesPath, 'resources', 'llm');
     const serverExe = path.join(llmDir, 'llama-server.exe');
     const modelFile = path.join(llmDir, 'eva-model.gguf');
 
     if (!fs.existsSync(serverExe) || !fs.existsSync(modelFile)) {
-      console.error("[LLM] Missing llama-server.exe or eva-model.gguf in", llmDir);
+      console.error('[LLM] Fichiers manquants dans', llmDir);
+      console.error('[LLM]   llama-server.exe existe:', fs.existsSync(serverExe));
+      console.error('[LLM]   eva-model.gguf existe:', fs.existsSync(modelFile));
       return resolve(false);
     }
 
-    console.log("[LLM] Starting local llama-server...");
-    // Lancement du modèle. 
-    // mmap est activé par défaut (le modèle est "figé" dans l'espace virtuel/pagefile de Windows sans saturer la RAM physique).
-    // Configuration optimisée pour processeur (CPU) afin de garantir la compatibilité sur tous les PC.
+    console.log('[LLM] Démarrage de llama-server depuis:', llmDir);
     llmProcess = child_process.spawn(serverExe, [
       '--model', modelFile,
       '--port', '11434',
       '--ctx-size', '4096',
-      '--parallel', '1'
+      '--parallel', '1',
+      '--log-disable'  // moins de verbosité
     ], { windowsHide: true });
 
+    // Capturer stderr pour diagnostic
+    let stderrBuf = '';
+    llmProcess.stderr?.on('data', (d: Buffer) => {
+      stderrBuf += d.toString();
+    });
+
     llmProcess.on('error', (err: any) => {
-      console.error("[LLM] Spawn error:", err);
+      console.error('[LLM] Erreur spawn:', err);
+      llmProcess = null;
+      resolve(false);
+    });
+
+    llmProcess.on('exit', (code: number) => {
+      console.log('[LLM] Process terminé, code:', code);
+      if (stderrBuf) console.error('[LLM] stderr:', stderrBuf.substring(0, 500));
       llmProcess = null;
     });
 
-    llmProcess.on('exit', () => {
-      console.log("[LLM] Process exited.");
-      llmProcess = null;
-    });
-
-    // Wait 3 seconds for server to boot up
-    setTimeout(() => { resolve(true); }, 3000);
+    // Health-check polling : attend que le serveur soit prêt (max 120s)
+    // Bien plus fiable qu'un setTimeout fixe (le chargement du modèle varie selon la RAM/CPU)
+    let attempts = 0;
+    const maxAttempts = 120;
+    const poll = async () => {
+      if (!llmProcess) { resolve(false); return; }  // process crashed
+      try {
+        const r = await fetch('http://127.0.0.1:11434/health', { signal: AbortSignal.timeout(1000) });
+        if (r.ok) {
+          console.log('[LLM] Serveur prêt après', attempts, 'secondes');
+          resolve(true);
+          return;
+        }
+      } catch(_) { /* encore en démarrage */ }
+      attempts++;
+      if (attempts >= maxAttempts) {
+        console.error('[LLM] Timeout: serveur non prêt après 120s');
+        resolve(false);
+        return;
+      }
+      setTimeout(poll, 1000);
+    };
+    setTimeout(poll, 2000);  // premier check après 2s
   });
 }
+
 
 function stopLLM() {
   if (llmProcess) {
@@ -994,26 +1025,54 @@ function resetLLMTimer() {
 
 ipcMain.handle('llm:chat', async (event, messages) => {
   resetLLMTimer();
+
+  // Notify the renderer that LLM is loading (only if it needs to start)
+  const wasRunning = !!llmProcess;
+  if (!wasRunning && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('overlay:setState', 'thinking', 'LLM en cours de chargement...');
+    mainWindow.webContents.send('overlay:show', 'thinking');
+  }
+
   const started = await startLLM();
-  if (!started) throw new Error("Le moteur LLM n'a pas pu démarrer.");
-  
+  if (!started) {
+    const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
+    const llmDir = path.join(resourcesPath, 'resources', 'llm');
+    const hasServer = fs.existsSync(path.join(llmDir, 'llama-server.exe'));
+    const hasModel  = fs.existsSync(path.join(llmDir, 'eva-model.gguf'));
+    if (!hasServer || !hasModel) {
+      throw new Error(
+        `Fichiers LLM manquants dans resources/llm/ — ` +
+        `llama-server.exe: ${hasServer ? 'OK' : 'ABSENT'}, ` +
+        `eva-model.gguf: ${hasModel ? 'OK' : 'ABSENT'}`
+      );
+    }
+    throw new Error("Le moteur LLM n'a pas pu démarrer (timeout ou crash). Vérifiez les logs.");
+  }
+
   try {
-    
     const response = await fetch('http://127.0.0.1:11434/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        model: 'local',     // llama-server ignore le nom mais certaines versions le requièrent
         messages: messages,
+        max_tokens: 2048,   // évite les réponses tronquées
         temperature: 0.2,
         stream: false
-      })
+      }),
+      signal: AbortSignal.timeout(120000)  // 120s max par requête
     });
-    
+
+    if (!response.ok) {
+      const txt = await response.text().catch(() => '');
+      throw new Error(`Erreur HTTP ${response.status} du LLM: ${txt.substring(0, 200)}`);
+    }
+
     const data = await response.json();
     return data;
-  } catch (err) {
-    console.error("[LLM API] Erreur:", err);
-    throw err;
+  } catch (err: any) {
+    console.error('[LLM API] Erreur:', err?.message || err);
+    throw new Error(err?.message || String(err));
   }
 });
 

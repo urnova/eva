@@ -634,8 +634,7 @@ async function handleSend() {
       '- Note → [ACTION:{"type":"note","title":"Titre","body":"Contenu"}]\n' +
       '- Alarme → [ACTION:{"type":"alarm","time":"HH:MM","label":"Libellé","repeat":"once"}]\n' +
       '- Rappel → [ACTION:{"type":"reminder","text":"Texte","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
-      '- Tâche PC simple (créer fichier, liste dossier, ouvrir app) → [ACTION:{"type":"run_script","command":"PowerShell: commande_ici"}]\n' +
-      '- Tâche PC complexe multi-étapes → [ACTION:{"type":"agentic_task","prompt":"Instructions complètes..."}]\n' +
+      '- Tâche PC (créer fichier, dossier, renommer, rechercher, exécuter) → [ACTION:{"type":"agentic_task","prompt":"Instructions complètes et précises..."}]\n' +
       '- Agenda → [ACTION:{"type":"event","title":"Titre","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
       '- Excel → [ACTION:{"type":"excel","filename":"data.xlsx","headers":["Col1","Col2"],"rows":[["val1","val2"]]}]\n' +
       '- R\u00C8GLE IMPORTANTE : Toujours \u00E9crire une r\u00E9ponse textuelle amicale avant le bloc ACTION (ex: Voici le document)\n' +
