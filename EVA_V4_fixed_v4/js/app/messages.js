@@ -556,11 +556,36 @@ async function handleSend() {
     userCtx += 'Si l\'utilisateur te demande d\'exécuter une tâche sur son PC, tu utiliseras l\'outil Tâche PC [ACTION:{"type":"agentic_task","prompt":"..."}]. S\'il y a des PC en ligne, la commande y sera envoyée.\n';
   }
 
-  if (window.eva) {
-      userCtx += '\nNOTE IMPORTANTE : Tu tournes actuellement SUR l\'application PC locale E.V.A Desktop (pas sur le web). Tu AS un accès direct à ce système via tes outils.\n';
-  } else {
-      userCtx += '\nNOTE IMPORTANTE : Tu tournes actuellement sur la version Web / Mobile. Tu n\'es pas sur le PC localement. Pour agir sur le PC, tu dois impérativement utiliser l\'outil Tâche PC vers un noeud CloudWorks En Ligne.\n';
-  }
+  // Web uniquement — pas de window.eva sur le navigateur
+    // Détecter les PC en ligne pour le site web
+    var onlinePCs = [];
+    var offlinePCs = [];
+    if (S.cwDevices && S.cwDevices.length > 0) {
+      S.cwDevices.forEach(function(d) {
+        if (d.online) onlinePCs.push(d);
+        else offlinePCs.push(d);
+      });
+    }
+
+    userCtx += '\nENVIRONNEMENT : Tu tournes sur la version Web/Navigateur. Pour agir sur un PC, tu dois utiliser CloudWorks.\n';
+
+    if (onlinePCs.length === 0 && offlinePCs.length === 0) {
+      userCtx += 'CloudWorks : Aucun appareil PC enregistré. Propose à l\'utilisateur d\'installer EVA Desktop.\n';
+    } else if (onlinePCs.length === 0) {
+      userCtx += 'CloudWorks : Aucun PC en ligne (' + offlinePCs.length + ' hors ligne). Tu ne peux pas exécuter de tâches PC en ce moment. Informe l\'utilisateur.\n';
+    } else if (onlinePCs.length === 1) {
+      userCtx += 'CloudWorks : 1 PC disponible : ' + (onlinePCs[0].deviceName || onlinePCs[0].deviceId) + ' [ID: ' + onlinePCs[0].deviceId + '] — En ligne.\n';
+      userCtx += 'Pour une tâche sur ce PC, génère [ACTION:{"type":"...","deviceId":"' + onlinePCs[0].deviceId + '","prompt":"..."}].\n';
+    } else {
+      userCtx += 'CloudWorks : ' + onlinePCs.length + ' PC disponibles en ligne :\n';
+      onlinePCs.forEach(function(d) {
+        userCtx += '  - ' + (d.deviceName || d.deviceId) + ' [ID: ' + d.deviceId + ']\n';
+      });
+      userCtx += 'Si l\'utilisateur ne précise pas, demande-lui sur quel PC exécuter la tâche. Génère ensuite [ACTION:{...,"deviceId":"<id choisi>"}].\n';
+    }
+    if (offlinePCs.length > 0) {
+      userCtx += 'Hors ligne (indisponibles) : ' + offlinePCs.map(function(d){ return d.deviceName || d.deviceId; }).join(', ') + '\n';
+    }
 
   var _now = new Date();
   var _dateStr = _now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });

@@ -78,6 +78,7 @@ const evaAPI = {
     llmChat: (messages: any) => ipcRenderer.invoke('llm:chat', messages),
     llmStart: () => ipcRenderer.invoke('llm:start'),
     llmStop: () => ipcRenderer.invoke('llm:stop'),
+    llmStatus: () => ipcRenderer.invoke('llm:status'),
     cpuLoad: () => ipcRenderer.invoke('system:cpuLoad'),
     screenshot: () => ipcRenderer.invoke('system:screenshot'),
     exec: (cmd: string) => ipcRenderer.invoke('system:exec', cmd),
@@ -88,6 +89,13 @@ const evaAPI = {
     processes: () => ipcRenderer.invoke('system:processes'),
     killProcess: (pid: number) => ipcRenderer.invoke('system:killProcess', pid)
   },
+
+  // ── CloudWorks ──
+  cloudworks: {
+    enable: () => ipcRenderer.invoke('cloudworks:enable'),
+    disable: () => ipcRenderer.invoke('cloudworks:disable')
+  },
+
 
   // ── Auto Launch ──
   autoLaunch: {

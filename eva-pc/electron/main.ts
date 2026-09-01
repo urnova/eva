@@ -268,22 +268,82 @@ function saveBounds() {
   store.set('windowBounds', bounds)
 }
 
-// â”€â”€â”€ Tray Icon â”€â”€â”€
+// ——— Tray Icon ———
 function createTray() {
   const trayIconPath = join(__dirname, '../public/eva-icon.png')
   const icon = nativeImage.createFromPath(trayIconPath).resize({ width: 16, height: 16 })
   tray = new Tray(icon)
+  _rebuildTrayMenu()
+  tray.on('double-click', () => { mainWindow?.show(); mainWindow?.focus() })
+}
+
+function _rebuildTrayMenu() {
+  if (!tray) return;
+  const cwEnabled = store.get('cwEnabled', false) as boolean;
+  const llmRunning = !!llmProcess;
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'E.V.A - Ouvrir', click: () => { mainWindow?.show(); mainWindow?.focus() } },
+    {
+      label: '⚡ E.V.A — Ouvrir',
+      click: () => { mainWindow?.show(); mainWindow?.focus() }
+    },
     { type: 'separator' },
-    { label: 'CloudWorks', click: () => { mainWindow?.show(); mainWindow?.webContents.send('navigate', 'cloudworks') } },
-    { label: 'Nouveau chat', click: () => { mainWindow?.show(); mainWindow?.webContents.send('new-chat') } },
+    {
+      label: `🖥️ CloudWorks  ${cwEnabled ? '[● Actif]' : '[○ Inactif]'}`,
+      submenu: [
+        {
+          label: cwEnabled ? '○ Désactiver CloudWorks' : '● Activer CloudWorks',
+          click: async () => {
+            if (cwEnabled) {
+              store.set('cwEnabled', false);
+              stopLLM();
+              tray?.setToolTip('E.V.A - Evolutionary Virtual Assistant');
+            } else {
+              store.set('cwEnabled', true);
+              await startLLM();
+              tray?.setToolTip('E.V.A | CloudWorks: Actif' + (llmProcess ? ' | LLM: En ligne' : ''));
+            }
+            _rebuildTrayMenu();
+          }
+        },
+        { type: 'separator' },
+        {
+          label: '→ Ouvrir panneau CloudWorks',
+          click: () => { mainWindow?.show(); mainWindow?.focus(); mainWindow?.webContents.send('navigate', 'cloudworks'); }
+        }
+      ]
+    },
+    {
+      label: `🤖 LLM Local  ${llmRunning ? '[● En ligne]' : '[○ Arrêté]'}`,
+      submenu: [
+        {
+          label: llmRunning ? '■ Arrêter le LLM' : '▶ Démarrer le LLM',
+          click: async () => {
+            if (llmRunning) { stopLLM(); } else { await startLLM(); }
+            _rebuildTrayMenu();
+          }
+        },
+        {
+          label: '⟳ Redémarrer le LLM',
+          click: async () => { stopLLM(); setTimeout(async () => { await startLLM(); _rebuildTrayMenu(); }, 1500); }
+        }
+      ]
+    },
     { type: 'separator' },
-    { label: 'Quitter E.V.A', click: () => { app.isQuitting = true; app.quit() } }
+    {
+      label: '💬 Nouveau chat',
+      click: () => { mainWindow?.show(); mainWindow?.webContents.send('new-chat') }
+    },
+    { type: 'separator' },
+    {
+      label: '✖ Quitter E.V.A',
+      click: () => { app.isQuitting = true; app.quit() }
+    }
   ])
 
-  tray.setToolTip('E.V.A - Evolutionary Virtual Assistant')
+  const cwStatus = cwEnabled ? '| CW: Actif' : '';
+  const llmStatus = llmRunning ? '| LLM: En ligne' : '';
+  tray.setToolTip(`E.V.A ${cwStatus} ${llmStatus}`.trim())
   tray.setContextMenu(contextMenu)
   tray.on('double-click', () => { mainWindow?.show(); mainWindow?.focus() })
 }
@@ -365,8 +425,11 @@ function launchMainApp() {
   if (mainWindow) {
     mainWindow.webContents.send('splash:done')
   }
-  // Démarrer le LLM en arrière-plan (préchargement) après que l'app soit prête
-  startLLM().catch(console.error);
+  // Démarrer le LLM seulement si CloudWorks était activé
+  if (store.get('cwEnabled', false)) {
+    console.log('[LLM] CloudWorks activé — démarrage automatique du LLM local');
+    startLLM().catch(console.error);
+  }
 }
 
 function toggleWindow() {
@@ -945,6 +1008,22 @@ ipcMain.handle('llm:stop', async () => {
   return { success: true };
 });
 
+ipcMain.handle('llm:status', async () => {
+  return { running: !!llmProcess, pid: llmProcess?.pid || null };
+});
 
+// CloudWorks enable/disable — gère le lifecycle LLM automatiquement
+ipcMain.handle('cloudworks:enable', async () => {
+  store.set('cwEnabled', true);
+  const started = await startLLM();
+  // Mise à jour tray tooltip
+  if (tray) tray.setToolTip('E.V.A | CloudWorks: Actif' + (started ? ' | LLM: En ligne' : ''));
+  return { success: true, llmStarted: started };
+});
 
-
+ipcMain.handle('cloudworks:disable', async () => {
+  store.set('cwEnabled', false);
+  stopLLM();
+  if (tray) tray.setToolTip('E.V.A - Evolutionary Virtual Assistant');
+  return { success: true };
+});
