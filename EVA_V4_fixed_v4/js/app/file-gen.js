@@ -126,10 +126,17 @@ function parseEvaActions(content) {
     /* Essai 3 : synthétiser depuis le texte brut */
     var typeMap = { pdf:'pdf', pptx:'pptx', ppt:'pptx', xlsx:'excel', xls:'excel', excel:'excel', csv:'csv', txt:'txt' };
     var synType = typeMap[fLang] || 'txt';
-    if (synType === 'txt' || synType === 'pdf') {
-      actions.push({ type: synType, filename: 'eva_document.' + (synType === 'pdf' ? 'pdf' : 'txt'), title: 'Document EVA', content: fBody });
-      removeRanges.push(blockRange);
-    }
+      if (synType === 'txt' || synType === 'pdf') {
+        var autoName = 'document_genere';
+        var firstLineMatch = fBody.match(/^\s*#\s+(.+)$/m);
+        if (firstLineMatch) {
+            autoName = firstLineMatch[1].trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
+            if (autoName.length > 30) autoName = autoName.substring(0, 30);
+        }
+        if (!autoName) autoName = 'document_genere';
+        actions.push({ type: synType, filename: autoName + '.' + (synType === 'pdf' ? 'pdf' : 'txt'), title: 'Document EVA', content: fBody });
+        removeRanges.push(blockRange);
+      }
   }
 
   /* ── Exécuter les actions détectées ── */
@@ -452,15 +459,20 @@ async function _evaGeneratePdf(action) {
     }
     
     const marp = new window.MarpBundle.Marp({ html: true });
-    const { html, css } = marp.render(content);
+    let { html, css } = marp.render(content);
+
+    // Prevent auto dark-mode (which causes light text on white bg with html2canvas)
+    css = css.replace(/@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/g, '@media (max-width: 1px)');
 
     var fullHtml = `
-      <style>
-        ${css}
-        section { page-break-after: always; box-shadow: none !important; margin: 0 !important; }
-      </style>
-      <div class="marpit" style="width: 100%; height: auto; min-width: 800px;">
-        ${html}
+      <div style="all: initial; display: block;">
+        <style>
+          ${css}
+          section { page-break-after: always; box-shadow: none !important; margin: 0 !important; }
+        </style>
+        <div class="marpit" style="width: 100%; height: auto; min-width: 800px;">
+          ${html}
+        </div>
       </div>
     `;
 
