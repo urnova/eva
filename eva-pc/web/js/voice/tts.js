@@ -129,38 +129,75 @@ function _getEngine(config) {
   return null; /* on utilisera Web Speech directement */
 }
 
-/* ── Fallback Web Speech ── */
+/* ── Fallback Web Speech — optimisé pour Electron (voix chargées en async) ── */
+var _voicesReady = false;
+var _voicesCache = null;
+
+function _ensureVoices(cb) {
+  if (_voicesReady && _voicesCache) { cb(_voicesCache); return; }
+  if (typeof speechSynthesis === 'undefined') { cb([]); return; }
+
+  var voices = speechSynthesis.getVoices();
+  if (voices && voices.length > 0) {
+    _voicesCache = voices; _voicesReady = true; cb(voices); return;
+  }
+  /* Electron / Chromium charge les voix de manière asynchrone */
+  speechSynthesis.onvoiceschanged = function() {
+    _voicesCache = speechSynthesis.getVoices() || [];
+    _voicesReady = true;
+    cb(_voicesCache);
+  };
+  /* Timeout de sécurité 2s */
+  setTimeout(function() {
+    if (!_voicesReady) {
+      _voicesCache = speechSynthesis.getVoices() || [];
+      _voicesReady = true;
+      cb(_voicesCache);
+    }
+  }, 2000);
+}
+
 function _speakNative(text, config) {
   if (typeof speechSynthesis === 'undefined') return;
   try { speechSynthesis.cancel(); } catch(e) {}
-  var utt = new SpeechSynthesisUtterance(text);
-  utt.lang = 'fr-FR';
-  var rate = parseFloat(config && config.speechRate);
-  utt.rate  = (rate && rate !== 1.0) ? Math.min(1.2, Math.max(0.75, rate)) : 0.92;
-  utt.pitch = 1.15;
-  utt.volume = 1.0;
 
-  /* Chercher voix féminine française */
-  try {
-    var voices = speechSynthesis.getVoices() || [];
-    var frVoices = voices.filter(function(v) { return v.lang && v.lang.startsWith('fr'); });
-    var femKeys = ['Denise','Amelie','Amélie','Audrey','Marie','Virginie','Léa','Lea','Julie'];
-    var best = null;
-    for (var i = 0; i < femKeys.length; i++) {
-      var k = femKeys[i];
-      best = frVoices.find(function(v) { return v.name && v.name.includes(k); });
-      if (best) break;
-    }
-    if (!best && frVoices.length) best = frVoices[0];
-    if (best) { utt.voice = best; utt.lang = best.lang; }
-  } catch(e) {}
+  _ensureVoices(function(voices) {
+    var utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'fr-FR';
+    var rate = parseFloat(config && config.speechRate);
+    utt.rate  = (rate && rate !== 1.0) ? Math.min(1.2, Math.max(0.75, rate)) : 0.92;
+    utt.pitch = 1.15;
+    utt.volume = 1.0;
 
-  utt.onend   = function() { _speaking = false; _updateSkipBtn(); _onSpeakEnd(); };
-  utt.onerror = function() { _speaking = false; _updateSkipBtn(); _onSpeakEnd(); };
-  _speaking = true;
-  _updateSkipBtn();
-  try { speechSynthesis.speak(utt); } catch(e) { _speaking = false; _updateSkipBtn(); }
+    /* Chercher voix féminine française */
+    try {
+      var frVoices = voices.filter(function(v) { return v.lang && v.lang.startsWith('fr'); });
+      var femKeys = ['Denise','Amelie','Amélie','Audrey','Marie','Virginie','Léa','Lea','Julie','Hortense','Zira'];
+      var best = null;
+      for (var i = 0; i < femKeys.length; i++) {
+        var k = femKeys[i];
+        best = frVoices.find(function(v) { return v.name && v.name.includes(k); });
+        if (best) break;
+      }
+      if (!best && frVoices.length) best = frVoices[0];
+      /* Sur Electron, essayer aussi toutes les voix si pas de fr-FR */
+      if (!best && voices.length) {
+        best = voices.find(function(v) { return v.lang && v.lang.startsWith('fr'); }) || null;
+      }
+      if (best) { utt.voice = best; utt.lang = best.lang; }
+    } catch(e) {}
+
+    utt.onend   = function() { _speaking = false; _updateSkipBtn(); _onSpeakEnd(); };
+    utt.onerror = function(err) {
+      console.warn('[EVA TTS] SpeechSynthesis error:', err);
+      _speaking = false; _updateSkipBtn(); _onSpeakEnd();
+    };
+    _speaking = true;
+    _updateSkipBtn();
+    try { speechSynthesis.speak(utt); } catch(e) { _speaking = false; _updateSkipBtn(); }
+  });
 }
+
 
 /* ── Extrait le texte lisible (enlève markdown, actions, code) ── */
 function _cleanForTts(text) {
@@ -218,10 +255,17 @@ window.EVATTS = {
       if (window.EvaCharacter && typeof window.EvaCharacter.setSpeaking === 'function') {
         try { window.EvaCharacter.setSpeaking(); } catch(e) {}
       }
-      engine.speak(clean, config,
-        function onStart() { _speaking = true; _updateSkipBtn(); },
-        function onEnd()   { _speaking = false; _updateSkipBtn(); _onSpeakEnd(); }
-      );
+      try {
+        engine.speak(clean, config,
+          function onStart() { _speaking = true; _updateSkipBtn(); },
+          function onEnd()   { _speaking = false; _updateSkipBtn(); _onSpeakEnd(); }
+        );
+      } catch(engineErr) {
+        /* L'engine custom a planté (ex: modèle Piper absent) → fallback natif */
+        console.warn('[EVA TTS] Engine custom error, fallback natif:', engineErr);
+        _speaking = false;
+        _speakNative(clean, config);
+      }
     } else {
       /* Fallback Web Speech */
       _speakNative(clean, config);
