@@ -470,6 +470,7 @@ async function handleSend() {
   if (!text && !img && !docPending) return;
   if (S.busy) { toast('Eva rÃ©flÃ©chit...','info'); return; }
   if (!window.EVAChatHandler) { toast('SystÃ¨me non initialisÃ©','error'); return; }
+    if (S.documents && S.documents.some(function(d) { return d._loading; })) { toast('Lecture du document en cours...','warning'); return; }
 
   /* ArrÃªter le micro s'il est actif â€” l'utilisateur envoie manuellement */
   if (window.EVASTS && window.EVASTS.getIsListening()) {
@@ -587,35 +588,34 @@ async function handleSend() {
     }
   }
 
-  var msgContent = text;
-  if (allImages.length) {
-    window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine votre image...');
-    try {
-      var vision = await analyzeImage(allImages[0].data, text || 'DÃ©cris cette image.');
-      if (vision) msgContent = vision;
-      /* Images supplÃ©mentaires */
-      for (var _ii = 1; _ii < allImages.length; _ii++) {
-        window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine l\'image ' + (_ii + 1) + ' sur ' + allImages.length + '...');
-        try {
-          var vision2 = await analyzeImage(allImages[_ii].data, 'DÃ©cris aussi cette image.');
-          if (vision2) msgContent += '\n\n[Image ' + (_ii + 1) + '] ' + vision2;
-        } catch(_) {}
+    var msgContent = text;
+    if (allImages.length) {
+      window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine votre image...');
+      try {
+        var vision = await analyzeImage(allImages[0].data, text || 'Du00e9cris cette image.');
+        if (vision) msgContent = vision;
+        for (var _ii = 1; _ii < allImages.length; _ii++) {
+          window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine l\'image ' + (_ii + 1) + ' sur ' + allImages.length + '...');
+          try {
+            var vision2 = await analyzeImage(allImages[_ii].data, 'Du00e9cris aussi cette image.');
+            if (vision2) msgContent += '\n\n[Image ' + (_ii + 1) + '] ' + vision2;
+          } catch(_) {}
+        }
+      } catch(e) {}
+    }
+    
+    if (allDocs.length) {
+      var xmlDocs = '';
+      for (var _di = 0; _di < allDocs.length; _di++) {
+        if (allDocs[_di] && allDocs[_di].text) {
+          xmlDocs += '\n<document>\n  <source>' + allDocs[_di].name + '</source>\n  <document_content>\n' + allDocs[_di].text + '\n  </document_content>\n</document>\n';
+        }
       }
-    } catch(e) {}
-  }
-  /* Documents joints : injecter les textes extraits dans le contexte */
-  if (allDocs.length) {
-    for (var _di = 0; _di < allDocs.length; _di++) {
-      if (allDocs[_di] && allDocs[_di].text) {
-        var docCtx = '\n\n[DOCUMENT JOINT â€” "' + allDocs[_di].name + '"]\n' + allDocs[_di].text + '\n[FIN DU DOCUMENT]';
-        msgContent = (msgContent || 'Voici un document. Analyse-le et rÃ©sume-le.') + docCtx;
+      if (xmlDocs !== '') {
+        var originalText = msgContent || text || 'Analyse ce document.';
+        msgContent = xmlDocs + '\n<instructions>\nUn ou plusieurs documents ont ete fournis ci-dessus dans la balise <document>. Tu DOIS analyser leur contenu avant de repondre a la question de l utilisateur, et t y referer explicitement dans ta reponse.\n</instructions>\n\n<user_message>' + originalText + '</user_message>';
       }
     }
-    if (allDocs.length === 1) msgContent += '\n\nRÃ©ponds Ã  la demande de l\'utilisateur en te basant sur ce document.';
-    else msgContent += '\n\nRÃ©ponds Ã  la demande de l\'utilisateur en te basant sur ces documents.';
-  }
-
-  // Recherche web si nÃ©cessaire
   var _isLocalProv = (_activeProv === 'lmstudio' || _activeProv === 'ollama' ||
                       _activeProv === 'qwen'    || _activeProv === 'eva');
 
@@ -1546,4 +1546,7 @@ window.cancelCwCmd = function(cmdId) {
       }).catch(function(e) { console.error('Erreur annulation', e); });
   }
 };
+
+
+
 
