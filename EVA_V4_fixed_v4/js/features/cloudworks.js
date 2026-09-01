@@ -14,17 +14,7 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 ══════════════════════════════════════════ */
   async function loadCloudWorks() {
     // Récupération version dynamique
-    fetch('https://api.github.com/repos/urnova/eva/releases/latest')
-      .then(r => r.json())
-      .then(d => {
-        if(d.tag_name) {
-          document.querySelectorAll('.cw-dl-btn-v2, .cw-btn').forEach(b => {
-            if(b.innerHTML.includes('T') && b.innerHTML.includes('l') && b.innerHTML.includes('charger') && !b.innerHTML.includes(d.tag_name)) {
-              b.innerHTML = b.innerHTML.replace(/T.l.charger E\.V\.A Desktop \(Derni.re version\)/g, 'Télécharger E.V.A Desktop (' + d.tag_name + ')');
-              b.innerHTML = b.innerHTML.replace(/T.l.charger E\.V\.A Desktop/g, 'Télécharger E.V.A Desktop (' + d.tag_name + ')');
-              b.href = 'https://github.com/urnova/eva/releases/latest/download/E.V.A-Setup-' + d.tag_name.replace('v', '') + '.exe';
-            }
-          });
+    
         }
       }).catch(e=>console.log(e));
 
