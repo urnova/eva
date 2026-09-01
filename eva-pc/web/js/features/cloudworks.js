@@ -13,11 +13,6 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
    LOAD — initialise listeners
 ══════════════════════════════════════════ */
   async function loadCloudWorks() {
-    // Récupération version dynamique
-    
-        }
-      }).catch(e=>console.log(e));
-
   if (!window.S || !window.S.user) return;
   var uid = S.user.uid;
   var list = document.getElementById('cwDeviceList');
