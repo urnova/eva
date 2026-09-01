@@ -1,4 +1,4 @@
-﻿(async function() {
+(async function() {
   'use strict';
 
   let unsubCmds = null;
@@ -35,16 +35,18 @@
       
       const docRef = window.db.collection('cloudworks').doc(uid).collection('devices').doc(deviceId);
 window.pcAgentDocRef = docRef;
-              const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+              // On détecte le PC Desktop par la présence de window.eva, pas le hostname (localhost = Express)
+      const isDev = false; // toujours 'Production' dans l'app Desktop
         await docRef.set({
           deviceId: deviceId,
-          deviceName: isDev ? 'EVA Desktop (Dev)' : 'EVA Desktop',
+          deviceName: 'EVA Desktop',
           deviceType: 'windows',
           localIP: localIP,
           isDev: isDev,
         osVersion: osInfo,
         online: true,
-        lastSeen: ts
+        lastSeen: ts,
+        sessionId: (window.S && window.S.sessionId) ? window.S.sessionId : null
       }, { merge: true });
 
       console.log('[CloudWorks] EnregistrÃ© sous ID:', deviceId);
