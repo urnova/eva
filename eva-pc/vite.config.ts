@@ -66,7 +66,10 @@ export default defineConfig({
         main: resolve(__dirname, 'web/chat.html'),
         login: resolve(__dirname, 'web/app-login.html'),
         signup: resolve(__dirname, 'web/app-signup.html'),
-        reset: resolve(__dirname, 'web/app-reset.html')
+        reset: resolve(__dirname, 'web/app-reset.html'),
+        splash: resolve(__dirname, 'web/splash.html'),
+        onboarding: resolve(__dirname, 'web/onboarding.html'),
+        overlay: resolve(__dirname, 'web/overlay.html')
       }
     }
   },

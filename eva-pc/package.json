@@ -1,13 +1,13 @@
 {
   "name": "eva-assistant-pc",
-  "version": "5.4.1",
+  "version": "5.4.2",
   "description": "Assistant Virtuel IA E.V.A — Evolutionary Virtual Assistant by Astral Technologie",
   "author": "Astral Technologie",
   "main": "dist-electron/main.js",
   "homepage": "https://eva-assistant.app",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
+    "build": "tsc && vite build && xcopy /E /I /Y web\\js dist\\js && xcopy /E /I /Y web\\assets dist\\assets && electron-builder",
     "build:portable": "tsc && vite build && electron-builder --win portable",
     "preview": "vite preview",
     "electron:dev": "vite",
@@ -81,7 +81,7 @@
         }
       ],
       "icon": "public/installer-icon.ico",
-      "artifactName": "E.V.A-Setup.exe",
+      "artifactName": "E.V.A-Setup-${version}.exe",
       "legalTrademarks": "Astral Technologie",
       "publisherName": "Astral Technologie",
       "verifyUpdateCodeSignature": false
@@ -93,7 +93,7 @@
       "allowElevation": true,
       "installerIcon": "public/installer-icon.ico",
       "uninstallerIcon": "public/installer-icon.ico",
-      "uninstallDisplayName": "Désinstaller E.V.A",
+      "uninstallDisplayName": "EVA Assistant",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     },
