@@ -12,16 +12,17 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 /* ══════════════════════════════════════════
    LOAD — initialise listeners
 ══════════════════════════════════════════ */
-async function loadCloudWorks() {
+  async function loadCloudWorks() {
     // Récupération version dynamique
     fetch('https://api.github.com/repos/urnova/eva/releases/latest')
       .then(r => r.json())
       .then(d => {
         if(d.tag_name) {
           document.querySelectorAll('.cw-dl-btn-v2, .cw-btn').forEach(b => {
-            if(b.innerHTML.includes('Télécharger') && !b.innerHTML.includes(d.tag_name)) {
-              b.innerHTML = b.innerHTML.replace('Télécharger E.V.A Desktop (Dernière version)', 'Télécharger E.V.A Desktop (' + d.tag_name + ')');
-              b.innerHTML = b.innerHTML.replace('Télécharger EVA Desktop Agent', 'Télécharger EVA Desktop Agent (' + d.tag_name + ')');
+            if(b.innerHTML.includes('T') && b.innerHTML.includes('l') && b.innerHTML.includes('charger') && !b.innerHTML.includes(d.tag_name)) {
+              b.innerHTML = b.innerHTML.replace(/T.l.charger E\.V\.A Desktop \(Derni.re version\)/g, 'Télécharger E.V.A Desktop (' + d.tag_name + ')');
+              b.innerHTML = b.innerHTML.replace(/T.l.charger E\.V\.A Desktop/g, 'Télécharger E.V.A Desktop (' + d.tag_name + ')');
+              b.href = 'https://github.com/urnova/eva/releases/latest/download/E.V.A-Setup-' + d.tag_name.replace('v', '') + '.exe';
             }
           });
         }
@@ -71,7 +72,7 @@ function renderDevices(snap) {
   var list = document.getElementById('cwDeviceList');
   if (!list) return;
   if (snap.empty) {
-    list.innerHTML = '<div class="cw-empty"><div class="cw-empty-icon">\uD83D\uDCBB</div><div class="cw-empty-title">AUCUN APPAREIL CONNECTÉ</div>Installez EVA Desktop Agent sur votre PC pour qu\'il apparaisse ici automatiquement.<br><br><a href="https://github.com/urnova/eva/releases/latest/download/E.V.A-Setup.exe" target="_blank" class="cw-btn" style="text-decoration:none;display:inline-block;margin-top:10px;">Télécharger E.V.A Desktop (Dernière version)</a></div>';
+    list.innerHTML = '<div class="cw-empty"><div class="cw-empty-icon">\uD83D\uDCBB</div><div class="cw-empty-title">AUCUN APPAREIL CONNECTÉ</div>Installez EVA Desktop sur votre PC pour qu\'il apparaisse ici automatiquement.</div>';
     _setStats(0, 0, 0);
     return;
   }
@@ -493,4 +494,6 @@ window.cwShowScreenshot  = cwShowScreenshot;
 window.cwShowSysInfo     = cwShowSysInfo;
 window.cwShowScriptResult= cwShowScriptResult;
 })();
+
+
 

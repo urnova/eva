@@ -445,11 +445,15 @@ fetch('https://api.github.com/repos/urnova/eva/releases/latest')
     const vTag = data.tag_name || data.name;
     const dlEl = document.getElementById('dl-version');
     if (dlEl && vTag) dlEl.textContent = '(' + vTag + ')';
+    if (dlEl && vTag && dlEl.closest('a')) {
+        dlEl.closest('a').href = 'https://github.com/urnova/eva/releases/latest/download/E.V.A-Setup-' + vTag.replace('v', '') + '.exe';
+    }
   })
   .catch(console.error);
 </script>
 </body>
 </html>
+
 
 
 
