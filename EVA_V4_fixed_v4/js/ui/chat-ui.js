@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════
    EVA V4 - CHAT-UI.JS
    Gestion de l'interface chat et affichage des messages
    ═══════════════════════════════════════════════════════════ */
@@ -28,15 +28,18 @@ export function addMessage(role, content, options = {}) {
     let userAvatarUrl = options.avatarUrl;
     let userInitial = options.userInitial || 'U';
     
-    if (role === 'user' && window.S && window.S.user) {
-      if (window.S.user.photoURL) {
-        userAvatarUrl = window.S.user.photoURL;
+    if (role === 'user' && window.S) {
+      // Prioritize profile (Firestore) over user (Auth)
+      const p = window.S.profile || {};
+      const u = window.S.user || {};
+      
+      const photo = p.photoURL || p.avatar || u.photoURL;
+      if (photo) {
+        userAvatarUrl = photo;
       }
-      if (window.S.user.displayName) {
-        userInitial = window.S.user.displayName.charAt(0).toUpperCase();
-      } else if (window.S.user.email) {
-        userInitial = window.S.user.email.charAt(0).toUpperCase();
-      }
+      
+      const name = p.nickname || p.displayName || p.name || u.displayName || u.email || 'U';
+      userInitial = name.charAt(0).toUpperCase();
     }
 
     if (userAvatarUrl) {
@@ -402,5 +405,6 @@ export default {
   hideEmptyState,
   initChatUI
 };
+
 
 

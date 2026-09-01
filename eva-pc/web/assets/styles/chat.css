@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════
    VARIABLES & RESET
 ═══════════════════════════════════════════ */
 /* ═══ THÈME SOMBRE (défaut) ═══ */
@@ -386,7 +386,7 @@ body::before{
   top:50%;left:50%;
   transform:translate(-50%,-50%);
   width:240px;height:240px;
-  background-image:url('assets/images/eva-logo.svg');
+  background-image:url('../images/eva-logo.svg');
   background-position:center;
   background-repeat:no-repeat;
   background-size:contain;
@@ -2324,3 +2324,4 @@ body::before{
 .drop-overlay-inner svg {
   filter: drop-shadow(0 0 10px rgba(99, 215, 255, 0.5));
 }
+
