@@ -443,22 +443,52 @@ async function _evaGeneratePdf(action) {
     }
     if (!window.html2pdf) throw new Error('html2pdf.js introuvable après chargement CDN');
 
-    var contentHtml = action.content || '';
-
-    /* Nettoyage : retirer les blocs de code markdown ```html résiduels si présents */
-    contentHtml = contentHtml.replace(/^```html\s*/i, '').replace(/```$/i, '');
-    contentHtml = contentHtml.replace(/^```pdf\s*/i, '').replace(/```$/i, '');
-
-    /* Si le contenu ne contient pas de balise HTML → envelopper en HTML complet */
-    if (contentHtml.indexOf('<') === -1 || !contentHtml.toLowerCase().includes('<!doctype')) {
-      contentHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
-        'body{font-family:Arial,sans-serif;padding:40px;color:#222;font-size:14px;line-height:1.7;}' +
-        'h1{font-size:22px;color:#1a1a2e;border-bottom:2px solid #3498db;padding-bottom:8px;}' +
-        'h2{font-size:17px;color:#2c3e50;margin-top:20px;}' +
-        'p{margin:8px 0;}ul{padding-left:20px;}li{margin:4px 0;}' +
-        'table{width:100%;border-collapse:collapse;}td,th{border:1px solid #ddd;padding:8px;}th{background:#f2f2f2;}' +
-        '</style></head><body>' + contentHtml + '</body></html>';
+        var contentHtml = action.content || '';
+    
+    // Load marked.js if not available (to parse Markdown)
+    if (!window.marked) {
+      await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js', 'marked');
     }
+    
+    contentHtml = contentHtml.replace(/^\s*```html\s*/i, '').replace(/\s*```\s*$/i, '');
+    contentHtml = contentHtml.replace(/^\s*```pdf\s*/i, '').replace(/\s*```\s*$/i, '');
+    
+    // Parse Markdown if it looks like Markdown (no major HTML tags like <div, <p, etc.)
+    if (window.marked && !/<[a-z][\s\S]*>/i.test(contentHtml)) {
+      contentHtml = window.marked.parse(contentHtml);
+    } else if (window.marked && contentHtml.indexOf('**') !== -1) {
+      contentHtml = window.marked.parse(contentHtml);
+    }
+    
+    // Extract body if it's a full document
+    var bodyMatch = contentHtml.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    if (bodyMatch) contentHtml = bodyMatch[1];
+
+    var theme = action.theme || 'corporate';
+    
+    var cssThemes = {
+      corporate: 'body{font-family:"Segoe UI",Arial,sans-serif;padding:40px;color:#333;font-size:14px;line-height:1.6;background:#fff;}' +
+                 'h1{font-size:28px;color:#0056b3;border-bottom:2px solid #0056b3;padding-bottom:10px;margin-bottom:20px;}' +
+                 'h2{font-size:20px;color:#0056b3;margin-top:25px;margin-bottom:10px;}' +
+                 'h3{font-size:16px;color:#444;}' +
+                 'p{margin:10px 0;} ul,ol{padding-left:25px;margin:10px 0;} li{margin:5px 0;}' +
+                 'table{width:100%;border-collapse:collapse;margin:20px 0;} td,th{border:1px solid #ddd;padding:12px;text-align:left;} th{background:#f8f9fa;color:#0056b3;font-weight:bold;}' +
+                 'blockquote{border-left:4px solid #0056b3;margin:0;padding-left:15px;color:#666;font-style:italic;}',
+                 
+      minimal:   'body{font-family:Georgia,serif;padding:50px;color:#111;font-size:15px;line-height:1.8;background:#fff;}' +
+                 'h1{font-size:32px;font-weight:normal;text-align:center;margin-bottom:40px;letter-spacing:1px;}' +
+                 'h2{font-size:22px;font-weight:normal;border-bottom:1px solid #eee;padding-bottom:5px;margin-top:30px;}' +
+                 'p{margin:15px 0;} table{width:100%;border-collapse:collapse;margin:20px 0;} td,th{border-bottom:1px solid #eee;padding:10px;text-align:left;}',
+                 
+      modern:    'body{font-family:"Helvetica Neue",Helvetica,sans-serif;padding:40px;color:#222;font-size:14px;line-height:1.6;background:#fdfdfd;}' +
+                 'h1{font-size:36px;color:#111;font-weight:900;letter-spacing:-1px;margin-bottom:20px;}' +
+                 'h2{font-size:24px;color:#ff4d4d;font-weight:bold;margin-top:30px;}' +
+                 'table{width:100%;border-collapse:collapse;margin:20px 0;box-shadow:0 4px 6px rgba(0,0,0,0.05);} td,th{padding:15px;text-align:left;border-bottom:1px solid #eee;} th{background:#111;color:#fff;}'
+    };
+    
+    var css = cssThemes[theme] || cssThemes['corporate'];
+
+    contentHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body>' + contentHtml + '</body></html>';
 
     /* Approche iframe : rend le HTML complet dans un iframe invisible
        → garantit que DOCTYPE, <head> et <style> sont correctement appliqués */
@@ -564,104 +594,66 @@ function _evaGeneratePptx(action) {
     var pptx = new PptxCtor();
     try { pptx.layout = 'LAYOUT_WIDE'; } catch(_) {}
 
-    var mainTitle = action.title || filename.replace(/\.pptx$/i, '');
+        var mainTitle = action.title || filename.replace(/\.pptx$/i, '');
     var slides = action.slides || [];
-    /* Normalisation: si slides est manquant ou vide, construire depuis content */
     if (!Array.isArray(slides) || !slides.length) {
-      slides = [{ title: mainTitle, points: action.content ? action.content.split('\n').filter(function(l){ return l.trim(); }) : ['Contenu de la présentation'] }];
+      slides = [{ title: mainTitle, points: action.content ? action.content.split('\n').filter(function(l){ return l.trim(); }) : ['Contenu'] }];
     }
+    
+    var theme = action.theme || 'corporate';
+    
+    // Themes definition
+    var themes = {
+      corporate: { bgCover: 'FFFFFF', bgSlide: 'F8F9FA', accent: '0056B3', text: '333333', dim: '6C757D', font: 'Helvetica' },
+      minimal: { bgCover: 'FFFFFF', bgSlide: 'FFFFFF', accent: '000000', text: '000000', dim: '888888', font: 'Arial' },
+      modern: { bgCover: '0E0E12', bgSlide: '111113', accent: '7B8BF5', text: 'D8D9E8', dim: '5A5A72', font: 'Calibri' }
+    };
+    var t = themes[theme] || themes['corporate'];
 
-    /* ── Palette thème EVA Indigo ── */
-    var C_BG_COVER   = '0E0E12';  /* fond couverture */
-    var C_BG_SLIDE   = '111113';  /* fond slides */
-    var C_ACCENT     = '7B8BF5';  /* indigo principal */
-    var C_ACCENT2    = '9FA8F7';  /* indigo clair pour titres */
-    var C_TEXT       = 'D8D9E8';  /* texte corps */
-    var C_DIM        = '5A5A72';  /* texte discret */
-    var C_STRIPE     = '1E1E26';  /* bande basse */
-
-    /* ── Slide de couverture (s'il y en a plus d'une) ── */
-    if (slides.length > 1) {
-      var cover = pptx.addSlide();
-      cover.background = { color: C_BG_COVER };
-      /* Bande verticale gauche indigo */
-      try { cover.addShape('rect', { x:0, y:0, w:0.18, h:7.5, fill:{ color:C_ACCENT } }); } catch(_) {}
-      /* Bande basse discrète */
-      try { cover.addShape('rect', { x:0, y:7.22, w:13.33, h:0.28, fill:{ color:C_STRIPE } }); } catch(_) {}
-      /* Titre principal */
-      cover.addText(mainTitle, {
-        x:0.48, y:2.0, w:12.3, h:2.2,
-        fontSize:38, bold:true, color:C_ACCENT2, fontFace:'Calibri', align:'left'
-      });
-      /* Sous-titre EVA */
-      cover.addText('Présenté par E.V.A · Astral Technologie', {
-        x:0.48, y:4.4, w:12.3, h:0.6,
-        fontSize:14, color:C_ACCENT, fontFace:'Calibri', align:'left'
-      });
-      /* Date */
-      cover.addText(new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}), {
-        x:0.48, y:6.85, w:12.3, h:0.35,
-        fontSize:10, color:C_DIM, fontFace:'Calibri', align:'left'
-      });
-    }
-
-    /* ── Slides de contenu ── */
-    slides.forEach(function(sld, idx) {
-      var slide = pptx.addSlide();
-      slide.background = { color: C_BG_SLIDE };
-      /* Bande verticale fine */
-      try { slide.addShape('rect', { x:0, y:0, w:0.08, h:7.5, fill:{ color:C_ACCENT } }); } catch(_) {}
-      /* Bande basse */
-      try { slide.addShape('rect', { x:0, y:7.22, w:13.33, h:0.28, fill:{ color:C_STRIPE } }); } catch(_) {}
-
-      /* Titre */
-      var sldTitle = sld.title || ('Diapositive ' + (idx + 1));
-      slide.addText(sldTitle, {
-        x:0.28, y:0.28, w:12.2, h:0.9,
-        fontSize:25, bold:true, color:C_ACCENT2, fontFace:'Calibri'
-      });
-      /* Séparateur sous titre */
-      try { slide.addShape('rect', { x:0.28, y:1.28, w:12.2, h:0.04, fill:{ color:C_ACCENT } }); } catch(_) {}
-
-      /* Corps — bullets ou texte */
-      var bodyArr = [];
-      if (Array.isArray(sld.points) && sld.points.length) {
-        sld.points.forEach(function(p) {
-          var txt = String(p || '').trim();
-          if (!txt) return;
-          bodyArr.push({ text: txt, options: { bullet: { type:'bullet', code:'25AA', color:C_ACCENT, size:75 }, indentLevel:0, paraSpaceBefore:5 } });
-        });
-      } else if (sld.content) {
-        var cLines = String(sld.content).split('\n');
-        cLines.forEach(function(l) {
-          var lt = l.trim();
-          if (!lt) { bodyArr.push({ text:'', options:{} }); return; }
-          var isBullet = /^[-•·–*]\s/.test(lt);
-          var cleanTxt = isBullet ? lt.replace(/^[-•·–*]\s*/, '') : lt;
-          bodyArr.push({
-            text: cleanTxt,
-            options: isBullet
-              ? { bullet:{ type:'bullet', code:'25AA', color:C_ACCENT, size:75 }, paraSpaceBefore:5 }
-              : { paraSpaceBefore: 6 }
-          });
-        });
-      }
-
-      if (bodyArr.length) {
-        slide.addText(bodyArr, {
-          x:0.28, y:1.45, w:12.2, h:5.5,
-          fontSize:16, color:C_TEXT, fontFace:'Calibri', valign:'top'
-        });
-      }
-
-      /* Numéro de slide */
-      slide.addText(String(idx + 1) + '/' + slides.length, {
-        x:12.0, y:7.25, w:1.1, h:0.22,
-        fontSize:9, color:C_DIM, fontFace:'Calibri', align:'right'
-      });
+    pptx.defineSlideMaster({
+      title: "MASTER_COVER",
+      background: { color: t.bgCover },
+      objects: [
+        { rect: { x:0, y:0, w:0.18, h:7.5, fill:{ color: t.accent } } },
+        { rect: { x:0, y:7.22, w:13.33, h:0.28, fill:{ color: t.accent } } },
+        { placeholder: { options: { name: "title", type: "title", x:0.48, y:2.0, w:12.3, h:2.2, fontSize:42, bold:true, color: t.accent, fontFace: t.font, align:'left' }, text: "" } },
+        { placeholder: { options: { name: "subtitle", type: "body", x:0.48, y:4.3, w:12.3, h:1.0, fontSize:20, color: t.dim, fontFace: t.font, align:'left' }, text: "" } }
+      ]
     });
 
-    /* Écriture */
+    pptx.defineSlideMaster({
+      title: "MASTER_SLIDE",
+      background: { color: t.bgSlide },
+      objects: [
+        { rect: { x:0, y:0, w:13.33, h:0.08, fill:{ color: t.accent } } },
+        { placeholder: { options: { name: "title", type: "title", x:0.5, y:0.4, w:12.3, h:0.8, fontSize:32, bold:true, color: t.accent, fontFace: t.font }, text: "" } },
+        { placeholder: { options: { name: "body", type: "body", x:0.5, y:1.5, w:12.3, h:5.5, fontSize:18, color: t.text, fontFace: t.font, valign:'top' }, text: "" } }
+      ]
+    });
+
+    if (slides.length > 1) {
+      var cover = pptx.addSlide({ masterName: "MASTER_COVER" });
+      cover.addText([{text: mainTitle}], { placeholder: "title" });
+      cover.addText([{text: 'Présenté par E.V.A - Astral Technologie'}], { placeholder: "subtitle" });
+    }
+
+    slides.forEach(function(sData, i) {
+      var s = pptx.addSlide({ masterName: "MASTER_SLIDE" });
+      if (sData.title) s.addText([{text: sData.title}], { placeholder: "title" });
+      
+      var content = sData.content || (sData.points && sData.points.join('\n')) || '';
+      if (content) {
+        var lines = content.split('\n');
+        var textObjs = lines.map(function(l) {
+          var isBullet = l.trim().startsWith('-') || l.trim().startsWith('*');
+          var txt = l.replace(/^[-*]\s*/, '').trim();
+          return { text: txt, options: { bullet: isBullet } };
+        });
+        s.addText(textObjs, { placeholder: "body" });
+      }
+    });
+
+      /* Écriture */
     var writeResult = pptx.write({ outputType: 'blob' });
     Promise.resolve(writeResult).then(function(blob) {
       if (blob && !(blob instanceof Blob)) {
