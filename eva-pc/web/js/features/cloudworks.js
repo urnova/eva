@@ -84,7 +84,14 @@ function renderDevices(snap) {
 
   snap.forEach(function(doc) {
     var d = Object.assign({id: doc.id}, doc.data());
-    var online = d.online === true;
+        var online = d.online === true;
+    if (online && d.lastSeen && d.lastSeen.toDate) {
+      var diffMs = Date.now() - d.lastSeen.toDate().getTime();
+      if (diffMs > 120000) { // 2 minutes timeout
+        online = false;
+        d.online = false;
+      }
+    }
     var seen = d.lastSeen && d.lastSeen.toDate ? d.lastSeen.toDate().toLocaleString('fr-FR') : 'Inconnu';
     var iconMap = {mac: '💻', linux: '🐧', windows: '🪟'};
     var icon = iconMap[d.deviceType] || '💻';
