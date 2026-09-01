@@ -1,4 +1,4 @@
-﻿import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
 app.disableHardwareAcceleration();
 import { join } from 'path'
 import { fileURLToPath } from 'url'
@@ -808,11 +808,11 @@ ipcMain.handle('autolaunch:set', async (_event, enabled: boolean) => {
   return { success: true }
 })
 
-// â”€â”€â”€ IPC Handlers â€” App Info â”€â”€â”€
 ipcMain.handle('app:version', () => app.getVersion())
 ipcMain.handle('app:platform', () => process.platform)
 ipcMain.handle('app:name', () => app.getName())
 ipcMain.handle('app:path', () => app.getPath('userData'))
+ipcMain.handle('app:quit', () => { app.isQuitting = true; app.quit() })
 
 // --- Updater IPC ---
 ipcMain.handle('updater:start-download', () => {

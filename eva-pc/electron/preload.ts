@@ -1,10 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-// â”€â”€â”€ API EVA exposÃ©e au renderer via contextBridge â”€â”€â”€
-// Pas de nodeIntegration â†’ sÃ©curitÃ© maximale
+// ─── API EVA exposée au renderer via contextBridge ───
+// Pas de nodeIntegration → sécurité maximale
 
 const evaAPI = {
-  // ðŸ”„ Updater
+  // 🔄 Updater
   updater: {
     startDownload: () => ipcRenderer.invoke('updater:start-download'),
     quitAndInstall: () => ipcRenderer.invoke('updater:quit-and-install'),
@@ -13,12 +13,13 @@ const evaAPI = {
     onUpdateDownloaded: (callback: () => void) => ipcRenderer.on('updater:downloaded', callback),
     onUpdateError: (callback: (err: any) => void) => ipcRenderer.on('updater:error', (e, err) => callback(err))
   },
-  
-  // ðŸ”’ App Quit
+
+  // 🔒 App Quit
   onAppQuit: (callback: () => void) => {
     ipcRenderer.on('app:quit-request', callback)
   },
-  // â”€â”€ Window Controls â”€â”€
+
+  // ── Window Controls ──
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),
     maximize: () => ipcRenderer.invoke('window:maximize'),
@@ -26,7 +27,7 @@ const evaAPI = {
     isMaximized: () => ipcRenderer.invoke('window:isMaximized')
   },
 
-  // â”€â”€ electron-store (config locale) â”€â”€
+  // ── electron-store (config locale) ──
   store: {
     get: (key: string) => ipcRenderer.invoke('store:get', key),
     set: (key: string, value: unknown) => ipcRenderer.invoke('store:set', key, value),
@@ -34,7 +35,7 @@ const evaAPI = {
     getAll: () => ipcRenderer.invoke('store:getAll')
   },
 
-  // â”€â”€ Filesystem â”€â”€
+  // ── Filesystem ──
   fs: {
     list: (dirPath: string) => ipcRenderer.invoke('fs:list', dirPath),
     read: (filePath: string) => ipcRenderer.invoke('fs:read', filePath),
@@ -50,7 +51,7 @@ const evaAPI = {
     homedir: () => ipcRenderer.invoke('fs:homedir')
   },
 
-  // â”€â”€ Terminal â”€â”€
+  // ── Terminal ──
   terminal: {
     create: (termId: string) => ipcRenderer.invoke('terminal:create', termId),
     write: (termId: string, data: string) => ipcRenderer.invoke('terminal:write', termId, data),
@@ -70,7 +71,7 @@ const evaAPI = {
     }
   },
 
-  // â”€â”€ System â”€â”€
+  // ── System ──
   system: {
     info: () => ipcRenderer.invoke('system:info'),
     stats: () => ipcRenderer.invoke('system:stats'),
@@ -88,21 +89,22 @@ const evaAPI = {
     killProcess: (pid: number) => ipcRenderer.invoke('system:killProcess', pid)
   },
 
-  // â”€â”€ Auto Launch â”€â”€
+  // ── Auto Launch ──
   autoLaunch: {
     get: () => ipcRenderer.invoke('autolaunch:get'),
     set: (enabled: boolean) => ipcRenderer.invoke('autolaunch:set', enabled)
   },
 
-  // â”€â”€ App Info â”€â”€
+  // ── App Info + Force Quit ──
   app: {
     version: () => ipcRenderer.invoke('app:version'),
     platform: () => ipcRenderer.invoke('app:platform'),
     name: () => ipcRenderer.invoke('app:name'),
-    path: () => ipcRenderer.invoke('app:path')
+    path: () => ipcRenderer.invoke('app:path'),
+    quit: () => ipcRenderer.invoke('app:quit')
   },
 
-  // â”€â”€ Navigation (depuis tray/main) â”€â”€
+  // ── Navigation (depuis tray/main) ──
   onNavigate: (callback: (route: string) => void) => {
     ipcRenderer.on('navigate', (_: unknown, route: string) => callback(route))
   },
@@ -110,7 +112,7 @@ const evaAPI = {
     ipcRenderer.on('new-chat', () => callback())
   },
 
-  // â”€â”€ Auth callback (depuis protocole eva-desktop://) â”€â”€
+  // ── Auth callback (depuis protocole eva-desktop://) ──
   onAuthCallback: (callback: (data: { refreshToken?: string; hid?: string }) => void) => {
     ipcRenderer.on('auth:callback', (_: unknown, data: { refreshToken?: string; hid?: string }) => callback(data))
   },
@@ -120,7 +122,7 @@ const evaAPI = {
     ipcRenderer.on('puter:callback', (_: unknown, data: { token: string }) => callback(data))
   },
 
-  // â”€â”€â”€ Splash Screen â”€â”€â”€
+  // ─── Splash Screen ───
   onSplashStatus: (callback: (status: string) => void) => {
     ipcRenderer.on('splash:status', (_: unknown, status: string) => callback(status))
   },
@@ -128,27 +130,27 @@ const evaAPI = {
     ipcRenderer.on('splash:done', () => callback())
   },
 
-  // â”€â”€ Ouvrir URL dans le navigateur systÃ¨me â”€â”€
+  // ── Ouvrir URL dans le navigateur système ──
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
 
-  // â”€â”€ Ã‰change du refresh token via main process (Node.js, sans restriction CORS) â”€â”€
+  // ── Échange du refresh token via main process (Node.js, sans restriction CORS) ──
   exchangeToken: (refreshToken: string, apiKey: string) =>
     ipcRenderer.invoke('auth:exchangeToken', refreshToken, apiKey),
 
-  // â”€â”€ Popup Auth (conservÃ© pour fallback futur) â”€â”€
+  // ── Popup Auth (conservé pour fallback futur) ──
   openAuthWindow: (url: string) => ipcRenderer.invoke('auth:openAuthWindow', url),
 
-  // â”€â”€ Overlay Agentique â”€â”€
+  // ── Overlay Agentique ──
   overlay: {
     show: (state?: string) => ipcRenderer.invoke('overlay:show', state),
     hide: () => ipcRenderer.invoke('overlay:hide'),
     setState: (state: string, text?: string) => ipcRenderer.invoke('overlay:setState', state, text),
-      onSetState: (callback: (state: string, text?: string) => void) => {
-        const channel = 'overlay:setState'
-        const listener = (_: unknown, state: string, text?: string) => callback(state, text)
-        ipcRenderer.on(channel, listener)
-        return () => ipcRenderer.removeListener(channel, listener)
-      },
+    onSetState: (callback: (state: string, text?: string) => void) => {
+      const channel = 'overlay:setState'
+      const listener = (_: unknown, state: string, text?: string) => callback(state, text)
+      ipcRenderer.on(channel, listener)
+      return () => ipcRenderer.removeListener(channel, listener)
+    },
     onAction: (callback: (action: string) => void) => {
       const channel = 'overlay:action'
       const listener = (_: unknown, action: string) => callback(action)
@@ -161,5 +163,4 @@ const evaAPI = {
 contextBridge.exposeInMainWorld('eva', evaAPI)
 
 // Type global pour TypeScript dans le renderer
-// Note: EvaAPI est dÃ©clarÃ© dans src/types/index.ts via declare global
-
+// Note: EvaAPI est déclaré dans src/types/index.ts via declare global

@@ -57,6 +57,9 @@
       animation: pulseText 2s infinite;
     }
     @keyframes pulseText { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    /* Nuclear drag-region killer when update modal is active */
+    body.update-active * { -webkit-app-region: no-drag !important; pointer-events: auto !important; }
+    body.update-active #update-modal { display: flex !important; }
   </style>
 </head>
 <body>
@@ -83,9 +86,12 @@
         Fermeture dans <span id="countdown-val">3</span>...
       </div>
       
-      <div id="update-actions" style="display:flex; justify-content:center; gap:15px;">
-        <button onclick="window.eva.window.close()" style="padding:10px 20px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:var(--text); border-radius:6px; cursor:pointer; font-family:'Space Mono', monospace; transition:all 0.2s; pointer-events:auto; -webkit-app-region:no-drag;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">Quitter</button>
-        <button id="btn-download" onclick="startUpdate()" style="padding:10px 20px; border:none; background:var(--cyan); color:#111; border-radius:6px; cursor:pointer; font-weight:bold; font-family:'Space Mono', monospace; transition:all 0.2s; box-shadow:0 0 15px var(--cyan-glow); pointer-events:auto; -webkit-app-region:no-drag;" onmouseover="this.style.boxShadow='0 0 25px var(--cyan)'" onmouseout="this.style.boxShadow='0 0 15px var(--cyan-glow)'">Télécharger</button>
+      <div id="update-actions" style="display:flex; justify-content:center; gap:15px; flex-direction:column; align-items:center;">
+        <div style="display:flex; gap:15px;">
+          <button id="btn-quit" style="padding:10px 20px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:var(--text); border-radius:6px; cursor:pointer; font-family:'Space Mono', monospace; font-size:0.85em; transition:all 0.2s;">Quitter</button>
+          <button id="btn-download" style="padding:10px 24px; border:none; background:var(--cyan); color:#111; border-radius:6px; cursor:pointer; font-weight:bold; font-family:'Space Mono', monospace; font-size:0.85em; transition:all 0.2s; box-shadow:0 0 15px var(--cyan-glow);">Télécharger</button>
+        </div>
+        <a id="link-manual" href="#" style="color:var(--text-muted); font-size:0.75em; text-decoration:underline; cursor:pointer; margin-top:4px;">Télécharger manuellement sur GitHub</a>
       </div>
     </div>
   </div>
@@ -100,71 +106,134 @@
   </div>
 
   <script>
+    const GITHUB_RELEASES = 'https://github.com/urnova/eva/releases/latest';
     let downloadStarted = false;
-    
+    let downloadFallbackTimer = null;
+
+    /* ─── Show update modal: KILL all drag regions via CSS class ─── */
+    function showUpdateModal(info) {
+      document.body.classList.add('update-active');  // CSS kills ALL -webkit-app-region:drag
+      var modal = document.getElementById('update-modal');
+      modal.style.display = 'flex';
+
+      if (info && (info.version || info.releaseNotes)) {
+        var infoDiv = document.getElementById('update-info');
+        infoDiv.style.display = 'block';
+        var content = '<b>Version ' + (info.version || 'Disponible') + '</b><br>';
+        if (info.releaseNotes) {
+          var notes = typeof info.releaseNotes === 'string'
+            ? info.releaseNotes
+            : (info.releaseNotes[0] ? info.releaseNotes[0].note : '');
+          content += '<div style="margin-top:5px;font-size:0.9em;">' + notes + '</div>';
+        }
+        infoDiv.innerHTML = content;
+      }
+    }
+
+    /* ─── Télécharger via Electron updater ─── */
     function startUpdate() {
       if (downloadStarted) return;
       downloadStarted = true;
       document.getElementById('update-actions').style.display = 'none';
       document.getElementById('update-progress').style.display = 'block';
+
       if (window.eva && window.eva.updater) {
         window.eva.updater.startDownload();
       }
+
+      /* Fallback: if no progress after 10s, open GitHub releases in browser */
+      downloadFallbackTimer = setTimeout(function() {
+        var bar = document.getElementById('update-bar');
+        if (bar && parseInt(bar.style.width || '0') < 5) {
+          /* No progress detected — offer manual download */
+          document.getElementById('update-progress').style.display = 'none';
+          document.getElementById('update-actions').style.display = 'flex';
+          downloadStarted = false;
+          var infoDiv = document.getElementById('update-info');
+          infoDiv.style.display = 'block';
+          infoDiv.innerHTML = '<b style="color:#f0a500">Téléchargement automatique indisponible.</b><br>'
+            + 'Cliquez sur "Télécharger manuellement" ci-dessous.';
+        }
+      }, 10000);
     }
 
+    /* ─── Wire buttons after DOM ready ─── */
+    document.addEventListener('DOMContentLoaded', function() {
+      var btnQuit = document.getElementById('btn-quit');
+      var btnDl   = document.getElementById('btn-download');
+      var linkMan = document.getElementById('link-manual');
+
+      if (btnQuit) {
+        btnQuit.addEventListener('click', function(e) {
+          e.stopPropagation();
+          /* Try IPC force-quit first, then native window.close() as fallback */
+          try {
+            if (window.eva && window.eva.app && window.eva.app.quit) {
+              window.eva.app.quit();
+            } else if (window.eva && window.eva.window) {
+              window.eva.window.close();
+            } else {
+              window.close();
+            }
+          } catch(err) {
+            window.close();
+          }
+        });
+      }
+
+      if (btnDl) {
+        btnDl.addEventListener('click', function(e) {
+          e.stopPropagation();
+          startUpdate();
+        });
+      }
+
+      if (linkMan) {
+        linkMan.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (window.eva && window.eva.openExternal) {
+            window.eva.openExternal(GITHUB_RELEASES);
+          } else {
+            window.open(GITHUB_RELEASES, '_blank');
+          }
+        });
+      }
+    });
+
+    /* ─── IPC events from main process ─── */
     if (window.eva) {
       if (window.eva.onSplashStatus) {
-        window.eva.onSplashStatus((status) => {
+        window.eva.onSplashStatus(function(status) {
           document.getElementById('status-text').innerText = status;
         });
       }
       if (window.eva.onSplashDone) {
-        window.eva.onSplashDone(() => {
+        window.eva.onSplashDone(function() {
           window.location.href = 'chat.html';
         });
       }
-      
+
       if (window.eva.updater) {
-        window.eva.updater.onUpdateAvailable((info) => {
-          document.getElementById('update-modal').style.display = 'flex';
-          if (info && (info.version || info.releaseNotes)) {
-            let infoDiv = document.getElementById('update-info');
-            infoDiv.style.display = 'block';
-            let content = '<b>Version ' + (info.version || 'Inconnue') + '</b><br>';
-            if (info.releaseNotes) {
-              // Si releaseNotes est un HTML (provenant de github)
-              let notes = typeof info.releaseNotes === 'string' ? info.releaseNotes : (info.releaseNotes[0] ? info.releaseNotes[0].note : '');
-              content += '<div style="margin-top:5px;font-size:0.9em;">' + notes + '</div>';
-            }
-            infoDiv.innerHTML = content;
-          }
+        window.eva.updater.onUpdateAvailable(function(info) {
+          showUpdateModal(info);
         });
-        
-        if (window.eva.updater.onUpdateError) {
-          window.eva.updater.onUpdateError((err) => {
-            document.getElementById('update-progress').style.display = 'none';
-            document.getElementById('update-actions').style.display = 'flex';
-            downloadStarted = false;
-            let infoDiv = document.getElementById('update-info');
-            infoDiv.style.display = 'block';
-            infoDiv.innerHTML = '<b style="color:var(--red)">Erreur de téléchargement:</b><br><span style="color:var(--red);font-size:0.8em">' + err + '</span><br><br><button onclick="window.eva.openExternal(\'https://github.com/urnova/eva/releases\')" style="padding:6px 12px; border:1px solid var(--cyan); background:transparent; color:var(--cyan); border-radius:4px; cursor:pointer; font-size:0.9em;">Télécharger manuellement</button>';
-          });
-        }
-        
-        window.eva.updater.onUpdateProgress((prog) => {
-          if (prog && prog.percent) {
-            let p = Math.round(prog.percent);
+
+        window.eva.updater.onUpdateProgress(function(prog) {
+          if (downloadFallbackTimer) { clearTimeout(downloadFallbackTimer); downloadFallbackTimer = null; }
+          if (prog && typeof prog.percent !== 'undefined') {
+            var p = Math.round(prog.percent);
             document.getElementById('update-bar').style.width = p + '%';
             document.getElementById('update-percent').innerText = p + '%';
           }
         });
-        
-        window.eva.updater.onUpdateDownloaded(() => {
+
+        window.eva.updater.onUpdateDownloaded(function() {
+          if (downloadFallbackTimer) { clearTimeout(downloadFallbackTimer); downloadFallbackTimer = null; }
           document.getElementById('update-progress').style.display = 'none';
           document.getElementById('update-countdown').style.display = 'block';
-          
-          let count = 3;
-          let iv = setInterval(() => {
+          var count = 3;
+          var iv = setInterval(function() {
             count--;
             document.getElementById('countdown-val').innerText = count;
             if (count <= 0) {
@@ -173,9 +242,19 @@
             }
           }, 1000);
         });
+
+        window.eva.updater.onUpdateError(function(err) {
+          if (downloadFallbackTimer) { clearTimeout(downloadFallbackTimer); downloadFallbackTimer = null; }
+          document.getElementById('update-progress').style.display = 'none';
+          document.getElementById('update-actions').style.display = 'flex';
+          downloadStarted = false;
+          var infoDiv = document.getElementById('update-info');
+          infoDiv.style.display = 'block';
+          infoDiv.innerHTML = '<b style="color:#ff6b6b">Erreur de téléchargement</b><br>'
+            + '<span style="color:#ff6b6b;font-size:0.8em">' + (err || 'Erreur inconnue') + '</span>';
+        });
       }
     }
   </script>
 </body>
 </html>
-
