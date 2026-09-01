@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
+﻿import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
 app.disableHardwareAcceleration();
 import { join } from 'path'
 import { fileURLToPath } from 'url'
@@ -9,10 +9,61 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import * as child_process from 'child_process'
-
 // â”€â”€â”€ Polyfill __dirname pour ESM â”€â”€â”€
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+import * as http from 'http'
+import { extname } from 'path'
+
+let localServerPort = 0;
+const mimeTypes: { [key: string]: string } = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpg',
+  '.svg': 'image/svg+xml'
+};
+
+const httpServer = http.createServer((req, res) => {
+  let urlPath = req.url?.split('?')[0] || '/';
+  
+  if (urlPath === '/login') urlPath = '/app-login.html';
+  else if (urlPath === '/onboarding') urlPath = '/onboarding.html';
+  else if (urlPath === '/chat') urlPath = '/chat.html';
+  else if (urlPath === '/') urlPath = '/splash.html';
+
+  let filePath = join(__dirname, '../dist', urlPath);
+  
+  fs.stat(filePath, (err, stat) => {
+    if (err || !stat.isFile()) {
+      filePath = join(__dirname, '../dist/splash.html');
+    }
+    const ext = extname(filePath).toLowerCase();
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    
+    fs.readFile(filePath, (error, content) => {
+      if (error) {
+        res.writeHead(500);
+        res.end('Error');
+      } else {
+        res.writeHead(200, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' });
+        res.end(content, 'utf-8');
+      }
+    });
+  });
+});
+
+httpServer.listen(0, '127.0.0.1', () => {
+  const address = httpServer.address();
+  if (address && typeof address !== 'string') {
+    localServerPort = address.port;
+    console.log('[EVA] Local HTTP Server running on port:', localServerPort);
+  }
+});
+
 
 // â”€â”€â”€ Store local (config NON synchronisÃ©e) â”€â”€â”€
 interface StoreSchema {
@@ -149,7 +200,7 @@ function createWindow() {
     loadDevURL();
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
-    mainWindow.loadFile(join(__dirname, '../dist/splash.html'))
+    mainWindow.loadURL(('http://127.0.0.1:' + localServerPort + '/splash.html'))
   }
 
   // â”€â”€â”€ Sauvegarder la position/taille â”€â”€â”€
@@ -200,7 +251,7 @@ function createOverlayWindow() {
   if (isDev) {
     overlayWindow.loadFile(join(__dirname, '../web/overlay.html'))
   } else {
-    overlayWindow.loadFile(join(__dirname, '../dist/overlay.html'))
+    overlayWindow.loadURL(('http://127.0.0.1:' + localServerPort + '/overlay.html'))
   }
 
   overlayWindow.on('closed', () => { overlayWindow = null })
@@ -864,3 +915,7 @@ ipcMain.handle('llm:stop', async () => {
   stopLLM();
   return { success: true };
 });
+
+
+
+

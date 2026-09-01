@@ -1,4 +1,4 @@
-/* ═══ AUTH ═══ */
+﻿/* ═══ AUTH ═══ */
 function initAuth() {
   auth.onAuthStateChanged(function(user) {
     if (!user) { window.location.href = '/login'; return; }
@@ -67,10 +67,11 @@ function initAuth() {
       }
     });
 
-    loadProfile(user.uid);
-    initChatSession();
-    loadConvs();
-    setTimeout(function(){ loadReminders(); }, 2000);
+    loadProfile(user.uid).then(() => {
+      initChatSession();
+      loadConvs();
+      setTimeout(function(){ loadReminders(); }, 2000);
+    });
     setTimeout(function(){ initFCM(); }, 3000);
     // Init wake word (stays off until user activates)
     if (window.EVAWakeWord) {
@@ -325,3 +326,5 @@ function renderUserUI(p) {
 window.evaSafePuterSignIn = async function() {
   return await puter.auth.signIn();
 };
+
+

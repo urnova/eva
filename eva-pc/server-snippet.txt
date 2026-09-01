@@ -1,0 +1,50 @@
+﻿import * as http from 'http'
+import { extname } from 'path'
+
+let localServerPort = 0;
+const mimeTypes: { [key: string]: string } = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpg',
+  '.svg': 'image/svg+xml'
+};
+
+const httpServer = http.createServer((req, res) => {
+  let urlPath = req.url?.split('?')[0] || '/';
+  
+  if (urlPath === '/login') urlPath = '/app-login.html';
+  else if (urlPath === '/onboarding') urlPath = '/onboarding.html';
+  else if (urlPath === '/chat') urlPath = '/chat.html';
+  else if (urlPath === '/') urlPath = '/splash.html';
+
+  let filePath = join(__dirname, '../dist', urlPath);
+  
+  fs.stat(filePath, (err, stat) => {
+    if (err || !stat.isFile()) {
+      filePath = join(__dirname, '../dist/splash.html');
+    }
+    const ext = extname(filePath).toLowerCase();
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    
+    fs.readFile(filePath, (error, content) => {
+      if (error) {
+        res.writeHead(500);
+        res.end('Error');
+      } else {
+        res.writeHead(200, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' });
+        res.end(content, 'utf-8');
+      }
+    });
+  });
+});
+
+httpServer.listen(0, '127.0.0.1', () => {
+  const address = httpServer.address();
+  if (address && typeof address !== 'string') {
+    localServerPort = address.port;
+    console.log('[EVA] Local HTTP Server running on port:', localServerPort);
+  }
+});
