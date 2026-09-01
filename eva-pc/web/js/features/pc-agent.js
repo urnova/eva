@@ -132,7 +132,7 @@
         const prompt = data.payload?.prompt || 'Aucun prompt';
         await cmdRef.update({ status: 'running', updatedAt: new Date(), step: 'Démarrage du LLM local...' });
         resultData = await runAgenticLoop(prompt, cmdId, uid, cmdRef);
-        status = 'done';
+        status = (resultData && resultData.error) ? 'error' : 'done';
       }
       else if (data.type === 'sysinfo') {
         await _updateStep(cmdRef, 'Récupération infos système...');

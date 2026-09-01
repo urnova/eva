@@ -64,6 +64,7 @@ function renderDevices(snap) {
 
   var totalCount = 0, onlineCount = 0;
   list.innerHTML = '';
+  var _cwDevArr = []; /* peuple S.cwDevices pour le system prompt EVA */
 
   snap.forEach(function(doc) {
     var d = Object.assign({id: doc.id}, doc.data());
@@ -83,6 +84,7 @@ function renderDevices(snap) {
     var dname = esc(d.deviceName || d.deviceId);
     totalCount++;
     if (online) onlineCount++;
+    _cwDevArr.push(Object.assign({}, d, { online: online }));
 
     var c = document.createElement('div');
     c.className = 'cw-card' + (online ? ' cw-card-online' : ' cw-card-offline');
@@ -156,6 +158,9 @@ function renderDevices(snap) {
     list.appendChild(c);
   });
 
+    /* Mettre à jour S.cwDevices pour le system prompt EVA */
+  if (window.S) window.S.cwDevices = _cwDevArr;
+  window._cwDevicesCache = _cwDevArr;
   _setStats(totalCount, onlineCount, totalCount - onlineCount);
 }
 

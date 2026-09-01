@@ -51,17 +51,8 @@ function _renderPCLayout(container, uid) {
           <div class="cw-info-row"><span class="cw-info-label">Port</span><span class="cw-info-value">11434</span></div>
           <div class="cw-info-row"><span class="cw-info-label">Statut</span><span id="cwLLMStatus" class="cw-info-value">—</span></div>
         </div>
-        <div class="cw-llm-toggle-row">
-          <label class="cw-toggle-label">Démarrer le LLM avec CloudWorks</label>
-          <label class="cw-switch">
-            <input type="checkbox" id="cwLLMAutoStart" onchange="window._cwToggleLLMAutostart(this.checked)">
-            <span class="cw-switch-slider"></span>
-          </label>
-        </div>
         <div class="cw-llm-actions">
-          <button class="cw-btn cw-btn-primary" onclick="window._cwStartLLM()">▶ Démarrer</button>
-          <button class="cw-btn cw-btn-secondary" onclick="window._cwStopLLM()">■ Arrêter</button>
-          <button class="cw-btn cw-btn-warning" onclick="window._cwRestartLLM()">⟳ Redémarrer</button>
+          <button class="cw-btn cw-btn-warning" onclick="window._cwRestartLLM()">⟳ Redémarrage d'urgence</button>
         </div>
       </div>
     </div>
@@ -129,18 +120,22 @@ function _renderPCLayout(container, uid) {
    LLM PANEL
 ══════════════════════════════════════════ */
 async function _initLLMPanel() {
-  // Récupérer l'état autostart depuis electron-store
-  if (window.eva && window.eva.store) {
-    try {
-      var autostart = await window.eva.store.get('cwLLMAutoStart');
-      var el = document.getElementById('cwLLMAutoStart');
-      if (el) el.checked = !!autostart;
-    } catch(e) {}
-  }
-  // Poll statut LLM toutes les 5s
+  // CloudWorks est actif = LLM DOIT être actif sans exception
   _updateLLMStatus();
   if (_llmPollInterval) clearInterval(_llmPollInterval);
   _llmPollInterval = setInterval(_updateLLMStatus, 5000);
+  // Démarrer le LLM automatiquement si pas déjà actif
+  if (window.eva && window.eva.system && window.eva.system.llmStatus) {
+    try {
+      var res = await window.eva.system.llmStatus();
+      if (!res || !res.running) {
+        console.log('[CloudWorks] LLM inactif → démarrage automatique');
+        window._cwStartLLM();
+      }
+    } catch(e) {
+      window._cwStartLLM();
+    }
+  }
 }
 
 async function _updateLLMStatus() {
@@ -300,16 +295,20 @@ function _renderDevices(snap) {
   var statOnline = document.getElementById('cwStatOnline');
   var statOffline = document.getElementById('cwStatOffline');
   if (!list) return;
+
+  var myId = window._cwDeviceId || localStorage.getItem('cw_device_id');
+
   if (snap.empty) {
     list.innerHTML = '<div class="cw-empty">Aucun autre appareil enregistré</div>';
-    if (statOnline) statOnline.textContent = '0';
+    // Ce PC est toujours en ligne (on est dessus)
+    if (statOnline) statOnline.textContent = myId ? '1' : '0';
     if (statOffline) statOffline.textContent = '0';
     return;
   }
 
-  var onlineCount = 0, offlineCount = 0;
+  // Ce PC compte comme 1 en ligne (on l'exclut de la liste mais pas du total)
+  var onlineCount = myId ? 1 : 0, offlineCount = 0;
   var html = '';
-  var myId = window._cwDeviceId || localStorage.getItem('cw_device_id');
 
   snap.forEach(function(doc) {
     var d = Object.assign({id: doc.id}, doc.data());

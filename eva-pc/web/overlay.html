@@ -195,9 +195,13 @@
         window.eva.overlay.onSetState((state, text) => {
           pill.className = 'pill state-' + state;
           
-          if (state === 'cloudworks' || state === 'remote' || state === 'action') {
-            titleText.textContent = 'CLOUDWORKS ACTIF';
-            subText.textContent = text || 'Commande à distance en cours...';
+          if (state === 'cloudworks' || state === 'action') {
+            titleText.textContent = 'CE PC — ACTIF';
+            subText.textContent = text || 'Tâche locale en cours...';
+            pill.className = 'pill state-remote';
+          } else if (state === 'remote') {
+            titleText.textContent = 'COMMANDE À DISTANCE';
+            subText.textContent = text || 'Exécution depuis un autre appareil...';
             pill.className = 'pill state-remote';
           } else if (state === 'thinking') {
             titleText.textContent = 'ANALYSE...';
@@ -216,14 +220,131 @@
 
     function closeOverlay() {
       if (window.eva) {
-        if (window.eva.sendOverlayAction) {
-          window.eva.sendOverlayAction('cancel');
+        if (window.eva.overlay && window.eva.overlay.sendAction) {
+          window.eva.overlay.sendAction('cancel');
         }
-        if (window.eva.overlay.hide) {
+        if (window.eva.overlay && window.eva.overlay.hide) {
           window.eva.overlay.hide();
         }
       }
     }
+
+    /* ══════════════════════════════════════════
+       WAKE WORD — Tourne dans l'overlay (toujours visible → non throttlé)
+       Détecte "EVA" ou "Hey EVA" même quand la fenêtre principale est cachée
+    ══════════════════════════════════════════ */
+    (function initOverlayWakeWord() {
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return;
+
+      var wakeWords = ['eva', 'éva', 'hey eva', 'e.v.a', 'eh va'];
+      var recognition = null;
+      var isListening = false;
+      var state = 'idle';
+      var buffer = '';
+      var restartTimer = null;
+
+      function hasWake(t) {
+        t = t.toLowerCase().trim();
+        return wakeWords.some(function(w) { return t.includes(w); });
+      }
+      function extractCmd(t) {
+        t = t.toLowerCase();
+        var bestIdx = -1, bestLen = 0;
+        wakeWords.forEach(function(w) {
+          var idx = t.indexOf(w);
+          if (idx !== -1 && w.length > bestLen) { bestIdx = idx; bestLen = w.length; }
+        });
+        if (bestIdx === -1) return null;
+        return t.substring(bestIdx + bestLen).replace(/^[\s,\.!?]+/, '').trim() || null;
+      }
+      function fireCommand(cmd) {
+        if (!cmd || !cmd.trim()) return;
+        if (window.eva && window.eva.overlay && window.eva.overlay.sendAction) {
+          window.eva.overlay.sendAction('wakeword', cmd.trim());
+        }
+      }
+      function scheduleRestart(ms) {
+        if (restartTimer) clearTimeout(restartTimer);
+        restartTimer = setTimeout(function() {
+          if (isListening && recognition) try { recognition.start(); } catch(e) {}
+        }, ms || 400);
+      }
+
+      function buildRecognition() {
+        var r = new SR();
+        r.lang = 'fr-FR';
+        r.continuous = true;
+        r.interimResults = true;
+        r.maxAlternatives = 1;
+        r.onresult = function(event) {
+          for (var i = event.resultIndex; i < event.results.length; i++) {
+            var tr = event.results[i][0].transcript;
+            var final = event.results[i].isFinal;
+            if (state === 'idle') {
+              if (hasWake(tr)) {
+                if (final) {
+                  var cmd = extractCmd(tr);
+                  if (cmd && cmd.length > 1) { fireCommand(cmd); }
+                  else { state = 'triggered'; buffer = ''; }
+                }
+              }
+            } else if (state === 'triggered') {
+              buffer = tr;
+              if (final && buffer.trim().length > 1) {
+                var fc = buffer.trim(); state = 'idle'; buffer = '';
+                fireCommand(fc);
+              }
+            }
+          }
+        };
+        r.onend = function() {
+          if (state === 'triggered' && buffer.trim().length > 1) {
+            var c = buffer.trim(); state = 'idle'; buffer = ''; fireCommand(c); return;
+          }
+          state = 'idle'; buffer = '';
+          if (isListening) scheduleRestart(400);
+        };
+        r.onerror = function(e) {
+          if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            isListening = false; return;
+          }
+          state = 'idle'; buffer = '';
+          if (isListening) scheduleRestart(1200);
+        };
+        return r;
+      }
+
+      // Démarrer uniquement si le wake word est activé dans le store
+      async function startIfEnabled() {
+        if (window.eva && window.eva.store) {
+          try {
+            var cfg = await window.eva.store.get('eva_config');
+            var config = typeof cfg === 'string' ? JSON.parse(cfg || '{}') : (cfg || {});
+            if (!config.wakeWordEnabled) return; // Wake word désactivé → ne pas démarrer
+          } catch(e) {}
+        }
+        if (isListening) return;
+        isListening = true;
+        recognition = buildRecognition();
+        try { recognition.start(); } catch(e) { scheduleRestart(800); }
+      }
+
+      // Écouter les changements de config pour démarrer/arrêter
+      if (window.eva && window.eva.overlay && window.eva.overlay.onSetState) {
+        window.eva.overlay.onSetState(function(st) {
+          if (st === 'wake-word-on') { startIfEnabled(); }
+          if (st === 'wake-word-off' && recognition) {
+            isListening = false;
+            try { recognition.stop(); } catch(e) {}
+            recognition = null;
+          }
+        });
+      }
+
+      // Auto-démarrer au chargement de l'overlay
+      setTimeout(startIfEnabled, 2000);
+    })();
   </script>
 </body>
 </html>

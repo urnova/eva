@@ -572,6 +572,11 @@ async function handleSend() {
     userCtx += '- Si l\'utilisateur demande une tâche complexe en plusieurs étapes, utilise [ACTION:{"type":"agentic_task","prompt":"...","deviceId":"' + deviceId + '"}]\n';
     userCtx += '- Si CloudWorks est désactivé, dis-le à l\'utilisateur et propose de l\'activer dans les paramètres\n';
     userCtx += '- Identifie-toi comme étant sur ce PC précis, pas sur le web\n';
+
+    userCtx += '\nDÉTECTION AUTOMATIQUE CLOUDWORKS :\n';
+    userCtx += 'Si l\'utilisateur mentionne un chemin EXPLICITE sur son système (sur mon Bureau, dans mes Documents, dans C:\\\\, dans /home/, sur le disque dur, dans le dossier X, etc.) → c\'est une tâche CloudWorks, PAS un fichier dans le chat.\n';
+    userCtx += 'Si la demande est générique sans chemin (ex: crée-moi un document sur les tomates) → crée le fichier dans le chat.\n';
+    userCtx += 'Si tu as un doute raisonnable sur l\'intention → demande : "Veux-tu que je crée ce fichier sur ton PC (via CloudWorks) ou directement ici dans le chat ?"\n';
   } else {
     // === VERSION WEB ===
     userCtx += '\nENVIRONNEMENT : Tu tournes sur la version Web/Navigateur. Tu n\'es PAS sur le PC localement.\n';

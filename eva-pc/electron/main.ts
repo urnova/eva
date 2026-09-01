@@ -514,10 +514,20 @@ ipcMain.handle('overlay:setState', (_event, state, text) => {
   }
 })
 
-// Communication Overlay -> Main App (Ex: Bouton Annuler appuyÃ©)
-ipcMain.on('overlay:action', (_event, action) => {
+// Communication Overlay -> Main App (Ex: Bouton Annuler appuyé, Wake Word)
+ipcMain.on('overlay:action', (_event, action, data) => {
+  // Action wake word : afficher la fenêtre principale + envoyer le texte
+  if (action === 'wakeword' && data) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.webContents.send('wakeword:command', data);
+    }
+    return;
+  }
+  // Autres actions (cancel, etc.) → forwarded tel quel
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('overlay:action', action)
+    mainWindow.webContents.send('overlay:action', action, data);
   }
 })
 

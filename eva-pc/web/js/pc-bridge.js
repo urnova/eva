@@ -146,6 +146,11 @@
       if (route === 'chat' && window.openChat) window.openChat();
       else if (route === 'notes' && window.openNotes) window.openNotes();
       else if (route === 'alarms' && window.openAlarms) window.openAlarms();
+      else if (route === 'cloudworks') {
+        // Ouvrir le panneau CloudWorks dans le chat
+        if (window.openSection) window.openSection('cloudworks');
+        else if (window.showCloudWorks) window.showCloudWorks();
+      }
     });
   }
 
@@ -154,6 +159,56 @@
       if (window.newConversation) window.newConversation();
     });
   }
+
+  /* ── Wake Word depuis l'overlay (application en arrière-plan) ── */
+  // Canal principal : main.ts → chat via wakeword:command
+  if (window.eva.onWakeWordCommand) {
+    window.eva.onWakeWordCommand(function(text) {
+      console.log('[PC Bridge] Wake word commande reçue:', text);
+      _submitWakeWordCommand(text);
+    });
+  }
+  // Canal secondaire : overlay → main → chat via overlay:action
+  if (window.eva.overlay && window.eva.overlay.onAction) {
+    window.eva.overlay.onAction(function(action, data) {
+      if (action === 'wakeword' && data) {
+        console.log('[PC Bridge] Wake word via overlay:', data);
+        _submitWakeWordCommand(data);
+      }
+    });
+  }
+
+  function _submitWakeWordCommand(text) {
+    if (!text || !text.trim()) return;
+    var t = text.trim();
+    // Mettre le texte dans l'input du chat
+    var input = document.getElementById('userInput') ||
+                document.getElementById('messageInput') ||
+                document.querySelector('textarea.chat-textarea') ||
+                document.querySelector('.chat-input textarea');
+    if (input) {
+      input.value = t;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    // Soumettre après 300ms
+    setTimeout(function() {
+      var sendBtn = document.getElementById('sendBtn') ||
+                   document.querySelector('[data-action="send"]') ||
+                   document.querySelector('.send-btn button') ||
+                   document.querySelector('button.btn-send');
+      if (sendBtn) {
+        sendBtn.click();
+      } else if (window.sendMessage) {
+        window.sendMessage(t);
+      } else if (window.handleUserMessage) {
+        window.handleUserMessage(t);
+      } else {
+        // Dernier recours : simuler Entrée dans l'input
+        if (input) input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      }
+    }, 300);
+  }
+  window._submitWakeWordCommand = _submitWakeWordCommand;
 
   /* ── 11. Initialisation du Node CloudWorks (Worker en arrière-plan) ── */
   function initCloudWorksNode() {

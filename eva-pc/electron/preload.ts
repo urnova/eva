@@ -119,6 +119,9 @@ const evaAPI = {
   onNewChat: (callback: () => void) => {
     ipcRenderer.on('new-chat', () => callback())
   },
+  onWakeWordCommand: (callback: (text: string) => void) => {
+    ipcRenderer.on('wakeword:command', (_: unknown, text: string) => callback(text))
+  },
 
   // ── Auth callback (depuis protocole eva-desktop://) ──
   onAuthCallback: (callback: (data: { refreshToken?: string; hid?: string }) => void) => {
@@ -153,15 +156,16 @@ const evaAPI = {
     show: (state?: string) => ipcRenderer.invoke('overlay:show', state),
     hide: () => ipcRenderer.invoke('overlay:hide'),
     setState: (state: string, text?: string) => ipcRenderer.invoke('overlay:setState', state, text),
+    sendAction: (action: string, data?: string) => ipcRenderer.send('overlay:action', action, data),
     onSetState: (callback: (state: string, text?: string) => void) => {
       const channel = 'overlay:setState'
       const listener = (_: unknown, state: string, text?: string) => callback(state, text)
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     },
-    onAction: (callback: (action: string) => void) => {
+    onAction: (callback: (action: string, data?: string) => void) => {
       const channel = 'overlay:action'
-      const listener = (_: unknown, action: string) => callback(action)
+      const listener = (_: unknown, action: string, data?: string) => callback(action, data)
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     }

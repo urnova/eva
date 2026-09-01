@@ -583,7 +583,12 @@ async function handleSend() {
       });
       userCtx += 'Si l\'utilisateur ne précise pas, demande-lui sur quel PC exécuter la tâche. Génère ensuite [ACTION:{...,"deviceId":"<id choisi>"}].\n';
     }
-    if (offlinePCs.length > 0) {
+
+    userCtx += '\nDÉTECTION AUTOMATIQUE CLOUDWORKS :\n';
+    userCtx += 'Si la demande mentionne un chemin système explicite (Bureau, Documents, C:\\\\, /home/, dossier X, disque dur, etc.) → tâche CloudWorks sur le PC en ligne.\n';
+    userCtx += 'Si générique sans chemin → crée dans le chat. Si doute → demande confirmation.\n';
+
+        if (offlinePCs.length > 0) {
       userCtx += 'Hors ligne (indisponibles) : ' + offlinePCs.map(function(d){ return d.deviceName || d.deviceId; }).join(', ') + '\n';
     }
 
