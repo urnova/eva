@@ -1052,13 +1052,13 @@ window.downloadCurrentFile = function() {
   if (!window._currentViewerDoc || !window._currentViewerDoc.url) return;
   var doc2 = window._currentViewerDoc;
   if (doc2.ext === 'pdf') {
-    /* PDF stored as HTML blob — trigger print dialog so user saves a real PDF */
-    var iframe = document.getElementById('fileViewerIframe');
-    if (iframe && iframe.contentWindow && iframe.src !== 'about:blank') {
-      try { iframe.contentWindow.print(); return; } catch(e) {}
+    /* Use html2pdf.js to generate a true PDF matching the viewer */
+    if (typeof _downloadHtmlAsPdf === 'function') {
+      _downloadHtmlAsPdf(doc2.url, doc2.name);
+    } else {
+      var w = window.open(doc2.url, '_blank');
+      if (w) { w.onload = function() { setTimeout(function(){ w.print(); }, 400); }; }
     }
-    var win = window.open(doc2.url, '_blank');
-    if (win) { win.onload = function() { setTimeout(function(){ win.print(); }, 400); }; }
     return;
   }
   var a = document.createElement('a');

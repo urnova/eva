@@ -589,10 +589,10 @@ async function handleSend() {
       '- Agenda → [ACTION:{"type":"event","title":"Titre","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
       '- Excel → [ACTION:{"type":"excel","filename":"data.xlsx","headers":["Col1","Col2"],"rows":[["val1","val2"]]}]\n' +
       '- R\u00C8GLE IMPORTANTE : Toujours \u00E9crire une r\u00E9ponse textuelle amicale avant le bloc ACTION (ex: Voici le document)\n' +
-        '- PowerPoint (Marp) \u2192 [ACTION:{"type":"marp_pptx","filename":"p.pptx","content":"---\nmarp: true\ntheme: default\n---\n\n# Titre\n\nContenu de la slide"}]\n' +
+        '- PowerPoint \u2192 [ACTION:{"type":"pptx","filename":"nom_descriptif.pptx","title":"Titre","slides":[{"title":"Titre slide 1","points":["Point 1","Point 2","Point 3"]},{"title":"Slide 2","content":"Texte libre pour cette slide"},{"title":"Conclusion","points":["Bilan A","Bilan B"]}]}]\n' +
         '- CSV \u2192 [ACTION:{"type":"csv","filename":"data.csv","headers":["Col1"],"rows":[["val"]]}]\n' +
         '- Fichier texte \u2192 [ACTION:{"type":"txt","filename":"fichier.txt","content":"Contenu"}]\n' +
-        '- PDF (Marp) \u2192 [ACTION:{"type":"marp_pdf","filename":"doc.pdf","content":"---\nmarp: true\ntheme: default\n---\n\n# Titre\n\nContenu de la slide"}]\n' +
+        '- PDF \u2192 [ACTION:{"type":"pdf","filename":"nom_descriptif.pdf","content":"<!DOCTYPE html><html><head><meta charset=\'utf-8\'><style>body{font-family:Georgia,serif;color:#1a1a1a;line-height:1.75;font-size:14px}h1{color:#1a2e5a;border-bottom:3px solid #3498db;padding-bottom:10px;margin-top:0}h2{color:#2c3e50;margin-top:24px}p{margin:10px 0}ul,ol{padding-left:22px}table{width:100%;border-collapse:collapse;margin:16px 0}th{background:#3498db;color:white;padding:10px;text-align:left}td{padding:8px;border:1px solid #ddd}td:first-child{font-weight:bold}</style></head><body><h1>Titre du document</h1><p>Contenu COMPLET ici.</p></body></html>"}]\n' +
       '- Graphique \u2192 bloc ``json\n{"type":"bar","data":{"labels":["A","B"],"datasets":[{"label":"Ventes","data":[10,20],"backgroundColor":["#5b77f7","#06b6d4"]}]}}\n``\n' +
       'Pour toute génération de fichier : UNE phrase courte + le bloc ACTION. Rien d\'autre après.\n' +
         'QUESTIONS SUGGÉRÉES : À la fin de TA RÉPONSE, ajoute TOUJOURS [SUGGESTIONS: ["Q1?","Q2?","Q3?"]] (tableau JSON strict de 3 questions de suivi).\n' +

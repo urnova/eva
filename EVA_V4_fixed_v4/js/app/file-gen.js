@@ -508,6 +508,54 @@ async function _evaGeneratePdf(action) {
   }
 }
 
+
+/* ── Téléchargement PDF via html2pdf.js (rendu identique au viewer) ── */
+async function _downloadHtmlAsPdf(blobUrl, filename) {
+  if (typeof toast === 'function') toast('Génération du PDF en cours…', 'info');
+  var pdfIframe;
+  try {
+    if (!window.html2pdf) {
+      await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js', 'html2pdf');
+    }
+    /* Render the HTML at A4 width in a hidden iframe */
+    pdfIframe = document.createElement('iframe');
+    pdfIframe.setAttribute('data-eva-pdf', '1');
+    pdfIframe.style.cssText = 'position:fixed;top:0;left:0;width:794px;height:1px;opacity:0.001;pointer-events:none;z-index:-99999;border:none;overflow:hidden;';
+    document.body.appendChild(pdfIframe);
+    pdfIframe.src = blobUrl;
+    await new Promise(function(resolve) {
+      pdfIframe.onload = function() { setTimeout(resolve, 700); };
+    });
+    var body = pdfIframe.contentDocument && pdfIframe.contentDocument.body;
+    if (!body) throw new Error('iframe body inaccessible');
+    /* Match viewer dimensions */
+    pdfIframe.style.height = Math.max(body.scrollHeight, 1123) + 'px';
+    await new Promise(function(r){ setTimeout(r, 200); });
+    var opt = {
+      margin: 0,
+      filename: filename || 'document.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2, useCORS: true, allowTaint: false,
+        backgroundColor: '#ffffff', width: 794, windowWidth: 794,
+        scrollX: 0, scrollY: -window.scrollY
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'h2', 'h3', 'h4'] }
+    };
+    await html2pdf().set(opt).from(body).save();
+    if (typeof toast === 'function') toast('PDF téléchargé : ' + filename, 'success');
+  } catch(e) {
+    console.error('[EVA PDF Download]', e);
+    /* Fallback: open in new tab + auto-print */
+    var w = window.open(blobUrl, '_blank');
+    if (w) { w.onload = function() { setTimeout(function(){ w.print(); }, 500); }; }
+    if (typeof toast === 'function') toast("Astuce : dans la boîte d'impression, choisissez « Enregistrer en PDF »", 'info');
+  } finally {
+    if (pdfIframe && pdfIframe.parentNode) pdfIframe.parentNode.removeChild(pdfIframe);
+  }
+}
+
 function _evaGenerateHtmlPdf(action) {
   setEvaStatus('GÉNÉRATION PDF…', 'action');
   var filename = action.filename || 'document.pdf';
@@ -521,9 +569,9 @@ function _evaGenerateHtmlPdf(action) {
       if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Contenu HTML manquant</span>';
       setEvaStatus(null); return;
     }
-    /* Inject A4 page-simulation CSS (viewer + print) */
+    /* Inject A4 page-simulation CSS — viewer shows white card on gray bg, print preserves all styling */
     if (!htmlContent.includes('__eva_a4__')) {
-      var a4css = '<style id="__eva_a4__">\nhtml{background:#6b6b6b;padding:28px 16px;margin:0;min-height:100vh;box-sizing:border-box}\nbody{background:white!important;max-width:794px;margin:0 auto 32px!important;padding:45px 60px!important;\n  box-shadow:0 4px 24px rgba(0,0,0,.45);box-sizing:border-box;min-height:1123px;\n  font-size:13.5px;line-height:1.75;position:relative}\nbody::after{content:attr(data-page);position:absolute;bottom:18px;right:32px;\n  font-size:11px;color:#aaa;font-family:sans-serif}\n@page{size:A4 portrait;margin:20mm}\n@media print{\n  html{background:white!important;padding:0}\n  body{box-shadow:none;margin:0!important;padding:0!important;max-width:none!important;min-height:auto;font-size:12px}\n}\n</style>';
+      var a4css = '<style id="__eva_a4__">html{background:#6b6b6b;padding:28px 16px;margin:0;min-height:100vh;box-sizing:border-box}body{background:white!important;max-width:794px;margin:0 auto 32px!important;padding:36px 56px!important;box-shadow:0 4px 24px rgba(0,0,0,.45);box-sizing:border-box;min-height:1123px;font-size:13.5px;line-height:1.75}@page{size:A4 portrait;margin:20mm 22mm}@media print{html{background:white!important;padding:0!important;margin:0!important}body{background:white!important;max-width:none!important;margin:0!important;padding:0!important;box-shadow:none!important;min-height:auto!important;font-size:12pt!important;line-height:1.65!important}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}h1,h2,h3,h4{page-break-after:avoid}table{page-break-inside:avoid}tr{page-break-inside:avoid}}</style>';
       if (htmlContent.includes('</head>')) {
         htmlContent = htmlContent.replace('</head>', a4css + '</head>');
       } else if (htmlContent.includes('<body')) {
@@ -531,12 +579,6 @@ function _evaGenerateHtmlPdf(action) {
       } else {
         htmlContent = a4css + htmlContent;
       }
-    }
-    /* Inject print CSS if not already present */
-    if (!htmlContent.includes('@media print')) {
-      htmlContent = htmlContent.replace('</head>',
-        '<style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
-        'body{max-width:900px;margin:30px auto;font-family:Georgia,serif}</style></head>');
     }
     var blob = new Blob([htmlContent], {type:'text/html;charset=utf-8'});
     var url = URL.createObjectURL(blob);
