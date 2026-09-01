@@ -967,6 +967,8 @@ window.openDocumentViewer = function(doc) {
     if (doc.ext === 'pdf') {
       iframe.src = doc.url + '#toolbar=0';
       iframe.style.display = 'block';
+      /* Change download button label to indicate print-to-PDF flow */
+      if (downloadBtn) { downloadBtn.title = 'Cliquez pour ouvrir la boîte de dialogue Imprimer — choisissez « Enregistrer en PDF »'; }
     } else if (doc.ext === 'html') {
       /* HTML → render in iframe so the user sees the actual page */
       iframe.src = doc.url;
@@ -983,11 +985,21 @@ window.openDocumentViewer = function(doc) {
     } else {
       // Pour les autres formats (Excel, PPT, docx, etc.), la prévisualisation native iframe ne marche pas offline sans office viewer
       // On affiche le texte extrait s'il existe, sinon on indique que la visualisation complète n'est pas dispo mais téléchargeable.
-      content.style.display = 'block';
-      if (doc.text) {
-        content.textContent = doc.text;
+      var slidesData = window._evaSlidesCache && window._evaSlidesCache[doc.url];
+      if (slidesData && slidesData.length) {
+        content.style.display = 'block';
+        content.innerHTML = '';
+        if (typeof _renderPptxPreview === 'function') {
+          _renderPptxPreview(slidesData, content);
+        } else {
+          content.style.cssText += ';background:#1a1a2e;padding:16px;';
+          content.innerHTML = '<div style="color:#00d4ff;text-align:center;padding:40px;font-size:0.9em;">Aperçu des ' + slidesData.length + ' diapositives — Téléchargez le .pptx pour une lecture complète.</div>';
+        }
+        printBtn.style.display = 'none';
       } else {
-        content.innerHTML = '<div style="color:var(--text-muted);text-align:center;margin-top:20px;">Aperçu direct non disponible pour ce format. Veuillez télécharger le document.</div>';
+        content.style.display = 'block';
+        content.innerHTML = '<div style="color:var(--text-muted);text-align:center;margin-top:40px;font-size:0.9em;">Téléchargez le fichier .pptx pour le visualiser dans PowerPoint ou LibreOffice.</div>';
+        printBtn.style.display = 'none';
       }
     }
   } else if (doc.text) {
@@ -1038,9 +1050,20 @@ window.closeFileViewer = function() {
 
 window.downloadCurrentFile = function() {
   if (!window._currentViewerDoc || !window._currentViewerDoc.url) return;
+  var doc2 = window._currentViewerDoc;
+  if (doc2.ext === 'pdf') {
+    /* PDF stored as HTML blob — trigger print dialog so user saves a real PDF */
+    var iframe = document.getElementById('fileViewerIframe');
+    if (iframe && iframe.contentWindow && iframe.src !== 'about:blank') {
+      try { iframe.contentWindow.print(); return; } catch(e) {}
+    }
+    var win = window.open(doc2.url, '_blank');
+    if (win) { win.onload = function() { setTimeout(function(){ win.print(); }, 400); }; }
+    return;
+  }
   var a = document.createElement('a');
-  a.href = window._currentViewerDoc.url;
-  a.download = window._currentViewerDoc.name || 'document';
+  a.href = doc2.url;
+  a.download = doc2.name || 'document';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1048,9 +1071,18 @@ window.downloadCurrentFile = function() {
 
 window.printCurrentFile = function() {
   if (!window._currentViewerDoc || !window._currentViewerDoc.url) return;
+  var doc2 = window._currentViewerDoc;
+  /* PPTX/XLSX cannot be printed from browser — show hint */
+  if (doc2.ext === 'pptx' || doc2.ext === 'xlsx') {
+    if (typeof toast === 'function') toast('Téléchargez le fichier et imprimez depuis PowerPoint / Excel.', 'info');
+    return;
+  }
   var iframe = document.getElementById('fileViewerIframe');
   if (iframe && iframe.style.display === 'block') {
-    iframe.contentWindow.print();
+    try { iframe.contentWindow.print(); } catch(e) {
+      var win = window.open(doc2.url, '_blank');
+      if (win) { win.onload = function() { setTimeout(function(){ win.print(); }, 400); }; }
+    }
   } else if (window._currentViewerDoc.ext === 'png' || window._currentViewerDoc.ext === 'jpg' || window._currentViewerDoc.ext === 'jpeg') {
     var pWin = window.open(window._currentViewerDoc.url, '_blank');
     if(pWin) { pWin.onload = function(){ pWin.print(); }; }

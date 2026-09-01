@@ -521,6 +521,17 @@ function _evaGenerateHtmlPdf(action) {
       if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Contenu HTML manquant</span>';
       setEvaStatus(null); return;
     }
+    /* Inject A4 page-simulation CSS (viewer + print) */
+    if (!htmlContent.includes('__eva_a4__')) {
+      var a4css = '<style id="__eva_a4__">\nhtml{background:#6b6b6b;padding:28px 16px;margin:0;min-height:100vh;box-sizing:border-box}\nbody{background:white!important;max-width:794px;margin:0 auto 32px!important;padding:45px 60px!important;\n  box-shadow:0 4px 24px rgba(0,0,0,.45);box-sizing:border-box;min-height:1123px;\n  font-size:13.5px;line-height:1.75;position:relative}\nbody::after{content:attr(data-page);position:absolute;bottom:18px;right:32px;\n  font-size:11px;color:#aaa;font-family:sans-serif}\n@page{size:A4 portrait;margin:20mm}\n@media print{\n  html{background:white!important;padding:0}\n  body{box-shadow:none;margin:0!important;padding:0!important;max-width:none!important;min-height:auto;font-size:12px}\n}\n</style>';
+      if (htmlContent.includes('</head>')) {
+        htmlContent = htmlContent.replace('</head>', a4css + '</head>');
+      } else if (htmlContent.includes('<body')) {
+        htmlContent = htmlContent.replace('<body', a4css + '<body');
+      } else {
+        htmlContent = a4css + htmlContent;
+      }
+    }
     /* Inject print CSS if not already present */
     if (!htmlContent.includes('@media print')) {
       htmlContent = htmlContent.replace('</head>',
@@ -584,6 +595,47 @@ function _evaGenerateExcel(action) {
     if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Erreur : ' + e.message + '</span>';
     setEvaStatus(null);
   }
+}
+
+
+/* ── Aperçu HTML des slides PPTX dans le viewer ── */
+function _renderPptxPreview(slides, container) {
+  container.style.cssText = 'background:#1a1a2e;padding:20px;overflow-y:auto;';
+  slides.forEach(function(s, i) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#0d0d1a;border:1px solid #1e3a5f;border-radius:12px;padding:20px 26px;margin-bottom:18px;position:relative;border-left:4px solid #00d4ff;';
+    var num = document.createElement('div');
+    num.style.cssText = 'position:absolute;top:12px;right:16px;font-size:10px;color:#445577;font-family:monospace;';
+    num.textContent = (i+1)+'/'+slides.length;
+    var title = document.createElement('div');
+    title.style.cssText = 'font-size:1.1em;font-weight:700;color:#00d4ff;margin-bottom:10px;line-height:1.3;';
+    title.textContent = s.title || '';
+    card.appendChild(num);
+    card.appendChild(title);
+    if (s.subtitle) {
+      var sub = document.createElement('div');
+      sub.style.cssText = 'font-size:0.82em;color:#9999cc;font-style:italic;margin-bottom:8px;';
+      sub.textContent = s.subtitle;
+      card.appendChild(sub);
+    }
+    if (s.points && s.points.length) {
+      s.points.forEach(function(p) {
+        var li = document.createElement('div');
+        li.style.cssText = 'display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;';
+        li.innerHTML = '<span style="color:#00d4ff;margin-top:3px;flex-shrink:0;">›</span><span style="color:#dde0f5;font-size:0.88em;line-height:1.5;">'+_escHtml(p)+'</span>';
+        card.appendChild(li);
+      });
+    } else if (s.content) {
+      var ct = document.createElement('div');
+      ct.style.cssText = 'color:#dde0f5;font-size:0.88em;line-height:1.6;white-space:pre-wrap;';
+      ct.textContent = s.content;
+      card.appendChild(ct);
+    }
+    container.appendChild(card);
+  });
+}
+function _escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 async function _evaGeneratePptx(action) {
@@ -660,8 +712,11 @@ async function _evaGeneratePptx(action) {
       });
     });
 
+    /* Store slides for viewer preview */
+    if (!window._evaSlidesCache) window._evaSlidesCache = {};
     pptx.write({outputType:'blob'}).then(function(blob) {
       var url = URL.createObjectURL(blob);
+      if (window._evaSlidesCache) window._evaSlidesCache[url] = action.slides || [];
       toast('PowerPoint prêt : '+filename, 'success');
       setEvaStatus('PPTX CRÉÉ', 'action');
       setTimeout(function(){ setEvaStatus(null); }, 3000);
