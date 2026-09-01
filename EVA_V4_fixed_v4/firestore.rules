@@ -1,4 +1,4 @@
-rules_version = '2';
+﻿rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -43,6 +43,11 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
 
+      // ════ Sessions Actives ════
+      match /sessions/{sessionId} {
+        allow read, write: if isOwner(userId);
+      }
+
       // ════ Statistiques d'utilisation CloudWorks ════
       match /stats/{statDoc} {
         allow read, write: if isOwner(userId);
@@ -75,3 +80,4 @@ service cloud.firestore {
 
   }
 }
+
