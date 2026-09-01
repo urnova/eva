@@ -126,17 +126,10 @@ function parseEvaActions(content) {
     /* Essai 3 : synthétiser depuis le texte brut */
     var typeMap = { pdf:'pdf', pptx:'pptx', ppt:'pptx', xlsx:'excel', xls:'excel', excel:'excel', csv:'csv', txt:'txt' };
     var synType = typeMap[fLang] || 'txt';
-      if (synType === 'txt' || synType === 'pdf') {
-        var autoName = 'document_genere';
-        var firstLineMatch = fBody.match(/^\s*#\s+(.+)$/m);
-        if (firstLineMatch) {
-            autoName = firstLineMatch[1].trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
-            if (autoName.length > 30) autoName = autoName.substring(0, 30);
-        }
-        if (!autoName) autoName = 'document_genere';
-        actions.push({ type: synType, filename: autoName + '.' + (synType === 'pdf' ? 'pdf' : 'txt'), title: 'Document EVA', content: fBody });
-        removeRanges.push(blockRange);
-      }
+    if (synType === 'txt' || synType === 'pdf') {
+      actions.push({ type: synType, filename: 'eva_document.' + (synType === 'pdf' ? 'pdf' : 'txt'), title: 'Document EVA', content: fBody });
+      removeRanges.push(blockRange);
+    }
   }
 
   /* ── Exécuter les actions détectées ── */
@@ -459,31 +452,23 @@ async function _evaGeneratePdf(action) {
     }
     
     const marp = new window.MarpBundle.Marp({ html: true });
-    let { html, css } = marp.render(content);
-
-    // Prevent auto dark-mode (which causes light text on white bg with html2canvas)
-    css = css.replace(/@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/g, '@media (max-width: 1px)');
+    const { html, css } = marp.render(content);
 
     var fullHtml = `
-      <div style="all: initial; display: block;">
-        <style>
-          ${css}
-          section { page-break-after: always; box-shadow: none !important; margin: 0 !important; }
-        </style>
-        <div class="marpit" style="width: 100%; height: auto; min-width: 800px;">
-          ${html}
-        </div>
+      <style>
+        ${css}
+        section { page-break-after: always; box-shadow: none !important; margin: 0 !important; }
+      </style>
+      <div class="marpit" style="width: 100%; height: auto; min-width: 800px;">
+        ${html}
       </div>
     `;
 
-    // Use string directly for html2pdf
-    var container = fullHtml;
-    // But for pptx export we need DOM to extract standaloneHtml?
-    // Actually standaloneHtml uses css and html strings directly.
-    var tmpContainerForPptx = document.createElement('div');
-    tmpContainerForPptx.innerHTML = fullHtml;
-    // We only need it appended if we needed it visually. We don't append it for pdf rendering.
-    
+    var container = document.createElement('div');
+    container.innerHTML = fullHtml;
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    document.body.appendChild(container);
     
     if (action.type === 'marp_pptx' || action.type === 'pptx') {
       var standaloneHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${filename}</title><style>${css} body { margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; background: #333; } section { margin: 20px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }</style></head><body><div class="marpit">${html}</div></body></html>`;
@@ -491,7 +476,7 @@ async function _evaGeneratePdf(action) {
       var blob = new Blob([standaloneHtml], { type: 'text/html' });
       var reader = new FileReader();
       reader.onloadend = function() {
-        // cleanup removed
+        document.body.removeChild(container);
         var realFilename = filename.replace('.pptx', '.html');
         _evaCardReady(card, 'html', realFilename, reader.result);
         setEvaStatus('Prêt', 'idle');
@@ -508,7 +493,8 @@ async function _evaGeneratePdf(action) {
       jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
     };
 
-    html2pdf().set(opt).from(fullHtml).output('datauristring').then(function(pdfAsString) {
+    html2pdf().set(opt).from(container).output('datauristring').then(function(pdfAsString) {
+      document.body.removeChild(container);
       _evaCardReady(card, 'pdf', filename, pdfAsString);
       setEvaStatus('Prêt', 'idle');
     }).catch(function(err) {

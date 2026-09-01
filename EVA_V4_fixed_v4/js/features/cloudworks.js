@@ -1,4 +1,4 @@
-/* EVA V4 — CLOUDWORKS.JS — Paths: cloudworks/{uid}/devices & cloudworks/{uid}/commands */
+﻿/* EVA V4 — CLOUDWORKS.JS — Paths: cloudworks/{uid}/devices & cloudworks/{uid}/commands */
 (function() {
 'use strict';
 
@@ -78,26 +78,23 @@ function renderDevices(snap) {
   }
 
   var totalCount = 0, onlineCount = 0;
-  window.S = window.S || {};
-  window.S.cwDevices = [];
   list.innerHTML = '';
 
   snap.forEach(function(doc) {
     var d = Object.assign({id: doc.id}, doc.data());
-        var online = d.online === true;
+    var online = d.online === true;
     if (online && d.lastSeen && d.lastSeen.toDate) {
       var diffMs = Date.now() - d.lastSeen.toDate().getTime();
-      if (diffMs > 120000) { // 2 minutes timeout
+      if (diffMs > 120000) {
         online = false;
         d.online = false;
       }
     }
     var seen = d.lastSeen && d.lastSeen.toDate ? d.lastSeen.toDate().toLocaleString('fr-FR') : 'Inconnu';
-    var iconMap = {mac: '💻', linux: '🐧', windows: '🪟'};
-    var icon = iconMap[d.deviceType] || '💻';
+    var iconMap = {mac: '🍎', linux: '🐧', windows: '🖥️'};
+    var icon = iconMap[d.deviceType] || '🖥️';
     var typeLabel = {mac: 'macOS', linux: 'Linux', windows: 'Windows'}[d.deviceType] || 'PC';
     var did = esc(d.id);
-    window.S.cwDevices.push(d);
     var dname = esc(d.deviceName || d.deviceId);
     totalCount++;
     if (online) onlineCount++;
@@ -483,9 +480,7 @@ function _renderActivityLog() {
 ══════════════════════════════════════════ */
 async function cwRemoveDevice(deviceId, deviceName) {
     if (!window.S || !window.S.user) return;
-    if (!confirm('Retirer ' + deviceName + ' de votre compte ?
-
-L\'appareil sera déconnecté.')) return;
+    if (!confirm('Retirer ' + deviceName + ' de votre compte ?\n\nL\'appareil sera déconnecté.')) return;
     try {
         const docSnap = await window.db.collection('cloudworks').doc(S.user.uid).collection('devices').doc(deviceId).get();
         if (docSnap.exists && docSnap.data().sessionId) {

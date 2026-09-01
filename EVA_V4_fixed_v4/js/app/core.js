@@ -1042,8 +1042,6 @@ window.downloadCurrentFile = function() {
   var a = document.createElement('a');
   a.href = window._currentViewerDoc.url;
   a.download = window._currentViewerDoc.name || 'document';
-    // Fallback Puter
-    if (window.puter) { window.open(window._currentViewerDoc.url, '_blank'); return; }
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1067,4 +1065,3 @@ window.printCurrentFile = function() {
     pr.close();
   }
 };
-

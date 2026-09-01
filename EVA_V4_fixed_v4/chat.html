@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>E.V.A � Assistant</title>
+<title>E.V.A — Assistant</title>
 <script>
 (function(){document.documentElement.setAttribute('data-theme','dark');})();
 </script>
@@ -27,7 +27,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
 <script src="https://js.puter.com/v2/"></script>
-<!-- -- Librairies g�n�ration de fichiers � servis localement pour fiabilit� -- -->
+<!-- ══ Librairies génération de fichiers — servis localement pour fiabilité ══ -->
 <script src="/js/lib/jspdf.umd.min.js"></script>
 <script src="/js/lib/xlsx.full.min.js"></script>
 <script src="/js/lib/pptxgen.bundle.js"></script>
@@ -39,13 +39,13 @@
 <div class="bg-orb bg-orb-1"></div>
 <div class="bg-orb bg-orb-2"></div>
 
-<!-- ---------------- SIDEBAR ---------------- -->
+<!-- ════════════════ SIDEBAR ════════════════ -->
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sb-header">
-    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;" title="Retour � l'accueil">
+    <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;" title="Retour à l'accueil">
       <img src="/assets/images/eva-logo.png" alt="EVA" class="sb-logo-img">
-      <span class="sb-brand-beta">B�TA V4</span>
+      <span class="sb-brand-beta">BÊTA V4</span>
     </a>
   </div>
 
@@ -82,24 +82,24 @@
       <div class="nav-item" data-view="cloudworks" id="navCloudWorks" style="display:none;">
         <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
         Cloud Works
-        <span style="margin-left:auto;background:rgba(0,212,255,0.12);color:var(--cyan);font-size:0.5em;font-family:'Orbitron',monospace;padding:2px 7px;border-radius:20px;font-weight:800;border:1px solid rgba(0,212,255,0.3);letter-spacing:0.5px;">? EXP</span>
+        <span style="margin-left:auto;background:rgba(0,212,255,0.12);color:var(--cyan);font-size:0.5em;font-family:'Orbitron',monospace;padding:2px 7px;border-radius:20px;font-weight:800;border:1px solid rgba(0,212,255,0.3);letter-spacing:0.5px;">⚗ EXP</span>
       </div>
     </div>
 
-    <!-- -- Section Admin (or/gold) � visible dev/creator uniquement -- -->
+    <!-- ── Section Admin (or/gold) — visible dev/creator uniquement ── -->
     <div class="sb-nav-section nav-gold-section" id="navGoldSection">
-      <div class="sb-nav-label gold-label">? Admin</div>
+      <div class="sb-nav-label gold-label">⬥ Admin</div>
       <div class="nav-item gold" data-view="reports" id="navReports">
         <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Rapports
         <span id="reportBadge" style="margin-left:auto;background:#ff4d6d;color:#fff;font-size:0.6em;font-family:'Orbitron',monospace;padding:1px 6px;border-radius:10px;display:none;"></span>
       </div>
-      <!-- Vision R�paration � Cr�ateur uniquement -->
+      <!-- Vision Réparation — Créateur uniquement -->
       <div class="nav-item gold" data-view="visionRepair" id="navVisionRepair" style="display:none;">
         <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-        Vision R�paration
+        Vision Réparation
       </div>
-      <!-- Vision Assistance � Cr�ateur + D�veloppeur + Femme du Cr�ateur -->
+      <!-- Vision Assistance — Créateur + Développeur + Femme du Créateur -->
       <div class="nav-item gold" data-view="visionAssist" id="navVisionAssist" style="display:none;">
         <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         Vision Assistance
@@ -116,11 +116,11 @@
   </div>
 
   <div class="sb-footer">
-    <div class="user-card" id="userCard" title="Param�tres & Profil">
+    <div class="user-card" id="userCard" title="Paramètres & Profil">
       <div class="user-ava" id="userAvatar">U</div>
       <div class="user-info">
         <div class="user-name" id="userNameText">Chargement...</div>
-        <div class="user-role" id="userBadgeText">?? Utilisateur</div>
+        <div class="user-role" id="userBadgeText">👤 Utilisateur</div>
       </div>
       <div class="user-card-gear">
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
@@ -128,27 +128,27 @@
       <div class="user-menu">
         <button class="menu-item" id="settingsMenuBtn">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
-          Param�tres
+          Paramètres
         </button>
         <button class="menu-item" onclick="openReportModal()" style="color:var(--text-muted);">
           <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-          Signaler un probl�me
+          Signaler un problème
         </button>
         <button class="menu-item" onclick="openAboutModal()" style="color:var(--text-muted);">
           <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-          � propos d'EVA
+          À propos d'EVA
         </button>
         <div class="menu-divider"></div>
         <button class="menu-item danger" id="signOutBtn">
           <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          D�connexion
+          Déconnexion
         </button>
       </div>
     </div>
   </div>
 </aside>
 
-<!-- ---------------- ABOUT MODAL ---------------- -->
+<!-- ════════════════ ABOUT MODAL ════════════════ -->
 <div id="aboutModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:20px;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;max-width:620px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,0.7);animation:modalIn 0.28s cubic-bezier(0.34,1.56,0.64,1);">
     <!-- Header -->
@@ -157,20 +157,20 @@
         <img src="/assets/images/eva-logo.svg" alt="EVA" style="height:32px;width:auto;">
         <div>
           <div style="font-family:'Orbitron',monospace;font-size:1em;font-weight:900;color:var(--text);letter-spacing:2px;">E.V.A</div>
-          <div style="font-size:0.65em;color:var(--text-muted);margin-top:1px;letter-spacing:1px;">Evolutionary Virtual Assistant � Astral Technologie</div>
+          <div style="font-size:0.65em;color:var(--text-muted);margin-top:1px;letter-spacing:1px;">Evolutionary Virtual Assistant — Astral Technologie</div>
         </div>
       </div>
-      <button onclick="closeAboutModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:6px;border-radius:8px;transition:all 0.15s;font-size:1.1em;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-muted)'">?</button>
+      <button onclick="closeAboutModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:6px;border-radius:8px;transition:all 0.15s;font-size:1.1em;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-muted)'">✕</button>
     </div>
     <!-- Body -->
     <div style="overflow-y:auto;padding:22px 26px 26px;display:flex;flex-direction:column;gap:20px;">
 
       <!-- Description -->
-      <p style="font-size:0.82em;color:var(--text-muted);line-height:1.75;margin:0;">E.V.A est votre assistante IA nouvelle g�n�ration, con�ue par <strong style="color:var(--cyan)">Astral Technologie</strong>. Elle combine intelligence artificielle avanc�e, voix naturelle et outils de productivit� pour simplifier votre quotidien.</p>
+      <p style="font-size:0.82em;color:var(--text-muted);line-height:1.75;margin:0;">E.V.A est votre assistante IA nouvelle génération, conçue par <strong style="color:var(--cyan)">Astral Technologie</strong>. Elle combine intelligence artificielle avancée, voix naturelle et outils de productivité pour simplifier votre quotidien.</p>
 
       <!-- Section: IA & Chat -->
       <div>
-        <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">?? Intelligence & Chat</div>
+        <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">💬 Intelligence & Chat</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;">
             <div style="font-size:0.78em;font-weight:700;color:var(--text);margin-bottom:3px;">Multi-providers IA</div>
@@ -178,127 +178,127 @@
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;">
             <div style="font-size:0.78em;font-weight:700;color:var(--text);margin-bottom:3px;">Vision (Analyse d'images)</div>
-            <div style="font-size:0.68em;color:var(--text-muted);line-height:1.5;">Glissez une image dans le chat � EVA l'analyse et r�pond</div>
+            <div style="font-size:0.68em;color:var(--text-muted);line-height:1.5;">Glissez une image dans le chat — EVA l'analyse et répond</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;">
             <div style="font-size:0.78em;font-weight:700;color:var(--text);margin-bottom:3px;">Recherche web</div>
-            <div style="font-size:0.68em;color:var(--text-muted);line-height:1.5;">EVA acc�de � internet pour les infos en temps r�el (m�t�o, actualit�s�)</div>
+            <div style="font-size:0.68em;color:var(--text-muted);line-height:1.5;">EVA accède à internet pour les infos en temps réel (météo, actualités…)</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;">
-            <div style="font-size:0.78em;font-weight:700;color:var(--text);margin-bottom:3px;">M�moire contextuelle</div>
-            <div style="font-size:0.68em;color:var(--text-muted);line-height:1.5;">Garde le fil de la conversation et s'adapte � votre profil</div>
+            <div style="font-size:0.78em;font-weight:700;color:var(--text);margin-bottom:3px;">Mémoire contextuelle</div>
+            <div style="font-size:0.68em;color:var(--text-muted);line-height:1.5;">Garde le fil de la conversation et s'adapte à votre profil</div>
           </div>
         </div>
       </div>
 
-      <!-- Section: G�n�ration de fichiers -->
+      <!-- Section: Génération de fichiers -->
       <div>
-        <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">?? G�n�ration de Fichiers</div>
+        <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">📁 Génération de Fichiers</div>
         <div style="background:var(--surface2);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:14px 16px;">
-          <div style="font-size:0.75em;color:var(--text);margin-bottom:10px;font-weight:600;">Demandez � EVA de cr�er des fichiers directement dans le chat :</div>
+          <div style="font-size:0.75em;color:var(--text);margin-bottom:10px;font-weight:600;">Demandez à EVA de créer des fichiers directement dans le chat :</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
             <div style="display:flex;align-items:center;gap:8px;font-size:0.72em;color:var(--text-muted);">
-              <span style="font-size:1.2em;">??</span>
+              <span style="font-size:1.2em;">📄</span>
               <div><strong style="color:var(--text);">PDF</strong><br>Rapports, lettres, documents</div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;font-size:0.72em;color:var(--text-muted);">
-              <span style="font-size:1.2em;">??</span>
-              <div><strong style="color:var(--text);">Excel (.xlsx)</strong><br>Tableaux, donn�es, budgets</div>
+              <span style="font-size:1.2em;">📊</span>
+              <div><strong style="color:var(--text);">Excel (.xlsx)</strong><br>Tableaux, données, budgets</div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;font-size:0.72em;color:var(--text-muted);">
-              <span style="font-size:1.2em;">??</span>
-              <div><strong style="color:var(--text);">PowerPoint</strong><br>Pr�sentations, diaporamas</div>
+              <span style="font-size:1.2em;">📑</span>
+              <div><strong style="color:var(--text);">PowerPoint</strong><br>Présentations, diaporamas</div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;font-size:0.72em;color:var(--text-muted);">
-              <span style="font-size:1.2em;">??</span>
-              <div><strong style="color:var(--text);">Texte / CSV</strong><br>Fichiers texte, donn�es CSV</div>
+              <span style="font-size:1.2em;">📃</span>
+              <div><strong style="color:var(--text);">Texte / CSV</strong><br>Fichiers texte, données CSV</div>
             </div>
           </div>
           <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:0.68em;color:var(--text-muted);font-style:italic;">
-            Exemple : "Cr�e-moi un PDF avec le r�sum� de notre conversation" ou "G�n�re un tableau Excel de mes d�penses du mois"
+            Exemple : "Crée-moi un PDF avec le résumé de notre conversation" ou "Génère un tableau Excel de mes dépenses du mois"
           </div>
         </div>
       </div>
 
-      <!-- Section: Productivit� -->
+      <!-- Section: Productivité -->
       <div>
-        <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">? Productivit�</div>
+        <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">⚡ Productivité</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;text-align:center;">
-            <div style="font-size:1.4em;margin-bottom:5px;">??</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">📝</div>
             <div style="font-size:0.72em;font-weight:700;color:var(--text);">Notes</div>
-            <div style="font-size:0.62em;color:var(--text-muted);margin-top:3px;">Cr��es par EVA ou manuellement</div>
+            <div style="font-size:0.62em;color:var(--text-muted);margin-top:3px;">Créées par EVA ou manuellement</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;text-align:center;">
-            <div style="font-size:1.4em;margin-bottom:5px;">?</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">⏰</div>
             <div style="font-size:0.72em;font-weight:700;color:var(--text);">Alarmes</div>
-            <div style="font-size:0.62em;color:var(--text-muted);margin-top:3px;">Alarmes, rappels et �v�nements</div>
+            <div style="font-size:0.62em;color:var(--text-muted);margin-top:3px;">Alarmes, rappels et événements</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;text-align:center;">
-            <div style="font-size:1.4em;margin-bottom:5px;">??</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">📌</div>
             <div style="font-size:0.72em;font-weight:700;color:var(--text);">Rappels</div>
             <div style="font-size:0.62em;color:var(--text-muted);margin-top:3px;">Rappels intelligents avec heure</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;text-align:center;">
-            <div style="font-size:1.4em;margin-bottom:5px;">??</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">📅</div>
             <div style="font-size:0.72em;font-weight:700;color:var(--text);">Agenda</div>
-            <div style="font-size:0.62em;color:var(--text-muted);margin-top:3px;">�v�nements et rendez-vous</div>
+            <div style="font-size:0.62em;color:var(--text-muted);margin-top:3px;">Événements et rendez-vous</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;text-align:center;">
-            <div style="font-size:1.4em;margin-bottom:5px;">??</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">🎤</div>
             <div style="font-size:0.72em;font-weight:700;color:var(--text);">Voix</div>
             <div style="font-size:0.62em;color:var(--text-muted);margin-top:3px;">TTS + STT + Wake Word</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;text-align:center;">
-            <div style="font-size:1.4em;margin-bottom:5px;">???</div>
+            <div style="font-size:1.4em;margin-bottom:5px;">👁️</div>
             <div style="font-size:0.72em;font-weight:700;color:var(--text);">Vision IA</div>
-            <div style="font-size:0.62em;color:var(--text-muted);margin-top:3px;">Analyse cam�ra en temps r�el</div>
+            <div style="font-size:0.62em;color:var(--text-muted);margin-top:3px;">Analyse caméra en temps réel</div>
           </div>
         </div>
       </div>
 
       <!-- Section: CloudWorks & Desktop -->
       <div>
-        <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">?? Cloud Works � Contr�le � distance</div>
+        <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">☁️ Cloud Works — Contrôle à distance</div>
         <div style="background:var(--surface2);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:14px 16px;">
-          <div style="font-size:0.75em;color:var(--text);margin-bottom:6px;font-weight:600;">Contr�lez votre PC depuis EVA, partout dans le monde</div>
-          <div style="font-size:0.68em;color:var(--text-muted);line-height:1.6;">Installez E.V.A Desktop sur votre PC Windows, macOS ou Linux. Une fois connect�, vous pouvez envoyer des commandes � distance depuis l'interface web.</div>
+          <div style="font-size:0.75em;color:var(--text);margin-bottom:6px;font-weight:600;">Contrôlez votre PC depuis EVA, partout dans le monde</div>
+          <div style="font-size:0.68em;color:var(--text-muted);line-height:1.6;">Installez E.V.A Desktop sur votre PC Windows, macOS ou Linux. Une fois connecté, vous pouvez envoyer des commandes à distance depuis l'interface web.</div>
           <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-            <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);">? Exp�rimental</span>
+            <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);">⚗ Expérimental</span>
             <span style="font-size:0.62em;padding:3px 9px;border-radius:20px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);">Multi-appareils</span>
             <a href="https://github.com/urnova/eva/releases/latest/download/EVA-Assistant-Setup.exe" target="_blank" style="text-decoration:none;font-size:0.62em;padding:4px 10px;border-radius:20px;background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.4);color:var(--cyan);font-weight:700;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;" onmouseover="this.style.background='rgba(0,212,255,0.25)'" onmouseout="this.style.background='rgba(0,212,255,0.15)'">
               <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              T�l�charger E.V.A Desktop
+              Télécharger E.V.A Desktop
             </a>
           </div>
         </div>
       </div>
 
-      <!-- Section: Comment parler � EVA -->
+      <!-- Section: Comment parler à EVA -->
       <div>
-        <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">?? Exemples de commandes</div>
+        <div style="font-size:0.62em;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-family:'Orbitron',monospace;">💡 Exemples de commandes</div>
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
-          <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.71em;color:var(--text-muted);">"<span style="color:var(--text);">Cr�e un PDF de r�sum� de notre conversation</span>"</div>
-          <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.71em;color:var(--text-muted);">"<span style="color:var(--text);">G�n�re un tableau Excel avec 5 recettes et leurs ingr�dients</span>"</div>
-          <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.71em;color:var(--text-muted);">"<span style="color:var(--text);">Cr�e une pr�sentation PowerPoint sur le changement climatique</span>"</div>
-          <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.71em;color:var(--text-muted);">"<span style="color:var(--text);">Rappelle-moi d'appeler le dentiste demain � 9h</span>"</div>
+          <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.71em;color:var(--text-muted);">"<span style="color:var(--text);">Crée un PDF de résumé de notre conversation</span>"</div>
+          <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.71em;color:var(--text-muted);">"<span style="color:var(--text);">Génère un tableau Excel avec 5 recettes et leurs ingrédients</span>"</div>
+          <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.71em;color:var(--text-muted);">"<span style="color:var(--text);">Crée une présentation PowerPoint sur le changement climatique</span>"</div>
+          <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:0.71em;color:var(--text-muted);">"<span style="color:var(--text);">Rappelle-moi d'appeler le dentiste demain à 9h</span>"</div>
           <div style="padding:10px 14px;font-size:0.71em;color:var(--text-muted);">"<span style="color:var(--text);">Analyse cette image et dis-moi ce que tu vois</span>"</div>
         </div>
       </div>
 
       <!-- Footer -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding-top:6px;border-top:1px solid var(--border);">
-        <div style="font-size:0.65em;color:var(--text-dim);">Version B�ta V4.1 � Astral Technologie � 2026</div>
+        <div style="font-size:0.65em;color:var(--text-dim);">Version Bêta V4.1 · Astral Technologie © 2026</div>
         <a href="mailto:contact@astral-technologie.fr" style="font-size:0.65em;color:var(--cyan);text-decoration:none;">Contact</a>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ---------------- MAIN ---------------- -->
+<!-- ════════════════ MAIN ════════════════ -->
 <div class="app-main">
 
-  <!-- -- CHAT AREA -- -->
+  <!-- ══ CHAT AREA ══ -->
   <div class="chat-area">
 
     <!-- Header -->
@@ -317,7 +317,7 @@
             <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
           </button>
         </div>
-        <button class="hdr-btn" id="wakeWordBtn" title="Wake Word � Dites 'Hey Eva'">
+        <button class="hdr-btn" id="wakeWordBtn" title="Wake Word — Dites 'Hey Eva'">
           <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
         </button>
         <div class="hdr-export-wrap" id="hdrExportWrap" style="position:relative;display:none;">
@@ -325,12 +325,12 @@
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           </button>
           <div class="export-menu" id="exportMenu">
-            <button onclick="exportCurrentConv('txt')">?? Exporter en TXT</button>
-            <button onclick="exportCurrentConv('json')">??? Exporter en JSON</button>
+            <button onclick="exportCurrentConv('txt')">📄 Exporter en TXT</button>
+            <button onclick="exportCurrentConv('json')">🗂️ Exporter en JSON</button>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
-          <button class="hdr-btn tts-on" id="ttsBtn" title="Voix activ�e � cliquer pour d�sactiver">
+          <button class="hdr-btn tts-on" id="ttsBtn" title="Voix activée — cliquer pour désactiver">
             <svg id="ttsBtnIcon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
           </button>
         </div>
@@ -348,75 +348,75 @@
           <div class="welcome-icon">
             <img src="/assets/images/eva-logo.png" alt="EVA" style="width:52px;height:auto;opacity:0.65;">
           </div>
-          <div class="welcome-title">PR�TE</div>
-          <div class="welcome-sub">Votre assistante virtuelle intelligente. Posez une question, cr�ez une alarme, prenez une note...</div>
+          <div class="welcome-title">PRÊTE</div>
+          <div class="welcome-sub">Votre assistante virtuelle intelligente. Posez une question, créez une alarme, prenez une note...</div>
           <div class="prompt-chips">
-            <div class="prompt-chip" data-prompt="Bonjour Eva ! Pr�sente-toi en quelques mots.">?? Pr�sente-toi Eva</div>
-            <div class="prompt-chip" data-prompt="Quelles sont tes fonctionnalit�s principales ?">? Tes fonctionnalit�s</div>
-            <div class="prompt-chip" data-prompt="Aide-moi � organiser ma journ�e de demain.">?? Organiser ma journ�e</div>
-            <div class="prompt-chip" data-prompt="Raconte-moi quelque chose d'int�ressant.">? Surprends-moi</div>
-            <div class="prompt-chip" data-prompt="Dis-moi ce que tu sais sur moi.">?? Ce que tu sais sur moi</div>
+            <div class="prompt-chip" data-prompt="Bonjour Eva ! Présente-toi en quelques mots.">👋 Présente-toi Eva</div>
+            <div class="prompt-chip" data-prompt="Quelles sont tes fonctionnalités principales ?">⚡ Tes fonctionnalités</div>
+            <div class="prompt-chip" data-prompt="Aide-moi à organiser ma journée de demain.">📅 Organiser ma journée</div>
+            <div class="prompt-chip" data-prompt="Raconte-moi quelque chose d'intéressant.">✨ Surprends-moi</div>
+            <div class="prompt-chip" data-prompt="Dis-moi ce que tu sais sur moi.">🧠 Ce que tu sais sur moi</div>
           </div>
         </div>
         <div id="messagesList"></div>
       </div>
 
-      <!-- -- S�lection Ton + Mod�le -- -->
+      <!-- ── Sélection Ton + Modèle ── -->
       <div class="tone-bar">
-        <!-- S�lecteur de ton -->
+        <!-- Sélecteur de ton -->
         <div class="tone-select-wrap" id="toneSelectWrap">
           <button class="tone-select-btn" id="toneSelectBtn" onclick="toggleToneMenu(event)" aria-haspopup="true" aria-expanded="false">
-            <span class="tone-select-icon" id="toneSelectIcon">??</span>
+            <span class="tone-select-icon" id="toneSelectIcon">😊</span>
             <span class="tone-select-label" id="toneSelectLabel">Normal</span>
             <svg class="tone-select-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="tone-dropdown" id="toneDropdown" role="menu">
-            <button class="tone-option active" data-tone="normal" data-icon="??" data-label="Normal" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">??</span><span class="tone-opt-label">Normal</span>
+            <button class="tone-option active" data-tone="normal" data-icon="😊" data-label="Normal" onclick="selectTone(this)" role="menuitem">
+              <span class="tone-opt-icon">😊</span><span class="tone-opt-label">Normal</span>
             </button>
-            <button class="tone-option" data-tone="professional" data-icon="??" data-label="Professionnel" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">??</span><span class="tone-opt-label">Professionnel</span>
+            <button class="tone-option" data-tone="professional" data-icon="💼" data-label="Professionnel" onclick="selectTone(this)" role="menuitem">
+              <span class="tone-opt-icon">💼</span><span class="tone-opt-label">Professionnel</span>
             </button>
-            <button class="tone-option" data-tone="friendly" data-icon="??" data-label="Amical" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">??</span><span class="tone-opt-label">Amical</span>
+            <button class="tone-option" data-tone="friendly" data-icon="🤗" data-label="Amical" onclick="selectTone(this)" role="menuitem">
+              <span class="tone-opt-icon">🤗</span><span class="tone-opt-label">Amical</span>
             </button>
-            <button class="tone-option" data-tone="code" data-icon="??" data-label="Code" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">??</span><span class="tone-opt-label">Code</span>
+            <button class="tone-option" data-tone="code" data-icon="💻" data-label="Code" onclick="selectTone(this)" role="menuitem">
+              <span class="tone-opt-icon">💻</span><span class="tone-opt-label">Code</span>
             </button>
-            <button class="tone-option" data-tone="creative" data-icon="??" data-label="Cr�atif" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">??</span><span class="tone-opt-label">Cr�atif</span>
+            <button class="tone-option" data-tone="creative" data-icon="🎨" data-label="Créatif" onclick="selectTone(this)" role="menuitem">
+              <span class="tone-opt-icon">🎨</span><span class="tone-opt-label">Créatif</span>
             </button>
-            <button class="tone-option" data-tone="trading" data-icon="??" data-label="Trading" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">??</span><span class="tone-opt-label">Trading</span>
+            <button class="tone-option" data-tone="trading" data-icon="📈" data-label="Trading" onclick="selectTone(this)" role="menuitem">
+              <span class="tone-opt-icon">📈</span><span class="tone-opt-label">Trading</span>
             </button>
           </div>
         </div>
-        <!-- S�lecteur de mod�le -->
+        <!-- Sélecteur de modèle -->
         <div class="tone-select-wrap" id="convModelWrap" style="margin-left:auto;">
           <button class="tone-select-btn" id="convModelBtn" onclick="toggleModelMenu(event)" aria-haspopup="true" aria-expanded="false">
-            <span class="tone-select-icon" id="convModelIcon">??</span>
-            <span class="tone-select-label" id="convModelLabel">GPT-4o � Expert</span>
+            <span class="tone-select-icon" id="convModelIcon">🤖</span>
+            <span class="tone-select-label" id="convModelLabel">GPT-4o — Expert</span>
             <svg class="tone-select-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="tone-dropdown model-dropdown" id="modelDropdown" role="menu"></div>
-          <!-- select cach� pour compat JS existant -->
+          <!-- select caché pour compat JS existant -->
           <select id="convModelSelect" style="display:none;" onchange="changeConvModel(this.value)"></select>
         </div>
       </div>
 
 
-      <!-- Banni�re avertissement mode local -->
+      <!-- Bannière avertissement mode local -->
       <div id="localModeBanner" style="display:none;align-items:center;gap:10px;background:rgba(245,158,11,0.12);border-top:1px solid rgba(245,158,11,0.35);padding:7px 16px;font-size:0.72em;color:#fbbf24;line-height:1.4;">
-        <span style="font-size:1.1em;">??</span>
-        <span><strong>Mode local actif</strong> � Performances limit�es. Pour changer de mod�le ou de fournisseur, <span style="text-decoration:underline;cursor:pointer;" onclick="openSettings('ai')">ouvrez les param�tres IA</span>.</span>
-        <button onclick="document.getElementById('localModeBanner').style.display='none'" style="margin-left:auto;background:none;border:none;color:#fbbf24;cursor:pointer;font-size:1em;opacity:0.7;">?</button>
+        <span style="font-size:1.1em;">⚠️</span>
+        <span><strong>Mode local actif</strong> — Performances limitées. Pour changer de modèle ou de fournisseur, <span style="text-decoration:underline;cursor:pointer;" onclick="openSettings('ai')">ouvrez les paramètres IA</span>.</span>
+        <button onclick="document.getElementById('localModeBanner').style.display='none'" style="margin-left:auto;background:none;border:none;color:#fbbf24;cursor:pointer;font-size:1em;opacity:0.7;">✕</button>
       </div>
 
-      <!-- Banni�re erreur r�seau -->
+      <!-- Bannière erreur réseau -->
       <div id="networkErrorBanner" style="display:none;align-items:center;gap:10px;padding:10px 18px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:10px;margin:0 0 8px;color:#f87171;font-size:0.85em;">
-        <span style="font-size:1.2em;">??</span>
-        <span id="networkErrorMsg">Connexion perdue � v�rifie ta connexion internet.</span>
-        <button onclick="document.getElementById('networkErrorBanner').style.display='none'" style="margin-left:auto;background:none;border:none;color:#f87171;cursor:pointer;font-size:1em;opacity:0.7;">?</button>
+        <span style="font-size:1.2em;">📡</span>
+        <span id="networkErrorMsg">Connexion perdue — vérifie ta connexion internet.</span>
+        <button onclick="document.getElementById('networkErrorBanner').style.display='none'" style="margin-left:auto;background:none;border:none;color:#f87171;cursor:pointer;font-size:1em;opacity:0.7;">✕</button>
       </div>
 
       <div class="input-area">
@@ -426,18 +426,18 @@
           <button class="input-btn" id="attachBtn" title="Joindre une image ou un document (PDF, Word, Excel, PowerPoint, CSV, TXT)">
             <svg viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </button>
-          <textarea id="msgInput" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true" data-lpignore="true" data-1p-ignore placeholder="Message � Eva... (Entr�e pour envoyer)" rows="1"></textarea>
+          <textarea id="msgInput" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true" data-lpignore="true" data-1p-ignore placeholder="Message à Eva... (Entrée pour envoyer)" rows="1"></textarea>
           <button class="input-btn" id="micBtn" title="Message vocal">
             <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
           </button>
           <button class="input-btn send-btn" id="sendBtn" title="Envoyer" disabled>
             <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
-          <button class="input-btn send-btn" id="stopBtn" title="Arr�ter" style="display:none; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.5); color:#f87171;" onclick="stopGeneration()">
+          <button class="input-btn send-btn" id="stopBtn" title="Arrêter" style="display:none; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.5); color:#f87171;" onclick="stopGeneration()">
             <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
           </button>
         </div>
-        <p class="input-disclaimer">E.V.A peut faire des erreurs � V�rifiez les informations importantes</p>
+        <p class="input-disclaimer">E.V.A peut faire des erreurs · Vérifiez les informations importantes</p>
       </div>
     </div>
 
@@ -446,7 +446,7 @@
       <div class="view-header">
         <div>
           <div class="view-title">NOTES</div>
-          <div class="view-sub">Vos notes personnelles synchronis�es</div>
+          <div class="view-sub">Vos notes personnelles synchronisées</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <input type="text" id="noteSearch" class="form-input" placeholder="Rechercher..." style="height:36px;font-size:0.78em;width:160px" oninput="filterNotes(this.value)">
@@ -459,7 +459,7 @@
           <div class="mod-modal-box">
             <div class="mod-modal-header">
               <div class="mod-modal-title" id="noteModalTitle">NOUVELLE NOTE</div>
-              <button class="mod-modal-close" onclick="closeNoteModal()">?</button>
+              <button class="mod-modal-close" onclick="closeNoteModal()">✕</button>
             </div>
             <div class="form-field">
               <label class="form-label">Titre</label>
@@ -472,7 +472,7 @@
             <div class="form-row">
               <div class="form-field">
                 <label class="form-label">Tag</label>
-                <input type="text" class="form-input" id="noteTagInput" placeholder="ex: travail, id�e...">
+                <input type="text" class="form-input" id="noteTagInput" placeholder="ex: travail, idée...">
               </div>
               <div class="form-field">
                 <label class="form-label">Couleur</label>
@@ -502,7 +502,7 @@
       <div class="view-header">
         <div>
           <div class="view-title">ALARMES</div>
-          <div class="view-sub">G�rez vos alarmes</div>
+          <div class="view-sub">Gérez vos alarmes</div>
         </div>
         <button class="btn btn-primary" id="newAlarmBtn">+ Alarme</button>
       </div>
@@ -512,7 +512,7 @@
           <div class="mod-modal-box">
             <div class="mod-modal-header">
               <div class="mod-modal-title" id="alarmModalTitle">NOUVELLE ALARME</div>
-              <button class="mod-modal-close" onclick="closeAlarmModal()">?</button>
+              <button class="mod-modal-close" onclick="closeAlarmModal()">✕</button>
             </div>
             <div class="form-field">
               <label class="form-label">Heure</label>
@@ -520,16 +520,16 @@
             </div>
             <div class="form-field">
               <label class="form-label">Label</label>
-              <input type="text" class="form-input" id="alarmLabelInput" placeholder="ex: R�veil, R�union...">
+              <input type="text" class="form-input" id="alarmLabelInput" placeholder="ex: Réveil, Réunion...">
             </div>
             <div class="form-field">
-              <label class="form-label">R�p�tition</label>
+              <label class="form-label">Répétition</label>
               <select class="form-select" id="alarmRepeatInput" onchange="onAlarmRepeatChange(this.value)">
                 <option value="once">Une seule fois</option>
                 <option value="daily">Tous les jours</option>
-                <option value="weekdays">Jours ouvr�s (Lun�Ven)</option>
-                <option value="weekend">Week-end (Sam�Dim)</option>
-                <option value="custom">Jours personnalis�s</option>
+                <option value="weekdays">Jours ouvrés (Lun–Ven)</option>
+                <option value="weekend">Week-end (Sam–Dim)</option>
+                <option value="custom">Jours personnalisés</option>
               </select>
             </div>
             <div id="alarmCustomDays" style="display:none">
@@ -559,7 +559,7 @@
       <div class="view-header">
         <div>
           <div class="view-title">RAPPELS</div>
-          <div class="view-sub">Vos rappels personnels synchronis�s</div>
+          <div class="view-sub">Vos rappels personnels synchronisés</div>
         </div>
         <button class="btn btn-primary" id="newReminderBtn">+ Rappel</button>
       </div>
@@ -569,11 +569,11 @@
           <div class="mod-modal-box">
             <div class="mod-modal-header">
               <div class="mod-modal-title" id="reminderModalTitle">NOUVEAU RAPPEL</div>
-              <button class="mod-modal-close" onclick="closeReminderModal()">?</button>
+              <button class="mod-modal-close" onclick="closeReminderModal()">✕</button>
             </div>
             <div class="form-field">
               <label class="form-label">Message</label>
-              <input type="text" class="form-input" id="reminderTextInput" placeholder="ex: Appeler le m�decin...">
+              <input type="text" class="form-input" id="reminderTextInput" placeholder="ex: Appeler le médecin...">
             </div>
             <div class="form-row">
               <div class="form-field">
@@ -586,11 +586,11 @@
               </div>
             </div>
             <div class="form-field">
-              <label class="form-label">Priorit�</label>
+              <label class="form-label">Priorité</label>
               <select class="form-select" id="reminderPrioInput">
-                <option value="medium">?? Moyenne</option>
-                <option value="high">?? Haute</option>
-                <option value="low">?? Basse</option>
+                <option value="medium">🟡 Moyenne</option>
+                <option value="high">🔴 Haute</option>
+                <option value="low">🟢 Basse</option>
               </select>
             </div>
             <div class="mod-modal-footer">
@@ -608,21 +608,21 @@
       <div class="view-header">
         <div>
           <div class="view-title">AGENDA</div>
-          <div class="view-sub">Vos �v�nements et rendez-vous</div>
+          <div class="view-sub">Vos événements et rendez-vous</div>
         </div>
-        <button class="btn btn-primary" id="newEventBtn">+ �v�nement</button>
+        <button class="btn btn-primary" id="newEventBtn">+ Événement</button>
       </div>
       <div class="view-content">
         <!-- Event modal -->
         <div class="mod-modal" id="eventModal">
           <div class="mod-modal-box">
             <div class="mod-modal-header">
-              <div class="mod-modal-title" id="eventModalTitle">NOUVEL �V�NEMENT</div>
-              <button class="mod-modal-close" onclick="closeEventModal()">?</button>
+              <div class="mod-modal-title" id="eventModalTitle">NOUVEL ÉVÉNEMENT</div>
+              <button class="mod-modal-close" onclick="closeEventModal()">✕</button>
             </div>
             <div class="form-field">
               <label class="form-label">Titre</label>
-              <input type="text" class="form-input" id="eventTitleInput" placeholder="Titre de l'�v�nement...">
+              <input type="text" class="form-input" id="eventTitleInput" placeholder="Titre de l'événement...">
             </div>
             <div class="form-row">
               <div class="form-field">
@@ -636,14 +636,14 @@
             </div>
             <div class="form-field">
               <label class="form-label">Description</label>
-              <textarea class="form-textarea" id="eventDescInput" placeholder="D�tails..."></textarea>
+              <textarea class="form-textarea" id="eventDescInput" placeholder="Détails..."></textarea>
             </div>
             <div class="form-field">
-              <label class="form-label">Cat�gorie</label>
+              <label class="form-label">Catégorie</label>
               <div class="event-category-select" id="eventCatSelect">
                 <div class="event-cat-opt active" data-cat="work" onclick="selectEventCat('work',this)"><div class="event-cat-dot-sm" style="background:var(--cyan)"></div>Travail</div>
                 <div class="event-cat-opt" data-cat="personal" onclick="selectEventCat('personal',this)"><div class="event-cat-dot-sm" style="background:#a855f7"></div>Personnel</div>
-                <div class="event-cat-opt" data-cat="health" onclick="selectEventCat('health',this)"><div class="event-cat-dot-sm" style="background:#22c55e"></div>Sant�</div>
+                <div class="event-cat-opt" data-cat="health" onclick="selectEventCat('health',this)"><div class="event-cat-dot-sm" style="background:#22c55e"></div>Santé</div>
                 <div class="event-cat-opt" data-cat="social" onclick="selectEventCat('social',this)"><div class="event-cat-dot-sm" style="background:#f59e0b"></div>Social</div>
                 <div class="event-cat-opt" data-cat="other" onclick="selectEventCat('other',this)"><div class="event-cat-dot-sm" style="background:#8b9bb4"></div>Autre</div>
               </div>
@@ -656,12 +656,12 @@
         </div>
         <div class="card" style="padding:16px 18px">
           <div class="cal-header">
-            <button class="cal-nav" id="calPrevBtn">?</button>
+            <button class="cal-nav" id="calPrevBtn">◀</button>
             <div style="display:flex;align-items:center;gap:10px">
               <span class="cal-month-year" id="calMonthYear">Mars 2026</span>
               <button class="cal-today-btn" onclick="goToday()">Aujourd'hui</button>
             </div>
-            <button class="cal-nav" id="calNextBtn">?</button>
+            <button class="cal-nav" id="calNextBtn">▶</button>
           </div>
           <div class="cal-grid" style="margin-top:8px">
             <div class="cal-day-label">LUN</div><div class="cal-day-label">MAR</div>
@@ -672,57 +672,57 @@
           <div class="cal-grid" id="calDays"></div>
         </div>
         <div class="events-list">
-          <div class="events-list-title" id="eventsListTitle">TOUS LES �V�NEMENTS</div>
+          <div class="events-list-title" id="eventsListTitle">TOUS LES ÉVÉNEMENTS</div>
           <div id="eventsList"></div>
         </div>
       </div>
     </div>
 
-    <!-- -- VIEW: RAPPORTS (admin uniquement) -- -->
+    <!-- ══ VIEW: RAPPORTS (admin uniquement) ══ -->
     <div class="view" id="viewReports">
       <div class="view-header">
         <div>
           <div class="view-title" style="color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,0.4)">RAPPORTS</div>
           <div class="view-sub">Signalements, bugs et suggestions utilisateurs</div>
         </div>
-        <button class="btn btn-primary" style="font-size:0.73em;padding:6px 14px;letter-spacing:1px;" onclick="loadReports()">? Actualiser</button>
+        <button class="btn btn-primary" style="font-size:0.73em;padding:6px 14px;letter-spacing:1px;" onclick="loadReports()">↻ Actualiser</button>
       </div>
       <div class="view-content">
         <div class="rp-stats">
-          <div class="rp-stat"><div class="rp-stat-num c-all" id="rstatAll">�</div><div class="rp-stat-lbl">Total</div></div>
-          <div class="rp-stat"><div class="rp-stat-num c-pend" id="rstatPend">�</div><div class="rp-stat-lbl">En attente</div></div>
-          <div class="rp-stat"><div class="rp-stat-num c-prog" id="rstatProg">�</div><div class="rp-stat-lbl">En cours</div></div>
-          <div class="rp-stat"><div class="rp-stat-num c-done" id="rstatDone">�</div><div class="rp-stat-lbl">R�solus</div></div>
+          <div class="rp-stat"><div class="rp-stat-num c-all" id="rstatAll">—</div><div class="rp-stat-lbl">Total</div></div>
+          <div class="rp-stat"><div class="rp-stat-num c-pend" id="rstatPend">—</div><div class="rp-stat-lbl">En attente</div></div>
+          <div class="rp-stat"><div class="rp-stat-num c-prog" id="rstatProg">—</div><div class="rp-stat-lbl">En cours</div></div>
+          <div class="rp-stat"><div class="rp-stat-num c-done" id="rstatDone">—</div><div class="rp-stat-lbl">Résolus</div></div>
         </div>
         <div class="rp-filters">
           <button class="rp-filter act" data-rfilter="all">Tous</button>
-          <button class="rp-filter" data-rfilter="bug-conversation">?? Bug conv.</button>
-          <button class="rp-filter" data-rfilter="bug-general">?? Bug g�n�ral</button>
-          <button class="rp-filter" data-rfilter="feature">?? Suggestions</button>
-          <button class="rp-filter" data-rfilter="autre">?? Autre</button>
-          <button class="rp-filter" data-rfilter="pending">? En attente</button>
-          <button class="rp-filter" data-rfilter="in-progress">?? En cours</button>
-          <button class="rp-filter" data-rfilter="resolved">? R�solus</button>
-          <button class="rp-filter" data-rfilter="rejected">?? Rejet�s</button>
+          <button class="rp-filter" data-rfilter="bug-conversation">🐛 Bug conv.</button>
+          <button class="rp-filter" data-rfilter="bug-general">🔧 Bug général</button>
+          <button class="rp-filter" data-rfilter="feature">💡 Suggestions</button>
+          <button class="rp-filter" data-rfilter="autre">💬 Autre</button>
+          <button class="rp-filter" data-rfilter="pending">⏳ En attente</button>
+          <button class="rp-filter" data-rfilter="in-progress">🔄 En cours</button>
+          <button class="rp-filter" data-rfilter="resolved">✅ Résolus</button>
+          <button class="rp-filter" data-rfilter="rejected">🚫 Rejetés</button>
         </div>
         <div id="reportsList"><div class="rp-loading">Chargement des rapports...</div></div>
       </div>
     </div>
 
-  <!-- ---------------------------------------------------
-       VISION R�PARATION � Cr�ateur uniquement
-  --------------------------------------------------- -->
+  <!-- ═══════════════════════════════════════════════════
+       VISION RÉPARATION — Créateur uniquement
+  ═══════════════════════════════════════════════════ -->
   <div class="view" id="viewVisionRepair">
     <!-- Notice mobile -->
     <div class="vision-mobile-notice">
       <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1"/></svg>
       <h3>MODULE NON DISPONIBLE</h3>
-      <p>Vision R�paration n�cessite un grand �cran. Reconnectez-vous sur un ordinateur ou une tablette pour y acc�der.</p>
+      <p>Vision Réparation nécessite un grand écran. Reconnectez-vous sur un ordinateur ou une tablette pour y accéder.</p>
     </div>
     <div class="view-header">
       <div>
-        <div class="view-title" style="color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,0.35);">VISION R�PARATION</div>
-        <div class="view-sub">Analyse visuelle IA � diagnostique &amp; r�paration informatique</div>
+        <div class="view-title" style="color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,0.35);">VISION RÉPARATION</div>
+        <div class="view-sub">Analyse visuelle IA — diagnostique &amp; réparation informatique</div>
       </div>
       <button class="btn btn-primary" style="font-size:0.72em;padding:6px 14px;" onclick="visionNewSession('vr')">+ Nouvelle session</button>
     </div>
@@ -731,80 +731,80 @@
         <!-- Overlay verrouillage Puter -->
         <div class="vision-lock-overlay" id="vrLock" style="display:none;">
           <div class="vision-lock-card">
-            <div class="vision-lock-icon">??</div>
-            <div class="vision-lock-title">MODULE D�SACTIV�</div>
-            <div class="vision-lock-msg">Ce module n�cessite un fournisseur IA avec capacit� vision.<br>Activez <strong style="color:var(--cyan)">Puter</strong> (gratuit) ou entrez une <strong style="color:var(--cyan)">cl� API OpenAI</strong> dans les param�tres.</div>
+            <div class="vision-lock-icon">🔒</div>
+            <div class="vision-lock-title">MODULE DÉSACTIVÉ</div>
+            <div class="vision-lock-msg">Ce module nécessite un fournisseur IA avec capacité vision.<br>Activez <strong style="color:var(--cyan)">Puter</strong> (gratuit) ou entrez une <strong style="color:var(--cyan)">clé API OpenAI</strong> dans les paramètres.</div>
             <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:4px;">
               <div class="vision-lock-badge">Puter Cloud (gpt-4o)</div>
               <div class="vision-lock-badge">OpenAI API (gpt-4o)</div>
             </div><br>
-            <button class="vision-btn" style="margin-top:8px;" onclick="openSettings('ai')">? Param�tres IA</button>
+            <button class="vision-btn" style="margin-top:8px;" onclick="openSettings('ai')">⚙ Paramètres IA</button>
           </div>
         </div>
-        <!-- Grille principale : [Cam�ra | Chat] -->
+        <!-- Grille principale : [Caméra | Chat] -->
         <div class="vision-top-grid">
-          <!-- Panneau cam�ra -->
+          <!-- Panneau caméra -->
           <div class="vision-panel">
             <div class="vision-panel-hdr">
               <span class="live-dot" id="vrLiveDot"></span>
-              CAM�RA LIVE
+              CAMÉRA LIVE
             </div>
             <div class="vision-video-wrap">
               <video id="vrVideo" autoplay playsinline muted style="display:none;"></video>
               <div id="vrVideoPlaceholder" class="vision-video-placeholder">
-                ??<br><strong>Aucune cam�ra active</strong><br>Choisissez une cam�ra et cliquez ? D�marrer
+                📷<br><strong>Aucune caméra active</strong><br>Choisissez une caméra et cliquez ▶ Démarrer
               </div>
             </div>
             <div class="vision-cam-controls">
-              <select id="vrCamSelect"><option value="">Cam�ra par d�faut</option></select>
-              <button class="vision-btn green" id="vrCamBtn" onclick="visionCamToggle('vr')">? D�marrer</button>
+              <select id="vrCamSelect"><option value="">Caméra par défaut</option></select>
+              <button class="vision-btn green" id="vrCamBtn" onclick="visionCamToggle('vr')">▶ Démarrer</button>
             </div>
           </div>
           <!-- Panneau chat -->
           <div class="vision-panel">
-            <div class="vision-panel-hdr">?? CHAT � R�PARATION INFORMATIQUE</div>
+            <div class="vision-panel-hdr">🔧 CHAT — RÉPARATION INFORMATIQUE</div>
             <div class="vision-chat-messages" id="vrMessages">
-              <div class="vision-msg assistant">?? Pr�t � bosser. D�cris le probl�me, donne le mod�le, dis ce que tu as d�j� test�. Si tu veux que je regarde une image, dis-le moi explicitement (ex : "regarde �a", "analyse ce composant") ou clique sur ??.</div>
+              <div class="vision-msg assistant">👋 Prêt à bosser. Décris le problème, donne le modèle, dis ce que tu as déjà testé. Si tu veux que je regarde une image, dis-le moi explicitement (ex : "regarde ça", "analyse ce composant") ou clique sur 📷.</div>
             </div>
             <div class="vision-chat-input-row">
-              <textarea id="vrInput" placeholder="D�cris le probl�me ou montre le mat�riel�" onkeydown="visionInputKey(event,'vr')"></textarea>
-              <button class="vision-mic-btn" id="vrMicBtn" title='Wake word vision � cliquer pour activer, puis dites "Eva, [commande]"' onclick="visionWakeCapture('vr')">
+              <textarea id="vrInput" placeholder="Décris le problème ou montre le matériel…" onkeydown="visionInputKey(event,'vr')"></textarea>
+              <button class="vision-mic-btn" id="vrMicBtn" title='Wake word vision — cliquer pour activer, puis dites "Eva, [commande]"' onclick="visionWakeCapture('vr')">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
               </button>
-              <button class="vision-btn" title="Capturer et analyser l'image maintenant (forcer)" onclick="visionCaptureSend('vr')" style="padding:0 10px;height:40px;">??</button>
-              <button class="vision-btn" title="Envoyer le texte seul" onclick="visionSend('vr')" style="padding:0 10px;height:40px;">?</button>
-              <button class="vision-btn" id="vrSkipBtn" title="Passer la voix d'EVA" onclick="visionSkipTTS()" style="padding:0 10px;height:40px;display:none;">?</button>
+              <button class="vision-btn" title="Capturer et analyser l'image maintenant (forcer)" onclick="visionCaptureSend('vr')" style="padding:0 10px;height:40px;">📷</button>
+              <button class="vision-btn" title="Envoyer le texte seul" onclick="visionSend('vr')" style="padding:0 10px;height:40px;">➤</button>
+              <button class="vision-btn" id="vrSkipBtn" title="Passer la voix d'EVA" onclick="visionSkipTTS()" style="padding:0 10px;height:40px;display:none;">⏭</button>
             </div>
           </div>
         </div>
         <!-- Historique sessions -->
         <div class="vision-history-panel">
           <div class="vision-history-hdr">
-            <span>SESSIONS SAUVEGARD�ES</span>
-            <button class="vision-btn" style="font-size:0.7em;padding:3px 10px;" onclick="visionClearSession('vr')">? Nouvelle session</button>
+            <span>SESSIONS SAUVEGARDÉES</span>
+            <button class="vision-btn" style="font-size:0.7em;padding:3px 10px;" onclick="visionClearSession('vr')">↺ Nouvelle session</button>
           </div>
           <div class="vision-history-list" id="vrHistory">
-            <div style="color:var(--text-dim);font-size:0.72em;padding:4px 0;align-self:center;">Aucune session enregistr�e</div>
+            <div style="color:var(--text-dim);font-size:0.72em;padding:4px 0;align-self:center;">Aucune session enregistrée</div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ---------------------------------------------------
-       VISION ASSISTANCE � Cr�ateur + D�veloppeur + Femme du Cr�ateur
-  --------------------------------------------------- -->
+  <!-- ═══════════════════════════════════════════════════
+       VISION ASSISTANCE — Créateur + Développeur + Femme du Créateur
+  ═══════════════════════════════════════════════════ -->
   <div class="view" id="viewVisionAssist">
     <!-- Notice mobile -->
     <div class="vision-mobile-notice">
       <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1"/></svg>
       <h3>MODULE NON DISPONIBLE</h3>
-      <p>Vision Assistance n�cessite un grand �cran. Reconnectez-vous sur un ordinateur ou une tablette pour y acc�der.</p>
+      <p>Vision Assistance nécessite un grand écran. Reconnectez-vous sur un ordinateur ou une tablette pour y accéder.</p>
     </div>
     <div class="view-header">
       <div>
         <div class="view-title" style="color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,0.35);">VISION ASSISTANCE</div>
-        <div class="view-sub">Analyse visuelle IA � aide universelle &amp; partage d'�cran</div>
+        <div class="view-sub">Analyse visuelle IA — aide universelle &amp; partage d'écran</div>
       </div>
       <button class="btn btn-primary" style="font-size:0.72em;padding:6px 14px;" onclick="visionNewSession('va')">+ Nouvelle session</button>
     </div>
@@ -813,80 +813,80 @@
         <!-- Overlay verrouillage Puter -->
         <div class="vision-lock-overlay" id="vaLock" style="display:none;">
           <div class="vision-lock-card">
-            <div class="vision-lock-icon">??</div>
-            <div class="vision-lock-title">MODULE D�SACTIV�</div>
-            <div class="vision-lock-msg">Ce module n�cessite un fournisseur IA avec capacit� vision.<br>Activez <strong style="color:var(--cyan)">Puter</strong> (gratuit) ou entrez une <strong style="color:var(--cyan)">cl� API OpenAI</strong> dans les param�tres.</div>
+            <div class="vision-lock-icon">🔒</div>
+            <div class="vision-lock-title">MODULE DÉSACTIVÉ</div>
+            <div class="vision-lock-msg">Ce module nécessite un fournisseur IA avec capacité vision.<br>Activez <strong style="color:var(--cyan)">Puter</strong> (gratuit) ou entrez une <strong style="color:var(--cyan)">clé API OpenAI</strong> dans les paramètres.</div>
             <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:4px;">
               <div class="vision-lock-badge">Puter Cloud (gpt-4o)</div>
               <div class="vision-lock-badge">OpenAI API (gpt-4o)</div>
             </div><br>
-            <button class="vision-btn" style="margin-top:8px;" onclick="openSettings('ai')">? Param�tres IA</button>
+            <button class="vision-btn" style="margin-top:8px;" onclick="openSettings('ai')">⚙ Paramètres IA</button>
           </div>
         </div>
-        <!-- Grille principale : [Source vid�o | Chat] -->
+        <!-- Grille principale : [Source vidéo | Chat] -->
         <div class="vision-top-grid">
-          <!-- Panneau source (cam�ra ou �cran) -->
+          <!-- Panneau source (caméra ou écran) -->
           <div class="vision-panel">
             <div class="vision-panel-hdr">
               <span class="live-dot" id="vaLiveDot"></span>
-              <span id="vaSourceLabel">CAM�RA LIVE</span>
-              <!-- Tabs Cam�ra / �cran int�gr�s dans le header -->
+              <span id="vaSourceLabel">CAMÉRA LIVE</span>
+              <!-- Tabs Caméra / Écran intégrés dans le header -->
               <div class="vision-src-tabs">
-                <button class="vision-src-tab active" id="vaTabCam" onclick="vaSwitchSource('cam')">?? Cam�ra</button>
-                <button class="vision-src-tab" id="vaTabScreen" onclick="vaSwitchSource('screen')">?? �cran</button>
+                <button class="vision-src-tab active" id="vaTabCam" onclick="vaSwitchSource('cam')">📷 Caméra</button>
+                <button class="vision-src-tab" id="vaTabScreen" onclick="vaSwitchSource('screen')">🖥 Écran</button>
               </div>
             </div>
-            <!-- Source cam�ra -->
+            <!-- Source caméra -->
             <div id="vaCamSource" style="flex:1;display:flex;flex-direction:column;min-height:0;">
               <div class="vision-video-wrap">
                 <video id="vaVideo" autoplay playsinline muted style="display:none;"></video>
                 <div id="vaVideoPlaceholder" class="vision-video-placeholder">
-                  ??<br><strong>Aucune cam�ra active</strong><br>Choisissez une cam�ra et cliquez ? D�marrer
+                  📷<br><strong>Aucune caméra active</strong><br>Choisissez une caméra et cliquez ▶ Démarrer
                 </div>
               </div>
               <div class="vision-cam-controls">
-                <select id="vaCamSelect"><option value="">Cam�ra par d�faut</option></select>
-                <button class="vision-btn green" id="vaCamBtn" onclick="visionCamToggle('va')">? D�marrer</button>
+                <select id="vaCamSelect"><option value="">Caméra par défaut</option></select>
+                <button class="vision-btn green" id="vaCamBtn" onclick="visionCamToggle('va')">▶ Démarrer</button>
               </div>
             </div>
-            <!-- Source �cran -->
+            <!-- Source écran -->
             <div id="vaScreenSource" style="display:none;flex:1;flex-direction:column;min-height:0;">
               <div class="vision-video-wrap">
                 <video id="vaScreen" autoplay playsinline muted style="display:none;"></video>
                 <div id="vaScreenPlaceholder" class="vision-video-placeholder">
-                  ???<br><strong>Partage d'�cran inactif</strong><br>Cliquez ? Partager pour commencer
+                  🖥️<br><strong>Partage d'écran inactif</strong><br>Cliquez ▶ Partager pour commencer
                 </div>
               </div>
               <div class="vision-cam-controls">
-                <button class="vision-btn green" style="flex:1;" id="vaScreenBtn" onclick="vaScreenToggle()">? Partager l'�cran</button>
+                <button class="vision-btn green" style="flex:1;" id="vaScreenBtn" onclick="vaScreenToggle()">▶ Partager l'écran</button>
               </div>
             </div>
           </div>
           <!-- Panneau chat -->
           <div class="vision-panel">
-            <div class="vision-panel-hdr">??? CHAT � ASSISTANCE UNIVERSELLE</div>
+            <div class="vision-panel-hdr">👁️ CHAT — ASSISTANCE UNIVERSELLE</div>
             <div class="vision-chat-messages" id="vaMessages">
-              <div class="vision-msg assistant">?? Bonjour ! Activez la cam�ra ou partagez votre �cran, puis posez votre question. Documents, interfaces, mat�riel � je peux tout analyser.</div>
+              <div class="vision-msg assistant">👋 Bonjour ! Activez la caméra ou partagez votre écran, puis posez votre question. Documents, interfaces, matériel — je peux tout analyser.</div>
             </div>
             <div class="vision-chat-input-row">
-              <textarea id="vaInput" placeholder="Pose ta question ou d�cris ce que tu veux analyser�" onkeydown="visionInputKey(event,'va')"></textarea>
-              <button class="vision-mic-btn" id="vaMicBtn" title='Wake word vision � cliquer pour activer, puis dites "Eva, [commande]"' onclick="visionWakeCapture('va')">
+              <textarea id="vaInput" placeholder="Pose ta question ou décris ce que tu veux analyser…" onkeydown="visionInputKey(event,'va')"></textarea>
+              <button class="vision-mic-btn" id="vaMicBtn" title='Wake word vision — cliquer pour activer, puis dites "Eva, [commande]"' onclick="visionWakeCapture('va')">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
               </button>
-              <button class="vision-btn" title="Capturer la source et analyser" onclick="visionCaptureSend('va')" style="padding:0 10px;height:40px;">??</button>
-              <button class="vision-btn" title="Envoyer le texte seul" onclick="visionSend('va')" style="padding:0 10px;height:40px;">?</button>
-              <button class="vision-btn" id="vaSkipBtn" title="Passer la voix d'EVA" onclick="visionSkipTTS()" style="padding:0 10px;height:40px;display:none;">?</button>
+              <button class="vision-btn" title="Capturer la source et analyser" onclick="visionCaptureSend('va')" style="padding:0 10px;height:40px;">📷</button>
+              <button class="vision-btn" title="Envoyer le texte seul" onclick="visionSend('va')" style="padding:0 10px;height:40px;">➤</button>
+              <button class="vision-btn" id="vaSkipBtn" title="Passer la voix d'EVA" onclick="visionSkipTTS()" style="padding:0 10px;height:40px;display:none;">⏭</button>
             </div>
           </div>
         </div>
         <!-- Historique sessions -->
         <div class="vision-history-panel">
           <div class="vision-history-hdr">
-            <span>SESSIONS SAUVEGARD�ES</span>
-            <button class="vision-btn" style="font-size:0.7em;padding:3px 10px;" onclick="visionClearSession('va')">? Nouvelle session</button>
+            <span>SESSIONS SAUVEGARDÉES</span>
+            <button class="vision-btn" style="font-size:0.7em;padding:3px 10px;" onclick="visionClearSession('va')">↺ Nouvelle session</button>
           </div>
           <div class="vision-history-list" id="vaHistory">
-            <div style="color:var(--text-dim);font-size:0.72em;padding:4px 0;align-self:center;">Aucune session enregistr�e</div>
+            <div style="color:var(--text-dim);font-size:0.72em;padding:4px 0;align-self:center;">Aucune session enregistrée</div>
           </div>
         </div>
       </div>
@@ -894,10 +894,10 @@
   </div>
 
 
-    <!-- -- VIEW: CLOUD WORKS -- -->
+    <!-- ══ VIEW: CLOUD WORKS ══ -->
     <div class="view" id="viewCloudworks">
 
-      <!-- Header d�di� (remplace le chat-header masqu�) -->
+      <!-- Header dédié (remplace le chat-header masqué) -->
       <div class="cw-page-header">
         <div class="cw-page-header-left">
           <button class="hamburger" id="cwHamburgerBtn" onclick="toggleSidebar()" title="Menu" style="margin-right:4px;">
@@ -912,9 +912,9 @@
           <div class="cw-page-title-group">
             <div style="display:flex;align-items:center;gap:10px;">
               <div class="cw-page-title">CLOUD WORKS</div>
-              <div class="cw-page-badge">? EXP</div>
+              <div class="cw-page-badge">⚗ EXP</div>
             </div>
-            <div class="cw-page-sub">Contr�le � distance de vos appareils en temps r�el</div>
+            <div class="cw-page-sub">Contrôle à distance de vos appareils en temps réel</div>
           </div>
         </div>
 
@@ -927,81 +927,81 @@
           <!-- Stats -->
           <div class="cw-stats-bar">
             <div class="cw-stat-card">
-              <div class="cw-stat-icon total">???</div>
+              <div class="cw-stat-icon total">🖥️</div>
               <div>
-                <div class="cw-stat-val" id="cwStatTotal">�</div>
+                <div class="cw-stat-val" id="cwStatTotal">—</div>
                 <div class="cw-stat-lbl">Appareils</div>
               </div>
             </div>
             <div class="cw-stat-card">
-              <div class="cw-stat-icon online">??</div>
+              <div class="cw-stat-icon online">📡</div>
               <div>
-                <div class="cw-stat-val online" id="cwStatOnline">�</div>
+                <div class="cw-stat-val online" id="cwStatOnline">—</div>
                 <div class="cw-stat-lbl">En ligne</div>
               </div>
             </div>
             <div class="cw-stat-card">
-              <div class="cw-stat-icon offline">??</div>
+              <div class="cw-stat-icon offline">💤</div>
               <div>
-                <div class="cw-stat-val offline" id="cwStatOffline">�</div>
+                <div class="cw-stat-val offline" id="cwStatOffline">—</div>
                 <div class="cw-stat-lbl">Hors ligne</div>
               </div>
             </div>
           </div>
 
           <!-- Liste appareils -->
-          <div class="cw-section-title">Appareils connect�s</div>
+          <div class="cw-section-title">Appareils connectés</div>
           <div class="cw-list" id="cwDeviceList">
             <div class="cw-empty">
-              <div class="cw-empty-icon">???</div>
-              <div class="cw-empty-title">AUCUN APPAREIL CONNECT�</div>
+              <div class="cw-empty-icon">🖥️</div>
+              <div class="cw-empty-title">AUCUN APPAREIL CONNECTÉ</div>
               <span>Installez E.V.A Desktop sur votre PC pour commencer</span>
             </div>
           </div>
 
-          <!-- Journal d'activit� -->
-          <div class="cw-section-title" style="margin-top:10px;">Activit� r�cente</div>
+          <!-- Journal d'activité -->
+          <div class="cw-section-title" style="margin-top:10px;">Activité récente</div>
           <div class="cw-activity-box">
             <div class="cw-log-list" id="cwActivityLog">
-              <div class="cw-log-empty">Aucune commande r�cente</div>
+              <div class="cw-log-empty">Aucune commande récente</div>
             </div>
           </div>
 
           <!-- Guide de connexion -->
           <div class="cw-guide-v2" style="margin-top:28px;">
             <div class="cw-guide-header-v2">
-              <div class="cw-guide-badge">? EXP�RIMENTAL</div>
+              <div class="cw-guide-badge">⚗ EXPÉRIMENTAL</div>
               <div class="cw-guide-title-v2">CONNECTER UN APPAREIL</div>
-              <div class="cw-guide-sub-v2">Contr�lez n'importe quel PC depuis E.V.A en 3 �tapes simples</div>
+              <div class="cw-guide-sub-v2">Contrôlez n'importe quel PC depuis E.V.A en 3 étapes simples</div>
             </div>
             <div class="cw-steps-grid">
               <div class="cw-step-v2">
                 <div class="cw-step-num">1</div>
-                <div class="cw-step-icon">??</div>
-                <div class="cw-step-label">T�l�chargez l'agent</div>
+                <div class="cw-step-icon">⬇️</div>
+                <div class="cw-step-label">Téléchargez l'agent</div>
                 <div class="cw-step-desc">Installez E.V.A Desktop sur Windows, macOS ou Linux</div>
               </div>
               <div class="cw-step-v2">
                 <div class="cw-step-num">2</div>
-                <div class="cw-step-icon">??</div>
+                <div class="cw-step-icon">🔑</div>
                 <div class="cw-step-label">Connectez votre compte</div>
-                <div class="cw-step-desc">M�me identifiant Google ou Email que sur cette interface</div>
+                <div class="cw-step-desc">Même identifiant Google ou Email que sur cette interface</div>
               </div>
               <div class="cw-step-v2">
                 <div class="cw-step-num">3</div>
-                <div class="cw-step-icon">?</div>
-                <div class="cw-step-label">Votre PC appara�t</div>
-                <div class="cw-step-desc">Commandes � distance disponibles instantan�ment</div>
+                <div class="cw-step-icon">✅</div>
+                <div class="cw-step-label">Votre PC apparaît</div>
+                <div class="cw-step-desc">Commandes à distance disponibles instantanément</div>
               </div>
             </div>
             <div class="cw-actions-row">
               <a href="https://github.com/urnova/eva/releases/latest" target="_blank" class="cw-dl-btn-v2" style="text-decoration:none;">
               <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--cyan)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               <div style="text-align:left;flex:1;">
-                <div style="font-weight:600;color:var(--text);font-size:0.95em;">T�l�charger E.V.A Desktop</div>
-                <div style="font-size:0.75em;color:var(--text-muted);margin-top:2px;">Windows (Derni�re version)</div>
+                <div style="font-weight:600;color:var(--text);font-size:0.95em;">Télécharger E.V.A Desktop</div>
+                <div style="font-size:0.75em;color:var(--text-muted);margin-top:2px;">Windows (Dernière version)</div>
               </div>
-              <span class="cw-soon-badge" style="background:rgba(74, 222, 128, 0.15);color:#4ade80;border:1px solid rgba(74, 222, 128, 0.3);">T�l�charger</span>
+              <span class="cw-soon-badge" style="background:rgba(74, 222, 128, 0.15);color:#4ade80;border:1px solid rgba(74, 222, 128, 0.3);">Télécharger</span>
             </a>
             </div>
           </div>
@@ -1012,11 +1012,11 @@
 
   </div>
 
-  <!-- -- EVA PANEL -- -->
+  <!-- ══ EVA PANEL ══ -->
   <div class="eva-panel" id="evaPanel">
     <div class="eva-panel-header"></div>
     <div class="eva-panel-char" id="evaCharContainer">
-      <!-- Contenu inject� dynamiquement par EvaCharacter.create() -->
+      <!-- Contenu injecté dynamiquement par EvaCharacter.create() -->
       <div class="eva-ground-glow"></div>
     </div>
     <div class="eva-panel-info">
@@ -1024,19 +1024,19 @@
         <div class="provider-dot"></div>
         <span id="providerName">Puter (Gratuit)</span>
       </div>
-      <!-- -- Raccourcis rapides EVA -- -->
+      <!-- ── Raccourcis rapides EVA ── -->
       <div class="eva-quick-strip" id="evaQuickStrip">
-        <button class="quick-strip-btn" onclick="sendQuick('Cr�e une note rapide')">
+        <button class="quick-strip-btn" onclick="sendQuick('Crée une note rapide')">
           <svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>Note
         </button>
-        <button class="quick-strip-btn" onclick="sendQuick('Cr�e une alarme pour demain matin 7h')">
+        <button class="quick-strip-btn" onclick="sendQuick('Crée une alarme pour demain matin 7h')">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="m4.5 4.5 1.5 1.5M19.5 4.5 18 6"/></svg>Alarme
         </button>
-        <button class="quick-strip-btn" onclick="sendQuick('Ajoute un �v�nement � mon agenda')">
+        <button class="quick-strip-btn" onclick="sendQuick('Ajoute un événement à mon agenda')">
           <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Agenda
         </button>
-        <button class="quick-strip-btn" onclick="sendQuick('R�sume ce que nous avons dit')">
-          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>R�sum�
+        <button class="quick-strip-btn" onclick="sendQuick('Résume ce que nous avons dit')">
+          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Résumé
         </button>
       </div>
     </div>
@@ -1044,12 +1044,12 @@
 
 </div><!-- /.app-main -->
 
-<!-- ---------------- SETTINGS MODAL ---------------- -->
+<!-- ════════════════ SETTINGS MODAL ════════════════ -->
 <div class="modal-overlay" id="settingsModal">
   <div class="modal-box">
     <div class="modal-header">
-      <span class="modal-title">PARAM�TRES</span>
-      <button class="modal-close" id="closeSettingsBtn">?</button>
+      <span class="modal-title">PARAMÈTRES</span>
+      <button class="modal-close" id="closeSettingsBtn">✕</button>
     </div>
     <div class="modal-body">
       <div class="modal-sidebar">
@@ -1087,11 +1087,11 @@
         </button>
         <button class="settings-nav" data-section="dev">
           <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-          Cl�s Dev
+          Clés Dev
         </button>
         <button class="settings-nav" data-section="experimental">
           <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          Exp�rimental
+          Expérimental
         </button>
         <button class="settings-nav" data-section="tutorial">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -1106,44 +1106,44 @@
 <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" multiple style="display:none">
 <div id="evaToast"></div>
 
-<!-- ---------------- REPORT MODAL ---------------- -->
+<!-- ════════════════ REPORT MODAL ════════════════ -->
 <div class="report-overlay" id="reportOverlay">
   <div class="report-box" id="reportBox">
-    <div class="report-box-title">?? SIGNALER</div>
-    <div class="report-box-sub">Signalez un bug, une id�e ou tout autre retour. Chaque rapport est pr�cieux.</div>
+    <div class="report-box-title">🚩 SIGNALER</div>
+    <div class="report-box-sub">Signalez un bug, une idée ou tout autre retour. Chaque rapport est précieux.</div>
 
     <!-- Type de rapport -->
     <div style="font-size:0.71em;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Type de rapport</div>
     <div class="report-type-grid">
       <div class="rtype-btn sel" data-rtype="bug-conversation">
-        <span class="rtype-icon">??</span>Bug dans la conversation
+        <span class="rtype-icon">🐛</span>Bug dans la conversation
       </div>
       <div class="rtype-btn" data-rtype="bug-general">
-        <span class="rtype-icon">??</span>Bug g�n�ral
+        <span class="rtype-icon">🔧</span>Bug général
       </div>
       <div class="rtype-btn" data-rtype="feature">
-        <span class="rtype-icon">??</span>Suggestion / Feature
+        <span class="rtype-icon">💡</span>Suggestion / Feature
       </div>
       <div class="rtype-btn" data-rtype="autre">
-        <span class="rtype-icon">??</span>Autre
+        <span class="rtype-icon">💬</span>Autre
       </div>
     </div>
 
-    <!-- Priorit� (visible pour bugs) -->
+    <!-- Priorité (visible pour bugs) -->
     <div id="rprioSection" style="margin-bottom:14px;">
-      <div style="font-size:0.71em;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Priorit�</div>
+      <div style="font-size:0.71em;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Priorité</div>
       <div class="rprio-row">
-        <button class="rprio-btn" data-rprio="low">?? Basse</button>
-        <button class="rprio-btn sm" data-rprio="medium">?? Normale</button>
-        <button class="rprio-btn" data-rprio="high">?? Haute</button>
-        <button class="rprio-btn" data-rprio="critical">?? Critique</button>
+        <button class="rprio-btn" data-rprio="low">🟢 Basse</button>
+        <button class="rprio-btn sm" data-rprio="medium">🟡 Normale</button>
+        <button class="rprio-btn" data-rprio="high">🔴 Haute</button>
+        <button class="rprio-btn" data-rprio="critical">🟣 Critique</button>
       </div>
     </div>
 
     <!-- Description -->
     <div class="rfield">
       <label class="rlabel">Description *</label>
-      <textarea class="rtextarea" id="reportDesc" placeholder="D�crivez le probl�me ou l'id�e en d�tail..."></textarea>
+      <textarea class="rtextarea" id="reportDesc" placeholder="Décrivez le problème ou l'idée en détail..."></textarea>
     </div>
 
     <!-- Extrait de conversation (pour bug-conversation uniquement) -->
@@ -1158,30 +1158,30 @@
     </div>
   </div>
 </div>
-<!-- ---- ALARM OVERLAY ---- -->
+<!-- ════ ALARM OVERLAY ════ -->
 <div class="alarm-overlay" id="alarmOverlay">
   <div class="alarm-box">
-    <div class="alarm-box-icon">?</div>
+    <div class="alarm-box-icon">⏰</div>
     <div class="alarm-box-label" id="alarmOverlayLabel">Alarme</div>
     <div class="alarm-box-time" id="alarmOverlayTime"></div>
     <div class="alarm-box-btns">
-      <button class="alarm-btn-stop" onclick="alarmStop()">? ARR�TER</button>
-      <button class="alarm-btn-snooze" onclick="alarmSnooze()">?? +5 MIN</button>
+      <button class="alarm-btn-stop" onclick="alarmStop()">⛔ ARRÊTER</button>
+      <button class="alarm-btn-snooze" onclick="alarmSnooze()">💤 +5 MIN</button>
     </div>
   </div>
 </div>
 
-<!-- ---------------- QWEN DOWNLOAD MODAL ---------------- -->
+<!-- ════════════════ QWEN DOWNLOAD MODAL ════════════════ -->
 <div class="qwen-dl-overlay" id="qwenDlOverlay">
   <div class="qwen-dl-box">
-    <div class="qwen-dl-icon">??</div>
-    <div class="qwen-dl-title" id="qwenDlTitle">CHARGEMENT DU MOD�LE IA</div>
-    <div class="qwen-dl-sub" id="qwenDlSub">T�l�chargement en cours... Veuillez patienter quelques minutes.<br>Le mod�le sera mis en cache pour les prochaines utilisations.</div>
+    <div class="qwen-dl-icon">⬇️</div>
+    <div class="qwen-dl-title" id="qwenDlTitle">CHARGEMENT DU MODÈLE IA</div>
+    <div class="qwen-dl-sub" id="qwenDlSub">Téléchargement en cours... Veuillez patienter quelques minutes.<br>Le modèle sera mis en cache pour les prochaines utilisations.</div>
     <div class="qwen-dl-bar-wrap">
       <div class="qwen-dl-bar" id="qwenDlBar"></div>
     </div>
     <div class="qwen-dl-pct" id="qwenDlPct">0%</div>
-    <div class="qwen-dl-hint" id="qwenDlHint">Le mod�le fonctionne enti�rement sur votre appareil � aucune donn�e n'est envoy�e sur internet.</div>
+    <div class="qwen-dl-hint" id="qwenDlHint">Le modèle fonctionne entièrement sur votre appareil — aucune donnée n'est envoyée sur internet.</div>
   </div>
 </div>
 
@@ -1210,12 +1210,12 @@
     <div class="tuto-footer">
       <button class="tuto-skip" onclick="tutoSkip()">Passer le tutoriel</button>
       <div class="tuto-dots" id="tutoDots"></div>
-      <button class="tuto-next" id="tutoNextBtn" onclick="tutoNext()">Suivant ?</button>
+      <button class="tuto-next" id="tutoNextBtn" onclick="tutoNext()">Suivant →</button>
     </div>
   </div>
 </div>
 
-<!-- ---------------- SCRIPTS ---------------- -->
+<!-- ════════════════ SCRIPTS ════════════════ -->
 <script src="/js/core/firebase-config.js"></script>
 <script src="/js/features/cloudworks.js"></script>
 <script src="/js/ai/providers.js"></script>
@@ -1246,10 +1246,10 @@
 
 <!-- File Viewer Overlay -->
 <div id="fileViewerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(5px);z-index:999999;align-items:center;justify-content:center;flex-direction:column;opacity:0;transition:opacity 0.2s;">
-  <div style="position:absolute;top:20px;right:20px;display:flex;gap:15px;z-index:9999999;pointer-events:auto;">
-    <button id="fileViewerDownloadBtn" onclick="downloadCurrentFile()" style="display:none;background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:8px;padding:8px 15px;cursor:pointer;align-items:center;justify-content:center;font-size:14px;font-family:'Space Mono',monospace;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">T�l�charger</button>
+  <div style="position:absolute;top:20px;right:20px;display:flex;gap:15px;z-index:10;">
+    <button id="fileViewerDownloadBtn" onclick="downloadCurrentFile()" style="display:none;background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:8px;padding:8px 15px;cursor:pointer;align-items:center;justify-content:center;font-size:14px;font-family:'Space Mono',monospace;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Télécharger</button>
     <button id="fileViewerPrintBtn" onclick="printCurrentFile()" style="display:none;background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:8px;padding:8px 15px;cursor:pointer;align-items:center;justify-content:center;font-size:14px;font-family:'Space Mono',monospace;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Imprimer</button>
-    <button onclick="closeFileViewer()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:50%;width:40px;height:40px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">?</button>
+    <button onclick="closeFileViewer()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:50%;width:40px;height:40px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">✖</button>
   </div>
   <div id="fileViewerHeader" style="position:absolute;top:25px;left:25px;color:#fff;font-family:'Space Mono',monospace;font-size:16px;background:rgba(0,0,0,0.5);padding:8px 15px;border-radius:8px;"></div>
   
@@ -1261,5 +1261,4 @@
 
 </body>
 </html>
-
 
