@@ -665,6 +665,60 @@ footer{
 </footer>
 
 <script src="/js/core/firebase-config.js"></script>
+<script>
+(function() {
+  function _buildNavUser(user, photoURL) {
+    var navUser = document.getElementById('navUser');
+    if (!navUser) return;
+    var initial = (user.displayName || user.email || 'U')[0].toUpperCase();
+    var avatarContent = photoURL
+      ? '<img src="'+photoURL+'" alt="Avatar" onerror="this.style.display=\'none\';this.parentElement.textContent=\''+initial+'\'">'
+      : initial;
+    navUser.innerHTML =
+      '<div class="nav-profile" id="navProfile">' +
+        '<div class="nav-profile-avatar" id="navProfileAvatar" onclick="document.getElementById(\'navProfileMenu\').classList.toggle(\'open\')">' + avatarContent + '</div>' +
+        '<div class="nav-profile-menu" id="navProfileMenu">' +
+          '<div class="nav-profile-info"><div style="font-weight:700;font-size:0.85em">'+(user.displayName||user.email)+'</div><div style="font-size:0.72em;color:rgba(0,212,255,0.6)">'+user.email+'</div></div>' +
+          '<div style="height:1px;background:rgba(0,212,255,0.1);margin:4px 0"></div>' +
+          '<a href="/chat" target="_top" class="nav-profile-item"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Accéder à EVA</a>' +
+          '<a href="/chat/settings/profile" target="_top" class="nav-profile-item"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>Paramètres</a>' +
+          '<div style="height:1px;background:rgba(0,212,255,0.1);margin:4px 0"></div>' +
+          '<button class="nav-profile-item danger" onclick="auth.signOut().then(function(){window.location.reload();})"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Déconnexion</button>' +
+        '</div>' +
+      '</div>';
+    document.addEventListener('click', function(e) {
+      var prof = document.getElementById('navProfile');
+      if (prof && !prof.contains(e.target)) {
+        var m = document.getElementById('navProfileMenu');
+        if (m) m.classList.remove('open');
+      }
+    });
+  }
+
+  auth.onAuthStateChanged(function(user) {
+    var navUser = document.getElementById('navUser');
+    if (!navUser) return;
+    if (user) {
+      _buildNavUser(user, user.photoURL || null);
+      if (window.db) {
+        window.db.collection('users').doc(user.uid).get().then(function(doc) {
+          if (doc.exists) {
+            var fp = doc.data().photoURL || null;
+            if (fp && fp !== user.photoURL) _buildNavUser(user, fp);
+          }
+        }).catch(function(){});
+      }
+      // Update CTA buttons to go directly to chat when logged in
+      var heroBtn = document.getElementById('heroMainBtn');
+      if (heroBtn) { heroBtn.href = '/chat'; heroBtn.target = '_top'; }
+      var ctaBtn = document.getElementById('ctaMainBtn');
+      if (ctaBtn) { ctaBtn.href = '/chat'; ctaBtn.target = '_top'; }
+    } else {
+      navUser.innerHTML = '<a href="/login" target="_top" class="nav-user-btn">Connexion</a><a href="/login" target="_top" class="nav-cta">Essayer gratuitement</a>';
+    }
+  });
+})();
+</script>
 
 </body>
 </html>

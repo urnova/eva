@@ -321,29 +321,29 @@ app.whenReady().then(async () => {
   })
 
   autoUpdater.on('checking-for-update', () => {
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'VÃ©rification des mises Ã  jour...')
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Vérification des mises à jour...')
   })
 
   autoUpdater.on('update-available', (info) => {
     console.log('[AutoUpdater] Mise Ã  jour disponible:', info)
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise Ã  jour trouvÃ©e. TÃ©lÃ©chargement...')
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise à jour trouvée. Téléchargement...')
     if (mainWindow) mainWindow.webContents.send('updater:available', info)
   })
   
   autoUpdater.on('update-not-available', (info) => {
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'SystÃ¨me Ã  jour. DÃ©marrage...')
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Système à jour. Démarrage...')
     setTimeout(launchMainApp, 1000)
   })
 
   autoUpdater.on('error', (err) => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('updater:error', err ? err.toString() : 'Unknown error');
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Erreur rÃ©seau. DÃ©marrage...')
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Erreur réseau. Démarrage...')
     setTimeout(launchMainApp, 1000)
   })
   
   autoUpdater.on('update-downloaded', (info) => {
     console.log('[AutoUpdater] Mise Ã  jour tÃ©lÃ©chargÃ©e:', info)
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise Ã  jour prÃªte. RedÃ©marrage...')
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise à jour prête. Redémarrage...')
     if (mainWindow) mainWindow.webContents.send('updater:downloaded', info)
     
     // Installer l'update immÃ©diatement et redÃ©marrer (silencieusement)

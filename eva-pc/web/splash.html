@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>E.V.A - Chargement</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+  <!-- Firebase SDK pour vérifier l'état d'auth avant navigation -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="/js/core/firebase-config.js"></script>
   <style>
     :root{
       --cyan:#00d4ff;--cyan-glow:rgba(0,212,255,0.28);
@@ -210,7 +214,29 @@
       }
       if (window.eva.onSplashDone) {
         window.eva.onSplashDone(function() {
-          window.location.href = 'chat.html';
+          /* ─── Auth-aware routing ─── */
+          function _navigateAfterAuth() {
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+              var authTimeout = setTimeout(function() {
+                /* Firebase n'a pas répondu en 4s → aller sur login par sécurité */
+                window.location.href = 'app-login.html';
+              }, 4000);
+              firebase.auth().onAuthStateChanged(function(user) {
+                clearTimeout(authTimeout);
+                if (user) {
+                  document.getElementById('status-text').innerText = 'Bienvenue ' + (user.displayName || '') + '…';
+                  setTimeout(function() { window.location.href = 'chat.html'; }, 400);
+                } else {
+                  document.getElementById('status-text').innerText = 'Connexion requise…';
+                  setTimeout(function() { window.location.href = 'app-login.html'; }, 400);
+                }
+              });
+            } else {
+              /* Firebase non disponible (mode offline/dev) → chat par défaut */
+              window.location.href = 'chat.html';
+            }
+          }
+          _navigateAfterAuth();
         });
       }
 
