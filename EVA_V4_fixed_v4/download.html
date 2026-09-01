@@ -353,11 +353,11 @@ footer{
         </p>
       </div>
       </div>
-      <a href="https://github.com/urnova/eva/releases/latest" target="_blank" class="dl-btn" style="cursor: pointer; background: rgba(0,212,255,0.15); border-color: rgba(0,212,255,0.4);">
+      <a id="dl-win-btn" href="https://github.com/urnova/eva/releases/latest" class="dl-btn" style="cursor: pointer; background: rgba(0,212,255,0.15); border-color: rgba(0,212,255,0.4);">
         <div class="dl-btn-icon">🪟</div>
         <div class="dl-btn-info">
           <div class="dl-btn-name">Télécharger pour Windows</div>
-          <div class="dl-btn-format">Windows 10/11 — fichier .exe</div>
+          <div class="dl-btn-format">Windows 10/11 — .exe &nbsp;<span id="dl-version" style="opacity:0.6;"></span></div>
         </div>
         <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--cyan)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       </a>
@@ -450,17 +450,42 @@ auth.onAuthStateChanged(function(user) {
 });
 </script>
 <script>
-fetch('https://api.github.com/repos/urnova/eva/releases/latest')
-  .then(response => response.json())
-  .then(data => {
-    const vTag = data.tag_name || data.name;
-    const dlEl = document.getElementById('dl-version');
-    if (dlEl && vTag) dlEl.textContent = '(' + vTag + ')';
-    if (dlEl && vTag && dlEl.closest('a')) {
-        dlEl.closest('a').href = 'https://github.com/urnova/eva/releases/download/' + vTag + '/E.V.A-Setup-' + vTag.replace('v', '') + '.exe';
-    }
-  })
-  .catch(console.error);
+(function() {
+  fetch('https://api.github.com/repos/urnova/eva/releases/latest')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var vTag = data.tag_name || data.name;  // e.g. "v5.4.31"
+      var vNum = vTag ? vTag.replace('v', '') : '';  // e.g. "5.4.31"
+
+      // Update version label in the button
+      var vSpan = document.getElementById('dl-version');
+      if (vSpan && vNum) vSpan.textContent = 'v' + vNum;
+
+      // Find direct .exe download URL from assets
+      var exeUrl = null;
+      if (data.assets && data.assets.length) {
+        for (var i = 0; i < data.assets.length; i++) {
+          var a = data.assets[i];
+          if (a.name && a.name.endsWith('.exe') && a.browser_download_url) {
+            exeUrl = a.browser_download_url;
+            break;
+          }
+        }
+      }
+      // Fallback: build URL from tag name if no asset found
+      if (!exeUrl && vTag) {
+        exeUrl = 'https://github.com/urnova/eva/releases/download/' + vTag + '/E.V.A-Setup-' + vNum + '.exe';
+      }
+
+      // Update the download button
+      var btn = document.getElementById('dl-win-btn');
+      if (btn && exeUrl) {
+        btn.href = exeUrl;
+        btn.removeAttribute('target');  // no new tab — just download
+      }
+    })
+    .catch(function() {/* silently ignore if API fails */});
+})();
 </script>
 </body>
 </html>
