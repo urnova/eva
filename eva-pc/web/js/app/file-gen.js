@@ -464,11 +464,14 @@ async function _evaGeneratePdf(action) {
       </div>
     `;
 
-    var container = document.createElement('div');
-    container.innerHTML = fullHtml;
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    document.body.appendChild(container);
+    // Use string directly for html2pdf
+    var container = fullHtml;
+    // But for pptx export we need DOM to extract standaloneHtml?
+    // Actually standaloneHtml uses css and html strings directly.
+    var tmpContainerForPptx = document.createElement('div');
+    tmpContainerForPptx.innerHTML = fullHtml;
+    // We only need it appended if we needed it visually. We don't append it for pdf rendering.
+    
     
     if (action.type === 'marp_pptx' || action.type === 'pptx') {
       var standaloneHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${filename}</title><style>${css} body { margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; background: #333; } section { margin: 20px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }</style></head><body><div class="marpit">${html}</div></body></html>`;
@@ -476,7 +479,7 @@ async function _evaGeneratePdf(action) {
       var blob = new Blob([standaloneHtml], { type: 'text/html' });
       var reader = new FileReader();
       reader.onloadend = function() {
-        document.body.removeChild(container);
+        // cleanup removed
         var realFilename = filename.replace('.pptx', '.html');
         _evaCardReady(card, 'html', realFilename, reader.result);
         setEvaStatus('Prêt', 'idle');
@@ -493,8 +496,7 @@ async function _evaGeneratePdf(action) {
       jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
     };
 
-    html2pdf().set(opt).from(container).output('datauristring').then(function(pdfAsString) {
-      document.body.removeChild(container);
+    html2pdf().set(opt).from(fullHtml).output('datauristring').then(function(pdfAsString) {
       _evaCardReady(card, 'pdf', filename, pdfAsString);
       setEvaStatus('Prêt', 'idle');
     }).catch(function(err) {
