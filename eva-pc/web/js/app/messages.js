@@ -547,6 +547,21 @@ async function handleSend() {
                formatGraphToText(S.evaMemory);
   }
 
+  if (S.cwDevices && S.cwDevices.length > 0) {
+    userCtx += '\n\nÉTAT CLOUDWORKS (Vos Appareils Connectés) :\n';
+    S.cwDevices.forEach(function(d) {
+        userCtx += '- ' + (d.deviceName || d.id) + ' (' + (d.online ? 'En Ligne' : 'Hors Ligne') + ')\n';
+    });
+    userCtx += 'Si l\'utilisateur te demande d\'exécuter une tâche sur son PC, tu utiliseras l\'outil Tâche PC [ACTION:{"type":"agentic_task","prompt":"..."}]. S\'il y a des PC en ligne, la commande y sera envoyée.\n';
+  }
+
+  if (window.eva) {
+      userCtx += '\nNOTE IMPORTANTE : Tu tournes actuellement SUR l\'application PC locale E.V.A Desktop (pas sur le web). Tu AS un accès direct à ce système via tes outils.\n';
+  } else {
+      userCtx += '\nNOTE IMPORTANTE : Tu tournes actuellement sur la version Web / Mobile. Tu n\'es pas sur le PC localement. Pour agir sur le PC, tu dois impérativement utiliser l\'outil Tâche PC vers un noeud CloudWorks En Ligne.\n';
+  }
+
+
   // Injection date/heure courante — EVA connaît ainsi l'heure pour créer alarmes/rappels
   var _now = new Date();
   var _dateStr = _now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
@@ -578,7 +593,7 @@ async function handleSend() {
         '- PowerPoint (Marp) \u2192 [ACTION:{"type":"marp_pptx","filename":"NOM_PRESENTATION.pptx","content":"---\nmarp: true\ntheme: default\n---\n\n# Titre\n\nContenu de la slide"}]\n' +
         '- CSV \u2192 [ACTION:{"type":"csv","filename":"data.csv","headers":["Col1"],"rows":[["val"]]}]\n' +
         '- Fichier texte \u2192 [ACTION:{"type":"txt","filename":"fichier.txt","content":"Contenu"}]\n' +
-        '- RÈGLE PDF/PPTX : Remplace NOM_DOCUMENT par un nom de fichier pertinent (ex: synthese_reunion.pdf). Tu dois IMPERATIVEMENT utiliser le format Markdown pur. AUCUN HTML BRUT n'est autorise.\n' +
+        '- RÈGLE PDF/PPTX : Remplace NOM_DOCUMENT par un nom de fichier pertinent (ex: synthese_reunion.pdf). Tu dois IMPERATIVEMENT utiliser le format Markdown pur. AUCUN HTML BRUT n\'est autorise.\n' +
           '- PDF (Marp) \u2192 [ACTION:{"type":"marp_pdf","filename":"NOM_DOCUMENT.pdf","content":"---\nmarp: true\ntheme: default\n---\n\n# Titre\n\nContenu de la slide"}]\n' +
       '- Graphique \u2192 bloc ``json\n{"type":"bar","data":{"labels":["A","B"],"datasets":[{"label":"Ventes","data":[10,20],"backgroundColor":["#5b77f7","#06b6d4"]}]}}\n``\n' +
       'Pour toute génération de fichier : UNE phrase courte + le bloc ACTION. Rien d\'autre après.\n' +

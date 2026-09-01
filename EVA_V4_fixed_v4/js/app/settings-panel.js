@@ -2432,14 +2432,7 @@ window.loadSessions = function() {
   });
 };
 
-window.revokeSession = function(sid) {
-  if(confirm('Voulez-vous déconnecter cet appareil ?')) {
-    db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).update({ revoke: true }).catch(function(e){
-      console.error(e);
-      alert('Erreur: ' + e.message);
-    });
-  }
-};
+;
 
 
 /* --- SESSIONS ACTIVES --- */
@@ -2483,16 +2476,8 @@ function loadActiveSessions() {
   });
 }
 
-function revokeSession(sid) {
-  if (!S.user) return;
-  db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).delete().then(function() {
-    loadActiveSessions();
-    toast('Session déconnectée avec succès', 'success');
-  }).catch(function(e) {
-    toast('Erreur: ' + e.message, 'error');
-  });
-}
-window.revokeSession = revokeSession;
+
+
 
 
 
@@ -2564,12 +2549,7 @@ window.loadSessions = function() {
     });
 };
 
-window.revokeSession = function(sid) {
-    if(!confirm('R�voquer cette session ? Elle sera d�connect�e imm�diatement.')) return;
-    db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).update({revoke: true}).then(function() {
-        window.loadSessions();
-    }).catch(function(e){ alert('Erreur: ' + e.message); });
-};
+;
 
 window.loadSessions = function() {
     var container = document.getElementById('accountSessionsList');
@@ -2604,10 +2584,23 @@ window.loadSessions = function() {
     });
 };
 
-window.revokeSession = function(sid) {
+;
+
+
+
+window.revokeSession = async function(sid) {
     if(!confirm('Révoquer cette session ? Elle sera déconnectée immédiatement.')) return;
-    db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).update({revoke: true}).then(function() {
-        window.loadSessions();
-    }).catch(function(e){ alert('Erreur: ' + e.message); });
+    try {
+        await window.db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).update({revoke: true});
+        const devicesSnap = await window.db.collection('cloudworks').doc(S.user.uid).collection('devices').where('sessionId', '==', sid).get();
+        const batch = window.db.batch();
+        devicesSnap.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        if (typeof window.loadSessions === 'function') window.loadSessions();
+        if (typeof loadActiveSessions === 'function') loadActiveSessions();
+        if(window.toast) window.toast('Session et appareil révoqués.', 'success');
+    } catch(e) {
+        if(window.toast) window.toast('Erreur: ' + e.message, 'error');
+    }
 };
 
