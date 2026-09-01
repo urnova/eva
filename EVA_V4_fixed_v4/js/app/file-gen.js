@@ -478,7 +478,7 @@ async function _evaGeneratePdf(action) {
       reader.onloadend = function() {
         document.body.removeChild(container);
         var realFilename = filename.replace('.pptx', '.html');
-        _evaFinalizeCard(card, 'code', reader.result, realFilename);
+        _evaCardReady(card, 'html', realFilename, reader.result);
         setEvaStatus('Prêt', 'idle');
       };
       reader.readAsDataURL(blob);
@@ -495,15 +495,15 @@ async function _evaGeneratePdf(action) {
 
     html2pdf().set(opt).from(container).output('datauristring').then(function(pdfAsString) {
       document.body.removeChild(container);
-      _evaFinalizeCard(card, 'pdf', pdfAsString, filename);
+      _evaCardReady(card, 'pdf', filename, pdfAsString);
       setEvaStatus('Prêt', 'idle');
     }).catch(function(err) {
       if(container.parentNode) document.body.removeChild(container);
-      _evaFinalizeCard(card, 'pdf', null, filename, err.toString());
+      if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;"> Erreur : ' + err.toString() + '</span>';
       setEvaStatus('Prêt', 'idle');
     });
   } catch (err) {
-    _evaFinalizeCard(card, 'pdf', null, filename, err.toString());
+    if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;"> Erreur : ' + err.toString() + '</span>';
     setEvaStatus('Prêt', 'idle');
   }
 }
