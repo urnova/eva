@@ -361,6 +361,24 @@ app.whenReady().then(async () => {
   createOverlayWindow()
   createTray()
 
+  // ─── Permissions micro/caméra : accorder automatiquement ───
+  // Sans ça, getUserMedia() et webkitSpeechRecognition sont refusés silencieusement
+  const { session } = require('electron');
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    const allowed = ['media', 'microphone', 'audioCapture', 'camera', 'geolocation', 'notifications'];
+    if (allowed.indexOf(permission) !== -1) {
+      console.log('[Electron] Permission accordée:', permission);
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+  // Electron ≥ 27 : setPermissionCheckHandler (évite les blocages CSP)
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+    const allowed = ['media', 'microphone', 'audioCapture'];
+    return allowed.indexOf(permission) !== -1;
+  });
+
   // ─── Auto-updater (Dépôt Privé) ───
   if (isDev) { mainWindow?.webContents.once('did-finish-load', () => { setTimeout(launchMainApp, 1500); }); return; }
   const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg"
