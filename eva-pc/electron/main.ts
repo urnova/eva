@@ -364,7 +364,7 @@ app.whenReady().then(async () => {
   // ─── Permissions micro/caméra : accorder automatiquement ───
   // Sans ça, getUserMedia() et webkitSpeechRecognition sont refusés silencieusement
   const { session } = require('electron');
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+  session.defaultSession.setPermissionRequestHandler((_wc: any, permission: string, callback: (granted: boolean) => void) => {
     const allowed = ['media', 'microphone', 'audioCapture', 'camera', 'geolocation', 'notifications'];
     if (allowed.indexOf(permission) !== -1) {
       console.log('[Electron] Permission accordée:', permission);
@@ -374,7 +374,7 @@ app.whenReady().then(async () => {
     }
   });
   // Electron ≥ 27 : setPermissionCheckHandler (évite les blocages CSP)
-  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+  session.defaultSession.setPermissionCheckHandler((_wc: any, permission: string) => {
     const allowed = ['media', 'microphone', 'audioCapture'];
     return allowed.indexOf(permission) !== -1;
   });
