@@ -137,16 +137,11 @@ OUTILS DE CRÉATION DE FICHIERS — RÈGLES ABSOLUES :
 🎯 RÈGLE DE RÉPONSE LORS D'UNE GÉNÉRATION DE FICHIER :
 Quand tu génères un fichier, ta réponse textuelle doit se limiter à UNE SEULE phrase courte AVANT le bloc ACTION (ex : "Voici ton rapport." / "Fichier Excel prêt." / "Présentation générée."). N'écris AUCUN résumé, AUCUNE explication, AUCUNE liste du contenu APRÈS le bloc ACTION. Le bloc ACTION doit être la DERNIÈRE chose de ta réponse. Le contenu complet est à l'INTÉRIEUR du bloc ACTION.
 
-- Pour un PDF : Pour créer un PDF, ne génère PAS de bloc ACTION JSON. Utilise simplement le bloc de code markdown suivant et écris dedans une page HTML complète, stylisée avec CSS inline, pensée pour un rendu A4. N'ajoute pas de texte avant ou après.
-\`\`\`pdf
-<!DOCTYPE html>
-<html><head><style>body { font-family: sans-serif; color: #333; margin: 40px; } h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }</style></head>
-<body><h1>Titre</h1><p>Contenu magnifique ici...</p></body></html>
-\`\`\`
-- Pour un fichier Excel : [ACTION:{"type":"excel","filename":"données.xlsx","title":"Titre","headers":["Colonne1","Colonne2","Colonne3"],"rows":[["val1","val2","val3"],["val4","val5","val6"]]}]
-- Pour un PowerPoint : [ACTION:{"type":"pptx","filename":"présentation.pptx","title":"Titre","slides":[{"title":"Titre diapo 1","points":["Point 1","Point 2","Point 3"]},{"title":"Titre diapo 2","points":["Élément A","Élément B"]}]}]
-- Pour un fichier texte : [ACTION:{"type":"txt","filename":"fichier.txt","content":"Contenu texte du fichier"}]
-- Pour un CSV : [ACTION:{"type":"csv","filename":"données.csv","headers":["Col1","Col2"],"rows":[["a","b"],["c","d"]]}]
+- Pour un PDF (HTML stylisé) : [ACTION:{"type":"pdf","filename":"nom_descriptif.pdf","content":"<!DOCTYPE html><html><head><style>body{font-family:Georgia,serif;color:#222;max-width:780px;margin:40px auto;line-height:1.7}h1{color:#1a2e5a;border-bottom:3px solid #3498db;padding-bottom:10px}h2{color:#2c3e50;margin-top:24px}p{margin:10px 0}ul{padding-left:20px}table{width:100%;border-collapse:collapse}th{background:#3498db;color:white;padding:10px;text-align:left}td{padding:8px;border:1px solid #ddd}</style></head><body><h1>Titre du document</h1><p>Contenu complet et détaillé ici. Utilise du HTML riche avec titres, listes, tableaux, couleurs CSS pour un rendu professionnel et beau.</p></body></html>"}]
+- Pour un fichier Excel : [ACTION:{"type":"excel","filename":"données_descriptif.xlsx","title":"Titre","headers":["Colonne1","Colonne2","Colonne3"],"rows":[["val1","val2","val3"],["val4","val5","val6"]]}]
+- Pour un PowerPoint : [ACTION:{"type":"pptx","filename":"presentation_descriptif.pptx","title":"Titre","slides":[{"title":"Titre diapo 1","points":["Point 1","Point 2","Point 3"]},{"title":"Diapo 2","content":"Texte libre pour cette diapositive"},{"title":"Conclusion","subtitle":"Sous-titre optionnel","points":["Point A","Point B"]}]}]
+- Pour un fichier texte : [ACTION:{"type":"txt","filename":"fichier_descriptif.txt","content":"Contenu texte du fichier"}]
+- Pour un CSV : [ACTION:{"type":"csv","filename":"données_descriptif.csv","headers":["Col1","Col2"],"rows":[["a","b"],["c","d"]]}]
 
 Exemples de déclencheurs : "crée un PDF", "génère un Excel", "fais une présentation PowerPoint", "exporte en CSV", "crée un fichier texte".
 Dès que tu reçois une telle demande, génère IMMÉDIATEMENT le bloc [ACTION:...] avec le contenu complet. Ne demande pas de confirmation. Ne fournis pas de lien. UNE phrase + le bloc ACTION, rien d'autre.
@@ -972,7 +967,11 @@ window.openDocumentViewer = function(doc) {
     if (doc.ext === 'pdf') {
       iframe.src = doc.url + '#toolbar=0';
       iframe.style.display = 'block';
-    } else if (['js', 'html', 'css', 'json', 'txt', 'csv', 'md'].includes(doc.ext)) {
+    } else if (doc.ext === 'html') {
+      /* HTML → render in iframe so the user sees the actual page */
+      iframe.src = doc.url;
+      iframe.style.display = 'block';
+    } else if (['js', 'css', 'json', 'txt', 'csv', 'md'].includes(doc.ext)) {
       content.style.display = 'block';
       content.style.fontFamily = "'Space Mono', monospace";
       if (doc.text) {

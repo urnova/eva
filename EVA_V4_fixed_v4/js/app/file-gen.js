@@ -290,7 +290,7 @@ async function executeEvaAction(action) {
       setTimeout(function(){ setEvaStatus(null); }, 3000);
 
     } else if (action.type === 'pdf') {
-      _evaGeneratePdf(action);
+      _evaGenerateHtmlPdf(action);
 
     } else if (action.type === 'excel') {
       _evaGenerateExcel(action);
@@ -508,6 +508,42 @@ async function _evaGeneratePdf(action) {
   }
 }
 
+function _evaGenerateHtmlPdf(action) {
+  setEvaStatus('GÉNÉRATION PDF…', 'action');
+  var filename = action.filename || 'document.pdf';
+  if (!filename.toLowerCase().endsWith('.pdf')) filename += '.pdf';
+  var card = _evaGenCard('pdf', filename);
+  try {
+    var htmlContent = action.content || '';
+    /* Strip possible code fences */
+    htmlContent = htmlContent.replace(/^```[a-z]*\n?/i,'').replace(/\n?```$/,'');
+    if (!htmlContent.trim()) {
+      if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Contenu HTML manquant</span>';
+      setEvaStatus(null); return;
+    }
+    /* Inject print CSS if not already present */
+    if (!htmlContent.includes('@media print')) {
+      htmlContent = htmlContent.replace('</head>',
+        '<style>@media print{body{margin:0}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
+        'body{max-width:900px;margin:30px auto;font-family:Georgia,serif}</style></head>');
+    }
+    var blob = new Blob([htmlContent], {type:'text/html;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    toast('PDF prêt : '+filename, 'success');
+    setEvaStatus('PDF CRÉÉ', 'action');
+    setTimeout(function(){ setEvaStatus(null); }, 3000);
+    /* Store as html ext so the viewer uses iframe */
+    _evaCardReady(card, 'pdf', filename, url);
+    /* Override: mark internally so viewer uses iframe */
+    window._lastPdfUrl = url;
+  } catch(e) {
+    console.error('[EVA PDF]', e);
+    toast('Erreur génération PDF : '+e.message, 'error');
+    if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Erreur : '+e.message+'</span>';
+    setEvaStatus(null);
+  }
+}
+
 function _evaGenerateExcel(action) {
   setEvaStatus('GÉNÉRATION EXCEL…', 'action');
   var filename = action.filename || 'eva_donnees.xlsx';
@@ -551,8 +587,96 @@ function _evaGenerateExcel(action) {
 }
 
 async function _evaGeneratePptx(action) {
-  action.type = 'marp_pptx';
-  return _evaGeneratePdf(action);
+  setEvaStatus('GÉNÉRATION POWERPOINT…', 'action');
+  var filename = action.filename || 'presentation.pptx';
+  if (!filename.toLowerCase().endsWith('.pptx')) filename += '.pptx';
+  var card = _evaGenCard('pptx', filename);
+  try {
+    if (typeof PptxGenJS === 'undefined') {
+      await _loadScript('./js/lib/pptxgen.bundle.js', 'PptxGenJS');
+    }
+    var pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_16x9';
+    pptx.author = 'EVA Assistant';
+    pptx.title = action.title || filename.replace('.pptx','');
+
+    var slides = action.slides || [];
+    if (!slides.length) slides = [{title: action.title || 'Présentation', points: []}];
+
+    slides.forEach(function(s, idx) {
+      var slide = pptx.addSlide();
+
+      /* Fond sombre EVA */
+      slide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:'100%', h:'100%', fill:{color:'0d0d1a'} });
+      /* Barre d'accent cyan */
+      slide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.07, h:'100%', fill:{color:'00d4ff'} });
+      /* Ligne séparatrice sous le titre */
+      slide.addShape(pptx.ShapeType.rect, { x:0.3, y:1.3, w:9.2, h:0.025, fill:{color:'1e3a5f'} });
+
+      /* Titre */
+      if (s.title) {
+        slide.addText(s.title, {
+          x:0.3, y:0.2, w:9.2, h:1.0,
+          fontSize: idx===0 ? 34 : 26, bold:true,
+          color:'00d4ff', fontFace:'Calibri Light', valign:'middle'
+        });
+      }
+
+      /* Contenu / bullet points */
+      var yContent = 1.45, hContent = 3.15;
+      if (s.subtitle) {
+        slide.addText(s.subtitle, {
+          x:0.3, y:1.4, w:9.2, h:0.5,
+          fontSize:16, color:'9999cc', italic:true, fontFace:'Calibri'
+        });
+        yContent = 2.0; hContent = 2.6;
+      }
+
+      if (s.points && s.points.length) {
+        var lines = s.points.map(function(p) {
+          return {
+            text: p,
+            options: {
+              bullet: {indent:15, color:'00d4ff'},
+              paraSpaceAfter: 7,
+              color: 'dde0f5',
+              fontSize: 17,
+              fontFace: 'Calibri'
+            }
+          };
+        });
+        slide.addText(lines, { x:0.3, y:yContent, w:9.2, h:hContent, valign:'top' });
+      } else if (s.content) {
+        slide.addText(s.content, {
+          x:0.3, y:yContent, w:9.2, h:hContent,
+          fontSize:17, color:'dde0f5', fontFace:'Calibri', valign:'top', wrap:true
+        });
+      }
+
+      /* Numéro de slide */
+      slide.addText(String(idx+1)+'/'+slides.length, {
+        x:8.8, y:4.82, w:0.7, h:0.22,
+        fontSize:9, color:'445577', align:'right'
+      });
+    });
+
+    pptx.write({outputType:'blob'}).then(function(blob) {
+      var url = URL.createObjectURL(blob);
+      toast('PowerPoint prêt : '+filename, 'success');
+      setEvaStatus('PPTX CRÉÉ', 'action');
+      setTimeout(function(){ setEvaStatus(null); }, 3000);
+      _evaCardReady(card, 'pptx', filename, url);
+    }).catch(function(err) {
+      console.error('[EVA PPTX]', err);
+      if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Erreur PPTX : '+err.message+'</span>';
+      setEvaStatus(null);
+    });
+  } catch(e) {
+    console.error('[EVA PPTX]', e);
+    toast('Erreur génération PowerPoint : '+e.message, 'error');
+    if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Erreur : '+e.message+'</span>';
+    setEvaStatus(null);
+  }
 }
 
 function _evaGenerateTxt(action) {
