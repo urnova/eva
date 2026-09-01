@@ -1,18 +1,12 @@
 (function() {
 'use strict';
 
+var recognition = null;
 var isActive = false;
-var state = 'idle'; // idle | triggered
+var state = 'idle';
 var wakeWords = ['eva', 'éva', 'hey eva', 'e.v.a'];
 var onCommandCallback = null;
-
-var audioContext = null;
-var mediaStream = null;
-var sourceNode = null;
-var processorNode = null;
-var voskModel = null;
-var recognizer = null;
-
+var restartTimer = null;
 var commandBuffer = '';
 
 function init(config) {
@@ -41,110 +35,113 @@ function extractCommand(transcript) {
   return after || null;
 }
 
+function buildRecognition() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  var r = new SR();
+  r.lang = 'fr-FR';
+  r.continuous = true;
+  r.interimResults = true;
+  r.maxAlternatives = 1;
+
+  r.onresult = function(event) {
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      var result = event.results[i];
+      var transcript = result[0].transcript;
+      var isFinal = result.isFinal;
+
+      if (state === 'idle') {
+        if (hasWakeWord(transcript)) {
+          if (isFinal) {
+            var cmd = extractCommand(transcript);
+            if (cmd && cmd.length > 1) {
+              fireCommand(cmd);
+            } else {
+              state = 'triggered';
+              commandBuffer = '';
+              if (window.setEvaStatusHeader) window.setEvaStatusHeader('🎤 PARLEZ...', 'listening');
+            }
+          }
+        }
+      } else if (state === 'triggered') {
+        commandBuffer = transcript;
+        if (isFinal && commandBuffer.trim().length > 1) {
+          var finalCmd = commandBuffer.trim();
+          state = 'idle';
+          commandBuffer = '';
+          if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+          fireCommand(finalCmd);
+        }
+      }
+    }
+  };
+
+  r.onend = function() {
+    if (state === 'triggered' && commandBuffer.trim().length > 1) {
+      var cmd = commandBuffer.trim();
+      state = 'idle';
+      commandBuffer = '';
+      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      fireCommand(cmd);
+      return;
+    }
+    state = 'idle';
+    commandBuffer = '';
+    if (!isActive) return;
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(function() {
+      if (isActive && recognition) {
+        try { recognition.start(); } catch(e) {}
+      }
+    }, 350);
+  };
+
+  r.onerror = function(e) {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      console.warn('[WakeWord] Microphone non autorisé.');
+      isActive = false;
+      state = 'idle';
+      return;
+    }
+    state = 'idle';
+    commandBuffer = '';
+    if (!isActive) return;
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(function() {
+      if (isActive && recognition) {
+        try { recognition.start(); } catch(e2) {}
+      }
+    }, 1000);
+  };
+
+  return r;
+}
+
 function fireCommand(cmd) {
   if (!cmd || !cmd.trim()) return;
   if (onCommandCallback) onCommandCallback(cmd.trim());
 }
 
 function isSupported() {
-  return true; // We use Vosk WebAssembly now, supported everywhere!
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
-async function loadVoskModel() {
-  if (voskModel) return voskModel;
-  if (!window.Vosk) {
-    console.error('[WakeWord] Vosk non chargé.');
-    return null;
-  }
-  try {
-    // Si l'utilisateur a changé le chemin du modèle, on peut l'ajuster
-    voskModel = await window.Vosk.createModel('/models/vosk-model-small-fr.tar.gz');
-    return voskModel;
-  } catch (err) {
-    console.error('[WakeWord] Erreur chargement modèle Vosk:', err);
-    return null;
-  }
-}
-
-async function start() {
+function start() {
+  if (!isSupported()) { console.warn('[WakeWord] Non supporté par ce navigateur.'); return; }
   if (isActive) return;
   isActive = true;
   state = 'idle';
   commandBuffer = '';
-  
-  if (window.setEvaStatusHeader) window.setEvaStatusHeader('⏳ CHARGEMENT VOSK...', 'action');
-  
-  var model = await loadVoskModel();
-  if (!model) {
-      if (window.toast) window.toast("Erreur : Modèle vocal introuvable.", "error");
-      isActive = false;
-      return;
-  }
-  
-  if (!recognizer) {
-      recognizer = new model.KaldiRecognizer(16000);
-      recognizer.setWords(true);
-  }
-
+  if (!recognition) recognition = buildRecognition();
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1, sampleRate: 16000 }
-    });
-    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-    sourceNode = audioContext.createMediaStreamSource(mediaStream);
-    processorNode = audioContext.createScriptProcessor(4096, 1, 1);
-    
-    sourceNode.connect(processorNode);
-    processorNode.connect(audioContext.destination);
-    
-    if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
-
-    processorNode.onaudioprocess = function(e) {
-      if (!isActive) return;
-      var data = e.inputBuffer.getChannelData(0);
-      var res = recognizer.acceptWaveform(data);
-      
-      var transcript = '';
-      if (res) {
-          transcript = recognizer.result().text || '';
-      } else {
-          transcript = recognizer.partialResult().partial || '';
+    recognition.start();
+  } catch(e) {
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(function() {
+      if (isActive && recognition) {
+        try { recognition.start(); } catch(e2) {}
       }
-      
-      if (!transcript) return;
-
-      if (state === 'idle') {
-        if (hasWakeWord(transcript)) {
-          var cmd = extractCommand(transcript);
-          // Si on a la commande en même temps
-          if (cmd && cmd.length > 1 && res) {
-            fireCommand(cmd);
-            recognizer.reset(); // Reset pour nettoyer
-          } else {
-            // Wake word détecté, on passe en attente de commande
-            state = 'triggered';
-            commandBuffer = '';
-            if (window.setEvaStatusHeader) window.setEvaStatusHeader('🎤 PARLEZ...', 'listening');
-            if (window.eva && window.eva.overlay) window.eva.overlay.show('listening');
-          }
-        }
-      } else if (state === 'triggered') {
-        commandBuffer = transcript;
-        // Si c'est un résultat final (silence détecté)
-        if (res && commandBuffer.trim().length > 1) {
-          var finalCmd = commandBuffer.trim();
-          state = 'idle';
-          commandBuffer = '';
-          if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
-          if (window.eva && window.eva.overlay) window.eva.overlay.hide();
-          fireCommand(finalCmd);
-        }
-      }
-    };
-  } catch (err) {
-    console.error('[WakeWord] Erreur microphone:', err);
-    isActive = false;
-    if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+    }, 500);
   }
 }
 
@@ -152,26 +149,12 @@ function stop() {
   isActive = false;
   state = 'idle';
   commandBuffer = '';
-  
-  if (processorNode) {
-      processorNode.disconnect();
-      processorNode = null;
+  if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
+  if (recognition) {
+    try { recognition.stop(); } catch(e) {}
+    recognition = null;
   }
-  if (sourceNode) {
-      sourceNode.disconnect();
-      sourceNode = null;
-  }
-  if (mediaStream) {
-      mediaStream.getTracks().forEach(function(t) { t.stop(); });
-      mediaStream = null;
-  }
-  if (audioContext) {
-      audioContext.close();
-      audioContext = null;
-  }
-  
   if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
-  if (window.eva && window.eva.overlay) window.eva.overlay.hide();
 }
 
 function isRunning() { return isActive; }

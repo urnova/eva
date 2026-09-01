@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    EVA V3 — Service Worker Push Notifications
    Handler brut d'abord (Edge/Firefox/Safari compat),
    Firebase SDK en complément pour le déchiffrement FCM.
@@ -29,7 +29,8 @@ self.addEventListener('push', function(event) {
   var title = d.title || payload.title || 'E.V.A';
   var body  = d.body  || payload.body  || 'Nouvelle notification';
   var type  = d.type  || 'general';
-  var icon  = '/assets/images/favicon.svg';
+  var icon  = '/assets/images/eva-icon.png';
+  var badge = '/assets/images/eva-icon.png';
 
   var actions = [];
   if (type === 'alarm') {
@@ -44,7 +45,7 @@ self.addEventListener('push', function(event) {
   var options = {
     body:    body,
     icon:    icon,
-    badge:   icon,
+    badge:   badge,
     tag:     d.tag || ('eva-' + type + '-' + Date.now()),
     data:    d,
     actions: actions,
@@ -95,23 +96,6 @@ self.addEventListener('notificationclick', function(event) {
 });
 
 /* ─── Firebase SDK en complément (déchiffrement FCM) ─── */
-try {
-  importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
-  importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
-
-  firebase.initializeApp({
-    apiKey:            "AIzaSyDrXk8X9Ow7CcOc0Sr-yv3mXvzatNxpj3o",
-    authDomain:        "eva-assistant-a4fdf.firebaseapp.com",
-    projectId:         "eva-assistant-a4fdf",
-    storageBucket:     "eva-assistant-a4fdf.firebasestorage.app",
-    messagingSenderId: "594189556810",
-    appId:             "1:594189556810:web:0d72c2110245af92099ab3"
-  });
-
-  /* onBackgroundMessage ne fait rien — le raw push handler ci-dessus gère déjà l'affichage */
-  firebase.messaging().onBackgroundMessage(function(payload) {});
-
-} catch(e) {
-  /* Firebase SDK non disponible — le raw push handler suffit */
-  console.warn('[EVA SW] Firebase SDK non chargé, raw handler actif :', e.message);
-}
+/* Supprimé pour des raisons de sécurité : le raw handler ci-dessus suffit 
+   pour intercepter et afficher les notifications push, pas besoin d'exposer 
+   les clés Firebase en dur dans le Service Worker ! */

@@ -150,6 +150,18 @@ function parseEvaActions(content) {
     }
   });
 
+
+  /* ── Extraction des suggestions de suivi ── */
+  var suggestions = null;
+  var sugRe = /\[SUGGESTIONS:\s*(\[[^\]]+\])\s*\]/g;
+  var sm;
+  while ((sm = sugRe.exec(content)) !== null) {
+    try {
+      suggestions = JSON.parse(sm[1]);
+      removeRanges.push([sm.index, sm.index + sm[0].length]);
+    } catch(e) {}
+  }
+  
   /* ── Nettoyage du texte affiché — supprimer les plages (du dernier au premier) ── */
   removeRanges.sort(function(a, b) { return b[0] - a[0]; });
   var clean = content;
@@ -185,6 +197,7 @@ function parseEvaActions(content) {
     return trimmed;
   }
 
+    window._lastEvaSuggestions = suggestions;
   return clean.trim();
 }
 
@@ -396,10 +409,10 @@ function _evaCardReady(bubble, fileExt, filename, blobUrl) {
         '</div>' +
       '</div>' +
     '</div>' +
-    '<a href="' + blobUrl + '" download="' + filename + '" style="display:flex;align-items:center;justify-content:center;gap:8px;background:'+color+';color:#0a0a0c;text-decoration:none;font-size:0.75em;font-weight:700;border-radius:8px;padding:9px 16px;letter-spacing:0.03em;transition:opacity .15s;width:100%;box-sizing:border-box;" onmouseover="this.style.opacity=\'0.85\'" onmouseout="this.style.opacity=\'1\'">' +
-      '<svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:none;stroke:#0a0a0c;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
-      'Télécharger' +
-    '</a>';
+    '<button onclick="window.openDocumentViewer({name: \''+esc(filename)+'\', ext: \''+ext+'\', url: \''+blobUrl+'\'})" style="display:flex;align-items:center;justify-content:center;gap:8px;background:'+color+';border:none;cursor:pointer;color:#0a0a0c;text-decoration:none;font-size:0.75em;font-weight:700;border-radius:8px;padding:9px 16px;letter-spacing:0.03em;transition:opacity .15s;width:100%;box-sizing:border-box;" onmouseover="this.style.opacity=\'0.85\'" onmouseout="this.style.opacity=\'1\'">' +
+      '<svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:none;stroke:#0a0a0c;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+      'Visualiser' +
+    '</button>';
   var listId2 = window._evaFileTarget || 'messagesList';
   var list = document.getElementById(listId2) || document.getElementById('messagesList');
   if (list) list.scrollTop = list.scrollHeight;

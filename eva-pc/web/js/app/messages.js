@@ -94,6 +94,8 @@ function appendMsg(role, content, imgUrlOrArr, docOrArr) {
       gallery.className = 'msg-img-gallery single';
       var im = document.createElement('img');
       im.src = images[0].url || images[0]; im.className = 'msg-image'; im.alt = images[0].name || 'Image';
+        im.style.cursor = 'pointer';
+        im.onclick = function() { window.openImageViewer(images[0].url || images[0]); };
       gallery.appendChild(im);
       bubble.appendChild(gallery);
     } else if (images.length > 1) {
@@ -126,13 +128,15 @@ function appendMsg(role, content, imgUrlOrArr, docOrArr) {
       docs.forEach(function(doc) {
         var icon = (typeof _docIconExt === 'function') ? _docIconExt(doc.ext) : '📎';
         var chip = document.createElement('div');
-        chip.className = 'msg-doc-multi';
-        chip.innerHTML =
-          '<span style="font-size:1.3em;flex-shrink:0;">' + icon + '</span>' +
-          '<div style="display:flex;flex-direction:column;min-width:0;">' +
-            '<span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">' + esc(doc.name) + '</span>' +
-            (doc.ext ? '<span style="font-size:0.68em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">' + doc.ext + (doc.size ? ' · ' + (doc.size > 1024*1024 ? (doc.size/(1024*1024)).toFixed(1)+' Mo' : Math.round(doc.size/1024)+' Ko') : '') + '</span>' : '') +
-          '</div>';
+          chip.className = 'msg-doc-multi';
+          chip.style.cursor = 'pointer';
+          chip.onclick = function() { window.openDocumentViewer(doc); };
+          chip.innerHTML =
+            '<span style="font-size:1.3em;flex-shrink:0;">' + icon + '</span>' +
+            '<div style="display:flex;flex-direction:column;min-width:0;">' +
+              '<span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">' + esc(doc.name) + '</span>' +
+              (doc.ext ? '<span style="font-size:0.68em;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">' + doc.ext + (doc.size ? ' · ' + (doc.size > 1024*1024 ? (doc.size/(1024*1024)).toFixed(1)+' Mo' : Math.round(doc.size/1024)+' Ko') : '') + '</span>' : '') +
+            '</div>';
         docsWrap.appendChild(chip);
       });
       bubble.appendChild(docsWrap);
@@ -150,24 +154,14 @@ function setEvaStatus(text, type) {
 function setEvaStatusHeader(text, type) {
   var dot = document.getElementById('evaHdrDot');
   var label = document.getElementById('evaHdrText');
-  var skip = document.getElementById('skipTtsBtn');
   if (!dot || !label) return;
   if (!text) {
     dot.className = 'eva-hdr-dot';
     label.textContent = 'EN LIGNE';
-    if (skip) skip.style.display = 'none';
-    if (window.eva && window.eva.overlay) window.eva.overlay.hide();
-    window.isVoiceSession = false;
     return;
   }
-  var stateType = type || 'thinking';
-  dot.className = 'eva-hdr-dot ' + stateType;
+  dot.className = 'eva-hdr-dot ' + (type || 'thinking');
   label.textContent = text;
-  if (skip) skip.style.display = (stateType === 'speaking') ? 'inline-flex' : 'none';
-  if (window.eva && window.eva.overlay && window.isVoiceSession) {
-    window.eva.overlay.show(stateType);
-    window.eva.overlay.setState(stateType, text);
-  }
 }
 window.setEvaStatusHeader = setEvaStatusHeader;
 
@@ -180,7 +174,6 @@ window.skipTTS = skipTTS;
 
 function sendVoiceCommand(cmd) {
   if (S.busy) return;
-  window.isVoiceSession = true;
   var input = document.getElementById('msgInput');
   if (input) {
     input.value = cmd;
@@ -295,6 +288,21 @@ window.setThinkingPhase = function(iconSvg, label, detail) {
   if (lb && label)   lb.textContent = label;
   if (dt !== null && detail !== undefined) dt.textContent = detail || '';
   if (label) _thinkHistory.push({ label: label, detail: detail || '', ts: Date.now() });
+};
+
+/* Ajoute une étape à la boîte de réflexion du dernier message, même une fois terminé (utile pour les process en background comme la mémoire) */
+window.addFinalThinkingStep = function(label, detail) {
+  var tb = document.getElementById('lastThoughtBody');
+  if (!tb) return;
+  var count = tb.children.length + 1;
+  var item = document.createElement('div');
+  item.style.cssText = 'display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:0.68em;color:rgba(160,165,200,0.55);';
+  item.innerHTML = '<span style="color:rgba(123,139,245,0.4);min-width:14px;">' + count + '.</span><div><span style="color:rgba(200,205,230,0.6);">' + label + '</span>' + (detail ? '<span style="margin-left:5px;opacity:0.5;">' + detail + '</span>' : '') + '</div>';
+  tb.appendChild(item);
+  if (tb.previousElementSibling) {
+    var headerCount = tb.previousElementSibling.querySelector('span:last-child');
+    if (headerCount) headerCount.innerHTML = count + ' étape' + (count > 1 ? 's' : '') + ' ↓';
+  }
 };
 
 /* Stoppe la génération en cours */
@@ -466,6 +474,7 @@ async function handleSend() {
   if (!text && !img && !docPending) return;
   if (S.busy) { toast('Eva réfléchit...','info'); return; }
   if (!window.EVAChatHandler) { toast('Système non initialisé','error'); return; }
+    if (S.documents && S.documents.some(function(d) { return d._loading; })) { toast('Lecture du document en cours...','warning'); return; }
 
   /* Arrêter le micro s'il est actif — l'utilisateur envoie manuellement */
   if (window.EVASTS && window.EVASTS.getIsListening()) {
@@ -512,7 +521,27 @@ async function handleSend() {
   if (window._userBio) userCtx += '\nNote personnelle : ' + window._userBio;
   /* Mémoire Évolutive — injectée si activée et non vide */
   if (S.adaptationEnabled && S.evaMemory && S.evaMemory.nodes) {
-    userCtx += '\n\nMÉMOIRE ÉVOLUTIVE (Graphe de Connaissances) :\n' + JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links});
+    var formatGraphToText = function(mem) {
+        var txt = 'Entités:\n';
+        var nodeMap = {};
+        (mem.nodes || []).forEach(function(n) {
+            var lbl = (n.id === 'utilisateur' ? 'Utilisateur' : (n.label || n.id));
+            nodeMap[n.id] = lbl;
+            if (n.details) txt += '- [' + lbl + '] : ' + n.details + '\n';
+        });
+        txt += '\nRelations:\n';
+        (mem.links || []).forEach(function(l) {
+            var src = nodeMap[l.source] || l.source;
+            var tgt = nodeMap[l.target] || l.target;
+            txt += '[' + src + '] -> ' + (l.label || 'lié à') + ' -> [' + tgt + ']\n';
+        });
+        return txt;
+    };
+    
+    userCtx += '\n\nMÉMOIRE ÉVOLUTIVE (Graphe de Connaissances) :\n' + 
+               'Note vitale: Dans ce graphe, le nœud [Utilisateur] te représente TOI (l\'interlocuteur humain). Toutes les connexions à [Utilisateur] sont tes caractéristiques et ton entourage.\n' +
+               'INSTRUCTION SPÉCIALE : Tu dois activement analyser ce graphe. Si ce que l\'utilisateur vient de dire contredit une information de la mémoire (ex: un déménagement, un changement de goût, une nouvelle relation amoureuse), tu DOIS réagir humainement dans ta réponse en relevant la contradiction avec étonnement ou curiosité (ex: "Oh ? Tu ne m\'avais pas dit que tu habitais à Feurs ?"). Agis comme une vraie amie qui a de la mémoire !\n\n' +
+               formatGraphToText(S.evaMemory);
   }
 
   // Injection date/heure courante — EVA connaît ainsi l'heure pour créer alarmes/rappels
@@ -548,6 +577,7 @@ async function handleSend() {
       '- PDF → bloc ```pdf\n<!DOCTYPE html>...(HTML complet stylisé)...```\n' +
       '- Graphique dans le chat → ```chart\n{"type":"bar","data":{"labels":["A","B"],"datasets":[{"label":"Ventes","data":[10,20],"backgroundColor":["#5b77f7","#06b6d4"]}]}}\n```\n' +
       'Pour toute génération de fichier : UNE phrase courte + le bloc ACTION. Rien d\'autre après.\n' +
+        'QUESTIONS SUGGÉRÉES : À la fin de TA RÉPONSE, ajoute TOUJOURS [SUGGESTIONS: ["Q1?","Q2?","Q3?"]] (tableau JSON strict de 3 questions de suivi).\n' +
       '\nFORMATAGE : Utilise le markdown (##, listes, **gras**, tableaux) quand utile. Blocs spéciaux :\n' +
       '```tip ...``` (conseil), ```warning ...``` (mise en garde), ```info ...``` (information), ```success ...``` (validation)\n' +
       '```stats\nMétrique: Valeur``` (chiffres clés), ```timeline\n2024 → Événement``` (chronologie)\n' +
@@ -564,35 +594,36 @@ async function handleSend() {
   }
 
   var msgContent = text;
-  if (allImages.length) {
-    window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine votre image...');
-    try {
-      var vision = await analyzeImage(allImages[0].data, text || 'Décris cette image.');
-      if (vision) msgContent = vision;
-      /* Images supplémentaires */
-      for (var _ii = 1; _ii < allImages.length; _ii++) {
-        window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine l\'image ' + (_ii + 1) + ' sur ' + allImages.length + '...');
-        try {
-          var vision2 = await analyzeImage(allImages[_ii].data, 'Décris aussi cette image.');
-          if (vision2) msgContent += '\n\n[Image ' + (_ii + 1) + '] ' + vision2;
-        } catch(_) {}
+    if (allImages.length) {
+      window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine votre image...');
+      try {
+        var vision = await analyzeImage(allImages[0].data, text || 'Décris cette image.');
+        if (vision) msgContent = vision;
+        for (var _ii = 1; _ii < allImages.length; _ii++) {
+          window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine l\'image ' + (_ii + 1) + ' sur ' + allImages.length + '...');
+          try {
+            var vision2 = await analyzeImage(allImages[_ii].data, 'Décris aussi cette image.');
+            if (vision2) msgContent += '\n\n[Image ' + (_ii + 1) + '] ' + vision2;
+          } catch(_) {}
+        }
+      } catch(e) {}
+    }
+    
+    if (allDocs.length) {
+      var xmlDocs = '';
+      for (var _di = 0; _di < allDocs.length; _di++) {
+        if (allDocs[_di] && allDocs[_di].text) {
+          xmlDocs += '\n<document>\n  <source>' + allDocs[_di].name + '</source>\n  <document_content>\n' + allDocs[_di].text + '\n  </document_content>\n</document>\n';
+        }
       }
-    } catch(e) {}
-  }
-  /* Documents joints : injecter les textes extraits dans le contexte */
-  if (allDocs.length) {
-    for (var _di = 0; _di < allDocs.length; _di++) {
-      if (allDocs[_di] && allDocs[_di].text) {
-        var docCtx = '\n\n[DOCUMENT JOINT — "' + allDocs[_di].name + '"]\n' + allDocs[_di].text + '\n[FIN DU DOCUMENT]';
-        msgContent = (msgContent || 'Voici un document. Analyse-le et résume-le.') + docCtx;
+      if (xmlDocs !== '') {
+        var originalText = msgContent || text || 'Analyse ce document.';
+        msgContent = xmlDocs + '\n<instructions>\nUn ou plusieurs documents ont été fournis ci-dessus dans la balise <document>. Tu DOIS analyser leur contenu avant de répondre à la question de l\'utilisateur, et t\'y référer explicitement dans ta réponse.\n</instructions>\n\n<user_message>' + originalText + '</user_message>';
       }
     }
-    if (allDocs.length === 1) msgContent += '\n\nRéponds à la demande de l\'utilisateur en te basant sur ce document.';
-    else msgContent += '\n\nRéponds à la demande de l\'utilisateur en te basant sur ces documents.';
-  }
 
-  // Recherche web si nécessaire
-  var _isLocalProv = (_activeProv === 'lmstudio' || _activeProv === 'ollama' ||
+    // Recherche web si nécessaire
+    var _isLocalProv = (_activeProv === 'lmstudio' || _activeProv === 'ollama' ||
                       _activeProv === 'qwen'    || _activeProv === 'eva');
 
   // needsSearch = triggers standard (météo, bourse, actu...) -> S'applique à TOUS
@@ -782,7 +813,13 @@ function streamEvaMsg(content) {
     var thoughtHeader = document.createElement('button');
     thoughtHeader.style.cssText = 'width:100%;display:flex;align-items:center;gap:6px;padding:5px 10px;background:none;border:none;cursor:pointer;color:rgba(160,165,200,0.5);font-size:0.68em;font-family:inherit;text-align:left;transition:opacity 0.2s;';
     thoughtHeader.innerHTML = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></svg><span style="letter-spacing:0.3px;">Réflexion</span><span style="margin-left:auto;opacity:0.5;">' + _thinkHistory.length + ' étape' + (_thinkHistory.length > 1 ? 's' : '') + ' ▾</span>';
+    
+    // Nettoyer les anciens ID pour que seul le dernier ait lastThoughtBody
+    var oldBody = document.getElementById('lastThoughtBody');
+    if (oldBody) oldBody.removeAttribute('id');
+    
     var thoughtBody = document.createElement('div');
+    thoughtBody.id = 'lastThoughtBody';
     thoughtBody.style.cssText = 'display:none;padding:6px 10px 8px;border-top:1px solid rgba(123,139,245,0.08);';
     var thCaptured = _thinkHistory.slice();
     thCaptured.forEach(function(step, i) {
@@ -1197,7 +1234,7 @@ function handleFileSelect(e) {
     pendingDocs++;
     document.getElementById('sendBtn').disabled = true;
     /* Afficher nom immédiatement */
-    S.documents.push({ name: file.name, ext: ext, text: null, size: file.size, _loading: true });
+    S.documents.push({ name: file.name, ext: ext, text: null, size: file.size, url: URL.createObjectURL(file), _loading: true });
     S.document = S.documents[0];
     _refreshFilePreviewBars();
 
@@ -1461,14 +1498,58 @@ function initChatDragDropPaste() {
 }
 window.initChatDragDropPaste = initChatDragDropPaste;
 
-/* -- Overlay Integration -- */
-if (window.eva && window.eva.overlay) {
-  window.eva.overlay.onAction(function(action) {
-    if (action === 'cancel') {
-      if (window.stopGeneration) window.stopGeneration();
-      if (window.skipTTS) window.skipTTS();
-      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
-      if (window.EVAWakeWord && window.EVAWakeWord.isRunning()) { window.EVAWakeWord.stop(); setTimeout(function(){ window.EVAWakeWord.start(); }, 1000); }
-    }
-  });
-}
+window.appendCloudWorksTracker = function(cmdId, promptText) {
+  var list = document.getElementById('messagesList');
+  if (!list) return;
+
+  var div = document.createElement('div');
+  div.className = 'msg-bubble system-bubble cw-tracker-bubble';
+  div.id = 'cw-tracker-' + cmdId;
+  div.innerHTML =
+    '<div class="cw-tracker-header">☁️ Agent CloudWorks : En cours</div>' +
+    '<div class="cw-tracker-prompt">"' + window.esc(promptText) + '"</div>' +
+    '<div class="cw-tracker-step" id="cw-step-' + cmdId + '">⏳ En attente du PC...</div>' +
+    '<div class="cw-tracker-actions" id="cw-actions-' + cmdId + '">' +
+       '<button class="cw-tracker-cancel" onclick="window.cancelCwCmd(\'' + cmdId + '\')">❌ Annuler la tâche</button>' +
+    '</div>';
+  list.appendChild(div);
+  if (window.scrollDown) window.scrollDown();
+
+  if (window.db && window.S && window.S.user) {
+    window.db.collection('cloudworks').doc(window.S.user.uid).collection('commands').doc(cmdId)
+      .onSnapshot(function(snap) {
+        if (!snap.exists) return;
+        var data = snap.data();
+        var stepEl = document.getElementById('cw-step-' + cmdId);
+        var actionsEl = document.getElementById('cw-actions-' + cmdId);
+        if (!stepEl) return;
+
+        if (data.status === 'pending') {
+          stepEl.innerHTML = '⏳ En attente de réception par le PC...';
+        } else if (data.status === 'running') {
+          stepEl.innerHTML = '🔄 ' + (data.step || 'Exécution en cours...');
+        } else if (data.status === 'done') {
+          stepEl.innerHTML = '✅ Tâche terminée avec succès !';
+          stepEl.style.color = '#10b981';
+          if (actionsEl) actionsEl.style.display = 'none';
+        } else if (data.status === 'error') {
+          stepEl.innerHTML = '❌ Erreur : ' + window.esc(data.error || 'Erreur inconnue');
+          stepEl.style.color = '#ef4444';
+          if (actionsEl) actionsEl.style.display = 'none';
+        } else if (data.status === 'cancelled') {
+          stepEl.innerHTML = '🛑 Tâche annulée par l\'utilisateur.';
+          stepEl.style.color = '#f59e0b';
+          if (actionsEl) actionsEl.style.display = 'none';
+        }
+      });
+  }
+};
+
+window.cancelCwCmd = function(cmdId) {
+  if (window.db && window.S && window.S.user) {
+    window.db.collection('cloudworks').doc(window.S.user.uid).collection('commands').doc(cmdId)
+      .update({ status: 'cancelled' }).then(function() {
+        if (window.toast) window.toast('Tâche annulée.', 'info');
+      }).catch(function(e) { console.error('Erreur annulation', e); });
+  }
+};

@@ -130,8 +130,7 @@ export const AI_PROVIDERS = {
     quotaInfo: 'Quota quotidien partagé Puter — variable selon affluence',
     models: [
       { id: 'gpt-4o-mini',        label: 'GPT-4o mini — Rapide ⭐',     tier: 'quota' },
-      { id: 'gpt-4o',             label: 'GPT-4o — Expert',             tier: 'quota' },
-      { id: 'claude-3-5-sonnet',  label: 'Claude 3.5 Sonnet — Expert',  tier: 'quota' }
+      { id: 'gpt-4o',             label: 'GPT-4o — Expert',             tier: 'quota' }
     ]
   },
   qwen: {

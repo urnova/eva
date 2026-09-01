@@ -1,14 +1,7 @@
-/* ═══ AUTH ═══ */
+﻿/* ═══ AUTH ═══ */
 function initAuth() {
   auth.onAuthStateChanged(function(user) {
-    if (!user) {
-        setTimeout(function() {
-            if (!auth.currentUser) {
-                window.location.href = 'app-login.html';
-            }
-        }, 1500); // Laisse le temps à Firebase/IndexedDB de charger en local
-        return;
-    }
+    if (!user) { window.location.href = '/login'; return; }
     S.user = user;
 
     
@@ -66,13 +59,19 @@ function initAuth() {
           localStorage.removeItem('eva_session_id');
           window.location.reload();
         });
+      } else if (!doc.exists) {
+        auth.signOut().then(function() {
+          localStorage.removeItem('eva_session_id');
+          window.location.reload();
+        });
       }
     });
 
-    loadProfile(user.uid);
+    loadProfile(user.uid).then(() => {
+      setTimeout(function(){ loadReminders(); }, 2000);
+    });
     initChatSession();
     loadConvs();
-    setTimeout(function(){ loadReminders(); }, 2000);
     setTimeout(function(){ initFCM(); }, 3000);
     // Init wake word (stays off until user activates)
     if (window.EVAWakeWord) {
@@ -81,12 +80,6 @@ function initAuth() {
         onCommand: function(cmd) {
           if (S.busy) return;
           if (window.EVASTS && window.EVASTS.getIsListening()) return;
-          
-          if (window.eva && window.eva.overlay) {
-            window.eva.overlay.show('listening');
-            window.eva.overlay.setState('thinking', 'Traitement...');
-          }
-          
           sendVoiceCommand(cmd);
           setTimeout(function() {
             if (S.wakeWordOn && window.EVAWakeWord && !S.busy) window.EVAWakeWord.start();
@@ -105,25 +98,46 @@ async function loadProfile(uid) {
     if (doc.exists) {
       S.profile = doc.data() || {};
       if (S.profile.onboardingCompleted === false) {
-        window.location.href = 'onboarding.html';
+        window.location.href = '/onboarding';
         return;
       }
       S.keyPersonality = S.profile.keyPersonality || null;
       S.adaptationEnabled = S.profile.adaptationEnabled !== false; // true par défaut
       S.evaMemory = S.profile.evaMemory || null;
       S._lastExtractTime = 0;
+
+      // Nettoyage des liens corrompus (self-loops) et des doublons exacts
+      if (S.evaMemory && S.evaMemory.links) {
+          var initialLinkCount = S.evaMemory.links.length;
+          // 1. Enlever les self-loops
+          var cleanedLinks = S.evaMemory.links.filter(function(l) { return l.source !== l.target; });
+          
+          // 2. Supprimer les doublons stricts (même label, insensible à la casse)
+          var uniqueLinks = [];
+          cleanedLinks.forEach(function(l) {
+             var existing = uniqueLinks.find(function(ex) {
+                 var sameNodes = (ex.source === l.source && ex.target === l.target) || 
+                                 (ex.source === l.target && ex.target === l.source);
+                 var sameLabel = (ex.label || '').toLowerCase().trim() === (l.label || '').toLowerCase().trim();
+                 return sameNodes && sameLabel;
+             });
+             if (!existing) {
+                 uniqueLinks.push(l);
+             }
+          });
+          
+          S.evaMemory.links = uniqueLinks;
+          
+          if (S.evaMemory.links.length !== initialLinkCount) {
+              try { db.collection('users').doc(S.user.uid).set({ evaMemory: S.evaMemory }, { merge: true }); } catch(e){}
+          }
+      }
+
       console.log('[loadProfile] Appel de renderUserUI...');
       renderUserUI(S.profile);
       if (S.profile.preferences) {
-          if (window.eva) {
-            const localCfg = S.config;
-            S.config = Object.assign({}, S.config, S.profile.preferences);
-            ['aiProvider', 'aiModel', 'ollamaEndpoint', 'lmstudioEndpoint', 'voiceProvider', 'speechRate', 'openrouterApiKey', 'geminiApiKey', 'openAIApiKey', 'claudeApiKey', 'mistralApiKey', 'huggingfaceApiKey'].forEach(k => {
-              if (localCfg[k] !== undefined) S.config[k] = localCfg[k];
-            });
-          } else {
-            S.config = Object.assign({}, S.config, S.profile.preferences);
-          }
+        /* Firebase gagne sur le cache localStorage — sync multi-appareils */
+        S.config = Object.assign({}, S.config, S.profile.preferences);
         /* Migration : si l'ancien provider par défaut 'native' est stocké, passer à 'eva-custom' */
         if (!S.config.voiceProvider || S.config.voiceProvider === 'native') {
           S.config.voiceProvider = 'eva-custom';
@@ -211,7 +225,7 @@ async function createProfile(user) {
   };
   try {
     await db.collection('users').doc(user.uid).set(p);
-    window.location.href = 'onboarding.html';
+    window.location.href = '/onboarding';
   } catch(e) {}
 }
 
@@ -307,8 +321,20 @@ function renderUserUI(p) {
       ava.textContent = name.split(' ').map(function(n){return n[0]||'';}).join('').toUpperCase().slice(0,2);
     }
   }
+  
+  var msgAvas = document.querySelectorAll('.message.user .msg-ava');
+  msgAvas.forEach(function(avaNode) {
+    if (p.photoURL) {
+      avaNode.innerHTML = '<img src="' + p.photoURL + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">';
+    } else {
+      var un = p.displayName || p.nickname || p.email || 'U';
+      avaNode.innerHTML = '<span>' + un.charAt(0).toUpperCase() + '</span>';
+    }
+  });
 }
 /* ── Wrapper pour l'auth Puter (Popup Native) ── */
 window.evaSafePuterSignIn = async function() {
   return await puter.auth.signIn();
 };
+
+

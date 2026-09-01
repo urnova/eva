@@ -3,7 +3,7 @@
 ═══════════════════════════════════════════════════ */
 async function extractUserInsights(lastUserMsg, lastEvaMsg) {
   if (!S.user || !S.adaptationEnabled) return;
-  if (window.setEvaStatusHeader) window.setEvaStatusHeader('🧠 MISE À JOUR CERVEAU...', 'thinking');
+  if (window.addFinalThinkingStep) window.addFinalThinkingStep('Modifie le cerveau...', 'Analyse de la conversation...');
   try {
     /* Construire l'extrait de conversation (6 derniers messages) */
     var recentMsgs = (S.messages || []).slice(-6).map(function(m) {
@@ -14,11 +14,31 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       recentMsgs = 'Utilisateur : ' + (lastUserMsg || '').slice(0, 2000) + '\nEVA : ' + (lastEvaMsg || '').slice(0, 2000);
     }
     if (!recentMsgs) {
-      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      if (window.addFinalThinkingStep) window.addFinalThinkingStep('Mise à jour ignorée', 'Aucune conversation récente.');
       return;
     }
 
-    var existingMemory = S.evaMemory && S.evaMemory.nodes ? JSON.stringify({nodes: S.evaMemory.nodes, links: S.evaMemory.links}) : '{"nodes":[],"links":[]}';
+    var existingMemory = '';
+    if (S.evaMemory && S.evaMemory.nodes) {
+        var txt = 'Entités:\n';
+        var memNodeMap = {};
+        (S.evaMemory.nodes || []).forEach(function(n) {
+            var lbl = (n.id === 'utilisateur' ? 'Utilisateur' : (n.label || n.id));
+            memNodeMap[n.id] = lbl;
+            if (n.details) txt += '- [' + lbl + '] (ID: ' + n.id + ') : ' + n.details + '\n';
+            else txt += '- [' + lbl + '] (ID: ' + n.id + ')\n';
+        });
+        txt += '\nRelations:\n';
+        (S.evaMemory.links || []).forEach(function(l) {
+            var src = memNodeMap[l.source] || l.source;
+            var tgt = memNodeMap[l.target] || l.target;
+            txt += '[' + src + '] -> ' + (l.label || 'lié à') + ' -> [' + tgt + ']\n';
+        });
+        existingMemory = txt;
+    } else {
+        existingMemory = 'Aucune donnée. Le graphe est vide.';
+    }
+
     var nick = (S.profile && (S.profile.nickname || S.profile.displayName)) || 'l\'utilisateur';
 
     var extractPrompt = 'Tu es l\'ARCHIVISTE STRICT du Cerveau Neuronal de l\'IA EVA. Ton but est de modéliser la vie de ' + nick + ' sous forme de graphe.\n' +
@@ -26,16 +46,17 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
       'RÈGLES ABSOLUES :\n' +
         '0. N\'enregistre QUE LES INFORMATIONS PERSONNELLES INTIMES ET DURABLES de l\'utilisateur (famille, amis, couple, domicile, profession, études, projets de vie datés). IGNORE TOUT LE RESTE.\n' +
       '1. INTERDICTION FORMELLE d\'enregistrer du contexte de discussion, des recherches internet, des recommandations de matériel (ex: modèles de PC, Thinkpad), des tutoriels ou des questions générales.\n' +
-      '  - _etape1_analyse : Liste les nouveaux faits intimes.\n' +
-      '  - _etape2_actions : Explication des ajouts/modifs/suppressions.\n' +
+      '2. Structure exacte : {"_etape1_analyse": "Liste les nouveaux faits intimes", "_etape2_actions": "Explication des ajouts/modifs/suppressions", "add_nodes": [{"id":"...", "label":"...", "type":"person|concept|project|preference", "details": "Description exhaustive..."}], "update_nodes": [{"id":"...", "label":"Nouveau nom optionnel", "details":"Nouveau texte qui remplace l\'ancien"}], "remove_nodes": ["id_du_noeud_a_supprimer"], "add_links": [{"source":"...", "target":"...", "label":"..."}]}\n' +
       '3. NE RENVOIE JAMAIS LE GRAPHE ENTIER. Renvoie uniquement ce qui change :\n' +
       '   - "add_nodes" : pour les entités totalement nouvelles.\n' +
       '   - "update_nodes" : pour modifier le champ "details" d\'une entité existante.\n' +
       '   - "remove_nodes" : pour SUPPRIMER DÉFINITIVEMENT un nœud (mets juste les IDs dans un tableau).\n' +
-      '   - "add_links" : pour lier de nouvelles choses.\n' +
+      '   - "add_links" : pour lier de nouvelles choses. RÈGLE CRUCIALE : Le "label" d\'un lien DOIT FAIRE ENTRE 1 ET 3 MOTS MAXIMUM.\n' +
       '4. DÉDUPLICATION OBLIGATOIRE : Avant de créer dans "add_nodes", vérifie si ça n\'existe pas déjà. Si oui, utilise "update_nodes".\n' +
       '5. SUPPRESSION : Si l\'utilisateur demande d\'oublier ou si c\'est hors-sujet, utilise "remove_nodes".\n' +
-      '6. HIÉRARCHIE DES LIENS : Ne relie pas tout à l\'utilisateur central. Crée des chaînes logiques.\n\n' +
+      '6. NŒUD CENTRAL OBLIGATOIRE : L\'entité centrale de l\'utilisateur a TOUJOURS l\'id "utilisateur". Tu ne dois JAMAIS créer un nouveau nœud avec son prénom pour le représenter lui-même.\n' +
+      '7. RAMIFICATIONS COMPLEXES (TRÈS IMPORTANT) : Ne force pas tous les liens vers "utilisateur". Si l\'utilisateur dit "Ma mère habite à Paris", tu DOIS créer un lien [mère] -> habite à -> [Paris], ET un lien [utilisateur] -> a pour mère -> [mère]. Il est crucial de créer un vrai réseau connecté (graphe), et pas juste une étoile centrée sur l\'utilisateur.\n' +
+      '8. TEMPORALITÉ ET HISTORIQUE : Si une information change ou évolue (ex: déménagement, rupture, changement de goût), NE SUPPRIME PAS l\'ancienne information. Garde l\'historique ! Utilise "update_nodes" pour ajouter la nouvelle info tout en mentionnant l\'ancienne dans le champ "details", ou modifie les "add_links" avec des labels au passé (ex: "habitait à", "ex-copine").\n\n' +
       'GRAPHE ACTUEL :\n' + existingMemory + '\n\n' +
       'CONVERSATION RÉCENTE :\n' + recentMsgs;
 
@@ -89,7 +110,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
 
     if (!newMemoryText) {
       console.warn('[Mémoire Évolutive] Échec total de tous les providers.');
-      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      if (window.addFinalThinkingStep) window.addFinalThinkingStep('Erreur réseau', 'Échec de la mise à jour mémoire.');
       return;
     }
     console.log('[Mémoire Évolutive] Provider ayant généré le JSON :', usedProvider);
@@ -100,7 +121,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     if (jsonMatch) {
       newMemoryText = jsonMatch[0];
     } else {
-      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      if (window.addFinalThinkingStep) window.addFinalThinkingStep('Erreur', 'JSON invalide retourné par l\'IA.');
       throw new Error("Aucun objet JSON trouvé dans la réponse");
     }
     
@@ -127,10 +148,11 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     // 2. Mettre à jour les noeuds existants
     if (patch.update_nodes && Array.isArray(patch.update_nodes)) {
       patch.update_nodes.forEach(function(un) {
-        if (un && un.id && un.details) {
+        if (un && un.id) {
           var target = currentMem.nodes.find(function(ex){ return ex.id === un.id; });
           if (target) {
-            target.details = un.details;
+            if (un.details) target.details = un.details;
+            if (un.label) target.label = un.label;
             updated = true;
           }
         }
@@ -158,7 +180,14 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     if (patch.add_links && Array.isArray(patch.add_links)) {
       patch.add_links.forEach(function(l) {
         if (l && l.source && l.target) {
-          var exists = currentMem.links.find(function(ex){ return ex.source === l.source && ex.target === l.target && ex.label === l.label; });
+          // Chercher si un lien IDENTIQUE existe déjà (même source, même cible, même label)
+          var exists = currentMem.links.find(function(ex){ 
+            var sameNodes = (ex.source === l.source && ex.target === l.target) || 
+                            (ex.source === l.target && ex.target === l.source);
+            var sameLabel = (ex.label || '').toLowerCase().trim() === (l.label || '').toLowerCase().trim();
+            return sameNodes && sameLabel;
+          });
+          
           if (!exists) {
             currentMem.links.push(l);
             updated = true;
@@ -169,7 +198,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
 
     if (!updated) {
       console.log('[Mémoire Évolutive] Aucun changement détecté.');
-      if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+      if (window.addFinalThinkingStep) window.addFinalThinkingStep('Cerveau inchangé', 'Aucune nouvelle information pertinente.');
       return;
     }
 
@@ -186,9 +215,15 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     if (S.profile) S.profile.evaMemory = memoryData;
     console.log('[Mémoire Évolutive] Cerveau mis à jour — v' + memoryData.version + ' (par ' + usedProvider + ')', memoryData);
     
-    if (window.setEvaStatusHeader) {
-      window.setEvaStatusHeader('🧠 CERVEAU MIS À JOUR', 'action');
-      setTimeout(function(){ window.setEvaStatusHeader(null); }, 3000);
+    /* Injecter l'étape dans la boîte de réflexion du dernier message via la nouvelle fonction */
+    if (window.addFinalThinkingStep) {
+      var summary = [];
+      if (patch.add_nodes && patch.add_nodes.length > 0) summary.push('+' + patch.add_nodes.length + ' nœud' + (patch.add_nodes.length > 1 ? 's' : ''));
+      if (patch.add_links && patch.add_links.length > 0) summary.push('+' + patch.add_links.length + ' lien' + (patch.add_links.length > 1 ? 's' : ''));
+      if (patch.update_nodes && patch.update_nodes.length > 0) summary.push(patch.update_nodes.length + ' maj');
+      if (patch.remove_nodes && patch.remove_nodes.length > 0) summary.push('-' + patch.remove_nodes.length + ' nœud');
+      var detailStr = summary.join(', ') || 'Modifications mineures';
+      window.addFinalThinkingStep('Cerveau mis à jour', detailStr);
     }
     
     // Si la page des paramètres est ouverte sur Cerveau, rafraîchir
@@ -198,7 +233,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
 
   } catch(e) {
     console.warn('[Mémoire Évolutive] Erreur extraction (JSON attendu):', e);
-    if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+    if (window.addFinalThinkingStep) window.addFinalThinkingStep('Erreur', 'Extraction mémoire échouée.');
   }
 }
 window.extractUserInsights = extractUserInsights;

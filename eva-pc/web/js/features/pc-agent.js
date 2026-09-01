@@ -121,18 +121,6 @@ window.pcAgentDocRef = docRef;
         
         resultData = await runAgenticLoop(prompt, cmdId, uid);
         status = 'done';
-        
-        // Lire le rapport final via TTS et mettre à jour l'overlay
-        if (resultData && resultData.output) {
-          if (window.eva && window.eva.overlay) window.eva.overlay.show('speaking', 'Lecture du rapport...');
-          if (window.EVATTS && window.S && window.S.config && window.S.ttsOn) {
-            window.EVATTS.speakTextStreaming(resultData.output, window.S.config);
-          } else {
-            if (window.eva && window.eva.overlay) window.eva.overlay.hide();
-          }
-        } else {
-          if (window.eva && window.eva.overlay) window.eva.overlay.hide();
-        }
       }
       else if (data.type === 'sysinfo') {
         const res = await window.eva.system.info();
@@ -214,11 +202,6 @@ window.pcAgentDocRef = docRef;
     
     for(let i=0; i<10; i++) {
       try {
-        const checkDoc = await window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId).get();
-        if (checkDoc.exists && checkDoc.data().status === 'cancelled') {
-           return { output: 'Tâche annulée par l\'utilisateur.' };
-        }
-
         const data = await window.eva.system.llmChat(history);
           // Format adapter from openai-compatible (llama-server) to ollama format
           if (data.choices && data.choices[0] && data.choices[0].message) {

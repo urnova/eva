@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+ï»¿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>E.V.A — Téléchargement</title>
+<title>E.V.A â€” TÃ©lÃ©chargement</title>
 <link rel="icon" type="image/png" href="/assets/images/eva-logo.png">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#00d4ff">
@@ -29,7 +29,7 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);o
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(0,212,255,0.2);border-radius:10px}
 
-/* Background — identical to index.html */
+/* Background â€” identical to index.html */
 body::before{
   content:'';position:fixed;inset:0;
   background-image:linear-gradient(rgba(0,212,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.02) 1px,transparent 1px);
@@ -43,7 +43,7 @@ body::before{
 .bg-orb-3{width:400px;height:400px;background:rgba(0,255,136,0.03);top:50%;left:50%;transform:translate(-50%,-50%);animation:orbFloat 12s ease-in-out infinite;}
 @keyframes orbFloat{0%,100%{transform:translate(0,0)}33%{transform:translate(20px,-30px)}66%{transform:translate(-15px,20px)}}
 
-/* NAV — identical to index.html */
+/* NAV â€” identical to index.html */
 nav{
   position:fixed;top:0;left:0;right:0;z-index:100;
   padding:16px 40px;
@@ -106,7 +106,7 @@ nav.scrolled{background:rgba(15,15,18,0.97);border-bottom-color:var(--border);}
 .nav-profile-item:hover{background:rgba(0,212,255,0.08);color:var(--cyan);}
 .nav-profile-item.danger:hover{background:rgba(255,77,109,0.1);color:#ff4d6d;}
 
-/* FOOTER — identical to index.html */
+/* FOOTER â€” identical to index.html */
 footer{
   position:relative;z-index:1;
   padding:30px 40px;
@@ -302,9 +302,9 @@ footer{
     <img src="/assets/images/eva-logo.png" alt="EVA" class="nav-brand-logo">
   </a>
   <div class="nav-links">
-    <a href="/#features" class="nav-link">Fonctionnalités</a>
+    <a href="/#features" class="nav-link">FonctionnalitÃ©s</a>
     <a href="/#providers" class="nav-link">Providers IA</a>
-    <a href="/download" class="nav-link active">Téléchargement</a>
+    <a href="/download" class="nav-link active">TÃ©lÃ©chargement</a>
   </div>
   <div class="nav-user" id="navUser">
     <a href="/login" target="_top" class="nav-user-btn">Connexion</a>
@@ -319,70 +319,46 @@ footer{
   <div class="dl-header">
     <div class="dl-badge">
       <div class="dl-badge-dot"></div>
-      Téléchargement
+      TÃ©lÃ©chargement
     </div>
-    <h1 class="dl-title">EVA — <span>Partout.</span></h1>
-    <p class="dl-subtitle">Retrouvez votre assistante IA sur tous vos appareils. Application mobile et application desktop bientôt disponibles.</p>
+    <h1 class="dl-title">EVA â€” <span>Partout.</span></h1>
+    <p class="dl-subtitle">TÃ©lÃ©chargez l'application native pour Windows et profitez de l'intÃ©gration CloudWorks OS Agent avec E.V.A.</p>
   </div>
 
   <!-- App Cards -->
-  <div class="dl-grid">
-
-    <!-- Mobile -->
-    <div class="dl-card">
-      <div class="dl-card-icon">
-        <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-      </div>
-      <div class="dl-card-title">EVA MOBILE</div>
-      <div class="dl-card-sub">Application Android</div>
-      <div class="dl-card-features">
-        <div class="dl-card-feature">Toutes les fonctionnalités EVA dans votre poche</div>
-        <div class="dl-card-feature">Notifications push pour alarmes et rappels</div>
-        <div class="dl-card-feature">Interface optimisée tactile</div>
-        <div class="dl-card-feature">Wake Word "Hey EVA" toujours actif</div>
-        <div class="dl-card-feature">Mode hors-ligne avec modèle IA local</div>
-      </div>
-      <div class="dl-btn">
-        <div class="dl-btn-icon">??</div>
-        <div class="dl-btn-info">
-          <div class="dl-btn-name">Télécharger l'APK</div>
-          <div class="dl-btn-format">Android — fichier .apk</div>
-        </div>
-        <span class="dl-btn-soon">Bientôt</span>
-      </div>
-    </div>
+  <div class="dl-grid" style="display:flex;justify-content:center;">
 
     <!-- Desktop -->
-    <div class="dl-card">
+    <div class="dl-card" style="max-width:500px;width:100%;">
       <div class="dl-card-icon">
         <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
       </div>
       <div class="dl-card-title">EVA DESKTOP</div>
       <div class="dl-card-sub">Application Windows</div>
       <div class="dl-card-features">
-        <div class="dl-card-feature">Application native légère et rapide</div>
-        <div class="dl-card-feature">Accès depuis la barre des tâches</div>
-        <div class="dl-card-feature">Modèles IA locaux (Ollama, LM Studio)</div>
+        <div class="dl-card-feature">Application native lÃ©gÃ¨re et rapide</div>
+        <div class="dl-card-feature">AccÃ¨s depuis la barre des tÃ¢ches</div>
+        <div class="dl-card-feature">ModÃ¨les IA locaux (Ollama, LM Studio)</div>
         <div class="dl-card-feature">Raccourci clavier global pour invoquer EVA</div>
-        <div class="dl-card-feature">Génération et gestion de fichiers en local</div>
+        <div class="dl-card-feature">GÃ©nÃ©ration et gestion de fichiers en local</div>
       </div>
-      <div class="dl-btn">
-        <div class="dl-btn-icon">??</div>
+      <a href="https://github.com/urnova/eva/releases/latest/download/EVA-Assistant-Setup.exe" target="_blank" class="dl-btn" style="cursor: pointer; background: rgba(0,212,255,0.15); border-color: rgba(0,212,255,0.4);">
+        <div class="dl-btn-icon">ðŸªŸ</div>
         <div class="dl-btn-info">
-          <div class="dl-btn-name">Télécharger pour Windows</div>
-          <div class="dl-btn-format">Windows 10/11 — fichier .exe</div>
+          <div class="dl-btn-name">TÃ©lÃ©charger pour Windows</div>
+          <div class="dl-btn-format">Windows 10/11 â€” fichier .exe</div>
         </div>
-        <span class="dl-btn-soon">Bientôt</span>
-      </div>
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--cyan)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </a>
     </div>
 
   </div>
 
   <!-- Web CTA -->
   <div class="dl-cta">
-    <div class="dl-cta-label">Disponible dès maintenant</div>
+    <div class="dl-cta-label">Disponible dÃ¨s maintenant</div>
     <div class="dl-cta-title">Interface Web</div>
-    <p class="dl-cta-desc">Accédez à toutes les fonctionnalités EVA directement depuis votre navigateur, sans rien installer. Gratuit, rapide et toujours à jour.</p>
+    <p class="dl-cta-desc">AccÃ©dez Ã  toutes les fonctionnalitÃ©s EVA directement depuis votre navigateur, sans rien installer. Gratuit, rapide et toujours Ã  jour.</p>
     <a href="/login" target="_top" class="btn-primary">
       <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
       Commencer gratuitement
@@ -391,30 +367,30 @@ footer{
 
 </div>
 
-<!-- FOOTER — identical to index.html -->
+<!-- FOOTER â€” identical to index.html -->
 <footer>
   <div class="footer-brand" style="display:flex;align-items:center;gap:16px;">
     <img src="/assets/images/eva-logo.png" alt="EVA" style="height:28px;width:auto;">
-    <span style="color:rgba(0,212,255,0.2);font-size:1.2em;">×</span>
+    <span style="color:rgba(0,212,255,0.2);font-size:1.2em;">Ã—</span>
     <img src="/assets/images/astral-logo.png" alt="Astral Technologie" style="height:22px;width:auto;opacity:0.85;">
   </div>
-  <div class="footer-copy">© 2026 Astral Technologie — Evolutionary Virtual Assistant — Beta V4</div>
+  <div class="footer-copy">Â© 2026 Astral Technologie â€” Evolutionary Virtual Assistant â€” Beta V4</div>
   <div class="footer-links">
     <a href="/login" target="_top" class="footer-link">Connexion</a>
     <a href="/conditions" class="footer-link">Conditions d'utilisation</a>
-    <a href="/privacy" class="footer-link">Confidentialité</a>
+    <a href="/privacy" class="footer-link">ConfidentialitÃ©</a>
     <a href="/cookies" class="footer-link">Cookies</a>
   </div>
 </footer>
 
 <script src="/js/core/firebase-config.js"></script>
 <script>
-// Scroll nav — same as index.html
+// Scroll nav â€” same as index.html
 window.addEventListener('scroll', function() {
   document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 50);
 });
 
-// Auth state — same logic as index.html
+// Auth state â€” same logic as index.html
 function _buildNavUser(user, photoURL) {
   var navUser = document.getElementById('navUser');
   var initial = (user.displayName || user.email || 'U')[0].toUpperCase();
@@ -428,10 +404,10 @@ function _buildNavUser(user, photoURL) {
         '<div class="nav-profile-menu" id="navProfileMenu">' +
           '<div class="nav-profile-info"><div style="font-weight:700;font-size:0.85em">'+(user.displayName||user.email)+'</div><div style="font-size:0.72em;color:rgba(0,212,255,0.6)">'+user.email+'</div></div>' +
           '<div style="height:1px;background:rgba(0,212,255,0.1);margin:4px 0"></div>' +
-          '<a href="/chat" target="_top" class="nav-profile-item"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Accéder à EVA</a>' +
-          '<a href="/chat/settings/profile" target="_top" class="nav-profile-item"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>Paramètres</a>' +
+          '<a href="/chat" target="_top" class="nav-profile-item"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>AccÃ©der Ã  EVA</a>' +
+          '<a href="/chat/settings/profile" target="_top" class="nav-profile-item"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>ParamÃ¨tres</a>' +
           '<div style="height:1px;background:rgba(0,212,255,0.1);margin:4px 0"></div>' +
-          '<button class="nav-profile-item danger" onclick="auth.signOut().then(function(){window.location.reload();})"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Déconnexion</button>' +
+          '<button class="nav-profile-item danger" onclick="auth.signOut().then(function(){window.location.reload();})"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>DÃ©connexion</button>' +
         '</div>' +
       '</div>';
     document.addEventListener('click', function(e) {
@@ -462,5 +438,22 @@ auth.onAuthStateChanged(function(user) {
   }
 });
 </script>
+<script>
+fetch('https://api.github.com/repos/urnova/eva/releases/latest')
+  .then(response => response.json())
+  .then(data => {
+    const vTag = data.tag_name || data.name;
+    const dlEl = document.getElementById('dl-version');
+    if (dlEl && vTag) dlEl.textContent = '(' + vTag + ')';
+    if (dlEl && vTag && dlEl.closest('a')) {
+        dlEl.closest('a').href = 'https://github.com/urnova/eva/releases/latest/download/E.V.A-Setup-' + vTag.replace('v', '') + '.exe';
+    }
+  })
+  .catch(console.error);
+</script>
 </body>
 </html>
+
+
+
+

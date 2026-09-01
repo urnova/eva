@@ -1,10 +1,26 @@
 async function loadConvs() {
   if (!S.user) return;
   try {
-    var snap = await db.collection('users').doc(S.user.uid)
-      .collection('conversations').orderBy('updatedAt','desc').limit(30).get();
-    S.convs = [];
-    snap.forEach(function(d){ S.convs.push(Object.assign({id:d.id},d.data())); });
+    var pinnedSnap = await db.collection('users').doc(S.user.uid)
+      .collection('conversations').where('isPinned', '==', true).get();
+    var recentSnap = await db.collection('users').doc(S.user.uid)
+      .collection('conversations').orderBy('updatedAt','desc').limit(50).get();
+    
+    var tempMap = {};
+    pinnedSnap.forEach(function(d){ tempMap[d.id] = Object.assign({id:d.id},d.data()); });
+    recentSnap.forEach(function(d){ tempMap[d.id] = Object.assign({id:d.id},d.data()); });
+    
+    var all = Object.values(tempMap);
+    all.sort(function(a, b) {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      if (a.isPinned && b.isPinned) {
+          return (b.pinnedAt || 0) - (a.pinnedAt || 0);
+      }
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
+    });
+    
+    S.convs = all;
     renderConvs();
   } catch(e) { console.error('loadConvs:',e); }
 }
@@ -25,14 +41,20 @@ function renderConvs(filter) {
   var _svgPen  = '<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
   var _svgTrash= '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
 
+  var _svgPin  = '<svg viewBox="0 0 24 24" style="transform: rotate(45deg); stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M16 11V7a4 4 0 0 0-8 0v4l-2 4h12z"/><path d="M12 15v6"/></svg>';
+
   list.innerHTML = convs.map(function(c) {
     var act = c.id === S.convId;
-    return '<div class="conv-item'+(act?' active':'')+'" data-id="'+c.id+'">' +
+    var pinIcon = c.isPinned ? '<div style="position:absolute;top:5px;right:5px;color:#f1c40f;width:16px;height:16px;">'+_svgPin+'</div>' : '';
+    var pinBtnText = c.isPinned ? 'Désépingler' : 'Épingler';
+    return '<div class="conv-item'+(act?' active':'')+'" data-id="'+c.id+'" style="position:relative;">' +
+      pinIcon +
       '<div class="conv-icon"><svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>' +
       '<div class="conv-body"><div class="conv-title">'+esc(c.title||'Conversation')+'</div><div class="conv-preview">'+esc(c.lastMessage||'')+'</div></div>' +
       '<div class="conv-menu-wrap">' +
         '<button class="conv-menu-btn" data-id="'+c.id+'" title="Options" aria-label="Options">'+_svgDots+'</button>' +
         '<div class="conv-dropdown">' +
+          '<button class="conv-dropdown-item conv-pin-trigger" data-id="'+c.id+'" data-pinned="'+(c.isPinned?1:0)+'">'+_svgPin+pinBtnText+'</button>' +
           '<button class="conv-dropdown-item conv-rename-trigger" data-id="'+c.id+'">'+_svgPen+'Renommer</button>' +
           '<button class="conv-dropdown-item danger conv-del-trigger" data-id="'+c.id+'">'+_svgTrash+'Supprimer</button>' +
         '</div>' +
@@ -58,6 +80,17 @@ function renderConvs(filter) {
       /* Fermer tous les autres */
       list.querySelectorAll('.conv-dropdown.open').forEach(function(d){ d.classList.remove('open'); });
       if (!isOpen) dd.classList.add('open');
+    });
+  });
+
+  /* Épingler / Désépingler */
+  list.querySelectorAll('.conv-pin-trigger').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      this.closest('.conv-dropdown').classList.remove('open');
+      var id = this.dataset.id;
+      var isPinned = this.dataset.pinned === '1';
+      togglePinConv(id, !isPinned);
     });
   });
 
@@ -184,6 +217,29 @@ function renameConv(id) {
 }
 window.renameConv = renameConv;
 
+async function togglePinConv(id, isPinned) {
+  var conv = S.convs.find(function(c){return c.id===id;});
+  if (conv) {
+    conv.isPinned = isPinned;
+    conv.pinnedAt = isPinned ? window.timestamp() : null;
+    try {
+      await db.collection('users').doc(S.user.uid).collection('conversations').doc(id).update({
+        isPinned: isPinned,
+        pinnedAt: conv.pinnedAt
+      });
+      // Re-trier et ré-afficher
+      S.convs.sort(function(a, b) {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        if (a.isPinned && b.isPinned) return (b.pinnedAt || 0) - (a.pinnedAt || 0);
+        return (b.updatedAt || 0) - (a.updatedAt || 0);
+      });
+      renderConvs();
+    } catch(e) { toast('Erreur épinglage','error'); }
+  }
+}
+window.togglePinConv = togglePinConv;
+
 async function saveConvMsg(userMsg, evaMsg) {
   if (!S.user) return;
   try {
@@ -207,6 +263,15 @@ async function saveConvMsg(userMsg, evaMsg) {
     var msgs = ref.collection('messages');
     await msgs.add({role:'user', content:userMsg, timestamp:window.timestamp()});
     await msgs.add({role:'eva', content:evaMsg, timestamp:window.timestamp()});
+    
+    // Assurer le bon tri après mise à jour
+    S.convs.sort(function(a, b) {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      if (a.isPinned && b.isPinned) return (b.pinnedAt || 0) - (a.pinnedAt || 0);
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
+    });
+    
     renderConvs();
     /* Mémoire Évolutive — extraction à chaque échange (arrière-plan, non-bloquant) */
     if (S.adaptationEnabled) {

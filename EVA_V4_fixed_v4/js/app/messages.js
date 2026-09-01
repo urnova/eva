@@ -577,6 +577,7 @@ async function handleSend() {
       '- PDF → bloc ```pdf\n<!DOCTYPE html>...(HTML complet stylisé)...```\n' +
       '- Graphique dans le chat → ```chart\n{"type":"bar","data":{"labels":["A","B"],"datasets":[{"label":"Ventes","data":[10,20],"backgroundColor":["#5b77f7","#06b6d4"]}]}}\n```\n' +
       'Pour toute génération de fichier : UNE phrase courte + le bloc ACTION. Rien d\'autre après.\n' +
+        'QUESTIONS SUGGÉRÉES : À la fin de TA RÉPONSE, ajoute TOUJOURS [SUGGESTIONS: ["Q1?","Q2?","Q3?"]] (tableau JSON strict de 3 questions de suivi).\n' +
       '\nFORMATAGE : Utilise le markdown (##, listes, **gras**, tableaux) quand utile. Blocs spéciaux :\n' +
       '```tip ...``` (conseil), ```warning ...``` (mise en garde), ```info ...``` (information), ```success ...``` (validation)\n' +
       '```stats\nMétrique: Valeur``` (chiffres clés), ```timeline\n2024 → Événement``` (chronologie)\n' +
@@ -1233,7 +1234,7 @@ function handleFileSelect(e) {
     pendingDocs++;
     document.getElementById('sendBtn').disabled = true;
     /* Afficher nom immédiatement */
-    S.documents.push({ name: file.name, ext: ext, text: null, size: file.size, _loading: true });
+    S.documents.push({ name: file.name, ext: ext, text: null, size: file.size, url: URL.createObjectURL(file), _loading: true });
     S.document = S.documents[0];
     _refreshFilePreviewBars();
 

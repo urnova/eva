@@ -88,7 +88,6 @@ function _getEngine(config) {
     };
   }
   if (prov === 'openai') {
-    /* Engine OpenAI TTS inline */
     return {
       speak: function(text, cfg, onStart, onEnd) {
         var key   = cfg && (cfg.openAITTSApiKey || cfg.openaiApiKey);
@@ -114,12 +113,13 @@ function _getEngine(config) {
           return r.blob();
         }).then(function(blob) {
           var url = URL.createObjectURL(blob);
-          var audio = new Audio(url);
-          audio.onended = function() { URL.revokeObjectURL(url); if (onEnd) onEnd(); };
-          audio.onerror = function() { URL.revokeObjectURL(url); if (onEnd) onEnd(); };
-          audio.play();
+          window._openaiAudio = new Audio(url);
+          window._openaiAudio.onended = function() { URL.revokeObjectURL(url); window._openaiAudio = null; if (onEnd) onEnd(); };
+          window._openaiAudio.onerror = function() { URL.revokeObjectURL(url); window._openaiAudio = null; if (onEnd) onEnd(); };
+          window._openaiAudio.play();
         }).catch(function(e) {
           console.error('[EVA TTS] OpenAI TTS erreur:', e);
+          window._openaiAudio = null;
           if (onEnd) onEnd();
         });
       }
@@ -259,6 +259,9 @@ window.EVATTS = {
     }
     if (_elevenlabsAudio) {
       try { _elevenlabsAudio.pause(); _elevenlabsAudio = null; } catch(e) {}
+    }
+    if (window._openaiAudio) {
+      try { window._openaiAudio.pause(); window._openaiAudio = null; } catch(e) {}
     }
     if (typeof speechSynthesis !== 'undefined') {
       try { speechSynthesis.cancel(); } catch(e) {}

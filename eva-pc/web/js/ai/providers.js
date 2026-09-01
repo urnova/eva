@@ -22,90 +22,6 @@ function _stripLeakedPrefix(text) {
   return out.trim() || text;
 }
 
-// ═══ EVA LOCAL PROVIDER (Electron LLM) ═══
-class EvaLocalProvider {
-  constructor(config) {
-    this.config = config;
-    this.ready = true;
-  }
-
-  async initialize() {
-    if (window.eva && window.eva.system && window.eva.system.llmStart) {
-        await window.eva.system.llmStart();
-        return { success: true };
-    }
-    return { success: false, error: 'Non disponible en mode web.' };
-  }
-
-  async sendMessage(messages, systemPrompt) {
-    if (!window.eva || !window.eva.system || !window.eva.system.llmChat) {
-        return { success: false, error: 'Agent local non disponible.' };
-    }
-    
-    if (systemPrompt === undefined) {
-      systemPrompt = window.EVA_SYSTEM_PROMPT || 'Tu es Eva, assistante IA locale.';
-    }
-
-    try {
-      let history = [
-        { role: 'system', content: systemPrompt },
-        ...messages
-      ];
-
-      // On boucle au cas où l'IA génère des commandes [CMD]
-      for (let i = 0; i < 10; i++) {
-        if (window.eva && window.eva.overlay) window.eva.overlay.show('thinking');
-        const data = await window.eva.system.llmChat(history);
-        
-        let text = '';
-        if (data && data.choices && data.choices[0] && data.choices[0].message) {
-            text = data.choices[0].message.content;
-        } else if (data && data.content) {
-            text = data.content;
-        }
-
-        history.push({role: 'assistant', content: text});
-        
-        // 1. Check for REPORT
-        const reportMatch = text.match(/\[REPORT\]([\s\S]*?)\[\/REPORT\]/i);
-        if(reportMatch) {
-          if (window.eva && window.eva.overlay) window.eva.overlay.hide();
-          return { success: true, content: _stripLeakedPrefix(reportMatch[1].trim()) };
-        }
-        
-        // 2. Check for CMD
-        const cmdMatch = text.match(/\[CMD\]([\s\S]*?)\[\/CMD\]/i);
-        if(cmdMatch) {
-          const cmd = cmdMatch[1].trim();
-          if (window.eva && window.eva.overlay) window.eva.overlay.show('cloudworks', 'Exécution: ' + cmd);
-          
-          let cmdResult = '';
-          try {
-            const res = await window.eva.system.exec(cmd);
-            cmdResult = res.success ? (res.stdout || 'Succès') : (res.stderr || res.error);
-          } catch(e) { cmdResult = 'Erreur: ' + e; }
-          
-          history.push({role: 'user', content: "Résultat de la commande:\n" + cmdResult + "\n\nQue fais-tu ensuite ? (Utilise [CMD] ou [REPORT])"});
-        } else {
-          // No tags, just standard chat reply
-          if (window.eva && window.eva.overlay) window.eva.overlay.hide();
-          return {
-            success: true,
-            content: _stripLeakedPrefix(text)
-          };
-        }
-      }
-      
-      if (window.eva && window.eva.overlay) window.eva.overlay.hide();
-      return { success: true, content: 'Boucle agentique terminée sans rapport clair.' };
-
-    } catch (error) {
-      if (window.eva && window.eva.overlay) window.eva.overlay.hide();
-      return { success: false, error: error.message };
-    }
-  }
-}
-
 // ═══ QWEN 3 (WebLLM - Local) ═══
 class QwenProvider {
   constructor(config) {
@@ -804,8 +720,6 @@ class PollinationsProvider {
 // ═══ PROVIDER FACTORY ═══
 function createProvider(providerName, config) {
   switch (providerName) {
-    case 'evalocal':
-      return new EvaLocalProvider(config);
     case 'eva':
       return new EvaProvider(config);
     case 'qwen':

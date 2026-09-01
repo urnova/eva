@@ -10,7 +10,7 @@ export function checkAuth(requireAuth = true) {
   return new Promise((resolve, reject) => {
     auth.onAuthStateChanged((user) => {
       if (requireAuth && !user) {
-        window.location.href = '/app-login.html';
+        window.location.href = '/login';
         reject('Not authenticated');
       } else {
         resolve(user);
