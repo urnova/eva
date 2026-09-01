@@ -336,6 +336,7 @@ app.whenReady().then(async () => {
   })
 
   autoUpdater.on('error', (err) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('updater:error', err ? err.toString() : 'Unknown error');
     if (mainWindow) mainWindow.webContents.send('splash:status', 'Erreur rÃ©seau. DÃ©marrage...')
     setTimeout(launchMainApp, 1000)
   })
@@ -816,7 +817,12 @@ ipcMain.handle('app:path', () => app.getPath('userData'))
 // --- Updater IPC ---
 ipcMain.handle('updater:start-download', () => {
   if (!isDev) {
-    autoUpdater.downloadUpdate().catch(console.error);
+    autoUpdater.downloadUpdate().catch(err => {
+      console.error(err);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('updater:error', err ? err.toString() : 'Unknown error');
+      }
+    });
   }
 })
 ipcMain.handle('updater:quit-and-install', () => {
