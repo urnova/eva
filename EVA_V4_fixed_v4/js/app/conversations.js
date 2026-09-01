@@ -151,7 +151,9 @@ async function loadConv(id) {
       updateProviderLabel(restProv);
     }
     updateModelSelectUI();
-    var snap = await db.collection('users').doc(S.user.uid)
+      var _ml = document.getElementById('messagesList');
+      if (_ml) _ml.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);font-family:monospace;font-size:13px;">Chargement de la conversation...</div>';
+      var snap = await db.collection('users').doc(S.user.uid)
       .collection('conversations').doc(id)
       .collection('messages').orderBy('timestamp','asc').limit(100).get();
     S.messages = [];

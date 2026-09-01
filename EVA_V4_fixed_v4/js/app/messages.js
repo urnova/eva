@@ -17,11 +17,14 @@ function renderMsgs() {
     loadBtn.innerHTML = '<button onclick="loadOlderMsgs()" style="background:rgba(0,195,230,0.1);border:1px solid rgba(0,195,230,0.3);color:#00c3e6;border-radius:20px;padding:4px 18px;font-size:0.78em;cursor:pointer;font-family:inherit;">⬆ Charger les messages précédents ('+_renderedMsgOffset+')</button>';
     list.appendChild(loadBtn);
   }
-  for (var i = _renderedMsgOffset; i < S.messages.length; i++) {
-    var _md = buildMsgDom(S.messages[i]);
-    _md.dataset.msgIdx = i;
-    list.appendChild(_md);
-  }
+  var frag = document.createDocumentFragment();
+    for (var i = _renderedMsgOffset; i < S.messages.length; i++) {
+      var _md = buildMsgDom(S.messages[i]);
+      _md.dataset.msgIdx = i;
+      _md.style.animation = 'none'; /* Disable animation for history to prevent lag */
+      frag.appendChild(_md);
+    }
+    list.appendChild(frag);
   scrollDown();
 }
 
