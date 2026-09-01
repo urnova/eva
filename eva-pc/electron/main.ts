@@ -274,7 +274,7 @@ function createTray() {
   const icon = nativeImage.createFromPath(trayIconPath).resize({ width: 16, height: 16 })
   tray = new Tray(icon)
   _rebuildTrayMenu()
-  tray.on('double-click', () => { mainWindow?.show(); mainWindow?.focus() })
+  tray.on('double-click', () => { mainWindow?.show(); mainWindow?.focus(); _checkForUpdatesIfNeeded(); })
 }
 
 function _rebuildTrayMenu() {
@@ -314,15 +314,8 @@ function _rebuildTrayMenu() {
       ]
     },
     {
-      label: `🤖 LLM Local  ${llmRunning ? '[● En ligne]' : '[○ Arrêté]'}`,
+      label: `🤖 LLM  ${llmRunning ? '[● En ligne]' : '[○ Arrêté]'}`,
       submenu: [
-        {
-          label: llmRunning ? '■ Arrêter le LLM' : '▶ Démarrer le LLM',
-          click: async () => {
-            if (llmRunning) { stopLLM(); } else { await startLLM(); }
-            _rebuildTrayMenu();
-          }
-        },
         {
           label: '⟳ Redémarrer le LLM',
           click: async () => { stopLLM(); setTimeout(async () => { await startLLM(); _rebuildTrayMenu(); }, 1500); }
@@ -408,7 +401,8 @@ app.whenReady().then(async () => {
     
     // Installer l'update immÃ©diatement et redÃ©marrer (silencieusement)
     setTimeout(() => {
-      autoUpdater.quitAndInstall(true, true)
+      // isSilent=false pour éviter le blocage UAC avec perMachine=true
+      autoUpdater.quitAndInstall(false, true)
     }, 2000)
   })
 
@@ -432,6 +426,19 @@ function launchMainApp() {
   }
 }
 
+var _lastUpdateCheck = 0;
+
+function _checkForUpdatesIfNeeded() {
+  if (isDev) return;
+  var now = Date.now();
+  // Max 1 check toutes les 15 minutes
+  if (now - _lastUpdateCheck < 15 * 60 * 1000) return;
+  _lastUpdateCheck = now;
+  try {
+    autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+  } catch(e) {}
+}
+
 function toggleWindow() {
   if (!mainWindow) return
   if (mainWindow.isVisible()) {
@@ -443,6 +450,8 @@ function toggleWindow() {
   } else {
     mainWindow.show()
     mainWindow.focus()
+    // Vérifier les mises à jour à la réouverture
+    _checkForUpdatesIfNeeded();
   }
 }
 
@@ -900,7 +909,7 @@ ipcMain.handle('updater:start-download', () => {
 })
 ipcMain.handle('updater:quit-and-install', () => {
   if (!isDev) {
-    autoUpdater.quitAndInstall(true, true);
+    autoUpdater.quitAndInstall(false, true);
   }
 })
 autoUpdater.on('download-progress', (progressObj) => {

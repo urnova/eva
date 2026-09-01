@@ -1,6 +1,6 @@
 {
   "name": "eva-assistant-pc",
-  "version": "5.4.34",
+  "version": "5.4.35",
   "description": "Assistant Virtuel IA E.V.A â€” Evolutionary Virtual Assistant by Astral Technologie",
   "author": "Astral Technologie",
   "main": "dist-electron/main.js",
@@ -98,7 +98,9 @@
       "uninstallDisplayName": "EVA Assistant",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "differentialPackage": true
     },
     "publish": [
       {
