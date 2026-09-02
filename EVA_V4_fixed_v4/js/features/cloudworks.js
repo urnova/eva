@@ -43,26 +43,22 @@ function _startBackgroundDeviceListener(uid) {
   }
 }
 
-// Se branche sur l'auth Firebase dès que possible
+// Attend que window.S.user soit défini par auth.js (évite les races conditions Firebase)
+// N'utilise PAS onAuthStateChanged directement — auth.js le gère déjà
 function _hookAuthForDeviceListener() {
-  var maxRetry = 30, attempt = 0;
+  var attempt = 0, maxAttempts = 120; // 60 secondes max
   var check = setInterval(function() {
     attempt++;
-    if (attempt > maxRetry) { clearInterval(check); return; }
-    if (window.firebase && window.firebase.auth) {
+    if (attempt > maxAttempts) { clearInterval(check); return; }
+    // window.S.user est défini par auth.js APRÈS que Firebase ait bien initialisé le token
+    if (window.S && window.S.user && window.S.user.uid && window.db) {
       clearInterval(check);
-      window.firebase.auth().onAuthStateChanged(function(user) {
-        if (user) {
-          _startBackgroundDeviceListener(user.uid);
-        } else {
-          // Déconnexion → reset
-          if (_bgDeviceUnsub) { _bgDeviceUnsub(); _bgDeviceUnsub = null; }
-          if (window.S) window.S.cwDevices = [];
-        }
-      });
-    } else if (window.S && window.S.user) {
-      clearInterval(check);
-      _startBackgroundDeviceListener(window.S.user.uid);
+      var uid = window.S.user.uid;
+      // Délai 1s supplémentaire pour s\'assurer que le token est propagé à Firestore
+      setTimeout(function() {
+        _startBackgroundDeviceListener(uid);
+        _startBackgroundResultsListener(uid);
+      }, 1000);
     }
   }, 500);
 }
