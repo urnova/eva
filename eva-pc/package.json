@@ -1,7 +1,7 @@
 {
   "name": "eva-assistant-pc",
-  "version": "5.4.45",
-  "description": "Assistant Virtuel IA E.V.A â€” Evolutionary Virtual Assistant by Astral Technologie",
+  "version": "5.4.48",
+  "description": "Assistant Virtuel IA E.V.A \u00e2\u20ac\u201d Evolutionary Virtual Assistant by Astral Technologie",
   "author": "Astral Technologie",
   "main": "dist-electron/main.js",
   "homepage": "https://eva-assistant.app",
@@ -54,7 +54,7 @@
   "build": {
     "appId": "com.astraltechnologie.eva",
     "productName": "EVA Assistant",
-    "copyright": "Copyright Â© 2025 Astral Technologie. Tous droits rÃ©servÃ©s.",
+    "copyright": "Copyright \u00c2\u00a9 2025 Astral Technologie. Tous droits r\u00c3\u00a9serv\u00c3\u00a9s.",
     "icon": "public/eva-icon.png",
     "asar": true,
     "asarUnpack": [
@@ -76,6 +76,12 @@
     ],
     "win": {
       "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        },
         {
           "target": "nsis",
           "arch": [
@@ -101,7 +107,7 @@
       "createStartMenuShortcut": true,
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true,
-      "differentialPackage": true
+      "differentialPackage": false
     },
     "publish": [
       {
@@ -111,7 +117,7 @@
         "releaseType": "release"
       }
     ],
-    "compression": "maximum",
+    "compression": "store",
     "artifactName": "E.V.A-Setup.exe",
     "extraResources": [
       {

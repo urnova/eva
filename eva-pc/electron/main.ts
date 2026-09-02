@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
+﻿import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
 app.disableHardwareAcceleration();
 import { join } from 'path'
 import { fileURLToPath } from 'url'
@@ -9,7 +9,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import * as child_process from 'child_process'
-// â”€â”€â”€ Polyfill __dirname pour ESM â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Polyfill __dirname pour ESM Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -17,6 +17,10 @@ import * as http from 'http'
 import { extname } from 'path'
 
 let localServerPort = 0;
+export let llamaInstance: any = null;
+export let llamaModel: any = null;
+export let llamaContext: any = null;
+export let llmTimeout: any = null;
 const mimeTypes: { [key: string]: string } = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -65,7 +69,7 @@ httpServer.listen(0, '127.0.0.1', () => {
 });
 
 
-// â”€â”€â”€ Store local (config NON synchronisÃ©e) â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Store local (config NON synchronisÃƒÂ©e) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 interface StoreSchema {
   firebaseConfig: Record<string, string> | null
   aiProvider: string
@@ -100,7 +104,7 @@ const store = new Store<StoreSchema>({
   }
 })
 
-// â”€â”€â”€ Auto Launch â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Auto Launch Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const evaAutoLaunch = new AutoLaunch({
   name: 'EVA Assistant',
   path: process.execPath
@@ -111,10 +115,10 @@ let overlayWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
-// â”€â”€â”€ URL du site web EVA (en production) â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ URL du site web EVA (en production) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 export const EVA_WEB_URL = 'https://eva.astraltechnologie.fr'
 
-// â”€â”€â”€ PrÃ©venir multiple instances + gÃ©rer protocole custom â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ PrÃƒÂ©venir multiple instances + gÃƒÂ©rer protocole custom Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
@@ -139,10 +143,10 @@ function handleDeepLink(url: string) {
     const parsed = new URL(url)
     if (parsed.hostname === 'auth' || parsed.pathname.includes('auth')) {
       const params = new URLSearchParams(parsed.search)
-      // DÃ©coder le token (Windows peut modifier l'encodage URL)
+      // DÃƒÂ©coder le token (Windows peut modifier l'encodage URL)
       let refreshToken = params.get('refreshToken') || params.get('token')
       if (refreshToken) {
-        // RÃ©assurer le dÃ©codage correct des caractÃ¨res spÃ©ciaux
+        // RÃƒÂ©assurer le dÃƒÂ©codage correct des caractÃƒÂ¨res spÃƒÂ©ciaux
         try { refreshToken = decodeURIComponent(refreshToken) } catch { /* already decoded */ }
       }
       const hid = params.get('hid')
@@ -160,7 +164,7 @@ function handleDeepLink(url: string) {
   }
 }
 
-// â”€â”€â”€ CrÃ©er la fenÃªtre principale â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ CrÃƒÂ©er la fenÃƒÂªtre principale Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function createWindow() {
   const bounds = store.get('windowBounds')
 
@@ -171,7 +175,7 @@ function createWindow() {
     y: bounds.y,
     minWidth: 900,
     minHeight: 600,
-    frame: false,           // FenÃªtre sans bordure native
+    frame: false,           // FenÃƒÂªtre sans bordure native
     backgroundColor: '#111113',
     icon: join(__dirname, '../public/eva-icon.png'),
     webPreferences: {
@@ -203,11 +207,11 @@ function createWindow() {
     mainWindow.loadURL(('http://127.0.0.1:' + localServerPort + '/splash.html'))
   }
 
-  // â”€â”€â”€ Sauvegarder la position/taille â”€â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Sauvegarder la position/taille Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   mainWindow.on('resized', saveBounds)
   mainWindow.on('moved', saveBounds)
 
-  // â”€â”€â”€ Minimize to tray â”€â”€â”€
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Minimize to tray Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   mainWindow.on('show', () => {
     if (!isDev) {
       autoUpdater.checkForUpdatesAndNotify().catch(console.error);
@@ -236,7 +240,7 @@ function createOverlayWindow() {
   overlayWindow = new BrowserWindow({
     width: overlayWidth,
     height: overlayHeight,
-    x: width - overlayWidth - 20, // En haut à droite, avec un peu de marge
+    x: width - overlayWidth - 20, // En haut Ã  droite, avec un peu de marge
     y: 20,
     transparent: true,
     frame: false,
@@ -268,7 +272,7 @@ function saveBounds() {
   store.set('windowBounds', bounds)
 }
 
-// ——— Tray Icon ———
+// â€”â€”â€” Tray Icon â€”â€”â€”
 function createTray() {
   const trayIconPath = join(__dirname, '../public/eva-icon.png')
   const icon = nativeImage.createFromPath(trayIconPath).resize({ width: 16, height: 16 })
@@ -280,19 +284,19 @@ function createTray() {
 function _rebuildTrayMenu() {
   if (!tray) return;
   const cwEnabled = store.get('cwEnabled', false) as boolean;
-  const llmRunning = !!llmProcess;
+  const llmRunning = !!llamaContext;
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: '⚡ E.V.A — Ouvrir',
+      label: 'âš¡ E.V.A â€” Ouvrir',
       click: () => { mainWindow?.show(); mainWindow?.focus() }
     },
     { type: 'separator' },
     {
-      label: `🖥️ CloudWorks  ${cwEnabled ? '[● Actif]' : '[○ Inactif]'}`,
+      label: `ðŸ–¥ï¸ CloudWorks  ${cwEnabled ? '[â— Actif]' : '[â—‹ Inactif]'}`,
       submenu: [
         {
-          label: cwEnabled ? '○ Désactiver CloudWorks' : '● Activer CloudWorks',
+          label: cwEnabled ? 'â—‹ DÃ©sactiver CloudWorks' : 'â— Activer CloudWorks',
           click: async () => {
             if (cwEnabled) {
               store.set('cwEnabled', false);
@@ -301,35 +305,35 @@ function _rebuildTrayMenu() {
             } else {
               store.set('cwEnabled', true);
               await startLLM();
-              tray?.setToolTip('E.V.A | CloudWorks: Actif' + (llmProcess ? ' | LLM: En ligne' : ''));
+              tray?.setToolTip('E.V.A | CloudWorks: Actif' + (llamaContext ? ' | LLM: En ligne' : ''));
             }
             _rebuildTrayMenu();
           }
         },
         { type: 'separator' },
         {
-          label: '→ Ouvrir panneau CloudWorks',
+          label: 'â†’ Ouvrir panneau CloudWorks',
           click: () => { mainWindow?.show(); mainWindow?.focus(); mainWindow?.webContents.send('navigate', 'cloudworks'); }
         }
       ]
     },
     {
-      label: `🤖 LLM  ${llmRunning ? '[● En ligne]' : '[○ Arrêté]'}`,
+      label: `ðŸ¤– LLM  ${llmRunning ? '[â— En ligne]' : '[â—‹ ArrÃªtÃ©]'}`,
       submenu: [
         {
-          label: '⟳ Redémarrer le LLM',
+          label: 'âŸ³ RedÃ©marrer le LLM',
           click: async () => { stopLLM(); setTimeout(async () => { await startLLM(); _rebuildTrayMenu(); }, 1500); }
         }
       ]
     },
     { type: 'separator' },
     {
-      label: '💬 Nouveau chat',
+      label: 'ðŸ’¬ Nouveau chat',
       click: () => { mainWindow?.show(); mainWindow?.webContents.send('new-chat') }
     },
     { type: 'separator' },
     {
-      label: '✖ Quitter E.V.A',
+      label: 'âœ– Quitter E.V.A',
       click: () => { app.isQuitting = true; app.quit() }
     }
   ])
@@ -341,7 +345,7 @@ function _rebuildTrayMenu() {
   tray.on('double-click', () => { mainWindow?.show(); mainWindow?.focus() })
 }
 
-// â”€â”€â”€ App Events â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ App Events Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 app.whenReady().then(async () => {
   if (isDev) {
     app.setAsDefaultProtocolClient('eva-desktop', process.execPath, [
@@ -356,30 +360,30 @@ app.whenReady().then(async () => {
     handleDeepLink(url)
   })
 
-  // Afficher directement la fenêtre principale avec splash.html
+  // Afficher directement la fenÃªtre principale avec splash.html
   createWindow()
   createOverlayWindow()
   createTray()
 
-  // ─── Permissions micro/caméra : accorder automatiquement ───
-  // Sans ça, getUserMedia() et webkitSpeechRecognition sont refusés silencieusement
+  // â”€â”€â”€ Permissions micro/camÃ©ra : accorder automatiquement â”€â”€â”€
+  // Sans Ã§a, getUserMedia() et webkitSpeechRecognition sont refusÃ©s silencieusement
   const { session } = require('electron');
   session.defaultSession.setPermissionRequestHandler((_wc: any, permission: string, callback: (granted: boolean) => void) => {
     const allowed = ['media', 'microphone', 'audioCapture', 'camera', 'geolocation', 'notifications'];
     if (allowed.indexOf(permission) !== -1) {
-      console.log('[Electron] Permission accordée:', permission);
+      console.log('[Electron] Permission accordÃ©e:', permission);
       callback(true);
     } else {
       callback(false);
     }
   });
-  // Electron ≥ 27 : setPermissionCheckHandler (évite les blocages CSP)
+  // Electron â‰¥ 27 : setPermissionCheckHandler (Ã©vite les blocages CSP)
   session.defaultSession.setPermissionCheckHandler((_wc: any, permission: string) => {
     const allowed = ['media', 'microphone', 'audioCapture'];
     return allowed.indexOf(permission) !== -1;
   });
 
-  // ─── Auto-updater (Dépôt Privé) ───
+  // â”€â”€â”€ Auto-updater (DÃ©pÃ´t PrivÃ©) â”€â”€â”€
   if (isDev) { mainWindow?.webContents.once('did-finish-load', () => { setTimeout(launchMainApp, 1500); }); return; }
   const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg"
   const _t = _enc.split('').reverse().join('')
@@ -387,39 +391,39 @@ app.whenReady().then(async () => {
   autoUpdater.autoDownload = false
 
   autoUpdater.checkForUpdatesAndNotify().catch(err => {
-    console.error('[AutoUpdater] Erreur de vÃ©rification:', err)
+    console.error('[AutoUpdater] Erreur de vÃƒÂ©rification:', err)
     launchMainApp()
   })
 
   autoUpdater.on('checking-for-update', () => {
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Vérification des mises à jour...')
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'VÃ©rification des mises Ã  jour...')
   })
 
   autoUpdater.on('update-available', (info) => {
-    console.log('[AutoUpdater] Mise Ã  jour disponible:', info)
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise à jour trouvée. Téléchargement...')
+    console.log('[AutoUpdater] Mise ÃƒÂ  jour disponible:', info)
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise Ã  jour trouvÃ©e. TÃ©lÃ©chargement...')
     if (mainWindow) mainWindow.webContents.send('updater:available', info)
   })
   
   autoUpdater.on('update-not-available', (info) => {
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Système à jour. Démarrage...')
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'SystÃ¨me Ã  jour. DÃ©marrage...')
     setTimeout(launchMainApp, 1000)
   })
 
   autoUpdater.on('error', (err) => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('updater:error', err ? err.toString() : 'Unknown error');
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Erreur réseau. Démarrage...')
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Erreur rÃ©seau. DÃ©marrage...')
     setTimeout(launchMainApp, 1000)
   })
   
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('[AutoUpdater] Mise Ã  jour tÃ©lÃ©chargÃ©e:', info)
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise à jour prête. Redémarrage...')
+    console.log('[AutoUpdater] Mise ÃƒÂ  jour tÃƒÂ©lÃƒÂ©chargÃƒÂ©e:', info)
+    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise Ã  jour prÃªte. RedÃ©marrage...')
     if (mainWindow) mainWindow.webContents.send('updater:downloaded', info)
     
-    // Installer l'update immÃ©diatement et redÃ©marrer (silencieusement)
+    // Installer l'update immÃƒÂ©diatement et redÃƒÂ©marrer (silencieusement)
     setTimeout(() => {
-      // isSilent=false pour éviter le blocage UAC avec perMachine=true
+      // isSilent=false pour Ã©viter le blocage UAC avec perMachine=true
       autoUpdater.quitAndInstall(false, true)
     }, 2000)
   })
@@ -437,9 +441,9 @@ function launchMainApp() {
   if (mainWindow) {
     mainWindow.webContents.send('splash:done')
   }
-  // Démarrer le LLM seulement si CloudWorks était activé
+  // DÃ©marrer le LLM seulement si CloudWorks Ã©tait activÃ©
   if (store.get('cwEnabled', false)) {
-    console.log('[LLM] CloudWorks activé — démarrage automatique du LLM local');
+    console.log('[LLM] CloudWorks activÃ© â€” dÃ©marrage automatique du LLM local');
     startLLM().catch(console.error);
   }
 }
@@ -468,7 +472,7 @@ function toggleWindow() {
   } else {
     mainWindow.show()
     mainWindow.focus()
-    // Vérifier les mises à jour à la réouverture
+    // VÃ©rifier les mises Ã  jour Ã  la rÃ©ouverture
     _checkForUpdatesIfNeeded();
   }
 }
@@ -480,7 +484,7 @@ app.on('before-quit', (e) => {
     e.preventDefault();
     mainWindow.webContents.send('app:request-quit');
     
-    // Timeout de sǸcuritǸ si le renderer ne rǸpond pas
+    // Timeout de sÇ¸curitÇ¸ si le renderer ne rÇ¸pond pas
     setTimeout(() => {
       forceQuit = true;
       app.quit();
@@ -494,7 +498,7 @@ ipcMain.on('app:quit-ready', () => {
 });
 
 app.on('will-quit', () => {
-  // DÃ©senregistrer tous les raccourcis
+  // DÃƒÂ©senregistrer tous les raccourcis
   globalShortcut.unregisterAll()
 })
 
@@ -509,7 +513,7 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()
 })
 
-// â”€â”€â”€ IPC Handlers â€” Window Controls â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ IPC Handlers Ã¢â‚¬â€ Window Controls Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 ipcMain.handle('window:minimize', () => mainWindow?.minimize())
 ipcMain.handle('window:maximize', () => {
   if (mainWindow?.isMaximized()) mainWindow.unmaximize()
@@ -521,7 +525,7 @@ ipcMain.handle('window:close', () => {
 })
 ipcMain.handle('window:isMaximized', () => mainWindow?.isMaximized())
 
-// â”€â”€â”€ IPC Handlers â€” Overlay Agentique â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ IPC Handlers Ã¢â‚¬â€ Overlay Agentique Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 ipcMain.handle('overlay:show', (_event, state) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.webContents.send('overlay:setState', state || 'listening')
@@ -541,9 +545,9 @@ ipcMain.handle('overlay:setState', (_event, state, text) => {
   }
 })
 
-// Communication Overlay -> Main App (Ex: Bouton Annuler appuyé, Wake Word)
+// Communication Overlay -> Main App (Ex: Bouton Annuler appuyÃ©, Wake Word)
 ipcMain.on('overlay:action', (_event, action, data) => {
-  // Action wake word : afficher la fenêtre principale + envoyer le texte
+  // Action wake word : afficher la fenÃªtre principale + envoyer le texte
   if (action === 'wakeword' && data) {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
@@ -552,16 +556,16 @@ ipcMain.on('overlay:action', (_event, action, data) => {
     }
     return;
   }
-  // Autres actions (cancel, etc.) → forwarded tel quel
+  // Autres actions (cancel, etc.) â†’ forwarded tel quel
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('overlay:action', action, data);
   }
 })
 
-// â”€â”€â”€ IPC Handler â€” Ouvrir URL dans le navigateur systÃ¨me â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ IPC Handler Ã¢â‚¬â€ Ouvrir URL dans le navigateur systÃƒÂ¨me Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 ipcMain.handle('shell:openExternal', (_event, url: string) => shell.openExternal(url))
 
-// â”€â”€â”€ IPC Handler â€” Ã‰change du refresh token via Firebase REST API (depuis Node.js = pas de restriction origin) â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ IPC Handler Ã¢â‚¬â€ Ãƒâ€°change du refresh token via Firebase REST API (depuis Node.js = pas de restriction origin) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey: string) => {
   try {
     const https = await import('https')
@@ -585,7 +589,7 @@ ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey
         req.end()
       })
 
-    // Ã‰tape 1 : Ã©changer le refresh token contre un ID token
+    // Ãƒâ€°tape 1 : ÃƒÂ©changer le refresh token contre un ID token
     const tokenData = await postData(
       `https://securetoken.googleapis.com/v1/token?key=${apiKey}`,
       `grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`,
@@ -593,7 +597,7 @@ ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey
     ) as Record<string, unknown>
 
     if (!tokenData.id_token) {
-      // tokenData.error peut Ãªtre un objet {code, message, status}
+      // tokenData.error peut ÃƒÂªtre un objet {code, message, status}
       const err = tokenData.error
       const errMsg = typeof err === 'object' && err !== null
         ? ((err as Record<string, unknown>).message as string) || JSON.stringify(err)
@@ -602,7 +606,7 @@ ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey
       return { success: false, error: errMsg }
     }
 
-    // Ã‰tape 2 : rÃ©cupÃ©rer les infos utilisateur
+    // Ãƒâ€°tape 2 : rÃƒÂ©cupÃƒÂ©rer les infos utilisateur
     const userData = await postData(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
       JSON.stringify({ idToken: tokenData.id_token }),
@@ -627,13 +631,13 @@ ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey
 })
 
 
-// â”€â”€â”€ IPC Handlers â€” Store â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ IPC Handlers Ã¢â‚¬â€ Store Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 ipcMain.handle('store:get', (_event, key: string) => store.get(key as keyof StoreSchema))
 ipcMain.handle('store:set', (_event, key: string, value: unknown) => store.set(key as keyof StoreSchema, value))
 ipcMain.handle('store:delete', (_event, key: string) => store.delete(key as keyof StoreSchema))
 ipcMain.handle('store:getAll', () => store.store)
 
-// â”€â”€â”€ IPC Handlers â€” System Info â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ IPC Handlers Ã¢â‚¬â€ System Info Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 ipcMain.handle('system:info', async () => {
   try {
     const si = await import('systeminformation')
@@ -678,14 +682,14 @@ ipcMain.handle('system:stats', async () => {
       memUsed: mem.active,
       llmMem: llmMem,
       llmCpu: llmCpu,
-      llmActive: !!llmProcess
+      llmActive: !!llamaContext
     };
   } catch (e) {
     return { success: false, error: String(e) }
   }
 })
 
-// â”€â”€â”€ IPC Handlers â€” Screenshot â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ IPC Handlers Ã¢â‚¬â€ Screenshot Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 ipcMain.handle('system:screenshot', async () => {
   try {
     // @ts-ignore
@@ -704,14 +708,14 @@ ipcMain.handle('system:screenshot', async () => {
       height: Math.floor(size.height * scale),
       quality: 'good'
     })
-    const jpeg = resized.toJPEG(55) // JPEG ~55% qualité → ~80-200 KB
+    const jpeg = resized.toJPEG(55) // JPEG ~55% qualitÃ© â†’ ~80-200 KB
     return { success: true, data: jpeg.toString('base64'), mimeType: 'image/jpeg' }
   } catch (e) {
     return { success: false, error: String(e) }
   }
 })
 
-// â”€â”€â”€ IPC Handlers â€” Filesystem â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ IPC Handlers Ã¢â‚¬â€ Filesystem Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 ipcMain.handle('fs:list', async (_event, dirPath: string) => {
   try {
     const items = fs.readdirSync(dirPath, { withFileTypes: true })
@@ -820,7 +824,7 @@ ipcMain.handle('fs:drives', () => {
 
 ipcMain.handle('fs:homedir', () => os.homedir())
 
-// â”€â”€â”€ IPC Handlers â€” Terminal (node-pty) â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ IPC Handlers Ã¢â‚¬â€ Terminal (node-pty) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 const terminals = new Map<string, import('node-pty').IPty>()
 
 ipcMain.handle('terminal:create', async (_event, termId: string) => {
@@ -864,7 +868,7 @@ ipcMain.handle('terminal:kill', (_event, termId: string) => {
   return { success: false }
 })
 
-// â”€â”€â”€ IPC Handlers â€” System Commands â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ IPC Handlers Ã¢â‚¬â€ System Commands Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 ipcMain.handle('system:exec', async (_event, cmd: string) => {
   return new Promise(resolve => {
     child_process.exec(cmd, { timeout: 10000 }, (error, stdout, stderr) => {
@@ -913,7 +917,7 @@ ipcMain.handle('system:killProcess', async (_event, pid: number) => {
   }
 })
 
-// â”€â”€â”€ IPC Handlers â€” Auto Launch â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ IPC Handlers Ã¢â‚¬â€ Auto Launch Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 ipcMain.handle('autolaunch:get', () => store.get('autoLaunch'))
 ipcMain.handle('autolaunch:set', async (_event, enabled: boolean) => {
   store.set('autoLaunch', enabled)
@@ -968,10 +972,6 @@ declare global {
 // ==========================================
 import { getLlama, LlamaChatSession, type ChatHistoryItem } from "node-llama-cpp";
 
-let llamaInstance: any = null;
-let llamaModel: any = null;
-let llamaContext: any = null;
-let llmTimeout: any = null;
 
 async function startLLM(): Promise<boolean> {
   if (llamaModel && llamaContext) return true;
@@ -979,26 +979,26 @@ async function startLLM(): Promise<boolean> {
   try {
     const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
     const llmDir = path.join(resourcesPath, 'resources', 'llm');
-    const modelFile = path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v3.gguf');
+    const modelFile = path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v4.gguf');
 
     if (!fs.existsSync(modelFile)) {
-      console.error('[LLM] Modèle introuvable:', modelFile);
+      console.error('[LLM] ModÃ¨le introuvable:', modelFile);
       return false;
     }
 
     if (!llamaInstance) {
       console.log('[LLM] Initialisation de node-llama-cpp...');
       llamaInstance = await getLlama();
-      console.log('[LLM] Backend détecté automatiquement:', llamaInstance.gpu);
+      console.log('[LLM] Backend dÃ©tectÃ© automatiquement:', llamaInstance.gpu);
     }
 
-    console.log('[LLM] Chargement du modèle...');
+    console.log('[LLM] Chargement du modÃ¨le...');
     llamaModel = await llamaInstance.loadModel({ modelPath: modelFile });
     
-    console.log('[LLM] Création du contexte...');
+    console.log('[LLM] CrÃ©ation du contexte...');
     llamaContext = await llamaModel.createContext({ contextSize: 4096 });
     
-    console.log('[LLM] Moteur LLM prêt !');
+    console.log('[LLM] Moteur LLM prÃªt !');
     _notifyLLMReady();
     return true;
   } catch (err: any) {
@@ -1011,7 +1011,7 @@ async function startLLM(): Promise<boolean> {
 
 function stopLLM() {
   if (llamaContext) {
-    console.log('[LLM] Arrêt et libération de la RAM...');
+    console.log('[LLM] ArrÃªt et libÃ©ration de la RAM...');
     try { llamaContext.dispose(); } catch(e) {}
     try { llamaModel.dispose(); } catch(e) {}
     llamaContext = null;
@@ -1050,7 +1050,7 @@ ipcMain.handle('llm:chat', async (event, messages) => {
 
   const started = await startLLM();
   if (!started) {
-    throw new Error("Le moteur LLM n'a pas pu démarrer (fichier introuvable ou erreur GPU). Vérifiez les logs.");
+    throw new Error("Le moteur LLM n'a pas pu dÃ©marrer (fichier introuvable ou erreur GPU). VÃ©rifiez les logs.");
   }
 
   try {
@@ -1104,11 +1104,11 @@ ipcMain.handle('llm:status', async () => {
 });
 
 
-// CloudWorks enable/disable — gère le lifecycle LLM automatiquement
+// CloudWorks enable/disable â€” gÃ¨re le lifecycle LLM automatiquement
 ipcMain.handle('cloudworks:enable', async () => {
   store.set('cwEnabled', true);
   const started = await startLLM();
-  // Mise à jour tray tooltip
+  // Mise Ã  jour tray tooltip
   if (tray) tray.setToolTip('E.V.A | CloudWorks: Actif' + (started ? ' | LLM: En ligne' : ''));
   return { success: true, llmStarted: started };
 });
@@ -1120,15 +1120,15 @@ ipcMain.handle('cloudworks:disable', async () => {
   return { success: true };
 });
 
-// ─── IPC Handlers — STT (Speech-to-Text via PowerShell Windows SR) ───
-// webkitSpeechRecognition ne fonctionne pas dans Electron (pas de clé API Google)
-// → Utilise System.Speech.Recognition de Windows, 100% offline
+// â”€â”€â”€ IPC Handlers â€” STT (Speech-to-Text via PowerShell Windows SR) â”€â”€â”€
+// webkitSpeechRecognition ne fonctionne pas dans Electron (pas de clÃ© API Google)
+// â†’ Utilise System.Speech.Recognition de Windows, 100% offline
 let _sttProcess: any = null;
 
 ipcMain.handle('stt:start', async (event) => {
   if (_sttProcess) return { success: true, alreadyRunning: true };
 
-  // Script PowerShell : reconnaissance vocale continue en français
+  // Script PowerShell : reconnaissance vocale continue en franÃ§ais
   const psLines = [
     "Add-Type -AssemblyName System.Speech",
     "try { $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine([System.Globalization.CultureInfo]::GetCultureInfo('fr-FR')) } catch { $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine }",
@@ -1168,7 +1168,7 @@ ipcMain.handle('stt:start', async (event) => {
       }
     });
 
-    console.log('[STT] PowerShell Windows STT démarré');
+    console.log('[STT] PowerShell Windows STT dÃ©marrÃ©');
     return { success: true };
   } catch(e) {
     console.error('[STT] Erreur spawn PowerShell:', e);
@@ -1183,3 +1183,4 @@ ipcMain.handle('stt:stop', async () => {
   }
   return { success: true };
 });
+

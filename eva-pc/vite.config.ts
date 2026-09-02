@@ -14,7 +14,7 @@ export default defineConfig({
             outDir: resolve(__dirname, 'dist-electron'),
             rollupOptions: {
               external: [
-                'electron',
+                'electron', 'node-llama-cpp',
                 'node-pty',
                 'electron-store',
                 'electron-updater',
@@ -38,7 +38,7 @@ export default defineConfig({
             outDir: resolve(__dirname, 'dist-electron'),
             rollupOptions: {
               external: [
-                'electron',
+                'electron', 'node-llama-cpp',
                 'electron-store',
                 'node-pty',
                 'screenshot-desktop',
@@ -78,3 +78,4 @@ export default defineConfig({
     strictPort: true
   }
 })
+
