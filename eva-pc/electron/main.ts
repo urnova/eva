@@ -978,7 +978,7 @@ function startLLM(): Promise<boolean> {
     const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
     const llmDir = path.join(resourcesPath, 'resources', 'llm');
     const serverExe = path.join(llmDir, 'llama-server.exe');
-    const modelFile = path.join(llmDir, 'eva-model.gguf');
+    const modelFile = path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v3.gguf');
 
     if (!fs.existsSync(serverExe) || !fs.existsSync(modelFile)) {
       console.error('[LLM] Fichiers manquants dans', llmDir);
@@ -1088,12 +1088,13 @@ ipcMain.handle('llm:chat', async (event, messages) => {
     const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
     const llmDir = path.join(resourcesPath, 'resources', 'llm');
     const hasServer = fs.existsSync(path.join(llmDir, 'llama-server.exe'));
-    const hasModel  = fs.existsSync(path.join(llmDir, 'eva-model.gguf'));
+    const hasModel  = fs.existsSync(path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v3.gguf'));
+
     if (!hasServer || !hasModel) {
       throw new Error(
         `Fichiers LLM manquants dans resources/llm/ — ` +
         `llama-server.exe: ${hasServer ? 'OK' : 'ABSENT'}, ` +
-        `eva-model.gguf: ${hasModel ? 'OK' : 'ABSENT'}`
+        `EVA-PC-Agentic-3B-Q4_K_M-v3.gguf: ${hasModel ? 'OK' : 'ABSENT'}`
       );
     }
     throw new Error("Le moteur LLM n'a pas pu démarrer (timeout ou crash). Vérifiez les logs.");
