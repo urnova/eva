@@ -964,90 +964,59 @@ declare global {
 
 
 // ==========================================
-// LLM AGENTIC LOCAL (llama-server)
+// LLM AGENTIC LOCAL (node-llama-cpp)
 // ==========================================
-let llmProcess: any = null;
+import { getLlama, LlamaChatSession, type ChatHistoryItem } from "node-llama-cpp";
+
+let llamaInstance: any = null;
+let llamaModel: any = null;
+let llamaContext: any = null;
 let llmTimeout: any = null;
 
+async function startLLM(): Promise<boolean> {
+  if (llamaModel && llamaContext) return true;
 
-function startLLM(): Promise<boolean> {
-  if (llmProcess) return Promise.resolve(true);
-  
-  return new Promise((resolve) => {
-    // Find the resources path (works in dev and prod)
+  try {
     const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
     const llmDir = path.join(resourcesPath, 'resources', 'llm');
-    const serverExe = path.join(llmDir, 'llama-server.exe');
     const modelFile = path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v3.gguf');
 
-    if (!fs.existsSync(serverExe) || !fs.existsSync(modelFile)) {
-      console.error('[LLM] Fichiers manquants dans', llmDir);
-      console.error('[LLM]   llama-server.exe existe:', fs.existsSync(serverExe));
-      console.error('[LLM]   eva-model.gguf existe:', fs.existsSync(modelFile));
-      return resolve(false);
+    if (!fs.existsSync(modelFile)) {
+      console.error('[LLM] Modèle introuvable:', modelFile);
+      return false;
     }
 
-    console.log('[LLM] Démarrage de llama-server depuis:', llmDir);
-    llmProcess = child_process.spawn(serverExe, [
-      '--model', modelFile,
-      '--port', '11434',
-      '--ctx-size', '4096',
-      '--parallel', '1',
-      '--log-disable'  // moins de verbosité
-    ], { windowsHide: true });
+    if (!llamaInstance) {
+      console.log('[LLM] Initialisation de node-llama-cpp...');
+      llamaInstance = await getLlama();
+      console.log('[LLM] Backend détecté automatiquement:', llamaInstance.gpu);
+    }
 
-    // Capturer stderr pour diagnostic
-    let stderrBuf = '';
-    llmProcess.stderr?.on('data', (d: Buffer) => {
-      stderrBuf += d.toString();
-    });
-
-    llmProcess.on('error', (err: any) => {
-      console.error('[LLM] Erreur spawn:', err);
-      llmProcess = null;
-      resolve(false);
-    });
-
-    llmProcess.on('exit', (code: number) => {
-      console.log('[LLM] Process terminé, code:', code);
-      if (stderrBuf) console.error('[LLM] stderr:', stderrBuf.substring(0, 500));
-      llmProcess = null;
-    });
-
-    // Health-check polling : attend que le serveur soit prêt (max 120s)
-    // Bien plus fiable qu'un setTimeout fixe (le chargement du modèle varie selon la RAM/CPU)
-    let attempts = 0;
-    const maxAttempts = 120;
-    const poll = async () => {
-      if (!llmProcess) { resolve(false); return; }  // process crashed
-      try {
-        const r = await fetch('http://127.0.0.1:11434/health', { signal: AbortSignal.timeout(1000) });
-        if (r.ok) {
-          console.log('[LLM] Serveur prêt après', attempts, 'secondes');
-          _notifyLLMReady();
-          resolve(true);
-          return;
-        }
-      } catch(_) { /* encore en démarrage */ }
-      attempts++;
-      if (attempts >= maxAttempts) {
-        console.error('[LLM] Timeout: serveur non prêt après 120s');
-        resolve(false);
-        return;
-      }
-      setTimeout(poll, 1000);
-    };
-    setTimeout(poll, 2000);  // premier check après 2s
-  });
+    console.log('[LLM] Chargement du modèle...');
+    llamaModel = await llamaInstance.loadModel({ modelPath: modelFile });
+    
+    console.log('[LLM] Création du contexte...');
+    llamaContext = await llamaModel.createContext({ contextSize: 4096 });
+    
+    console.log('[LLM] Moteur LLM prêt !');
+    _notifyLLMReady();
+    return true;
+  } catch (err: any) {
+    console.error('[LLM] Erreur lors du chargement:', err);
+    llamaModel = null;
+    llamaContext = null;
+    return false;
+  }
 }
 
-
 function stopLLM() {
-  if (llmProcess) {
-    console.log('[LLM] Arrêt du llama-server...');
-    llmProcess.kill();
-    llmProcess = null;
-    // Notifier le renderer
+  if (llamaContext) {
+    console.log('[LLM] Arrêt et libération de la RAM...');
+    try { llamaContext.dispose(); } catch(e) {}
+    try { llamaModel.dispose(); } catch(e) {}
+    llamaContext = null;
+    llamaModel = null;
+    
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('llm:status-changed', { running: false });
     }
@@ -1056,17 +1025,14 @@ function stopLLM() {
 }
 
 function resetLLMTimer() {
-  // Ne pas tuer le LLM si CloudWorks est actif — le modèle doit rester chargé en permanence
   if (store.get('cwEnabled', false)) {
     if (llmTimeout) { clearTimeout(llmTimeout); llmTimeout = null; }
     return;
   }
-  // CloudWorks désactivé → kill après 5 min d'inactivité
   if (llmTimeout) clearTimeout(llmTimeout);
   llmTimeout = setTimeout(stopLLM, 300000);
 }
 
-// Notifier le renderer que le LLM est prêt (appelé depuis startLLM après health-check)
 function _notifyLLMReady() {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('llm:status-changed', { running: true });
@@ -1077,50 +1043,46 @@ function _notifyLLMReady() {
 ipcMain.handle('llm:chat', async (event, messages) => {
   resetLLMTimer();
 
-  // Notify the renderer only if LLM needs to actually start (not already running)
-  const wasRunning = !!llmProcess;
+  const wasRunning = !!llamaContext;
   if (!wasRunning && mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('overlay:show', 'thinking');
   }
 
   const started = await startLLM();
   if (!started) {
-    const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
-    const llmDir = path.join(resourcesPath, 'resources', 'llm');
-    const hasServer = fs.existsSync(path.join(llmDir, 'llama-server.exe'));
-    const hasModel  = fs.existsSync(path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v3.gguf'));
-
-    if (!hasServer || !hasModel) {
-      throw new Error(
-        `Fichiers LLM manquants dans resources/llm/ — ` +
-        `llama-server.exe: ${hasServer ? 'OK' : 'ABSENT'}, ` +
-        `EVA-PC-Agentic-3B-Q4_K_M-v3.gguf: ${hasModel ? 'OK' : 'ABSENT'}`
-      );
-    }
-    throw new Error("Le moteur LLM n'a pas pu démarrer (timeout ou crash). Vérifiez les logs.");
+    throw new Error("Le moteur LLM n'a pas pu démarrer (fichier introuvable ou erreur GPU). Vérifiez les logs.");
   }
 
   try {
-    const response = await fetch('http://127.0.0.1:11434/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'local',     // llama-server ignore le nom mais certaines versions le requièrent
-        messages: messages,
-        max_tokens: 2048,   // évite les réponses tronquées
-        temperature: 0.2,
-        stream: false
-      }),
-      signal: AbortSignal.timeout(120000)  // 120s max par requête
+    const sequence = llamaContext.getSequence();
+    const session = new LlamaChatSession({
+      contextSequence: sequence
     });
 
-    if (!response.ok) {
-      const txt = await response.text().catch(() => '');
-      throw new Error(`Erreur HTTP ${response.status} du LLM: ${txt.substring(0, 200)}`);
+    const history: ChatHistoryItem[] = [];
+    let promptMsg = "";
+
+    for (let i = 0; i < messages.length; i++) {
+      const m = messages[i];
+      if (i === messages.length - 1 && m.role === 'user') {
+        promptMsg = m.content;
+        break;
+      }
+      if (m.role === 'system') history.push({ type: 'system', text: m.content });
+      else if (m.role === 'user') history.push({ type: 'user', text: m.content });
+      else if (m.role === 'assistant') history.push({ type: 'model', response: [m.content] });
     }
 
-    const data = await response.json();
-    return data;
+    session.setChatHistory(history);
+    
+    const responseText = await session.prompt(promptMsg, {
+      maxTokens: 2048,
+      temperature: 0.2
+    });
+    
+    return {
+      choices: [{ message: { role: 'assistant', content: responseText } }]
+    };
   } catch (err: any) {
     console.error('[LLM API] Erreur:', err?.message || err);
     throw new Error(err?.message || String(err));
@@ -1138,8 +1100,9 @@ ipcMain.handle('llm:stop', async () => {
 });
 
 ipcMain.handle('llm:status', async () => {
-  return { running: !!llmProcess, pid: llmProcess?.pid || null };
+  return { running: !!llamaContext, pid: process.pid };
 });
+
 
 // CloudWorks enable/disable — gère le lifecycle LLM automatiquement
 ipcMain.handle('cloudworks:enable', async () => {

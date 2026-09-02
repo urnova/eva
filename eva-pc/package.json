@@ -1,6 +1,6 @@
 {
   "name": "eva-assistant-pc",
-  "version": "5.4.44",
+  "version": "5.4.45",
   "description": "Assistant Virtuel IA E.V.A â€” Evolutionary Virtual Assistant by Astral Technologie",
   "author": "Astral Technologie",
   "main": "dist-electron/main.js",
@@ -26,6 +26,7 @@
     "firebase": "^10.12.2",
     "highlight.js": "^11.9.0",
     "marked": "^12.0.0",
+    "node-llama-cpp": "^3.20.0",
     "node-pty": "^1.0.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
