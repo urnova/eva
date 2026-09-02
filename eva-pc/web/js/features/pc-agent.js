@@ -146,7 +146,7 @@
         const prompt = data.payload?.prompt || 'Aucun prompt';
         await cmdRef.update({ status: 'running', updatedAt: new Date(), step: 'Démarrage du LLM local...' });
         resultData = await runAgenticLoop(prompt, cmdId, uid, cmdRef);
-        status = (resultData && resultData.error) ? 'error' : 'done';
+        status = (resultData && resultData.cancelled) ? 'cancelled' : ((resultData && resultData.error) ? 'error' : 'done');
       }
       else if (data.type === 'sysinfo') {
         await _updateStep(cmdRef, 'Récupération infos système...');
@@ -314,9 +314,19 @@ RÈGLES D'EXÉCUTION :
     await cmdRef.update({ step: firstStep, steps, updatedAt: new Date() });
     window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: firstStep } }));
 
-    // Boucle infinie — seul [REPORT] ou une erreur l'arrête
+    // Boucle infinie — seul [REPORT], une erreur, ou une annulation l'arrête
     while (true) {
       iteration++;
+
+      // Vérifier si la tâche a été annulée depuis l'UI (web ou PC)
+      try {
+        const snap = await cmdRef.get();
+        if (snap.exists && snap.data().status === 'cancelled') {
+          console.log('[Agent] Tâche annulée à l iteration', iteration);
+          return { error: 'Annulé par l utilisateur', steps, cancelled: true };
+        }
+      } catch(e) { /* ignore, continuer */ }
+
       try {
         const raisonnement = iteration > 1 ? `Raisonnement étape ${iteration}...` : firstStep;
         if (iteration > 1) {
@@ -367,7 +377,7 @@ RÈGLES D'EXÉCUTION :
             var cmd = allCmds[ci];
             var stepText = 'Ex\u00e9cution [' + (ci+1) + '/' + allCmds.length + ']: ' + cmd.substring(0, 80) + (cmd.length > 80 ? '...' : '');
             steps.push({ text: stepText, ts: new Date().toISOString() });
-            await cmdRef.update({ step: stepText, steps, updatedAt: new Date() });
+            await cmdRef.update({ step: stepText, lastCmd: cmd.substring(0, 120), steps, updatedAt: new Date() });
             window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepText } }));
             try {
               var res = await window.eva.system.exec(cmd);

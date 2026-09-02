@@ -278,10 +278,319 @@ async function cwCmd(deviceId, type, payload) {
     }
     if (window.toast) window.toast(labels[type] || 'Commande envoyée', 'success');
     _addLogEntry({type: type, deviceId: deviceId, status: 'pending', label: entryLabel, createdAt: new Date(), cmdId: ref.id});
+
+    // ── Tracker dans le chat pour les tâches agentiques ──
+    if (type === 'agentic_task') {
+      _injectWebTracker(ref.id, (payload && payload.prompt) || 'Tâche en cours…', deviceId);
+    }
   } catch(e) {
     if (window.toast) window.toast('Erreur : ' + e.message, 'error');
   }
 }
+
+/* ══════════════════════════════════════════
+   TRACKER WEB — Stepper vertical dans le chat
+   (miroir du tracker PC — cw-modal.js)
+══════════════════════════════════════════ */
+var _webTrackers = {}; // cmdId → { unsub, lastStep }
+
+(function _injectWebTrackerStyles() {
+  if (document.getElementById('cw-web-tracker-styles')) return;
+  var s = document.createElement('style');
+  s.id = 'cw-web-tracker-styles';
+  s.textContent = `
+    .cww-card {
+      margin:12px 0; background:linear-gradient(145deg,rgba(10,12,28,0.96),rgba(15,18,38,0.92));
+      border:1px solid rgba(0,212,255,0.18); border-radius:16px; overflow:hidden;
+      font-family:'Inter','Space Grotesk',system-ui,sans-serif;
+      box-shadow:0 4px 24px rgba(0,0,0,0.35);
+      transition:border-color 0.4s ease;
+    }
+    .cww-card.done { border-color:rgba(0,255,136,0.25); }
+    .cww-card.error,.cww-card.cancelled { border-color:rgba(255,77,109,0.22); }
+    .cww-header {
+      display:flex; align-items:center; gap:10px; padding:11px 15px;
+      background:rgba(0,212,255,0.05); border-bottom:1px solid rgba(0,212,255,0.1);
+    }
+    .cww-icon { width:28px;height:28px;border-radius:7px;background:rgba(0,212,255,0.1);
+      border:1px solid rgba(0,212,255,0.2);display:flex;align-items:center;justify-content:center;font-size:13px; }
+    .cww-title { font-size:0.75em;font-weight:700;color:#00d4ff;flex:1; }
+    .cww-badge {
+      font-size:0.59em;padding:2px 8px;border-radius:20px;font-weight:600;
+      background:rgba(255,200,0,0.1);color:#ffc800;border:1px solid rgba(255,200,0,0.22);
+      animation:cwwBlink 2s ease-in-out infinite;
+    }
+    .cww-badge.done{background:rgba(0,255,136,0.1);color:#00ff88;border-color:rgba(0,255,136,0.22);animation:none;}
+    .cww-badge.error,.cww-badge.cancelled{background:rgba(255,77,109,0.1);color:#ff4d6d;border-color:rgba(255,77,109,0.22);animation:none;}
+    @keyframes cwwBlink{0%,100%{opacity:1}50%{opacity:0.5}}
+    .cww-body { padding:13px 15px; }
+    .cww-prompt {
+      font-size:0.71em;color:rgba(200,205,235,0.65);margin-bottom:14px;
+      padding:7px 11px;border-left:2px solid rgba(0,212,255,0.3);
+      border-radius:0 6px 6px 0;background:rgba(255,255,255,0.025);line-height:1.4;
+    }
+    .cww-stepper { display:flex;flex-direction:column; }
+    .cww-step {
+      display:flex;gap:11px;position:relative;
+      animation:cwwIn 0.22s ease;
+    }
+    @keyframes cwwIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+    .cww-connector {
+      position:absolute;left:11px;top:26px;bottom:0;width:2px;border-radius:1px;
+      background:linear-gradient(to bottom,rgba(0,212,255,0.25),rgba(0,212,255,0.04));
+    }
+    .cww-step.done > .cww-connector {
+      background:linear-gradient(to bottom,rgba(0,255,136,0.35),rgba(0,255,136,0.06));
+    }
+    .cww-dot {
+      width:24px;height:24px;border-radius:50%;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-size:10px;position:relative;z-index:1;margin-top:2px;
+    }
+    .cww-step.pending .cww-dot{background:rgba(255,255,255,0.03);border:1.5px dashed rgba(255,255,255,0.1);color:rgba(255,255,255,0.18);}
+    .cww-step.running .cww-dot{background:rgba(255,200,0,0.1);border:1.5px solid rgba(255,200,0,0.45);color:#ffc800;
+      box-shadow:0 0 14px rgba(255,200,0,0.25);animation:cwwGlow 1.4s ease-in-out infinite;}
+    @keyframes cwwGlow{0%,100%{box-shadow:0 0 8px rgba(255,200,0,0.15)}50%{box-shadow:0 0 18px rgba(255,200,0,0.4)}}
+    .cww-step.done .cww-dot{background:rgba(0,255,136,0.1);border:1.5px solid rgba(0,255,136,0.4);color:#00ff88;}
+    .cww-step.error .cww-dot{background:rgba(255,77,109,0.1);border:1.5px solid rgba(255,77,109,0.4);color:#ff4d6d;}
+    .cww-content{flex:1;min-width:0;padding:3px 0 14px;}
+    .cww-step:last-child .cww-content{padding-bottom:0;}
+    .cww-label{font-size:0.73em;font-weight:500;line-height:1.4;}
+    .cww-step.pending .cww-label{color:rgba(200,205,235,0.22);}
+    .cww-step.running .cww-label{color:#e4e4ef;}
+    .cww-step.done    .cww-label{color:rgba(200,210,220,0.55);}
+    .cww-step.error   .cww-label{color:#ff6b84;}
+    .cww-cmd{font-size:0.61em;font-family:'Space Mono',monospace;color:rgba(180,185,215,0.3);margin-top:2px;}
+    .cww-step.running .cww-cmd{color:rgba(255,200,0,0.4);}
+    .cww-footer{padding:0 15px 13px;}
+    .cww-cancel-btn{
+      width:100%;padding:7px 14px;border:1px solid rgba(255,77,109,0.2);
+      border-radius:9px;background:rgba(255,77,109,0.05);color:rgba(255,77,109,0.65);
+      font-size:0.67em;font-weight:600;cursor:pointer;transition:all 0.18s ease;
+      display:flex;align-items:center;justify-content:center;gap:6px;
+    }
+    .cww-cancel-btn:hover{background:rgba(255,77,109,0.12);color:#ff4d6d;}
+    .cww-summary{
+      margin:0 15px 13px;padding:10px 13px;
+      background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.14);
+      border-radius:9px;font-size:0.71em;color:rgba(200,220,210,0.85);line-height:1.5;
+    }
+    .cww-summary.error,.cww-summary.cancelled{
+      background:rgba(255,77,109,0.05);border-color:rgba(255,77,109,0.14);color:rgba(220,200,205,0.85);
+    }
+  `;
+  document.head.appendChild(s);
+})();
+
+function _escW(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function _injectWebTracker(cmdId, prompt, deviceId) {
+  if (!window.S || !window.S.user || !window.db) return;
+  _injectWebTrackerStyles();
+  var uid = window.S.user.uid;
+
+  // Créer la card
+  var card = document.createElement('div');
+  card.className = 'cww-card';
+  card.id = 'cwwTracker-' + cmdId;
+  card.innerHTML = `
+    <div class="cww-header">
+      <div class="cww-icon">⚙️</div>
+      <span class="cww-title">CloudWorks Agent</span>
+      <span class="cww-badge" id="cwwBadge-${cmdId}">⟳ En cours</span>
+    </div>
+    <div class="cww-body">
+      <div class="cww-prompt">${_escW(prompt)}</div>
+      <div class="cww-stepper" id="cwwSteps-${cmdId}"></div>
+    </div>
+    <div class="cww-footer" id="cwwFooter-${cmdId}">
+      <button class="cww-cancel-btn" onclick="window._cwwCancel('${cmdId}','${uid}')">■ Arrêter la tâche</button>
+    </div>
+  `;
+
+  // Insérer dans le dernier message EVA ou créer un container
+  var msgs = document.querySelectorAll('.message.eva,.msg-eva,[data-role="assistant"]');
+  var lastMsg = msgs[msgs.length - 1];
+  if (!lastMsg) {
+    var chatEl = document.getElementById('messagesArea') || document.getElementById('chatMessages') || document.getElementById('chat');
+    if (chatEl) {
+      lastMsg = document.createElement('div');
+      lastMsg.className = 'message eva';
+      chatEl.appendChild(lastMsg);
+    }
+  }
+  if (lastMsg) lastMsg.appendChild(card);
+
+  // Bloquer le bouton Send + afficher Stop
+  var sendBtn = document.getElementById('sendBtn');
+  var stopBtn = document.getElementById('stopBtn');
+  if (sendBtn) sendBtn.style.display = 'none';
+  if (stopBtn) stopBtn.style.display = 'inline-flex';
+  if (window.S) { window.S.cwRunning = true; window.S.busy = true; }
+
+  var tracker = { unsub: null, lastStep: null };
+  _webTrackers[cmdId] = tracker;
+
+  // Listener Firestore
+  tracker.unsub = window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId)
+    .onSnapshot(function(doc) {
+      var d = doc.data();
+      if (!d) return;
+
+      if (d.step && d.step !== tracker.lastStep) {
+        tracker.lastStep = d.step;
+        var isActive = (d.status !== 'done' && d.status !== 'error' && d.status !== 'cancelled');
+        _addWebStep(cmdId, d.step, isActive ? 'running' : 'done', d.lastCmd || null);
+      }
+
+      if (d.status === 'done' || d.status === 'error' || d.status === 'cancelled') {
+        if (d.result && d.result.steps && Array.isArray(d.result.steps)) {
+          d.result.steps.forEach(function(s) {
+            var t = typeof s === 'string' ? s : (s.text || '');
+            if (t && t !== tracker.lastStep) _addWebStep(cmdId, t, 'done');
+          });
+        }
+        _finalizeWebTracker(cmdId, d.result, d.status);
+      }
+    }, function(err) {
+      console.error('[CW Web Tracker] Erreur:', err);
+      _finalizeWebTracker(cmdId, { error: err.message }, 'error');
+    });
+}
+
+function _addWebStep(cmdId, text, state, cmdText) {
+  var el = document.getElementById('cwwSteps-' + cmdId);
+  if (!el) return;
+  var prev = el.querySelector('.cww-step.running');
+  if (prev) {
+    prev.classList.remove('running');
+    prev.classList.add('done');
+    var d = prev.querySelector('.cww-dot');
+    if (d) d.textContent = '✓';
+    if (!prev.querySelector('.cww-connector')) {
+      var conn = document.createElement('div');
+      conn.className = 'cww-connector';
+      prev.insertBefore(conn, prev.firstChild);
+    }
+  }
+  var icon = state === 'done' ? '✓' : state === 'error' ? '✗' : '⟳';
+  var item = document.createElement('div');
+  item.className = 'cww-step ' + (state || 'running');
+  item.innerHTML = `<div class="cww-dot">${icon}</div>
+    <div class="cww-content">
+      <div class="cww-label">${_escW(text)}</div>
+      ${cmdText ? '<div class="cww-cmd">' + _escW(cmdText.substring(0,80)) + '</div>' : ''}
+    </div>`;
+  el.appendChild(item);
+  var chat = document.getElementById('messagesArea') || document.getElementById('chatMessages');
+  if (chat) chat.scrollTop = chat.scrollHeight;
+}
+
+function _finalizeWebTracker(cmdId, result, status) {
+  var card = document.getElementById('cwwTracker-' + cmdId);
+  if (!card) return;
+  var badge  = document.getElementById('cwwBadge-' + cmdId);
+  var footer = document.getElementById('cwwFooter-' + cmdId);
+  var title  = card.querySelector('.cww-title');
+
+  // Finir la dernière étape
+  var el = document.getElementById('cwwSteps-' + cmdId);
+  if (el) {
+    var last = el.querySelector('.cww-step.running');
+    if (last) {
+      last.classList.remove('running');
+      last.classList.add(status === 'done' ? 'done' : 'error');
+      var d = last.querySelector('.cww-dot');
+      if (d) d.textContent = status === 'done' ? '✓' : '✗';
+    }
+  }
+
+  if (status === 'done') {
+    card.classList.add('done');
+    if (badge) { badge.textContent = '✓ Terminé'; badge.className = 'cww-badge done'; }
+    if (title) title.textContent = 'CloudWorks — Terminé ✓';
+  } else if (status === 'cancelled') {
+    card.classList.add('cancelled');
+    if (badge) { badge.textContent = '■ Arrêté'; badge.className = 'cww-badge cancelled'; }
+    if (title) title.textContent = 'CloudWorks — Arrêté';
+  } else {
+    card.classList.add('error');
+    if (badge) { badge.textContent = '✗ Erreur'; badge.className = 'cww-badge error'; }
+    if (title) title.textContent = 'CloudWorks — Erreur';
+  }
+  if (footer) footer.style.display = 'none';
+
+  // Résumé
+  var summary = (result && (result.output || result.report || result.error)) || '';
+  if (!summary) summary = status === 'done' ? 'Tâche terminée.' : status === 'cancelled' ? 'Arrêté par l\'utilisateur.' : 'Erreur inconnue.';
+  var sum = document.createElement('div');
+  sum.className = 'cww-summary' + (status !== 'done' ? ' ' + status : '');
+  sum.textContent = summary.substring(0, 300) + (summary.length > 300 ? '…' : '');
+  card.appendChild(sum);
+
+  if (_webTrackers[cmdId] && _webTrackers[cmdId].unsub) _webTrackers[cmdId].unsub();
+  delete _webTrackers[cmdId];
+
+  // Restaurer l'input si plus aucune tâche active
+  if (Object.keys(_webTrackers).length === 0) {
+    if (window.S) { window.S.cwRunning = false; window.S.busy = false; }
+    var sb = document.getElementById('sendBtn');
+    var st = document.getElementById('stopBtn');
+    if (st) st.style.display = 'none';
+    if (sb) { sb.style.display = 'inline-flex'; sb.disabled = false; }
+  }
+
+  // Message de résumé EVA
+  setTimeout(function() {
+    var msg = status === 'done'
+      ? '✅ **Tâche CloudWorks terminée**\n\n' + summary + '\n\nSouhaites-tu autre chose ?'
+      : status === 'cancelled'
+        ? '■ **Tâche arrêtée** par l\'utilisateur.'
+        : '⚠️ **Erreur CloudWorks** : ' + summary;
+    if (typeof window.streamEvaMsg === 'function') {
+      window.streamEvaMsg(msg);
+    } else if (typeof window.addMessage === 'function') {
+      window.addMessage('assistant', msg);
+    }
+  }, 600);
+}
+
+// Exposer la fonction d'annulation pour le web
+window._cwwCancel = function(cmdId, uid) {
+  if (!window.db) return;
+  window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId)
+    .update({ status: 'cancelled', updatedAt: window.timestamp ? window.timestamp() : new Date() })
+    .catch(function(e) {
+      console.error('[CW Web Tracker] Erreur annulation:', e);
+      _finalizeWebTracker(cmdId, { error: 'Annulé localement' }, 'cancelled');
+    });
+};
+
+// Patch du stopBtn web pour gérer CW
+(function() {
+  var t = setInterval(function() {
+    var stopBtn = document.getElementById('stopBtn');
+    if (!stopBtn) return;
+    clearInterval(t);
+    stopBtn.addEventListener('click', function() {
+      if (window.S && window.S.cwRunning) {
+        // Annuler toutes les tâches web actives
+        var uid = window.S.user && window.S.user.uid;
+        if (uid) {
+          Object.keys(_webTrackers).forEach(function(cmdId) {
+            window._cwwCancel(cmdId, uid);
+          });
+        }
+      } else if (typeof window.stopGeneration === 'function') {
+        window.stopGeneration();
+      }
+    }, true);
+  }, 400);
+})();
+
+
 
 /* ══════════════════════════════════════════
    PROMPTS — IDE & SCRIPT
