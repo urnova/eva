@@ -47,8 +47,8 @@ function _renderPCLayout(container, uid) {
       </div>
       <div class="cw-section-body">
         <div id="cwLLMInfo" class="cw-llm-info">
-          <div class="cw-info-row"><span class="cw-info-label">Modèle</span><span id="cwLLMModel" class="cw-info-value">eva-model.gguf</span></div>
-          <div class="cw-info-row"><span class="cw-info-label">Port</span><span class="cw-info-value">11434</span></div>
+          <div class="cw-info-row"><span class="cw-info-label">Modèle</span><span id="cwLLMModel" class="cw-info-value">EVA V5 — 3B Q4_K_M</span></div>
+          <div class="cw-info-row"><span class="cw-info-label">Engine</span><span class="cw-info-value">node-llama-cpp</span></div>
           <div class="cw-info-row"><span class="cw-info-label">Statut</span><span id="cwLLMStatus" class="cw-info-value">—</span></div>
         </div>
         <div class="cw-llm-actions">
@@ -272,139 +272,68 @@ window._cwQuickCmd = async function(type) {
 window._cwRunAgenticTask = async function() {
   var promptEl = document.getElementById('cwAgenticPrompt');
   var statusEl = document.getElementById('cwAgenticStatus');
-  if (!promptEl || !window.pcAgent || !window.S || !window.S.user) return;
+  if (!promptEl || !window.S || !window.S.user) return;
   var prompt = promptEl.value.trim();
   if (!prompt) return;
 
-  statusEl.style.display = 'block';
-  statusEl.innerHTML = '<div class="cw-task-header">⟳ Envoi au LLM local...</div><div class="cw-task-steps" id="cwTaskSteps"></div>';
-  statusEl.className = 'cw-agentic-status running';
-  var stepsEl = document.getElementById('cwTaskSteps');
-
-  function _appendStep(text, cls) {
-    if (!stepsEl) return;
-    var d = document.createElement('div');
-    d.className = 'cw-task-step ' + (cls || '');
-    d.textContent = text;
-    stepsEl.appendChild(d);
-    stepsEl.scrollTop = stepsEl.scrollHeight;
-    // Max 20 steps visible
-    while (stepsEl.children.length > 20) stepsEl.removeChild(stepsEl.firstChild);
-  }
-
-  try {
-    var cmdId = await window.pcAgent.sendCommand('agentic_task', { prompt }, window.S.user.uid);
-    _appendStep('⟳ LLM en cours de traitement...', 'pending');
-
-    var _seenSteps = new Set();
-    var stepUnsub = window.db.collection('cloudworks').doc(window.S.user.uid)
-      .collection('commands').doc(cmdId)
-      .onSnapshot(function(doc) {
-        var d = doc.data();
-        if (!d) return;
-
-        // Afficher le step courant s'il est nouveau
-        if (d.step && !_seenSteps.has(d.step)) {
-          _seenSteps.add(d.step);
-          var hdr = statusEl.querySelector('.cw-task-header');
-          if (hdr) hdr.textContent = '⟳ ' + d.step;
-          _appendStep(d.step, 'running');
-        }
-
-        // Afficher chaque étape de l'historique (steps[])
-        if (d.steps && Array.isArray(d.steps)) {
-          d.steps.forEach(function(s) {
-            var key = s.ts + '|' + s.text;
-            if (!_seenSteps.has(key)) {
-              _seenSteps.add(key);
-              _appendStep(s.text, s.text.startsWith('✓') ? 'done' : s.text.startsWith('✗') ? 'error' : 'running');
-            }
-          });
-        }
-
-        if (d.status === 'done') {
-          stepUnsub();
-          var out = (d.result && d.result.output) ? d.result.output : 'Tâche terminée';
-          _appendStep('✓ ' + out.substring(0, 120), 'done');
-          var hdr2 = statusEl.querySelector('.cw-task-header');
-          if (hdr2) hdr2.textContent = '✓ Terminé';
-          statusEl.className = 'cw-agentic-status done';
-          promptEl.value = '';
-          _addActivity('Tâche IA: ' + prompt.substring(0, 50), 'done');
-        } else if (d.status === 'error') {
-          stepUnsub();
-          var err = (d.result && d.result.error) ? d.result.error : 'Inconnue';
-          _appendStep('✗ Erreur: ' + err.substring(0, 120), 'error');
-          var hdr3 = statusEl.querySelector('.cw-task-header');
-          if (hdr3) hdr3.textContent = '✗ Erreur';
-          statusEl.className = 'cw-agentic-status error';
-          _addActivity('Tâche IA erreur: ' + err.substring(0, 40), 'error');
-        }
-      });
-  } catch(e) {
-    statusEl.innerHTML = '<div class="cw-task-header">✗ ' + esc(e.message) + '</div>';
-    statusEl.className = 'cw-agentic-status error';
-  }
-};
-
-/* ══════════════════════════════════════════
-   DEVICES
-══════════════════════════════════════════ */
-function _loadDevices(uid) {
-  if (_cwUnsub) { _cwUnsub(); _cwUnsub = null; }
-  try {
-    _cwUnsub = window.db.collection('cloudworks').doc(uid).collection('devices')
-      .onSnapshot(function(snap) { _renderDevices(snap); },
-      function(err) {
-        var el = document.getElementById('cwDeviceListInner');
-        if (el) el.innerHTML = '<div class="cw-empty">Erreur de chargement</div>';
-      });
-  } catch(e) {}
-}
-
-function _renderDevices(snap) {
-  var list = document.getElementById('cwDeviceListInner');
-  var statOnline = document.getElementById('cwStatOnline');
-  var statOffline = document.getElementById('cwStatOffline');
-  if (!list) return;
-
-  var myId = window._cwDeviceId || localStorage.getItem('cw_device_id');
-
-  if (snap.empty) {
-    list.innerHTML = '<div class="cw-empty">Aucun autre appareil enregistré</div>';
-    // Ce PC est toujours en ligne (on est dessus)
-    if (statOnline) statOnline.textContent = myId ? '1' : '0';
-    if (statOffline) statOffline.textContent = '0';
+  // Verifier que CWAgent est disponible
+  if (!window.CWAgent || !window.CWTools) {
+    if (window.toast) window.toast('Module CWAgent non charge. Rechargez l\'application.', 'error');
     return;
   }
 
-  // Ce PC compte comme 1 en ligne (on l'exclut de la liste mais pas du total)
-  var onlineCount = myId ? 1 : 0, offlineCount = 0;
-  var html = '';
+  statusEl.style.display = 'block';
+  statusEl.className = 'cw-agentic-status running';
+  statusEl.innerHTML =
+    '<div class="cw-task-header">Envoi au LLM local...</div>' +
+    '<div class="cw-task-steps" id="cwTaskSteps"></div>' +
+    '<button class="cw-btn cw-btn-danger cw-btn-sm" style="margin-top:8px;" onclick="window._cwStopAgent()">Arreter</button>';
 
-  snap.forEach(function(doc) {
-    var d = Object.assign({id: doc.id}, doc.data());
-    if (d.deviceId === myId) return; // Ne pas afficher ce PC
-    var online = d.online === true;
-    if (online && d.lastSeen && d.lastSeen.toDate) {
-      if (Date.now() - d.lastSeen.toDate().getTime() > 120000) online = false;
+  var stepsEl = document.getElementById('cwTaskSteps');
+
+  // Lire les parametres Firebase
+  var approvalMode = true;
+  var autonomousMode = false;
+  try {
+    var settingsDoc = await window.db.collection('users').doc(window.S.user.uid).get();
+    var settingsData = settingsDoc.data();
+    if (settingsData && settingsData.cloudworks) {
+      if (settingsData.cloudworks.approvalMode !== undefined) approvalMode = settingsData.cloudworks.approvalMode;
+      if (settingsData.cloudworks.autonomousMode !== undefined) autonomousMode = settingsData.cloudworks.autonomousMode;
     }
-    online ? onlineCount++ : offlineCount++;
-    var seen = d.lastSeen && d.lastSeen.toDate ? d.lastSeen.toDate().toLocaleString('fr-FR') : 'Inconnu';
-    html += `<div class="cw-device-card ${online ? 'online' : 'offline'}">
-      <div class="cw-device-icon">${online ? '🟢' : '⚫'}</div>
-      <div class="cw-device-info">
-        <div class="cw-device-name">${esc(d.deviceName || d.deviceId)}</div>
-        <div class="cw-device-meta">${esc(d.osVersion || 'Windows')} · ${online ? 'En ligne' : 'Hors ligne'}</div>
-        <div class="cw-device-seen">Vu: ${seen}</div>
-      </div>
-    </div>`;
+  } catch(e) { /* garder les defaults */ }
+
+  var agent = new window.CWAgent(window.S.user.uid, {
+    approvalMode: approvalMode,
+    autonomousMode: autonomousMode
+  });
+  window._activeAgent = agent;
+
+  var header = statusEl.querySelector('.cw-task-header');
+
+  var result = await agent.run(prompt, stepsEl, function(text, cls) {
+    if (header) header.textContent = text;
   });
 
-  list.innerHTML = html || '<div class="cw-empty">Aucun autre appareil enregistré</div>';
-  if (statOnline) statOnline.textContent = onlineCount;
-  if (statOffline) statOffline.textContent = offlineCount;
-}
+  if (result.success) {
+    if (header) header.textContent = 'Tache terminee';
+    statusEl.className = 'cw-agentic-status done';
+    promptEl.value = '';
+    _addActivity('Tache IA: ' + prompt.substring(0, 50), 'done');
+  } else {
+    if (header) header.textContent = 'Erreur: ' + (result.error || 'Inconnue');
+    statusEl.className = 'cw-agentic-status error';
+    _addActivity('Tache IA erreur: ' + prompt.substring(0, 30), 'error');
+  }
+
+  window._activeAgent = null;
+};
+
+window._cwStopAgent = function() {
+  if (window._activeAgent) window._activeAgent.stop();
+  if (window.CWAgentStop) window.CWAgentStop();
+};
+
 
 window._cwToggleDevices = function() {
   var body = document.getElementById('cwDevicesBody');

@@ -26,6 +26,23 @@ var _elevenlabsAudio = null; /* Audio en cours pour ElevenLabs */
 
 /* ── Appel le bon engine selon la config ── */
 function _getEngine(config) {
+  // Priorité maximale : TTS natif Windows SAPI via Electron (uniquement sur l'app PC)
+  if (window.eva && window.eva.tts) {
+    return {
+      speak: function(text, cfg, onStart, onEnd) {
+        if (onStart) onStart();
+        window.eva.tts.speak(text).then(function() {
+          var estimatedMs = Math.max(1000, text.length * 60);
+          setTimeout(function() { if (onEnd) onEnd(); }, estimatedMs);
+        }).catch(function() { if (onEnd) onEnd(); });
+      },
+      stop: function() {
+        window.eva.tts.stop();
+      },
+      isReady: function() { return true; }
+    };
+  }
+
   var prov = (config && config.voiceProvider) || 'eva-custom';
   if (prov === 'eva-custom' || prov === 'piper-vits') {
     return window.EvaCustomTTS || null;

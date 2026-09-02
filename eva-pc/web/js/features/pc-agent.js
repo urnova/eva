@@ -454,3 +454,78 @@ RÈGLES D'EXÉCUTION :
   };
 
 })();
+
+
+
+// ==========================================
+// EVA MODEL AUTO-DOWNLOADER
+// ==========================================
+(function() {
+  'use strict';
+
+  async function checkAndPromptModel() {
+    if (!window.eva || !window.eva.llm) return;
+
+    try {
+      const { exists } = await window.eva.llmCheck();
+      if (exists) return;
+
+      // Modele manquant, afficher la modal
+      const modal = document.getElementById('model-download-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+      }
+
+      const btn = document.getElementById('model-dl-btn');
+      if (!btn) return;
+
+      btn.addEventListener('click', async function() {
+        btn.disabled = true;
+        btn.textContent = 'Téléchargement en cours...';
+        
+        const progressContainer = document.getElementById('model-dl-progress-container');
+        if (progressContainer) progressContainer.style.display = 'block';
+
+        // Listen for progress updates
+        if (window.eva.onLLMDownloadProgress) {
+          window.eva.onLLMDownloadProgress(function(data) {
+            const bar = document.getElementById('model-dl-bar');
+            const pct = document.getElementById('model-dl-pct');
+            const info = document.getElementById('model-dl-info');
+            if (bar) bar.style.width = data.progress + '%';
+            if (pct) pct.textContent = data.progress + '%';
+            if (info) {
+              const dl = (data.downloadedBytes / 1024 / 1024 / 1024).toFixed(2);
+              const tot = (data.totalBytes / 1024 / 1024 / 1024).toFixed(2);
+              info.textContent = dl + ' Go / ' + tot + ' Go';
+            }
+          });
+        }
+
+        try {
+          await window.eva.llmDownload();
+          if (modal) modal.style.display = 'none';
+          // Start LLM now that model is downloaded
+          window.eva.llmStart().catch(console.error);
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = 'Réessayer';
+          alert('Erreur de téléchargement: ' + (err.message || err));
+        }
+      });
+    } catch (e) {
+      console.warn('[EVA] Erreur vérification modèle:', e);
+    }
+  }
+
+  // Wait for eva bridge to be ready
+  function waitForEva() {
+    if (window.eva && window.eva.llmCheck) {
+      // Check after a short delay to let UI render
+      setTimeout(checkAndPromptModel, 1500);
+    } else {
+      setTimeout(waitForEva, 300);
+    }
+  }
+  waitForEva();
+})();

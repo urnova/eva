@@ -107,31 +107,26 @@ async function loadProfile(uid) {
       S._lastExtractTime = 0;
 
       // Nettoyage des liens corrompus (self-loops) et des doublons exacts
-      if (S.evaMemory && S.evaMemory.links) {
-          var initialLinkCount = S.evaMemory.links.length;
-          // 1. Enlever les self-loops
-          var cleanedLinks = S.evaMemory.links.filter(function(l) { return l.source !== l.target; });
-          
-          // 2. Supprimer les doublons stricts (même label, insensible à la casse)
-          var uniqueLinks = [];
-          cleanedLinks.forEach(function(l) {
-             var existing = uniqueLinks.find(function(ex) {
-                 var sameNodes = (ex.source === l.source && ex.target === l.target) || 
-                                 (ex.source === l.target && ex.target === l.source);
-                 var sameLabel = (ex.label || '').toLowerCase().trim() === (l.label || '').toLowerCase().trim();
-                 return sameNodes && sameLabel;
-             });
-             if (!existing) {
-                 uniqueLinks.push(l);
-             }
-          });
-          
-          S.evaMemory.links = uniqueLinks;
-          
-          if (S.evaMemory.links.length !== initialLinkCount) {
-              try { db.collection('users').doc(S.user.uid).set({ evaMemory: S.evaMemory }, { merge: true }); } catch(e){}
-          }
-      }
+      try {
+        if (S.evaMemory && Array.isArray(S.evaMemory.links)) {
+            var initialLinkCount = S.evaMemory.links.length;
+            var cleanedLinks = S.evaMemory.links.filter(function(l) { return l.source !== l.target; });
+            var uniqueLinks = [];
+            cleanedLinks.forEach(function(l) {
+               var existing = uniqueLinks.find(function(ex) {
+                   var sameNodes = (ex.source === l.source && ex.target === l.target) || 
+                                   (ex.source === l.target && ex.target === l.source);
+                   var sameLabel = (ex.label || '').toLowerCase().trim() === (l.label || '').toLowerCase().trim();
+                   return sameNodes && sameLabel;
+               });
+               if (!existing) { uniqueLinks.push(l); }
+            });
+            S.evaMemory.links = uniqueLinks;
+            if (S.evaMemory.links.length !== initialLinkCount) {
+                try { db.collection('users').doc(S.user.uid).set({ evaMemory: S.evaMemory }, { merge: true }); } catch(e){}
+            }
+        }
+      } catch(e) { console.error("Erreur nettoyage memoire:", e); }
 
       console.log('[loadProfile] Appel de renderUserUI...');
       renderUserUI(S.profile);
@@ -187,13 +182,12 @@ async function loadProfile(uid) {
     }
   } catch(e) { 
     console.error('[loadProfile] Erreur critique:', e); 
-    // Fallback UI si Firestore échoue (offline ou panne)
     var el = document.getElementById('userNameText');
-    if (el && el.textContent === 'Chargement...') {
-      el.textContent = (S.user && S.user.email) ? S.user.email.split('@')[0] : 'Hors-ligne';
-      el.style.color = '#f59e0b';
+    if (el) {
+      el.textContent = 'Err: ' + e.message.substring(0,20);
+      el.title = e.message;
+      el.style.color = '#ef4444';
     }
-    // Débloquer l'UI malgré l'erreur
     document.dispatchEvent(new CustomEvent('eva:authReady'));
     if (window._initPathRouter) window._initPathRouter();
   }

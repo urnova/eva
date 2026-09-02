@@ -79,6 +79,8 @@ const evaAPI = {
     llmStart: () => ipcRenderer.invoke('llm:start'),
     llmStop: () => ipcRenderer.invoke('llm:stop'),
     llmStatus: () => ipcRenderer.invoke('llm:status'),
+    llmCheck: () => ipcRenderer.invoke('llm:check'),
+    llmDownload: () => ipcRenderer.invoke('llm:download'),
     cpuLoad: () => ipcRenderer.invoke('system:cpuLoad'),
     screenshot: () => ipcRenderer.invoke('system:screenshot'),
     exec: (cmd: string) => ipcRenderer.invoke('system:exec', cmd),
@@ -115,6 +117,9 @@ const evaAPI = {
     }
   },
   // ── LLM status (événement temps réel depuis main) ──
+  onLLMDownloadProgress: (callback: (data: { progress: number, downloadedBytes: number, totalBytes: number }) => void) => {
+    ipcRenderer.on('llm:download-progress', (_: unknown, data: any) => callback(data))
+  },
   onLLMStatusChanged: (callback: (status: { running: boolean }) => void) => {
     ipcRenderer.on('llm:status-changed', (_: unknown, status: { running: boolean }) => callback(status))
   },
@@ -175,7 +180,14 @@ const evaAPI = {
   openAuthWindow: (url: string) => ipcRenderer.invoke('auth:openAuthWindow', url),
 
   // ── Overlay Agentique ──
-  overlay: {
+  
+  // ── TTS (Text-to-Speech — Windows SAPI) ──
+  tts: {
+    speak: (text: string) => ipcRenderer.invoke('tts:speak', text),
+    stop: () => ipcRenderer.invoke('tts:stop'),
+  },
+
+overlay: {
     show: (state?: string) => ipcRenderer.invoke('overlay:show', state),
     hide: () => ipcRenderer.invoke('overlay:hide'),
     setState: (state: string, text?: string) => ipcRenderer.invoke('overlay:setState', state, text),

@@ -703,7 +703,80 @@ function renderSettings(section) {
       c.innerHTML = '<div class="settings-section" style="color:var(--text-muted);text-align:center;padding:30px;">Erreur lors de la récupération des statistiques :<br><code style="font-size:0.8em;color:#ef4444;">' + e.message + '</code></div>';
     });
 
-  } else if (section === 'brain') {
+    } else if (section === 'cloudworks-settings') {
+    // Section parametres comportement CloudWorks
+    var _cwSettingsLoading = true;
+    c.innerHTML = '<div class="settings-section"><h3>CloudWorks — Comportement</h3><div id="cwSettingsContent"><div class="loader" style="margin:20px auto;"></div></div></div>';
+    var cwContent = document.getElementById('cwSettingsContent');
+
+    // Charger les params depuis Firestore
+    var _cwData = { approvalMode: true, autonomousMode: false };
+    if (S.user) {
+      window.db.collection('users').doc(S.user.uid).get().then(function(cwSnap) {
+        var cwSnap2 = cwSnap.data();
+        if (cwSnap2 && cwSnap2.cloudworks) {
+          if (cwSnap2.cloudworks.approvalMode !== undefined) _cwData.approvalMode = cwSnap2.cloudworks.approvalMode;
+          if (cwSnap2.cloudworks.autonomousMode !== undefined) _cwData.autonomousMode = cwSnap2.cloudworks.autonomousMode;
+        }
+        document.getElementById('cwApprovalToggle').checked = _cwData.approvalMode;
+        document.getElementById('cwAutonomousToggle').checked = _cwData.autonomousMode;
+      }).catch(function(){});
+    }
+
+    function _saveCWSettings(key, value) {
+      if (!S.user) return;
+      var update = {};
+      update['cloudworks.' + key] = value;
+      window.db.collection('users').doc(S.user.uid).update(update).catch(function(e) {
+        if (e.code === 'not-found') {
+          window.db.collection('users').doc(S.user.uid).set({ cloudworks: _cwData }, { merge: true });
+        }
+      });
+    }
+
+    cwContent.innerHTML =
+      '<div class="settings-item" style="margin-bottom:16px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<div>' +
+            '<div style="font-weight:600;">Mode validation</div>' +
+            '<div style="font-size:0.82em;color:var(--text-muted);">Demande votre accord avant chaque action sensible (ecriture, creation de fichier). Recommande.</div>' +
+          '</div>' +
+          '<label class="toggle" style="margin-left:16px;">' +
+            '<input type="checkbox" id="cwApprovalToggle"' + (_cwData.approvalMode ? ' checked' : '') + '>' +
+            '<span class="slider"></span>' +
+          '</label>' +
+        '</div>' +
+      '</div>' +
+      '<div class="settings-item" style="border:1px solid #ef4444;border-radius:10px;padding:12px;margin-bottom:8px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<div>' +
+            '<div style="font-weight:600;color:#ef4444;">Mode autonome <span style="font-size:0.75em;background:#ef4444;color:#fff;padding:1px 6px;border-radius:10px;margin-left:4px;">EXPERIMENTAL</span></div>' +
+            '<div style="font-size:0.82em;color:var(--text-muted);">EVA execute les actions sans demander confirmation. Activez seulement si vous faites pleinement confiance au modele.</div>' +
+          '</div>' +
+          '<label class="toggle" style="margin-left:16px;">' +
+            '<input type="checkbox" id="cwAutonomousToggle"' + (_cwData.autonomousMode ? ' checked' : '') + '>' +
+            '<span class="slider"></span>' +
+          '</label>' +
+        '</div>' +
+        '<div style="margin-top:8px;font-size:0.78em;color:#ef4444;">Un kill switch est toujours disponible dans la fenetre CloudWorks.</div>' +
+      '</div>';
+
+    // Events
+    document.getElementById('cwApprovalToggle').addEventListener('change', function(e) {
+      _cwData.approvalMode = e.target.checked;
+      _saveCWSettings('approvalMode', _cwData.approvalMode);
+    });
+
+    document.getElementById('cwAutonomousToggle').addEventListener('change', function(e) {
+      if (e.target.checked && !confirm('Activer le mode autonome ? EVA pourra executer des actions sur votre PC sans demander confirmation. Vous pouvez l\'arreter a tout moment avec le bouton Arreter dans CloudWorks.')) {
+        e.target.checked = false;
+        return;
+      }
+      _cwData.autonomousMode = e.target.checked;
+      _saveCWSettings('autonomousMode', _cwData.autonomousMode);
+    });
+
+} else if (section === 'brain') {
     c.innerHTML =
       '<div class="settings-section">' +
       '<div class="settings-section-title">Cartographie Neuronale</div>' +
