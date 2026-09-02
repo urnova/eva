@@ -343,14 +343,33 @@ function cwShowInputModal(opts) {
 
 /* ══════════════════════════════════════════
    RESULT LISTENER — Firestore real-time
+   _cwPageLoadTime : seules les commandes complétées APRÈS ce timestamp
+   déclenchent un modal. Les anciennes sont affichées dans le log seulement.
 ══════════════════════════════════════════ */
+var _cwPageLoadTime = Date.now();
+
 function _handleResultsSnap(snap) {
-  // Traite tous les changements (added + modified) de statut done/error
   snap.docChanges().forEach(function(change) {
     if (change.type !== 'added' && change.type !== 'modified') return;
     var data = change.doc.data();
     if (data.status !== 'done' && data.status !== 'error') return;
+
+    // Toujours mettre à jour l'historique d'activité (log)
     _updateLogEntry(change.doc.id, data);
+
+    // ── GARDE TEMPORELLE ──
+    // Afficher un modal uniquement si la commande a été terminée APRÈS le chargement de la page.
+    // Évite que les captures/infos demandées depuis un autre appareil s'affichent en boucle.
+    var updAt = data.updatedAt;
+    var completedMs = 0;
+    if (updAt && typeof updAt.toDate === 'function') {
+      completedMs = updAt.toDate().getTime();
+    } else if (updAt && updAt.seconds) {
+      completedMs = updAt.seconds * 1000;
+    }
+    if (completedMs <= _cwPageLoadTime) return; // Résultat antérieur → log uniquement, pas de modal
+
+    // Nouveau résultat → afficher modal
     if (data.type === 'screenshot' && data.status === 'done' && data.result && data.result.imageBase64) {
       var mime = (data.result.mimeType || 'image/jpeg');
       cwShowScreenshot(data.result.imageBase64, data.deviceId, mime);
