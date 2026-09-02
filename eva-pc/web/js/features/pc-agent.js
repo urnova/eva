@@ -11,32 +11,45 @@
     try {
       const uid = window.S.user.uid;
 
-      // Récupérer un deviceId persistant ou en créer un
-      deviceId = localStorage.getItem('cw_device_id');
-      if (!deviceId) {
-        deviceId = 'PC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-        localStorage.setItem('cw_device_id', deviceId);
-      }
-      // Exposer globalement pour le system prompt
-      window._cwDeviceId = deviceId;
-
       let osInfo = 'Windows';
       let localIP = '127.0.0.1';
       let hostname = 'EVA Desktop';
+      let macAddress = null;
 
+      // Récupérer les infos système (dont l'adresse MAC stable)
       if (window.eva && window.eva.system) {
         try {
           const info = await window.eva.system.info();
           if (info.success && info.os) {
-            osInfo = info.os.distro || info.os.platform;
+            osInfo = info.os.distro || info.os.platform || 'Windows';
             hostname = info.os.hostname || 'EVA Desktop';
           }
           if (info.success && info.net) {
-            const defaultNet = info.net.find(n => n.ip4 && !n.internal);
-            if (defaultNet) localIP = defaultNet.ip4;
+            // Chercher la première interface physique avec IP + MAC
+            const physNet = info.net.find(n => n.ip4 && !n.internal && n.mac && n.mac !== '00:00:00:00:00:00');
+            if (physNet) {
+              localIP = physNet.ip4;
+              macAddress = physNet.mac;
+            }
           }
         } catch(e){}
       }
+
+      // ID stable basé sur l'adresse MAC (évite les doublons à chaque reconnexion)
+      // Si la MAC est disponible → utiliser MAC-XX-XX-XX-XX-XX-XX
+      // Sinon → fallback sur l'ancien ID aléatoire stocké en localStorage
+      if (macAddress) {
+        deviceId = 'MAC-' + macAddress.replace(/:/g, '-').toUpperCase();
+        localStorage.setItem('cw_device_id', deviceId); // Mettre à jour si changé
+      } else {
+        deviceId = localStorage.getItem('cw_device_id');
+        if (!deviceId) {
+          deviceId = 'PC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+          localStorage.setItem('cw_device_id', deviceId);
+        }
+      }
+      // Exposer globalement pour le system prompt
+      window._cwDeviceId = deviceId;
 
       const ts = typeof window.timestamp === 'function' ? window.timestamp() : new Date();
       const docRef = window.db.collection('cloudworks').doc(uid).collection('devices').doc(deviceId);
@@ -47,12 +60,13 @@
         deviceName: hostname || 'EVA Desktop',
         deviceType: 'windows',
         localIP: localIP,
+        macAddress: macAddress || null,
         osVersion: osInfo,
         online: true,
         lastSeen: ts,
         sessionId: (window.S && window.S.sessionId) ? window.S.sessionId : null,
         appVersion: (window.eva && window.eva.app) ? await window.eva.app.version().catch(()=>'?') : '?'
-      }, { merge: true });
+      }, { merge: true }); // merge:true = réutilise le document existant si même MAC
 
       console.log('[CloudWorks] Enregistré sous ID:', deviceId, '| Hostname:', hostname);
 

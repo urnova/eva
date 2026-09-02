@@ -5,7 +5,7 @@
 var _cwUnsub = null;
 var _cwResultUnsub = null;
 var _cwActivityLog = [];
-var MAX_LOG = 20;
+var MAX_LOG = 4;
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');}
 
@@ -214,7 +214,7 @@ function renderDevices(snap) {
             '<div class="cw-card-iconwrap">' + icon + '</div>' +
             '<div class="cw-card-info">' +
               '<div class="cw-card-name">' + dname + '</div>' +
-              '<div class="cw-card-sub">' + typeLabel + ' · ' + esc(d.deviceId || d.id) + '</div>' +
+              '<div class="cw-card-sub">' + typeLabel + (d.macAddress ? ' · ' + esc(d.macAddress) : ' · ' + esc(d.deviceId || d.id)) + '</div>' +
             '</div>' +
           '</div>' +
           '<div class="cw-card-right">' +
@@ -265,10 +265,19 @@ async function cwCmd(deviceId, type, payload) {
       sleep: '💤 Mise en veille…',
       shutdown: '⏻ Extinction…',
       run_script: '⚡ Script envoyé…',
-      open_ide_file: '💻 Ouverture dans l\'IDE…'
+      open_ide_file: '💻 Ouverture dans l\'IDE…',
+      agentic_task: '🤖 Tâche IA…'
     };
+    // Pour agentic_task : afficher le début du prompt dans le label
+    var entryLabel = labels[type] || type;
+    if (type === 'agentic_task' && payload && payload.prompt) {
+      var shortPrompt = payload.prompt.trim().replace(/\s+/g, ' ');
+      entryLabel = '🤖 ' + (shortPrompt.length > 48 ? shortPrompt.substring(0, 48) + '…' : shortPrompt);
+    } else if (type === 'run_script' && payload && payload.command) {
+      entryLabel = '⚡ ' + (payload.command.length > 42 ? payload.command.substring(0, 42) + '…' : payload.command);
+    }
     if (window.toast) window.toast(labels[type] || 'Commande envoyée', 'success');
-    _addLogEntry({type: type, deviceId: deviceId, status: 'pending', createdAt: new Date(), cmdId: ref.id});
+    _addLogEntry({type: type, deviceId: deviceId, status: 'pending', label: entryLabel, createdAt: new Date(), cmdId: ref.id});
   } catch(e) {
     if (window.toast) window.toast('Erreur : ' + e.message, 'error');
   }
@@ -522,13 +531,22 @@ function _updateLogEntry(cmdId, data) {
     sleep: '💤 Veille',
     shutdown: '⏻ Extinction',
     run_script: '⚡ Script',
-    open_ide_file: '💻 IDE'
+    open_ide_file: '💻 IDE',
+    agentic_task: '🤖 Tâche IA'
   };
+  // Pour agentic_task : afficher le début du prompt si disponible
+  var entryLabel = typeLabels[data.type] || data.type;
+  if (data.type === 'agentic_task' && data.payload && data.payload.prompt) {
+    var p = data.payload.prompt.trim().replace(/\s+/g, ' ');
+    entryLabel = '🤖 ' + (p.length > 48 ? p.substring(0, 48) + '…' : p);
+  } else if (data.type === 'run_script' && data.payload && data.payload.command) {
+    entryLabel = '⚡ ' + (data.payload.command.length > 42 ? data.payload.command.substring(0, 42) + '…' : data.payload.command);
+  }
   var entry = {
     type: data.type,
     deviceId: data.deviceId,
     status: data.status,
-    label: typeLabels[data.type] || data.type,
+    label: entryLabel,
     createdAt: data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate() : new Date()
   };
   _cwActivityLog = _cwActivityLog.filter(function(e){ return e.type !== data.type || e.deviceId !== data.deviceId || e.status !== 'pending'; });
