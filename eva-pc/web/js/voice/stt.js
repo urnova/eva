@@ -1,163 +1,108 @@
 (function() {
 'use strict';
 
-var _onResultCallback = null;
-var _onEndCallback = null;
-var _isListening = false;
-var _useElectronSTT = false;
-
-/* ── Détection Electron ── */
-function _isElectron() {
-  return !!(window.eva && window.eva.stt && typeof window.eva.stt.start === 'function');
-}
+var recognition  = null;
+var isListening  = false;
+var _shouldKeepListening = false;
+var _committed   = '';
+var onResultCallback = null;
+var onEndCallback    = null;
 
 function isSupported() {
-  return _isElectron() || !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
-/* ════════════════════════════════════════════════════════
-   MODE ELECTRON : PowerShell Windows Speech Recognition
-   ← 100% offline, ne nécessite pas la clé API Google
-════════════════════════════════════════════════════════ */
-function _startElectronSTT() {
-  window.eva.stt.onResult(function(result) {
-    if (!_isListening) return;
-    if (result && result.text && _onResultCallback) {
-      _onResultCallback(result.text, true); // final=true
-    }
-  });
-
-  window.eva.stt.onStopped(function() {
-    _isListening = false;
-    _useElectronSTT = false;
-    if (_onEndCallback) _onEndCallback();
-  });
-
-  window.eva.stt.start().then(function(res) {
-    if (res && res.success) {
-      _isListening = true;
-      _useElectronSTT = true;
-      console.log('[STT] PowerShell Windows STT démarré');
-    } else {
-      console.error('[STT] Erreur démarrage:', res && res.error);
-      if (_onEndCallback) _onEndCallback();
-    }
-  }).catch(function(e) {
-    console.error('[STT] Échec démarrage:', e);
-    if (_onEndCallback) _onEndCallback();
-  });
-}
-
-function _stopElectronSTT() {
-  _isListening = false;
-  _useElectronSTT = false;
-  if (window.eva && window.eva.stt) {
-    window.eva.stt.stop();
-    window.eva.stt.offAll();
-  }
-}
-
-/* ════════════════════════════════════════════════════════
-   MODE WEB : webkitSpeechRecognition (navigateur seulement)
-════════════════════════════════════════════════════════ */
-var _webRecognition = null;
-var _shouldKeepListening = false;
-var _committed = '';
-
-function _buildWebRecognition() {
+function initSTT() {
+  if (!isSupported()) return false;
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return null;
-  var r = new SR();
-  r.lang = 'fr-FR';
-  r.continuous = true;
-  r.interimResults = true;
-  r.maxAlternatives = 1;
+  recognition = new SR();
+  recognition.lang = 'fr-FR';
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  recognition.continuous = true;
 
-  r.onresult = function(event) {
-    var interim = '', newFinal = '';
+  recognition.onresult = function(event) {
+    var interim  = '';
+    var newFinal = '';
     for (var i = event.resultIndex; i < event.results.length; i++) {
       var t = event.results[i][0].transcript;
       if (event.results[i].isFinal) { newFinal += t; }
-      else { interim += t; }
+      else                          { interim  += t; }
     }
-    if (newFinal) _committed += (_committed ? ' ' : '') + newFinal.trim();
+    if (newFinal) {
+      _committed += (_committed ? ' ' : '') + newFinal.trim();
+    }
     var display = _committed + (interim ? (_committed ? ' ' : '') + interim : '');
-    if (_onResultCallback) _onResultCallback(display, false);
+    if (onResultCallback) onResultCallback(display, false);
   };
 
-  r.onstart = function() { _isListening = true; };
+  recognition.onstart = function() { isListening = true; };
 
-  r.onend = function() {
-    _isListening = false;
+  recognition.onend = function() {
+    isListening = false;
     if (_shouldKeepListening) {
-      try { r.start(); _isListening = true; }
-      catch(e) { _shouldKeepListening = false; if (_onEndCallback) _onEndCallback(); }
+      try { recognition.start(); isListening = true; }
+      catch(e) {
+        _shouldKeepListening = false;
+        if (onEndCallback) onEndCallback();
+      }
     } else {
-      if (_onEndCallback) _onEndCallback();
+      if (onEndCallback) onEndCallback();
     }
   };
 
-  r.onerror = function(e) {
+  recognition.onerror = function(e) {
     if (e.error === 'no-speech' && _shouldKeepListening) return;
-    if (e.error === 'network') {
-      console.warn('[STT] webkitSpeechRecognition: erreur réseau — clé API Google absente dans Electron');
-      _isListening = false;
-      _shouldKeepListening = false;
-      if (_onEndCallback) _onEndCallback();
-      return;
-    }
-    console.warn('[STT] Erreur:', e.error);
-    _isListening = false;
-    if (!_shouldKeepListening && _onEndCallback) _onEndCallback();
+    isListening = false;
+    console.warn('STT error:', e.error);
+    if (!_shouldKeepListening && onEndCallback) onEndCallback();
   };
 
-  return r;
+  return true;
 }
 
-/* ════════════════════════════════════════════════════════
-   API PUBLIQUE
-════════════════════════════════════════════════════════ */
 function startListening(onResult, onEnd) {
-  _onResultCallback = onResult || null;
-  _onEndCallback    = onEnd   || null;
-  _committed        = '';
-
-  if (_isElectron()) {
-    _startElectronSTT();
-    return true;
-  }
-
-  // Fallback navigateur
+  onResultCallback = onResult || null;
+  onEndCallback    = onEnd   || null;
+  _committed       = '';
   _shouldKeepListening = true;
-  if (!_webRecognition) _webRecognition = _buildWebRecognition();
-  if (!_webRecognition) { console.error('[STT] Aucun moteur disponible'); return false; }
-  if (_isListening) return true;
-  try { _webRecognition.start(); _isListening = true; return true; }
-  catch(e) { console.error('[STT] Erreur start:', e); return false; }
+  if (!recognition) initSTT();
+  if (!recognition) return false;
+  if (isListening) return true;
+  try { recognition.start(); isListening = true; return true; }
+  catch(e) { return false; }
 }
 
 function stopListening() {
-  if (_useElectronSTT) {
-    _stopElectronSTT();
-    if (_onEndCallback) _onEndCallback();
-    return;
-  }
   _shouldKeepListening = false;
-  if (_webRecognition && _isListening) {
-    try { _webRecognition.stop(); } catch(e) {}
-    _isListening = false;
+  if (recognition && isListening) {
+    try { recognition.stop(); } catch(e) {}
+    isListening = false;
   }
+  _committed = '';
 }
 
-function getIsListening() { return _isListening; }
+function getIsListening()   { return isListening || _shouldKeepListening; }
+function getCommitted()     { return _committed; }
 
-/* Exposer l'API globale */
-window.EVAVoice = window.EVAVoice || {};
-window.EVAVoice.startListening = startListening;
-window.EVAVoice.stopListening  = stopListening;
-window.EVAVoice.isListening    = getIsListening;
-window.EVAVoice.isSupported    = isSupported;
-window.EVAVoice.startSTT       = startListening;
-window.EVAVoice.stopSTT        = stopListening;
+async function requestMicPermission() {
+  try {
+    var s = await navigator.mediaDevices.getUserMedia({ 
+      audio: {
+        autoGainControl: false,
+        echoCancellation: true,
+        noiseSuppression: false
+      }
+    });
+    s.getTracks().forEach(function(t) { t.stop(); });
+    return true;
+  } catch(e) { return false; }
+}
 
+window.EVASTS = {
+  isSupported, initSTT,
+  startListening, stopListening,
+  getIsListening, getCommitted,
+  requestMicPermission
+};
 })();
