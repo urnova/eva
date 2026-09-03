@@ -1272,6 +1272,7 @@ ipcMain.handle('stt:stop', async () => {
     _sttProcess = null;
   }
   return { success: true };
+});
 
 // ─── IPC Handlers — TTS (Text-to-Speech via Windows SAPI) ───
 let _ttsProcess: any = null;
