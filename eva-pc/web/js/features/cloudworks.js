@@ -5,8 +5,7 @@
 
 var _cwUnsub = null;
 var _cwResultUnsub = null;
-var _cwActivityLog = [];
-var MAX_LOG = 5;
+var _cwDevicesUnsub = null;
 var _llmPollInterval = null;
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -20,21 +19,29 @@ async function loadCloudWorks() {
   var container = document.getElementById('cwDeviceList');
   if (!container) return;
 
-  // Injecter la structure PC complète
-  _renderPCLayout(container, uid);
+  try {
+    // Injecter la structure PC complète
+    _renderPCLayout(container, uid);
+  } catch(e) { console.error('[CloudWorks] Erreur _renderPCLayout:', e); }
 
-  // Initialiser le polling LLM
-  _initLLMPanel();
+  try {
+    // Initialiser le polling LLM
+    _initLLMPanel();
+  } catch(e) { console.error('[CloudWorks] Erreur _initLLMPanel:', e); }
 
-  // Charger les devices (autres PC)
-  _loadDevices(uid);
+  try {
+    // Charger les devices (autres PC)
+    _loadDevices(uid);
+  } catch(e) { console.error('[CloudWorks] Erreur _loadDevices:', e); }
 
-  // Charger l'activité récente
-  _loadActivity(uid);
+  try {
+    // Charger l'activité récente
+    _loadActivity(uid);
+  } catch(e) { console.error('[CloudWorks] Erreur _loadActivity:', e); }
 }
 
 /* ══════════════════════════════════════════
-   LAYOUT PC — injecte les 3 sections
+   LAYOUT PC — injecte les sections principales
 ══════════════════════════════════════════ */
 function _renderPCLayout(container, uid) {
   container.innerHTML = `
@@ -93,8 +100,8 @@ function _renderPCLayout(container, uid) {
         <span class="cw-section-icon">🖥️</span>
         <span class="cw-section-title">Appareils connectés</span>
         <div class="cw-stat-badges">
-          <span class="cw-stat-badge online"><span id="cwStatOnline">—</span> en ligne</span>
-          <span class="cw-stat-badge offline"><span id="cwStatOffline">—</span> hors ligne</span>
+          <span class="cw-stat-badge online"><span id="cwStatOnline">0</span> en ligne</span>
+          <span class="cw-stat-badge offline"><span id="cwStatOffline">0</span> hors ligne</span>
         </div>
         <span id="cwDevicesChevron" class="cw-chevron">▼</span>
       </div>
@@ -120,10 +127,8 @@ function _renderPCLayout(container, uid) {
    LLM PANEL
 ══════════════════════════════════════════ */
 async function _initLLMPanel() {
-  // CloudWorks est actif = LLM DOIT être actif sans exception
-  _updateLLMBadge(null);  // Afficher "En chargement..." initialement
+  _updateLLMBadge(null);
 
-  // Écouter les événements temps réel de main.ts (health-check confirmé)
   if (window.eva && window.eva.onLLMStatusChanged) {
     window.eva.onLLMStatusChanged(function(status) {
       console.log('[CloudWorks] Événement LLM status:', status);
@@ -134,41 +139,30 @@ async function _initLLMPanel() {
     });
   }
 
-  // Vérification initiale via IPC (process state)
-  if (window.eva && window.eva.system && window.eva.system.llmStatus) {
-    try {
-      var res = await window.eva.system.llmStatus();
-      if (!res || !res.running) {
-        console.log('[CloudWorks] LLM inactif → démarrage automatique');
-        _updateLLMBadge('starting');
-        window._cwStartLLM();
-      } else {
-        // Process existe → vérifier health aussi
-        _checkLLMHealth();
-      }
-    } catch(e) {
-      window._cwStartLLM();
-    }
-  }
+  await _checkLLMHealth();
 
-  // Polling léger toutes les 10s pour resynchroniser si besoin
   if (_llmPollInterval) clearInterval(_llmPollInterval);
   _llmPollInterval = setInterval(_checkLLMHealth, 10000);
 }
 
-// Vérifie si le serveur répond vraiment (health endpoint)
+// Vérification directe de l'état du moteur LLM via IPC Electron (node-llama-cpp)
 async function _checkLLMHealth() {
-  try {
-    var r = await fetch('http://127.0.0.1:11434/health', { signal: AbortSignal.timeout(1500) });
-    _updateLLMBadge(r.ok);
-  } catch(e) {
-    // Serveur pas encore prêt ou arrêté
-    var res2 = await window.eva.system.llmStatus().catch(() => null);
-    _updateLLMBadge(res2 && res2.running ? 'starting' : false);
+  if (window.eva && window.eva.system && window.eva.system.llmStatus) {
+    try {
+      var res = await window.eva.system.llmStatus();
+      if (res && res.running) {
+        _updateLLMBadge(true);
+      } else {
+        _updateLLMBadge(false);
+      }
+    } catch(e) {
+      _updateLLMBadge(false);
+    }
+  } else {
+    _updateLLMBadge(false);
   }
 }
 
-// Met à jour le badge LLM selon l'état : true=actif, false=arrêté, 'starting'=en chargement, null=inconnu
 function _updateLLMBadge(state) {
   var badge = document.getElementById('cwLLMBadge');
   var statusEl = document.getElementById('cwLLMStatus');
@@ -177,7 +171,7 @@ function _updateLLMBadge(state) {
   if (state === true) {
     badge.textContent = '● Actif';
     badge.className = 'cw-badge cw-badge-on';
-    if (statusEl) statusEl.textContent = 'Serveur opérationnel — port 11434';
+    if (statusEl) statusEl.textContent = 'Moteur IA opérationnel (node-llama-cpp)';
   } else if (state === 'starting') {
     badge.textContent = '⟳ En chargement...';
     badge.className = 'cw-badge cw-badge-starting';
@@ -193,7 +187,6 @@ function _updateLLMBadge(state) {
   }
 }
 
-// Compatibilité avec l'ancien code qui appelle _updateLLMStatus
 async function _updateLLMStatus() { await _checkLLMHealth(); }
 
 window._cwStartLLM = async function() {
@@ -223,16 +216,8 @@ window._cwRestartLLM = async function() {
   setTimeout(window._cwStartLLM, 1500);
 };
 
-window._cwToggleLLMAutostart = async function(enabled) {
-  if (window.eva && window.eva.store) {
-    await window.eva.store.set('cwLLMAutoStart', enabled);
-  }
-  // Si activé, démarrer le LLM maintenant
-  if (enabled) window._cwStartLLM();
-};
-
 /* ══════════════════════════════════════════
-   COMMANDES RAPIDES
+   COMMANDES RAPIDES & TASKEUR IA
 ══════════════════════════════════════════ */
 window._cwQuickCmd = async function(type) {
   if (!window.pcAgent || !window.S || !window.S.user) return;
@@ -248,7 +233,7 @@ window._cwQuickCmd = async function(type) {
       }
       return;
     }
-    // Attendre le résultat (polling simple)
+
     var tries = 0;
     var pollRes = setInterval(async function() {
       tries++;
@@ -276,9 +261,8 @@ window._cwRunAgenticTask = async function() {
   var prompt = promptEl.value.trim();
   if (!prompt) return;
 
-  // Verifier que CWAgent est disponible
   if (!window.CWAgent || !window.CWTools) {
-    if (window.toast) window.toast('Module CWAgent non charge. Rechargez l\'application.', 'error');
+    if (window.toast) window.toast('Module CWAgent non chargé. Rechargez l\'application.', 'error');
     return;
   }
 
@@ -287,11 +271,10 @@ window._cwRunAgenticTask = async function() {
   statusEl.innerHTML =
     '<div class="cw-task-header">Envoi au LLM local...</div>' +
     '<div class="cw-task-steps" id="cwTaskSteps"></div>' +
-    '<button class="cw-btn cw-btn-danger cw-btn-sm" style="margin-top:8px;" onclick="window._cwStopAgent()">Arreter</button>';
+    '<button class="cw-btn cw-btn-danger cw-btn-sm" style="margin-top:8px;" onclick="window._cwStopAgent()">Arrêter</button>';
 
   var stepsEl = document.getElementById('cwTaskSteps');
 
-  // Lire les parametres Firebase
   var approvalMode = true;
   var autonomousMode = false;
   try {
@@ -301,7 +284,7 @@ window._cwRunAgenticTask = async function() {
       if (settingsData.cloudworks.approvalMode !== undefined) approvalMode = settingsData.cloudworks.approvalMode;
       if (settingsData.cloudworks.autonomousMode !== undefined) autonomousMode = settingsData.cloudworks.autonomousMode;
     }
-  } catch(e) { /* garder les defaults */ }
+  } catch(e) {}
 
   var agent = new window.CWAgent(window.S.user.uid, {
     approvalMode: approvalMode,
@@ -316,14 +299,14 @@ window._cwRunAgenticTask = async function() {
   });
 
   if (result.success) {
-    if (header) header.textContent = 'Tache terminee';
+    if (header) header.textContent = 'Tâche terminée';
     statusEl.className = 'cw-agentic-status done';
     promptEl.value = '';
-    _addActivity('Tache IA: ' + prompt.substring(0, 50), 'done');
+    _addActivity('Tâche IA: ' + prompt.substring(0, 50), 'done');
   } else {
     if (header) header.textContent = 'Erreur: ' + (result.error || 'Inconnue');
     statusEl.className = 'cw-agentic-status error';
-    _addActivity('Tache IA erreur: ' + prompt.substring(0, 30), 'error');
+    _addActivity('Tâche IA erreur: ' + prompt.substring(0, 30), 'error');
   }
 
   window._activeAgent = null;
@@ -333,7 +316,6 @@ window._cwStopAgent = function() {
   if (window._activeAgent) window._activeAgent.stop();
   if (window.CWAgentStop) window.CWAgentStop();
 };
-
 
 window._cwToggleDevices = function() {
   var body = document.getElementById('cwDevicesBody');
@@ -345,22 +327,84 @@ window._cwToggleDevices = function() {
 };
 
 /* ══════════════════════════════════════════
+   APPAREILS CONNECTÉS
+══════════════════════════════════════════ */
+function _loadDevices(uid) {
+  if (!window.db) return;
+  if (_cwDevicesUnsub) { _cwDevicesUnsub(); _cwDevicesUnsub = null; }
+  var container = document.getElementById('cwDeviceListInner');
+
+  try {
+    _cwDevicesUnsub = window.db.collection('cloudworks').doc(uid).collection('devices')
+      .onSnapshot(function(snap) {
+        var total = snap.size;
+        var online = 0;
+        var offline = 0;
+        var html = '';
+
+        if (snap.empty) {
+          if (container) container.innerHTML = '<div class="cw-empty">Aucun autre appareil enregistré</div>';
+          _setStats(0, 0, 0);
+          return;
+        }
+
+        snap.forEach(function(doc) {
+          var d = doc.data();
+          var isOnline = !!d.online;
+          if (isOnline) online++; else offline++;
+
+          var deviceName = d.deviceName || d.name || doc.id;
+          var os = d.os || d.deviceType || 'Windows';
+          var lastSeen = d.updatedAt ? (d.updatedAt.toDate ? d.updatedAt.toDate().toLocaleString('fr-FR') : new Date(d.updatedAt).toLocaleString('fr-FR')) : 'Inconnu';
+          var statusCls = isOnline ? 'online' : 'offline';
+          var statusDot = isOnline ? '● En ligne' : '○ Hors ligne';
+
+          html += `
+            <div class="cw-device-card ${statusCls}">
+              <span class="cw-device-icon">💻</span>
+              <div style="flex:1;">
+                <div class="cw-device-name">${esc(deviceName)}</div>
+                <div class="cw-device-meta">OS: ${esc(os)} · <span class="cw-device-status-${statusCls}">${statusDot}</span></div>
+                <div class="cw-device-seen">Dernière activité: ${esc(lastSeen)}</div>
+              </div>
+            </div>
+          `;
+        });
+
+        if (container) container.innerHTML = html;
+        _setStats(total, online, offline);
+      }, function(err) {
+        console.warn('[CloudWorks] Devices snapshot error:', err);
+        if (container) container.innerHTML = '<div class="cw-empty">Impossible de charger les appareils</div>';
+        _setStats(0, 0, 0);
+      });
+  } catch(e) {
+    console.error('[CloudWorks] Erreur initialisation devices:', e);
+  }
+}
+
+/* ══════════════════════════════════════════
    ACTIVITÉ
 ══════════════════════════════════════════ */
 function _loadActivity(uid) {
+  if (!window.db) return;
   if (_cwResultUnsub) { _cwResultUnsub(); _cwResultUnsub = null; }
   try {
     _cwResultUnsub = window.db.collection('cloudworks').doc(uid).collection('commands')
       .orderBy('updatedAt', 'desc')
-      .limit(5)
-      .onSnapshot(function(snap) { _renderActivity(snap); });
-  } catch(e) {}
+      .limit(10)
+      .onSnapshot(function(snap) { _renderActivity(snap); }, function(err) {
+        console.warn('[CloudWorks] Activity snapshot error:', err);
+      });
+  } catch(e) {
+    console.error('[CloudWorks] Erreur initialisation activité:', e);
+  }
 }
 
 function _renderActivity(snap) {
   var el = document.getElementById('cwActivityList');
   if (!el) return;
-  if (snap.empty) { el.innerHTML = '<div class="cw-empty">Aucune activité récente</div>'; return; }
+  if (snap.empty) { el.innerHTML = '<div class="cw-empty">Aucune commande récente</div>'; return; }
   var html = '';
   snap.forEach(function(doc) {
     var d = doc.data();
@@ -382,27 +426,28 @@ function _addActivity(text, status) {
   entry.className = 'cw-activity-item ' + (status || '');
   entry.innerHTML = `<span class="cw-act-icon">${icon}</span><span class="cw-act-label">${esc(text)}</span><span class="cw-act-time">${new Date().toLocaleString('fr-FR')}</span>`;
   el.prepend(entry);
-  // Garder seulement les 5 dernières entrées
-  while (el.children.length > 5) el.removeChild(el.lastChild);
+  while (el.children.length > 10) el.removeChild(el.lastChild);
 }
 
 /* ══════════════════════════════════════════
-   STATS (compatibilité avec le HTML existant)
+   STATS
 ══════════════════════════════════════════ */
 function _setStats(total, online, offline) {
   var oEl = document.getElementById('cwStatOnline');
   var fEl = document.getElementById('cwStatOffline');
-  if (oEl) oEl.textContent = online !== null ? online : '—';
-  if (fEl) fEl.textContent = offline !== null ? offline : '—';
+  var tEl = document.getElementById('cwStatTotal');
+  if (oEl) oEl.textContent = online !== null ? online : '0';
+  if (fEl) fEl.textContent = offline !== null ? offline : '0';
+  if (tEl) tEl.textContent = total !== null ? total : '0';
 }
 
 /* ══════════════════════════════════════════
-   API GLOBALE — utilisée par messages.js et core.js
+   API GLOBALE
 ══════════════════════════════════════════ */
 window.loadCloudWorks = loadCloudWorks;
 
 /* ══════════════════════════════════════════
-   STYLES INJECTÉS pour la page CloudWorks PC
+   STYLES INJECTÉS
 ══════════════════════════════════════════ */
 (function injectStyles() {
   if (document.getElementById('cw-pc-styles')) return;
@@ -423,22 +468,13 @@ window.loadCloudWorks = loadCloudWorks;
     .cw-info-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid rgba(0,212,255,0.07); }
     .cw-info-label { font-size:0.72em; color:#88889a; }
     .cw-info-value { font-size:0.72em; color:#e4e4ef; font-family:monospace; }
-    .cw-llm-toggle-row { display:flex; align-items:center; justify-content:space-between; margin:10px 0; padding:8px 0; border-bottom:1px solid rgba(0,212,255,0.07); }
-    .cw-toggle-label { font-size:0.75em; color:#88889a; }
-    .cw-switch { position:relative; width:36px; height:20px; display:inline-block; }
-    .cw-switch input { display:none; }
-    .cw-switch-slider { position:absolute; inset:0; background:#333; border-radius:20px; cursor:pointer; transition:0.2s; }
-    .cw-switch input:checked + .cw-switch-slider { background:var(--cyan,#00d4ff); }
-    .cw-switch-slider::before { content:''; position:absolute; width:14px; height:14px; background:#fff; border-radius:50%; left:3px; top:3px; transition:0.2s; }
-    .cw-switch input:checked + .cw-switch-slider::before { transform:translateX(16px); }
     .cw-llm-actions { display:flex; gap:8px; flex-wrap:wrap; }
     .cw-btn { padding:7px 14px; border-radius:8px; border:none; cursor:pointer; font-size:0.75em; font-family:inherit; font-weight:600; transition:0.15s; }
     .cw-btn-primary { background:var(--cyan,#00d4ff); color:#000; }
     .cw-btn-primary:hover { opacity:0.85; }
-    .cw-btn-secondary { background:rgba(136,136,154,0.15); color:#88889a; border:1px solid rgba(136,136,154,0.2); }
-    .cw-btn-secondary:hover { background:rgba(136,136,154,0.25); }
     .cw-btn-warning { background:rgba(255,200,0,0.15); color:#ffc800; border:1px solid rgba(255,200,0,0.25); }
     .cw-btn-warning:hover { background:rgba(255,200,0,0.25); }
+    .cw-btn-danger { background:rgba(255,77,109,0.15); color:#ff4d6d; border:1px solid rgba(255,77,109,0.25); }
     .cw-btn-full { width:100%; margin-top:8px; }
     .cw-quick-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
     .cw-quick-btn { background:rgba(0,212,255,0.07); border:1px solid rgba(0,212,255,0.15); border-radius:10px; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; transition:0.15s; color:var(--text,#e4e4ef); font-size:0.72em; font-family:inherit; }
@@ -464,6 +500,8 @@ window.loadCloudWorks = loadCloudWorks;
     .cw-device-icon { font-size:1.2em; }
     .cw-device-name { font-size:0.8em; font-weight:700; color:#e4e4ef; }
     .cw-device-meta { font-size:0.68em; color:#88889a; }
+    .cw-device-status-online { color:#00ff88; font-weight:600; }
+    .cw-device-status-offline { color:#88889a; }
     .cw-device-seen { font-size:0.65em; color:rgba(136,136,154,0.6); margin-top:2px; }
     .cw-activity-item { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid rgba(0,212,255,0.06); font-size:0.72em; }
     .cw-act-icon { width:16px; text-align:center; }
@@ -486,4 +524,4 @@ window.loadCloudWorks = loadCloudWorks;
   document.head.appendChild(s);
 })();
 
-})(); // fin IIFE
+})();

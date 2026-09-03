@@ -950,46 +950,10 @@
       <div class="view-content">
         <div class="cw-wrap">
 
-          <!-- Stats -->
-          <div class="cw-stats-bar">
-            <div class="cw-stat-card">
-              <div class="cw-stat-icon total">🖥️</div>
-              <div>
-                <div class="cw-stat-val" id="cwStatTotal">—</div>
-                <div class="cw-stat-lbl">Appareils</div>
-              </div>
-            </div>
-            <div class="cw-stat-card">
-              <div class="cw-stat-icon online">📡</div>
-              <div>
-                <div class="cw-stat-val online" id="cwStatOnline">—</div>
-                <div class="cw-stat-lbl">En ligne</div>
-              </div>
-            </div>
-            <div class="cw-stat-card">
-              <div class="cw-stat-icon offline">💤</div>
-              <div>
-                <div class="cw-stat-val offline" id="cwStatOffline">—</div>
-                <div class="cw-stat-lbl">Hors ligne</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Liste appareils -->
-          <div class="cw-section-title">Appareils connectés</div>
-          <div class="cw-list" id="cwDeviceList">
+          <div id="cwDeviceList">
             <div class="cw-empty">
-              <div class="cw-empty-icon">🖥️</div>
-              <div class="cw-empty-title">AUCUN APPAREIL CONNECTÉ</div>
-              <span>Installez E.V.A Desktop sur votre PC pour commencer</span>
-            </div>
-          </div>
-
-          <!-- Journal d'activité -->
-          <div class="cw-section-title" style="margin-top:10px;">Activité récente</div>
-          <div class="cw-activity-box">
-            <div class="cw-log-list" id="cwActivityLog">
-              <div class="cw-log-empty">Aucune commande récente</div>
+              <div class="cw-spinner"></div>
+              <span>Chargement du module CloudWorks…</span>
             </div>
           </div>
 
