@@ -988,14 +988,30 @@ async function startLLM(): Promise<boolean> {
   if (llamaModel && llamaContext) return true;
 
   try {
+    // Chemin persistant (NSIS installe ici, survit aux mises a jour)
+    const persistentModelDir = path.join(app.getPath('localAppData'), 'PC EVA', 'models');
+    const persistentModelFile = path.join(persistentModelDir, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
+
+    // Chemin legacy (dans resources de l'app)
     const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
     const llmDir = path.join(resourcesPath, 'resources', 'llm');
-    const modelFile = path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
+    const legacyModelFile = path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
 
-    if (!fs.existsSync(modelFile)) {
-      console.error('[LLM] Modèle introuvable:', modelFile);
+    // Priorité : dossier persistant, puis dossier legacy
+    let modelFile = '';
+    if (fs.existsSync(persistentModelFile) && fs.statSync(persistentModelFile).size > 0) {
+      modelFile = persistentModelFile;
+      console.log('[LLM] Modèle trouvé dans le dossier persistant:', modelFile);
+    } else if (fs.existsSync(legacyModelFile) && fs.statSync(legacyModelFile).size > 0) {
+      modelFile = legacyModelFile;
+      console.log('[LLM] Modèle trouvé dans le dossier resources:', modelFile);
+    } else {
+      console.error('[LLM] Modèle introuvable dans aucun des chemins:');
+      console.error('  -', persistentModelFile);
+      console.error('  -', legacyModelFile);
       return false;
     }
+
 
     if (!llamaInstance) {
       console.log('[LLM] Initialisation de node-llama-cpp...');
@@ -1117,15 +1133,18 @@ ipcMain.handle('llm:status', async () => {
 });
 
 ipcMain.handle('llm:check', async () => {
+  const persistentModelDir = path.join(app.getPath('localAppData'), 'PC EVA', 'models');
+  const persistentModelFile = path.join(persistentModelDir, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
   const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
-  const llmDir = path.join(resourcesPath, 'resources', 'llm');
-  const modelFile = path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
-  return { exists: fs.existsSync(modelFile) };
+  const legacyModelFile = path.join(resourcesPath, 'resources', 'llm', 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
+  
+  const exists = (fs.existsSync(persistentModelFile) && fs.statSync(persistentModelFile).size > 0) || 
+                 (fs.existsSync(legacyModelFile) && fs.statSync(legacyModelFile).size > 0);
+  return { exists };
 });
 
 ipcMain.handle('llm:download', async (event) => {
-  const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
-  const llmDir = path.join(resourcesPath, 'resources', 'llm');
+  const llmDir = path.join(app.getPath('localAppData'), 'PC EVA', 'models');
   if (!fs.existsSync(llmDir)) fs.mkdirSync(llmDir, { recursive: true });
   
   const modelFile = path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
