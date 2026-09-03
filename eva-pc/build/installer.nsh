@@ -1,6 +1,9 @@
 !include "LogicLib.nsh"
 !include "FileFunc.nsh"
 
+; Ajout du dossier de plugins local
+!addplugindir "build\nsis-plugins\x86-unicode"
+
 !macro customInstall
   ; === Repertoire persistant (survit aux mises a jour) ===
   StrCpy $0 "$LOCALAPPDATA\PC EVA\models"
@@ -33,13 +36,11 @@
   StrCpy $R4 "hLcyEczyin"
   StrCpy $R5 "$R0$R1$R2$R3$R4"
 
-  ; === Telechargement via INetC (WinInet, avec barre de progression) ===
-  inetc::get \
-    /CAPTION "Installation E.V.A - Modele IA" \
-    /BANNER "Telechargement du modele neuronal V5 (1.9 Go)$\r$\nVeuillez patienter..." \
-    /HEADER "Authorization: Bearer $R5" \
+  ; === Telechargement via NScurl (plus robuste que INetC) ===
+  NScurl::http GET \
     "https://huggingface.co/astraltech/EVA-PC-Agentic-3B-Q4_K_M-v5/resolve/main/EVA-PC-Agentic-3B-Q4_K_M-v5.gguf" \
     "$2" \
+    /HEADER "Authorization: Bearer $R5" \
     /END
 
   Pop $4
