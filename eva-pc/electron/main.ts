@@ -1315,4 +1315,4 @@ ipcMain.handle('tts:stop', async () => {
   }
   return { success: true };
 });
-});
+
