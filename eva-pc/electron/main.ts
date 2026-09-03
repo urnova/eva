@@ -989,7 +989,7 @@ async function startLLM(): Promise<boolean> {
 
   try {
     // Chemin persistant (NSIS installe ici, survit aux mises a jour)
-    const persistentModelDir = path.join(process.env.LOCALAPPDATA || process.env.APPDATA || '', 'PC EVA', 'models');
+    const persistentModelDir = path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'PC EVA', 'models');
     const persistentModelFile = path.join(persistentModelDir, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
 
     // Chemin legacy (dans resources de l'app)
@@ -1133,7 +1133,7 @@ ipcMain.handle('llm:status', async () => {
 });
 
 ipcMain.handle('llm:check', async () => {
-  const persistentModelDir = path.join(process.env.LOCALAPPDATA || process.env.APPDATA || '', 'PC EVA', 'models');
+  const persistentModelDir = path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'PC EVA', 'models');
   const persistentModelFile = path.join(persistentModelDir, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
   const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
   const legacyModelFile = path.join(resourcesPath, 'resources', 'llm', 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
@@ -1144,7 +1144,7 @@ ipcMain.handle('llm:check', async () => {
 });
 
 ipcMain.handle('llm:download', async (event) => {
-  const llmDir = path.join(process.env.LOCALAPPDATA || process.env.APPDATA || '', 'PC EVA', 'models');
+  const llmDir = path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'PC EVA', 'models');
   if (!fs.existsSync(llmDir)) fs.mkdirSync(llmDir, { recursive: true });
   
   const modelFile = path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
