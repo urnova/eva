@@ -1,5 +1,4 @@
 !include "LogicLib.nsh"
-!include "FileFunc.nsh"
 
 !macro customInstall
   ; === Dossier models dans le repertoire d'installation choisi par l'utilisateur ===
@@ -9,12 +8,17 @@
   StrCpy $1 "$0\EVA-PC-Agentic-3B-Q4_K_M-v5.gguf"
   StrCpy $2 "$0\EVA-PC-Agentic-3B-Q4_K_M-v5.gguf.part"
 
-  ; === Verification : modele deja present et non vide ===
+  ; === Verification : modele deja present et non vide (au moins 100 Mo) ===
   ${If} ${FileExists} "$1"
-    ${GetSize} "$1" "/S=0K" $3 $4 $5
-    ${If} $3 > 0
-      DetailPrint "Modele LLM deja present ($3 Ko) : $1"
-      Goto model_done
+    ClearErrors
+    FileOpen $R8 "$1" r
+    ${IfNot} ${Errors}
+      FileSeek $R8 0 END $3
+      FileClose $R8
+      ${If} $3 > 100000000
+        DetailPrint "Modele LLM deja present : $1"
+        Goto model_done
+      ${EndIf}
     ${EndIf}
     Delete "$1"
   ${EndIf}
@@ -50,15 +54,27 @@
     Goto model_done
   ${EndIf}
 
-  ${GetSize} "$2" "/S=0K" $3 $4 $5
-  ${If} $3 <= 0
+  ; === Verification de la taille avec FileSeek (natif et fiable) ===
+  ClearErrors
+  FileOpen $R8 "$2" r
+  ${If} ${Errors}
     Delete "$2"
-    MessageBox MB_ICONSTOP "Telechargement echoue : fichier vide."
+    MessageBox MB_ICONSTOP "Telechargement echoue : impossible d'ouvrir le fichier."
+    Goto model_done
+  ${EndIf}
+
+  FileSeek $R8 0 END $3
+  FileClose $R8
+
+  ; Verifier que le fichier fait au moins 100 Mo (100000000 octets)
+  ${If} $3 < 100000000
+    Delete "$2"
+    MessageBox MB_ICONSTOP "Telechargement echoue : fichier incomplet."
     Goto model_done
   ${EndIf}
 
   Rename "$2" "$1"
-  DetailPrint "Modele telecharge avec succes ($3 Ko) : $1"
+  DetailPrint "Modele telecharge avec succes : $1"
 
 model_done:
 !macroend
