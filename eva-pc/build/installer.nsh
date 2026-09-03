@@ -2,9 +2,8 @@
 !include "FileFunc.nsh"
 
 !macro customInstall
-  ; === Lire C:\ProgramData via variable d'environnement (stable en mode admin) ===
-  ReadEnvStr $R9 "PROGRAMDATA"
-  StrCpy $0 "$R9\PC EVA\models"
+  ; === Dossier models dans le repertoire d'installation choisi par l'utilisateur ===
+  StrCpy $0 "$INSTDIR\resources\models"
   CreateDirectory "$0"
 
   StrCpy $1 "$0\EVA-PC-Agentic-3B-Q4_K_M-v5.gguf"
