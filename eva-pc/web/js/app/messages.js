@@ -548,6 +548,7 @@ async function handleSend() {
   }
 
   // Injection date/heure courante — EVA connaît ainsi l'heure pour créer alarmes/rappels
+  var deviceId = window._cwDeviceId || localStorage.getItem('cw_device_id') || 'PC-inconnu';
   if (S.cwDevices && S.cwDevices.length > 0) {
     userCtx += '\n\nÉTAT CLOUDWORKS (Vos Appareils Connectés) :\n';
     S.cwDevices.forEach(function(d) {
@@ -558,7 +559,6 @@ async function handleSend() {
 
   if (window.eva) {
     // === VERSION PC DESKTOP ===
-    var deviceId = window._cwDeviceId || localStorage.getItem('cw_device_id') || 'PC-inconnu';
     userCtx += '\nENVIRONNEMENT : Tu tournes SUR l\'application PC locale E.V.A Desktop.\n';
     userCtx += 'DEVICE ID de ce PC : ' + deviceId + '\n';
 
@@ -573,10 +573,19 @@ async function handleSend() {
     userCtx += '- Si CloudWorks est désactivé, dis-le à l\'utilisateur et propose de l\'activer dans les paramètres\n';
     userCtx += '- Identifie-toi comme étant sur ce PC précis, pas sur le web\n';
 
-    userCtx += '\nDÉTECTION AUTOMATIQUE CLOUDWORKS :\n';
-    userCtx += 'Si l\'utilisateur mentionne un chemin EXPLICITE sur son système (sur mon Bureau, dans mes Documents, dans C:\\\\, dans /home/, sur le disque dur, dans le dossier X, etc.) → c\'est une tâche CloudWorks, PAS un fichier dans le chat.\n';
-    userCtx += 'Si la demande est générique sans chemin (ex: crée-moi un document sur les tomates) → crée le fichier dans le chat.\n';
-    userCtx += 'Si tu as un doute raisonnable sur l\'intention → demande : "Veux-tu que je crée ce fichier sur ton PC (via CloudWorks) ou directement ici dans le chat ?"\n';
+    userCtx += '
+DÉTECTION AUTOMATIQUE CLOUDWORKS (TRES IMPORTANT) :
+';
+    userCtx += '1. Si l\'utilisateur mentionne un chemin EXPLICITE sur son système (sur mon Bureau, dans mes Documents, dans C:\, sur le disque dur, etc.) -> c\'est une tâche CloudWorks locale.
+';
+    userCtx += '2. INTERDICTION FORMELLE : N\'utilise JAMAIS l\'action "create_document" ou "create_file" pour des fichiers destinés au PC local. Ces outils créent des fichiers virtuels dans le chat web.
+';
+    userCtx += '3. Pour créer un vrai fichier sur le PC de l\'utilisateur, tu DOIS déléguer la tâche en utilisant [ACTION:{"type":"agentic_task","prompt":"Crée un fichier sur le bureau avec le contenu...","deviceId":"' + deviceId + '"}]
+';
+    userCtx += '4. Rédige le "prompt" de l\'agentic_task en langage naturel clair (ex: "Crée un document texte sur le bureau contenant Bonjour"). Ne génère pas de code ou de fausses fonctions comme web_create_document.
+';
+    userCtx += '5. Si la demande est générique sans chemin (ex: crée-moi un résumé), utilise create_document pour le générer dans le chat.
+';
   } else {
     // === VERSION WEB ===
     userCtx += '\nENVIRONNEMENT : Tu tournes sur la version Web/Navigateur. Tu n\'es PAS sur le PC localement.\n';

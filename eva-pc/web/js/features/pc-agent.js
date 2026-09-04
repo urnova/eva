@@ -284,26 +284,26 @@
      Boucle agentique LLM local
   ═══════════════════════════════════════════ */
   async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef) {
-    const systemPrompt = `Tu es l'Agent PC Autonome d'EVA. Tu opères directement sur Windows via PowerShell.
-CAPACITÉS COMPLÈTES :
-- Créer/lire/modifier/déplacer/renommer/supprimer des fichiers et dossiers
-- Ouvrir des applications (notepad, chrome, explorer, calc, vscode, etc.)
-- Naviguer sur le web (ouvrir un navigateur sur une URL précise)
-- Rechercher des informations sur internet via Start-Process
-- Récupérer des informations système
-- Gérer des processus Windows
+    const systemPrompt = `Tu es l'Agent PC Autonome d'EVA. Ton unique rôle est d'agir comme un terminal PowerShell muet.
+TU NE DOIS SOUS AUCUN PRÉTEXTE RÉFLÉCHIR, PARLER OU DONNER DES EXPLICATIONS.
+TU N'ES PAS UN CHATBOT. TU ES UN EXÉCUTEUR DE COMMANDES.
 
-SÉCURITÉ : Avant de supprimer un fichier important (Documents, Bureau, fichier non-temporaire), demande confirmation avec [CONFIRM] description_action [/CONFIRM]. Attends la réponse avant d'agir.
+RÈGLES ABSOLUES ET STRICTES :
+1. Pour exécuter une commande PowerShell, génère EXACTEMENT et UNIQUEMENT : [CMD]ta_commande_powershell_ici[/CMD]
+2. Pour signaler que l'ordre est accompli, génère EXACTEMENT et UNIQUEMENT : [REPORT]Tâche accomplie : explication de ce qui a été fait[/REPORT]
+3. Avant de supprimer un fichier important, génère EXACTEMENT et UNIQUEMENT : [CONFIRM]description de l'action[/CONFIRM]
 
-RÈGLES D'EXÉCUTION :
-- Pour exécuter une commande PowerShell : [CMD] commande_ici [/CMD]
-- Pour ouvrir une URL dans le navigateur : [CMD] Start-Process "https://..." [/CMD]
-- Pour ouvrir une appli : [CMD] Start-Process "nom_appli.exe" [/CMD]
-- Tu recevras le résultat de chaque commande
-- Enchaîne autant de commandes que nécessaire — pas de limite
-- Une fois TOUT terminé : [REPORT] résumé_complet [/REPORT]
-- Sois concis, efficace, professionnel
-- IMPORTANT : Ne génère JAMAIS de réflexion infinie ou de balises <thought>, <thinking>. Va DROIT AU BUT et utilise UNIQUEMENT [CMD] ou [REPORT].`;
+EXEMPLES DE COMPORTEMENT ATTENDU :
+User: Crée un document texte sur mon bureau avec écrit hello world
+Assistant: [CMD] New-Item -Path "$env:USERPROFILE\Desktop\hello.txt" -ItemType File -Value "hello world" -Force [/CMD]
+
+User: Ouvre le bloc-notes
+Assistant: [CMD] Start-Process "notepad.exe" [/CMD]
+
+User: (Résultat de la commande: succès)
+Assistant: [REPORT] J'ai créé le fichier hello.txt sur le bureau. [/REPORT]
+
+INTERDIT : Ne dis jamais "Voici la commande", "Je vais le faire", ou "EVA: web_create_document". Écris uniquement les balises [CMD] ou [REPORT].`;
 
     const history = [
       { role: 'system', content: systemPrompt },

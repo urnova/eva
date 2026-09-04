@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut , Notification } from 'electron'
 app.disableHardwareAcceleration();
 import { join } from 'path'
 import { fileURLToPath } from 'url'
@@ -175,6 +175,7 @@ function createWindow() {
     backgroundColor: '#111113',
     icon: join(__dirname, '../public/eva-icon.png'),
     webPreferences: {
+      plugins: true,
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
@@ -245,6 +246,7 @@ function createOverlayWindow() {
     skipTaskbar: true,
     show: false,
     webPreferences: {
+      plugins: true,
       nodeIntegration: false,
       contextIsolation: true,
       preload: join(__dirname, 'preload.js')
@@ -923,6 +925,13 @@ ipcMain.handle('autolaunch:set', async (_event, enabled: boolean) => {
   return { success: true }
 })
 
+ipcMain.handle('app:notify', (_event, title: string, body: string) => {
+  if (Notification.isSupported()) {
+    new Notification({ title, body, icon: join(__dirname, '../public/eva-icon.png') }).show()
+    return true
+  }
+  return false
+})
 ipcMain.handle('app:version', () => app.getVersion())
 ipcMain.handle('app:platform', () => process.platform)
 ipcMain.handle('app:name', () => app.getName())

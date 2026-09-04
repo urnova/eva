@@ -232,6 +232,10 @@ function playNotificationSound() {
 
 // ═══ SHOW REMINDER NOTIFICATION ═══
 function showReminderNotification(reminder) {
+  if (window.eva && window.eva.app && window.eva.app.notify) {
+    window.eva.app.notify('E.V.A - Rappel', reminder.text);
+    return;
+  }
   if ('Notification' in window && Notification.permission === 'granted') {
     new Notification('E.V.A — Rappel', {
       body: reminder.text,

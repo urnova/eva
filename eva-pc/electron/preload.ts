@@ -133,7 +133,8 @@ const evaAPI = {
 
   // ── App Info + Force Quit ──
   app: {
-    version: () => ipcRenderer.invoke('app:version'),
+    notify: (title: string, body: string) => ipcRenderer.invoke('app:notify', title, body),
+      version: () => ipcRenderer.invoke('app:version'),
     platform: () => ipcRenderer.invoke('app:platform'),
     name: () => ipcRenderer.invoke('app:name'),
     path: () => ipcRenderer.invoke('app:path'),
