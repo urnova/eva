@@ -1,6 +1,6 @@
 {
   "name": "eva-assistant-pc",
-  "version": "5.4.61",
+  "version": "5.4.73",
   "description": "Assistant Virtuel IA E.V.A Ã¢â‚¬â€ Evolutionary Virtual Assistant by Astral Technologie",
   "author": "Astral Technologie",
   "main": "dist-electron/main.js",

@@ -1,6 +1,23 @@
+
+!macro customUnInit
+  ; Sauvegarder le dossier models hors du repertoire INSTDIR avant la desinstallation
+  ${If} ${FileExists} "$INSTDIR\resources\models"
+    Rename "$INSTDIR\resources\models" "$INSTDIR-models-backup"
+    DetailPrint "Sauvegarde du modele LLM locale terminee (mise a jour)."
+  ${EndIf}
+!macroend
+
 !include "LogicLib.nsh"
 
 !macro customInstall
+
+  ; Restaurer la sauvegarde des modeles si elle existe
+  ${If} ${FileExists} "$INSTDIR-models-backup"
+    CreateDirectory "$INSTDIR\resources"
+    Rename "$INSTDIR-models-backup" "$INSTDIR\resources\models"
+    DetailPrint "Restauration du modele LLM local terminee."
+  ${EndIf}
+
   ; === Dossier models dans le repertoire d'installation choisi par l'utilisateur ===
   StrCpy $0 "$INSTDIR\resources\models"
   CreateDirectory "$0"

@@ -637,14 +637,15 @@ ipcMain.handle('store:getAll', () => store.store)
 ipcMain.handle('system:info', async () => {
   try {
     const si = await import('systeminformation')
-    const [cpu, mem, disk, net, os_info] = await Promise.all([
+    const [cpu, mem, disk, net, os_info, sys_uuid] = await Promise.all([
       si.cpu(),
       si.mem(),
       si.fsSize(),
       si.networkInterfaces(),
-      si.osInfo()
+      si.osInfo(),
+      si.uuid()
     ])
-    return { cpu, mem, disk, net, os: os_info, success: true }
+    return { cpu, mem, disk, net, os: os_info, uuid: sys_uuid, success: true }
   } catch (e) {
     return { success: false, error: String(e) }
   }

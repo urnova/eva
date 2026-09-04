@@ -38,9 +38,18 @@
       // ID stable basé sur l'adresse MAC (évite les doublons à chaque reconnexion)
       // Si la MAC est disponible → utiliser MAC-XX-XX-XX-XX-XX-XX
       // Sinon → fallback sur l'ancien ID aléatoire stocké en localStorage
-      if (macAddress) {
+      
+      let sysUuid = null;
+      try {
+        if (info.uuid && info.uuid.os) sysUuid = info.uuid.os;
+      } catch(e) {}
+      
+      if (sysUuid) {
+        deviceId = 'UUID-' + sysUuid.toUpperCase();
+        localStorage.setItem('cw_device_id', deviceId);
+      } else if (macAddress) {
         deviceId = 'MAC-' + macAddress.replace(/:/g, '-').toUpperCase();
-        localStorage.setItem('cw_device_id', deviceId); // Mettre à jour si changé
+        localStorage.setItem('cw_device_id', deviceId);
       } else {
         deviceId = localStorage.getItem('cw_device_id');
         if (!deviceId) {
@@ -48,6 +57,7 @@
           localStorage.setItem('cw_device_id', deviceId);
         }
       }
+
       // Exposer globalement pour le system prompt
       window._cwDeviceId = deviceId;
 
@@ -64,6 +74,7 @@
         osVersion: osInfo,
         online: true,
         lastSeen: ts,
+        updatedAt: ts,
         sessionId: (window.S && window.S.sessionId) ? window.S.sessionId : null,
         appVersion: (window.eva && window.eva.app) ? await window.eva.app.version().catch(()=>'?') : '?'
       }, { merge: true }); // merge:true = réutilise le document existant si même MAC
@@ -77,7 +88,8 @@
       setInterval(() => {
         docRef.update({
           online: true,
-          lastSeen: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+          lastSeen: typeof window.timestamp === 'function' ? window.timestamp() : new Date(),
+          updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
         }).catch(()=>{});
       }, 60000);
 
@@ -290,7 +302,8 @@ RÈGLES D'EXÉCUTION :
 - Tu recevras le résultat de chaque commande
 - Enchaîne autant de commandes que nécessaire — pas de limite
 - Une fois TOUT terminé : [REPORT] résumé_complet [/REPORT]
-- Sois concis, efficace, professionnel`;
+- Sois concis, efficace, professionnel
+- IMPORTANT : Ne génère JAMAIS de réflexion infinie ou de balises <thought>, <thinking>. Va DROIT AU BUT et utilise UNIQUEMENT [CMD] ou [REPORT].`;
 
     const history = [
       { role: 'system', content: systemPrompt },
