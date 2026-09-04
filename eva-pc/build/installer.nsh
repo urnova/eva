@@ -1,3 +1,10 @@
+!macro customInit
+  ; Sauvegarder le dossier models hors du repertoire INSTDIR des le lancement de l'installateur (pour proteger contre l'ancien desinstallateur)
+  ${If} ${FileExists} "$INSTDIR\resources\models"
+    Rename "$INSTDIR\resources\models" "$INSTDIR-models-backup"
+    DetailPrint "Sauvegarde du modele LLM locale terminee (depuis customInit)."
+  ${EndIf}
+!macroend
 
 !macro customUnInit
   ; Sauvegarder le dossier models hors du repertoire INSTDIR avant la desinstallation

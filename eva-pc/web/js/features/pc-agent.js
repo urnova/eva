@@ -41,7 +41,7 @@
       
       let sysUuid = null;
       try {
-        if (info.uuid && info.uuid.os) sysUuid = info.uuid.os;
+        if (typeof info !== 'undefined' && info && info.uuid && info.uuid.os) sysUuid = info.uuid.os;
       } catch(e) {}
       
       if (sysUuid) {
