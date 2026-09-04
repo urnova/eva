@@ -1078,9 +1078,10 @@ ipcMain.handle('llm:chat', async (event, messages) => {
     throw new Error("MODEL_MISSING");
   }
 
+  let sequence: any = null;
   try {
     const { LlamaChatSession } = await getLlamaCpp();
-    const sequence = llamaContext.getSequence();
+    sequence = llamaContext.getSequence();
     const session = new LlamaChatSession({
       contextSequence: sequence
     });
@@ -1106,10 +1107,13 @@ ipcMain.handle('llm:chat', async (event, messages) => {
       temperature: 0.2
     });
     
+    try { sequence.dispose(); } catch(e) {}
+    
     return {
       choices: [{ message: { role: 'assistant', content: responseText } }]
     };
   } catch (err: any) {
+    try { if (sequence) sequence.dispose(); } catch(e) {}
     console.error('[LLM API] Erreur:', err?.message || err);
     throw new Error(err?.message || String(err));
   }

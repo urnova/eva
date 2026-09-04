@@ -442,7 +442,7 @@ function _finalizeTracker(cmdId, result, status) {
 
   var summary = (result && (result.output || result.error || result.report)) || '';
   if (status === 'done' && !summary) summary = 'Tâche terminée avec succès.';
-  if (status === 'cancelled' && !summary) summary = 'Tâche interrompue par l\\'utilisateur.';
+  if (status === 'cancelled' && !summary) summary = "Tâche interrompue par l'utilisateur.";
   if (status === 'error' && !summary) summary = 'Une erreur est survenue.';
 
   if (summary) {
@@ -527,12 +527,12 @@ window.addEventListener('cw:generate-summary', function(e) {
   var msg = '';
   if (status === 'done') {
     msg = reportText
-      ? '✅ **Tâche CloudWorks terminée**\n\n' + reportText + '\n\nSouhaites-tu que je fasse autre chose ?'
-      : '✅ **Tâche CloudWorks terminée avec succès.** Souhaites-tu que je fasse autre chose ?';
+      ? "✅ **Tâche CloudWorks terminée**\n\n" + reportText + "\n\nSouhaites-tu que je fasse autre chose ?"
+      : "✅ **Tâche CloudWorks terminée avec succès.** Souhaites-tu que je fasse autre chose ?";
   } else if (status === 'cancelled') {
-    msg = '■ **Tâche arrêtée** par l\\'utilisateur. Dis-moi si tu veux relancer.';
+    msg = "■ **Tâche arrêtée** par l'utilisateur. Dis-moi si tu veux relancer.";
   } else {
-    msg = '⚠️ **Erreur CloudWorks**\n\n' + (summary || 'Erreur inconnue.') + '\n\nVeux-tu que je réessaie ?';
+    msg = "⚠️ **Erreur CloudWorks**\n\n" + (summary || "Erreur inconnue.") + "\n\nVeux-tu que je réessaie ?";
   }
 
   if (typeof window.streamEvaMsg === 'function') window.streamEvaMsg(msg);

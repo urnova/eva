@@ -1,6 +1,6 @@
 {
   "name": "eva-assistant-pc",
-  "version": "5.4.74",
+  "version": "5.4.75",
   "description": "Assistant Virtuel IA E.V.A - Evolutionary Virtual Assistant by Astral Technologie",
   "author": "Astral Technologie",
   "main": "dist-electron/main.js",
@@ -54,7 +54,7 @@
   "build": {
     "appId": "com.astraltechnologie.eva",
     "productName": "EVA Assistant",
-    "copyright": "Copyright \u00c3\u201a\u00c2\u00a9 2025 Astral Technologie. Tous droits r\u00c3\u0192\u00c2\u00a9serv\u00c3\u0192\u00c2\u00a9s.",
+    "copyright": "Copyright Ã‚Â© 2025 Astral Technologie. Tous droits rÃƒÂ©servÃƒÂ©s.",
     "icon": "public/eva-icon.png",
     "asar": true,
     "asarUnpack": [
