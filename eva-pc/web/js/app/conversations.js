@@ -1,5 +1,5 @@
 async function loadConvs() {
-  if (!S.user) return;
+  if (!S.user) { document.dispatchEvent(new CustomEvent('eva:appFullyLoaded')); return; }
   try {
     var pinnedSnap = await db.collection('users').doc(S.user.uid)
       .collection('conversations').where('isPinned', '==', true).get();
@@ -23,6 +23,9 @@ async function loadConvs() {
     S.convs = all;
     renderConvs();
   } catch(e) { console.error('loadConvs:',e); }
+  
+  // Signaler que l'interface est prete pour enlever le splash screen
+  document.dispatchEvent(new CustomEvent('eva:appFullyLoaded'));
 }
 
 function renderConvs(filter) {
@@ -243,7 +246,7 @@ async function togglePinConv(id, isPinned) {
 window.togglePinConv = togglePinConv;
 
 async function saveConvMsg(userMsg, evaMsg) {
-  if (!S.user) return;
+  if (!S.user) { document.dispatchEvent(new CustomEvent('eva:appFullyLoaded')); return; }
   try {
     var ref;
     if (!S.convId) {

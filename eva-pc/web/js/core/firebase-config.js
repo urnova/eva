@@ -32,8 +32,11 @@ window.db.settings({
 });
 
 // Activer la persistance offline (multi-onglets)
-window.db.enablePersistence({ synchronizeTabs: true })
-  .catch((err) => {
+let persistenceConfig = { synchronizeTabs: true };
+if (window.eva) persistenceConfig = undefined;
+
+let persistencePromise = persistenceConfig ? window.db.enablePersistence(persistenceConfig) : window.db.enablePersistence();
+persistencePromise.catch((err) => {
     if (err.code === 'failed-precondition') {
       console.warn('[EVA] Persistance: plusieurs onglets ouverts');
     } else if (err.code === 'unimplemented') {

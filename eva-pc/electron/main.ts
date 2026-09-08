@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename)
 import * as http from 'http'
 import { extname } from 'path'
 
-let localServerPort = 0;
+let localServerPort = 45454;
 const mimeTypes: { [key: string]: string } = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -56,7 +56,7 @@ const httpServer = http.createServer((req, res) => {
   });
 });
 
-httpServer.listen(0, '127.0.0.1', () => {
+httpServer.listen(localServerPort, '127.0.0.1', () => {
   const address = httpServer.address();
   if (address && typeof address !== 'string') {
     localServerPort = address.port;
