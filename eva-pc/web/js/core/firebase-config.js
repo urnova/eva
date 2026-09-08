@@ -31,17 +31,13 @@ window.db.settings({
   merge: true
 });
 
-// Activer la persistance offline (multi-onglets)
-let persistenceConfig = { synchronizeTabs: true };
-if (window.eva) persistenceConfig = undefined;
-
-let persistencePromise = persistenceConfig ? window.db.enablePersistence(persistenceConfig) : window.db.enablePersistence();
-persistencePromise.catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.warn('[EVA] Persistance: plusieurs onglets ouverts');
-    } else if (err.code === 'unimplemented') {
-      console.warn('[EVA] Persistance: non supporté par ce navigateur');
-    }
+// Activer la persistance offline (multi-onglets uniquement sur Web)
+if (!window.eva) {
+  window.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+    console.warn('[EVA] Persistance erreur:', err);
   });
+} else {
+  console.log('[EVA] PC App: Firestore persistence disabled to prevent IndexedDB lock hangs.');
+}
 
 console.log('✅ Firebase initialized');
