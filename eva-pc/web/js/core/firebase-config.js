@@ -36,16 +36,14 @@ if (window.eva) {
 window.db.settings(firestoreSettings);
 
 // Activer la persistance offline (multi-onglets uniquement sur Web)
-// ATTENTION: Uniquement sur la page principale pour eviter les locks d'IndexedDB lors des redirections!
-var isMainApp = window.location.pathname.includes('chat.html') || window.location.pathname.includes('index.html') || window.location.pathname === '/';
-if (isMainApp) {
-  if (!window.eva) {
+if (!window.eva) {
+  var isMainApp = window.location.pathname.includes('chat.html') || window.location.pathname.includes('index.html') || window.location.pathname === '/';
+  if (isMainApp) {
     window.db.enablePersistence({ synchronizeTabs: true }).catch((err) => console.warn(err));
-  } else {
-    window.db.enablePersistence().catch((err) => console.warn(err));
   }
 } else {
-  console.log('[EVA] Persistence skipped on secondary page to prevent lock contention.');
+  // Sur PC, on desactive totalement la persistance pour eviter les blocages et les deadlocks locaux liees a Chromium
+  console.log('[EVA] PC App: Firestore persistence disabled to prevent IndexedDB lock hangs.');
 }
 
 console.log('✅ Firebase initialized');
