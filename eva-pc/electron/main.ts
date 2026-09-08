@@ -56,6 +56,11 @@ const httpServer = http.createServer((req, res) => {
   });
 });
 
+httpServer.on('error', (e: any) => {
+  if (e.code === 'EADDRINUSE') {
+    console.warn('Port in use (likely second instance).');
+  }
+});
 httpServer.listen(localServerPort, '127.0.0.1', () => {
   const address = httpServer.address();
   if (address && typeof address !== 'string') {
