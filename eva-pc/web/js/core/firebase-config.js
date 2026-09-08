@@ -26,18 +26,26 @@ window.timestamp = firebase.firestore.FieldValue.serverTimestamp;
 window.increment = firebase.firestore.FieldValue.increment;
 
 // Configuration Firestore (merge:true évite le warning "overriding host")
-window.db.settings({
-  cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
-  merge: true
-});
+// Configuration Firestore
+let firestoreSettings = {
+  cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
+};
+if (window.eva) {
+  firestoreSettings.experimentalForceLongPolling = true; // Fix WebSocket hangs in Electron
+}
+window.db.settings(firestoreSettings);
 
 // Activer la persistance offline (multi-onglets uniquement sur Web)
-if (!window.eva) {
-  window.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
-    console.warn('[EVA] Persistance erreur:', err);
-  });
+// ATTENTION: Uniquement sur la page principale pour eviter les locks d'IndexedDB lors des redirections!
+var isMainApp = window.location.pathname.includes('chat.html') || window.location.pathname.includes('index.html') || window.location.pathname === '/';
+if (isMainApp) {
+  if (!window.eva) {
+    window.db.enablePersistence({ synchronizeTabs: true }).catch((err) => console.warn(err));
+  } else {
+    window.db.enablePersistence().catch((err) => console.warn(err));
+  }
 } else {
-  console.log('[EVA] PC App: Firestore persistence disabled to prevent IndexedDB lock hangs.');
+  console.log('[EVA] Persistence skipped on secondary page to prevent lock contention.');
 }
 
 console.log('✅ Firebase initialized');
