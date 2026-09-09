@@ -348,110 +348,133 @@ Assistant: [REPORT]Le fichier test.txt a bien été créé sur votre bureau.[/RE
 
     let totalCmdsExecuted = 0;
 
-    // Boucle agentique bornée à 10 itérations max
-    while (true) {
-      iteration++;
+      // Boucle agentique bornée à 3 itérations max
+      while (true) {
+        iteration++;
 
-      if (iteration > 10) {
-        var maxErr = 'Limite d\'itérations atteinte (10 étapes max).';
-        steps.push({ text: '\u2717 ' + maxErr, ts: new Date().toISOString() });
-        await cmdRef.update({ step: maxErr, steps, updatedAt: new Date() });
-        return { error: maxErr, steps };
-      }
+        if (iteration > 3) {
+          var maxErr = 'Limite d\'itérations atteinte (3 étapes max).';
+          steps.push({ text: '\u2717 ' + maxErr, ts: new Date().toISOString() });
+          await cmdRef.update({ step: maxErr, steps, updatedAt: new Date() });
+          return { error: maxErr, steps };
+        }
 
-      // Vérifier si la tâche a été annulée depuis l'UI (overlay, stop button, Firestore)
-      if (_currentRunningCancel) {
-        console.log('[Agent] Tâche annulée localement');
-        return { error: 'Annulé par l utilisateur', steps, cancelled: true };
-      }
-
-      try {
-        const snap = await cmdRef.get();
-        if (snap.exists && snap.data().status === 'cancelled') {
-          console.log('[Agent] Tâche annulée à l iteration', iteration);
+        // Vérifier si la tâche a été annulée depuis l'UI (overlay, stop button, Firestore)
+        if (_currentRunningCancel) {
+          console.log('[Agent] Tâche annulée localement');
           return { error: 'Annulé par l utilisateur', steps, cancelled: true };
         }
-      } catch(e) { /* ignore, continuer */ }
 
-      try {
-        const raisonnement = iteration > 1 ? `Raisonnement étape ${iteration}...` : firstStep;
-        if (iteration > 1) {
-          await cmdRef.update({ step: raisonnement, updatedAt: new Date() });
-          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: raisonnement } }));
-        }
-
-        const data = await window.eva.system.llmChat(history, {
-          maxTokens: 384,
-          temperature: 0.1,
-          stopTriggers: ['[/CMD]', '[/REPORT]', '[/CONFIRM]']
-        });
-        if (data.choices && data.choices[0] && data.choices[0].message) {
-          data.message = data.choices[0].message;
-        }
-        const text = (data.message && data.message.content) ? data.message.content : '';
-        console.log('[Agent LLM step ' + iteration + ' raw output]:', text);
-        if (!text) { history.push({ role: 'user', content: 'Utilise [CMD] pour agir sur le système.' }); continue; }
-        history.push({ role: 'assistant', content: text });
-
-        // Demande de confirmation (fichiers sensibles)
-        var confirmMatch = text.match(/\[CONFIRM\]([\s\S]*?)(?:\[\/CONFIRM\]|$)/i);
-        if (confirmMatch) {
-          var confirmText = confirmMatch[1].trim();
-          var stepConf = '\u26a0\ufe0f Confirmation requise: ' + confirmText.substring(0, 80);
-          steps.push({ text: stepConf, ts: new Date().toISOString() });
-          await cmdRef.update({ step: stepConf, steps, updatedAt: new Date() });
-          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepConf } }));
-          // Demander confirmation à l'utilisateur
-          var confirmed = await _askConfirmation(confirmText, cmdRef);
-          history.push({ role: 'user', content: confirmed ? 'Oui, confirmé. Continue.' : 'Non, annulé. Ne supprime pas ce fichier.' });
-          continue;
-        }
-
-        // 1. Extraire les commandes à exécuter (tolère balise fermante tronquée par stop trigger)
-        var allCmds = [];
-        var cmdRegex = /\[CMD\]([\s\S]*?)(?:\[\/CMD\]|$)/gi;
-        var m;
-        while ((m = cmdRegex.exec(text)) !== null) {
-          var rawCmd = m[1].trim();
-          if (rawCmd && !rawCmd.startsWith('[REPORT]')) {
-            allCmds.push(rawCmd);
+        try {
+          const snap = await cmdRef.get();
+          if (snap.exists && snap.data().status === 'cancelled') {
+            console.log('[Agent] Tâche annulée à l iteration', iteration);
+            return { error: 'Annulé par l utilisateur', steps, cancelled: true };
           }
-        }
+        } catch(e) { /* ignore, continuer */ }
 
-        // Fallback : blocs de code powershell si le modèle oublie les balises [CMD]
-        if (allCmds.length === 0) {
-          var codeBlockRegex = /```(?:powershell|cmd|sh|bash)?\s*\n([\s\S]*?)```/gi;
-          while ((m = codeBlockRegex.exec(text)) !== null) {
-            var raw = m[1].trim();
-            if (raw && !raw.startsWith('[REPORT]')) allCmds.push(raw);
+        try {
+          const raisonnement = iteration > 1 ? `Raisonnement étape ${iteration}...` : firstStep;
+          if (iteration > 1) {
+            await cmdRef.update({ step: raisonnement, updatedAt: new Date() });
+            window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: raisonnement } }));
           }
-        }
 
-        if (allCmds.length > 0) {
-          var results = [];
-          for (var ci = 0; ci < allCmds.length; ci++) {
-            var cmd = allCmds[ci];
-            var stepText = 'Ex\u00e9cution [' + (ci+1) + '/' + allCmds.length + ']: ' + cmd.substring(0, 80) + (cmd.length > 80 ? '...' : '');
-            steps.push({ text: stepText, ts: new Date().toISOString() });
-            await cmdRef.update({ step: stepText, lastCmd: cmd.substring(0, 120), steps, updatedAt: new Date() });
-            window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepText } }));
-            try {
-              var res = await window.eva.system.exec(cmd);
-              var out = res.success
-                ? (res.stdout ? res.stdout.substring(0, 500) : '(succ\u00e8s, pas de sortie)')
-                : ('ERREUR: ' + (res.stderr || res.error || 'Inconnue').substring(0, 300));
-              var stepResult = (res.success ? '\u2713 ' : '\u2717 ') + cmd.substring(0, 40) + ': ' + out.substring(0, 60);
-              steps.push({ text: stepResult, ts: new Date().toISOString() });
-              await cmdRef.update({ step: stepResult, steps, updatedAt: new Date() });
-              results.push('$ ' + cmd + '\n' + out);
-              totalCmdsExecuted++;
-            } catch(e) {
-              results.push('$ ' + cmd + '\nErreur: ' + e.message);
+          const data = await window.eva.system.llmChat(history, {
+            maxTokens: 256,
+            temperature: 0.1,
+            stopTriggers: ['[/CMD]', '[/REPORT]', '[/CONFIRM]']
+          });
+          if (data.choices && data.choices[0] && data.choices[0].message) {
+            data.message = data.choices[0].message;
+          }
+          const text = (data.message && data.message.content) ? data.message.content : '';
+          console.log('[Agent LLM step ' + iteration + ' raw output]:', text);
+          if (!text) { history.push({ role: 'user', content: 'Utilise [CMD] pour agir sur le système.' }); continue; }
+          history.push({ role: 'assistant', content: text });
+
+          // Demande de confirmation (fichiers sensibles)
+          var confirmMatch = text.match(/\[CONFIRM\]([\s\S]*?)(?:\[\/CONFIRM\]|$)/i);
+          if (confirmMatch) {
+            var confirmText = confirmMatch[1].trim();
+            var stepConf = '\u26a0\ufe0f Confirmation requise: ' + confirmText.substring(0, 80);
+            steps.push({ text: stepConf, ts: new Date().toISOString() });
+            await cmdRef.update({ step: stepConf, steps, updatedAt: new Date() });
+            window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepConf } }));
+            // Demander confirmation à l'utilisateur
+            var confirmed = await _askConfirmation(confirmText, cmdRef);
+            history.push({ role: 'user', content: confirmed ? 'Oui, confirmé. Continue.' : 'Non, annulé. Ne supprime pas ce fichier.' });
+            continue;
+          }
+
+          // 1. Extraire les commandes à exécuter (tolère balise fermante tronquée par stop trigger)
+          var allCmds = [];
+          var cmdRegex = /\[CMD\]([\s\S]*?)(?:\[\/CMD\]|$)/gi;
+          var m;
+          while ((m = cmdRegex.exec(text)) !== null) {
+            var rawCmd = m[1].trim();
+            if (rawCmd && !rawCmd.startsWith('[REPORT]')) {
+              allCmds.push(rawCmd);
             }
           }
-          history.push({ role: 'user', content: 'R\u00e9sultats des commandes:\n' + results.join('\n---\n') + '\n\nSi la tâche est finie, résume avec [REPORT]...[/REPORT]. Sinon continue avec [CMD]...[/CMD].' });
-          continue;
-        }
+
+          // Fallback : blocs de code powershell si le modèle oublie les balises [CMD]
+          if (allCmds.length === 0) {
+            var codeBlockRegex = /```(?:powershell|cmd|sh|bash)?\s*\n([\s\S]*?)```/gi;
+            while ((m = codeBlockRegex.exec(text)) !== null) {
+              var raw = m[1].trim();
+              if (raw && !raw.startsWith('[REPORT]')) allCmds.push(raw);
+            }
+          }
+
+          if (allCmds.length > 0) {
+            var results = [];
+            var allSucceeded = true;
+            for (var ci = 0; ci < allCmds.length; ci++) {
+              var cmd = allCmds[ci];
+              var stepText = 'Ex\u00e9cution [' + (ci+1) + '/' + allCmds.length + ']: ' + cmd.substring(0, 80) + (cmd.length > 80 ? '...' : '');
+              steps.push({ text: stepText, ts: new Date().toISOString() });
+              await cmdRef.update({ step: stepText, lastCmd: cmd.substring(0, 120), steps, updatedAt: new Date() });
+              window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepText } }));
+              try {
+                var res = await window.eva.system.exec(cmd);
+                var out = res.success
+                  ? (res.stdout ? res.stdout.substring(0, 500) : '(succ\u00e8s, pas de sortie)')
+                  : ('ERREUR: ' + (res.stderr || res.error || 'Inconnue').substring(0, 300));
+                var stepResult = (res.success ? '\u2713 ' : '\u2717 ') + cmd.substring(0, 40) + ': ' + out.substring(0, 60);
+                steps.push({ text: stepResult, ts: new Date().toISOString() });
+                await cmdRef.update({ step: stepResult, steps, updatedAt: new Date() });
+                results.push('$ ' + cmd + '\n' + out);
+                totalCmdsExecuted++;
+                if (!res.success) allSucceeded = false;
+              } catch(e) {
+                allSucceeded = false;
+                results.push('$ ' + cmd + '\nErreur: ' + e.message);
+              }
+            }
+
+            // 1) Si le modèle avait DÉJÀ inclus un [REPORT] dans son message
+            var directReport = text.match(/\[REPORT\]([\s\S]*?)(?:\[\/REPORT\]|$)/i);
+            if (allSucceeded && directReport) {
+              finalReport = directReport[1].trim();
+              steps.push({ text: '\u2713 ' + finalReport.substring(0, 120), ts: new Date().toISOString() });
+              await cmdRef.update({ step: 'Termin\u00e9 \u2713', steps, updatedAt: new Date() });
+              break;
+            }
+
+            // 2) Pour les actions directes (créer, ouvrir, fermer, supprimer, lancer, etc.)
+            // si toutes les commandes ont réussi, terminer immédiatement sans second appel LLM lourd !
+            var isDirectAction = /(crée|cree|créer|creer|écris|ecris|écrire|ecrire|ajoute|ajouter|supprime|supprimer|efface|effacer|ouvre|ouvrir|ferme|fermer|lance|lancer|tue|tuer|kill|déplace|deplace|copie|copier|installe|installer)/i.test(userPrompt);
+            if (allSucceeded && isDirectAction) {
+              finalReport = 'Action exécutée avec succès sur votre PC.';
+              steps.push({ text: '\u2713 ' + finalReport, ts: new Date().toISOString() });
+              await cmdRef.update({ step: 'Termin\u00e9 \u2713', steps, updatedAt: new Date() });
+              break;
+            }
+
+            history.push({ role: 'user', content: 'R\u00e9sultats des commandes:\n' + results.join('\n---\n') + '\n\nSi la tâche est finie, résume avec [REPORT]...[/REPORT]. Ne génère plus de commande.' });
+            continue;
+          }
 
         // 2. Rapport final (uniquement si au moins une commande a été exécutée)
         var reportMatch = text.match(/\[REPORT\]([\s\S]*?)(?:\[\/REPORT\]|$)/i);
