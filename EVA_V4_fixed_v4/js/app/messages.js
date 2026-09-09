@@ -310,15 +310,23 @@ window.addFinalThinkingStep = function(label, detail) {
 
 /* Stoppe la génération en cours */
 window.stopGeneration = function() {
-  if (!S.busy) return;
+  if (S.cwRunning && typeof window.cancelCloudWorksTask === 'function') {
+    if (window._cwActiveTrackers) {
+      Object.keys(window._cwActiveTrackers).forEach(window.cancelCloudWorksTask);
+    }
+  }
   _generationAborted = true;
+  S.cwRunning = false;
+  S.busy = false;
   hideTyping();
   streamEvaMsg('*Génération interrompue par l\'utilisateur.*');
   toast('Génération arrêtée', 'info');
 };
 
 function hideTyping() {
-  S.busy = false;
+  if (!S.cwRunning) {
+    S.busy = false;
+  }
   if (_thinkTimer) { clearInterval(_thinkTimer); _thinkTimer = null; }
   var el = document.getElementById('typingInd');
   if (el) el.remove();
@@ -326,14 +334,16 @@ function hideTyping() {
   if (window.EvaCharacter && typeof window.EvaCharacter.setIdle === 'function') {
     try { window.EvaCharacter.setIdle(); } catch(_) {}
   }
-  /* Restaurer le bouton Envoyer */
-  var sendBtn = document.getElementById('sendBtn');
-  var stopBtn = document.getElementById('stopBtn');
-  if (sendBtn && stopBtn) {
-    stopBtn.style.display = 'none';
-    sendBtn.style.display = 'inline-flex';
-    var input = document.getElementById('msgInput');
-    sendBtn.disabled = !(input && input.value.trim()) && (!S.images || !S.images.length) && (!S.documents || !S.documents.length);
+  /* Ne restaurer le bouton Envoyer QUE si aucune tâche CloudWorks n'est en cours */
+  if (!S.cwRunning) {
+    var sendBtn = document.getElementById('sendBtn');
+    var stopBtn = document.getElementById('stopBtn');
+    if (sendBtn && stopBtn) {
+      stopBtn.style.display = 'none';
+      sendBtn.style.display = 'inline-flex';
+      var input = document.getElementById('msgInput');
+      sendBtn.disabled = !(input && input.value.trim()) && (!S.images || !S.images.length) && (!S.documents || !S.documents.length);
+    }
   }
 }
 
@@ -704,6 +714,12 @@ async function handleSend() {
   var result = await window.EVAChatHandler.sendMessage(msgContent, { tone: S.tone });
 
   window.EVA_SYSTEM_PROMPT = origSys;
+
+  var hasCW = result.content && /\[ACTION:\s*\{[^}]*"(agentic_task|screenshot|sysinfo|run_script|lock|sleep|shutdown|open_ide_file)"/i.test(result.content);
+  if (hasCW) {
+    S.cwRunning = true;
+    S.busy = true;
+  }
   hideTyping();
 
   /* — Si l'utilisateur a cliqué Stop pendant la génération, on ignore la réponse — */
@@ -885,7 +901,9 @@ function streamEvaMsg(content) {
     thoughtPanel.appendChild(thoughtHeader);
     thoughtPanel.appendChild(thoughtBody);
     msgContent.appendChild(thoughtPanel);
+    _thinkHistory = [];
   }
+  window.clearThinkingHistory = function() { _thinkHistory = []; };
 
   // Bulle
   var bubble = document.createElement('div');
@@ -1546,60 +1564,7 @@ function initChatDragDropPaste() {
 }
 window.initChatDragDropPaste = initChatDragDropPaste;
 
-window.appendCloudWorksTracker = function(cmdId, promptText) {
-  var list = document.getElementById('messagesList');
-  if (!list) return;
+/* CloudWorks tracker functions removed, see cw-modal.js */
 
-  var div = document.createElement('div');
-  div.className = 'msg-bubble system-bubble cw-tracker-bubble';
-  div.id = 'cw-tracker-' + cmdId;
-  div.innerHTML =
-    '<div class="cw-tracker-header">☁️ Agent CloudWorks : En cours</div>' +
-    '<div class="cw-tracker-prompt">"' + window.esc(promptText) + '"</div>' +
-    '<div class="cw-tracker-step" id="cw-step-' + cmdId + '">⏳ En attente du PC...</div>' +
-    '<div class="cw-tracker-actions" id="cw-actions-' + cmdId + '">' +
-       '<button class="cw-tracker-cancel" onclick="window.cancelCwCmd(\'' + cmdId + '\')">❌ Annuler la tâche</button>' +
-    '</div>';
-  list.appendChild(div);
-  if (window.scrollDown) window.scrollDown();
-
-  if (window.db && window.S && window.S.user) {
-    window.db.collection('cloudworks').doc(window.S.user.uid).collection('commands').doc(cmdId)
-      .onSnapshot(function(snap) {
-        if (!snap.exists) return;
-        var data = snap.data();
-        var stepEl = document.getElementById('cw-step-' + cmdId);
-        var actionsEl = document.getElementById('cw-actions-' + cmdId);
-        if (!stepEl) return;
-
-        if (data.status === 'pending') {
-          stepEl.innerHTML = '⏳ En attente de réception par le PC...';
-        } else if (data.status === 'running') {
-          stepEl.innerHTML = '🔄 ' + (data.step || 'Exécution en cours...');
-        } else if (data.status === 'done') {
-          stepEl.innerHTML = '✅ Tâche terminée avec succès !';
-          stepEl.style.color = '#10b981';
-          if (actionsEl) actionsEl.style.display = 'none';
-        } else if (data.status === 'error') {
-          stepEl.innerHTML = '❌ Erreur : ' + window.esc(data.error || 'Erreur inconnue');
-          stepEl.style.color = '#ef4444';
-          if (actionsEl) actionsEl.style.display = 'none';
-        } else if (data.status === 'cancelled') {
-          stepEl.innerHTML = '🛑 Tâche annulée par l\'utilisateur.';
-          stepEl.style.color = '#f59e0b';
-          if (actionsEl) actionsEl.style.display = 'none';
-        }
-      });
-  }
-};
-
-window.cancelCwCmd = function(cmdId) {
-  if (window.db && window.S && window.S.user) {
-    window.db.collection('cloudworks').doc(window.S.user.uid).collection('commands').doc(cmdId)
-      .update({ status: 'cancelled' }).then(function() {
-        if (window.toast) window.toast('Tâche annulée.', 'info');
-      }).catch(function(e) { console.error('Erreur annulation', e); });
-  }
-};
 
 
