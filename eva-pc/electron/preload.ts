@@ -75,7 +75,7 @@ const evaAPI = {
   system: {
     info: () => ipcRenderer.invoke('system:info'),
     stats: () => ipcRenderer.invoke('system:stats'),
-    llmChat: (messages: any) => ipcRenderer.invoke('llm:chat', messages),
+    llmChat: (messages: any, options?: any) => ipcRenderer.invoke('llm:chat', messages, options),
     llmStart: () => ipcRenderer.invoke('llm:start'),
     llmStop: () => ipcRenderer.invoke('llm:stop'),
     llmStatus: () => ipcRenderer.invoke('llm:status'),

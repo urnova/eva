@@ -2,248 +2,350 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EVA Overlay</title>
+  <title>E.V.A Overlay</title>
   <style>
-    :root {
-      --cyan: #06b6d4;
-      --purple: #a855f7;
-      --bg: rgba(15, 15, 30, 0.85);
-      --border: rgba(123, 139, 245, 0.2);
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@500;700&display=swap');
     
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    :root {
+      --bg: rgba(12, 14, 20, 0.6);
+      --border: rgba(0, 212, 255, 0.25);
+      --cyan: #00d4ff;
+      --pink: #ff4d6d;
+      --gold: #ffd700;
+      --orange: #f97316;
+      --text: #e4e4ef;
     }
     
     body {
-      background: transparent;
+      margin: 0;
+      padding: 15px;
       overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      background: transparent;
       display: flex;
       justify-content: flex-end;
-      align-items: center;
-      height: 100vh;
-      padding-right: 15px;
-      -webkit-app-region: drag; /* Permet de drag la fenêtre si besoin */
+      align-items: flex-start;
+      -webkit-app-region: drag;
+      user-select: none;
     }
-
-    #overlay-container {
-      width: 300px;
-      height: 80px;
+    
+    /* Premium Glassmorphism Container */
+    .pill {
       background: var(--bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--border);
-      border-radius: 40px;
+      border-radius: 16px;
+      padding: 12px 16px;
       display: flex;
       align-items: center;
-      padding: 0 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(123, 139, 245, 0.05);
-      transform: translateX(120%);
-      opacity: 0;
-      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+      gap: 14px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(0, 212, 255, 0.05);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
       position: relative;
       overflow: hidden;
-      -webkit-app-region: no-drag; /* Empêcher le drag sur le container pour les clics */
     }
-
-    #overlay-container.show {
-      transform: translateX(0);
-      opacity: 1;
-    }
-
-    /* Lueur de fond animée */
-    .glow-bg {
+    
+    /* Animated Border Glow */
+    .pill::before {
+      content: '';
       position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.15) 0%, transparent 60%);
-      opacity: 0;
-      transition: opacity 0.5s;
-      z-index: 0;
+      inset: 0;
+      border-radius: 16px;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(249,115,22,0.4), rgba(255,255,255,0) 50%, rgba(249,115,22,0.2));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
       pointer-events: none;
     }
 
-    .state-listening .glow-bg { background: radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.15) 0%, transparent 60%); opacity: 1; animation: pulseGlow 2s infinite alternate; }
-    .state-thinking .glow-bg { background: radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.15) 0%, transparent 60%); opacity: 1; animation: spinGlow 4s linear infinite; }
-    .state-speaking .glow-bg { background: radial-gradient(circle at 50% 50%, rgba(74, 222, 128, 0.15) 0%, transparent 60%); opacity: 1; animation: pulseGlow 1s infinite alternate; }
-    .state-cloudworks .glow-bg { background: radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.15) 0%, transparent 60%); opacity: 1; }
-
-    @keyframes pulseGlow { 0% { transform: scale(0.9); opacity: 0.8; } 100% { transform: scale(1.1); opacity: 1; } }
-    @keyframes spinGlow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-    /* Icône animée */
-    .icon-container {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-right: 15px;
+    /* Core Indicator / Avatar */
+    .indicator-wrapper {
       position: relative;
-      z-index: 1;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .core-orb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan), 0 0 24px var(--cyan);
+      animation: corePulse 2s ease-in-out infinite;
+      z-index: 2;
+    }
+    
+    .ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 212, 255, 0.5);
+      animation: ringSpin 3s linear infinite;
+    }
+    .ring:nth-child(2) {
+      border-color: rgba(0, 212, 255, 0.2);
+      animation: ringSpin 4s linear infinite reverse;
+      transform: scale(1.2);
     }
 
-    .icon {
-      font-size: 20px;
-      transition: transform 0.3s;
-    }
-
-    .state-listening .icon { animation: micBounce 1.5s infinite; }
-    .state-thinking .icon { animation: spin 2s linear infinite; }
-    .state-speaking .icon { animation: pop 0.4s infinite alternate; }
-
-    @keyframes micBounce { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3px) scale(1.1); } }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    @keyframes pop { 0% { transform: scale(0.95); } 100% { transform: scale(1.15); } }
-
-    /* Texte de statut */
     .text-container {
-      flex: 1;
-      z-index: 1;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      min-width: 0;
+      margin-right: 15px;
+      flex: 1;
+      min-width: 140px;
     }
 
     .title {
-      color: #fff;
-      font-weight: 600;
-      font-size: 14px;
-      letter-spacing: 0.5px;
-      margin-bottom: 2px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--cyan);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+      text-shadow: 0 0 10px rgba(0,212,255,0.3);
     }
 
     .subtitle {
-      color: rgba(255,255,255,0.6);
       font-size: 11px;
+      font-weight: 400;
+      color: rgba(228, 228, 239, 0.85);
       white-space: nowrap;
-      overflow: hidden;
       text-overflow: ellipsis;
+      overflow: hidden;
     }
 
-    /* Bouton d'action */
-    .action-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+    /* Disconnect Button */
+    .btn-action {
+      -webkit-app-region: no-drag;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 10px;
       cursor: pointer;
-      z-index: 1;
       transition: all 0.2s;
-      outline: none;
-      margin-left: 10px;
-      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .action-btn:hover {
-      background: rgba(255, 77, 109, 0.2);
-      border-color: rgba(255, 77, 109, 0.5);
-      color: #ff4d6d;
+    .btn-action:hover {
+      background: rgba(249, 115, 22, 0.2);
+      border-color: var(--orange);
+      color: var(--orange);
+      box-shadow: 0 0 15px rgba(249, 115, 22, 0.3);
     }
     
-    .action-btn svg {
-      width: 14px;
-      height: 14px;
-      stroke: currentColor;
-      stroke-width: 2.5;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-    }
+    .btn-action svg { width: 14px; height: 14px; }
+
+    /* Dynamic States */
+    /* CloudWorks / Remote State (Orange) */
+    .state-remote .core-orb { background: var(--orange); box-shadow: 0 0 12px var(--orange), 0 0 24px var(--orange); animation: corePulseFast 1s ease-in-out infinite; }
+    .state-remote .ring { border-color: rgba(249, 115, 22, 0.5); }
+    .state-remote .title { color: var(--orange); text-shadow: 0 0 10px rgba(249, 115, 22, 0.4); }
+    .state-remote.pill { border-color: rgba(249, 115, 22, 0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(249, 115, 22, 0.1); }
+
+    /* Thinking State */
+    .state-thinking .core-orb { background: var(--gold); box-shadow: 0 0 12px var(--gold), 0 0 24px var(--gold); animation: corePulseFast 0.6s ease-in-out infinite; }
+    .state-thinking .ring { border-color: rgba(255, 215, 0, 0.5); }
+    .state-thinking .title { color: var(--gold); text-shadow: 0 0 10px rgba(255,215,0,0.3); }
+    .state-thinking.pill { border-color: rgba(255, 215, 0, 0.25); box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(255, 215, 0, 0.05); }
+
+    /* Animations */
+    @keyframes corePulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.3); opacity: 1; } }
+    @keyframes corePulseFast { 0%, 100% { transform: scale(0.9); opacity: 0.9; } 50% { transform: scale(1.4); opacity: 1; } }
+    @keyframes ringSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
   </style>
 </head>
 <body>
 
-  <div id="overlay-container">
-    <div class="glow-bg"></div>
-    
-    <div class="icon-container">
-      <span class="icon" id="status-icon">🎙️</span>
+  <div class="pill state-listening" id="pill">
+    <div class="indicator-wrapper">
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="core-orb"></div>
     </div>
     
     <div class="text-container">
-      <div class="title" id="status-title">Je t'écoute...</div>
-      <div class="subtitle" id="status-sub">Dis "Annuler" pour fermer</div>
+      <div class="title" id="titleText">E.V.A - EN ÉCOUTE</div>
+      <div class="subtitle" id="subText">Système actif</div>
     </div>
     
-    <button class="action-btn" id="cancel-btn" title="Annuler / Arrêter">
-      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    <button class="btn-action" onclick="closeOverlay()" title="Interrompre">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
     </button>
   </div>
 
   <script>
-    const { ipcRenderer } = require('electron');
-    const container = document.getElementById('overlay-container');
-    const iconEl = document.getElementById('status-icon');
-    const titleEl = document.getElementById('status-title');
-    const subEl = document.getElementById('status-sub');
+    if (window.eva && window.eva.overlay) {
+      const pill = document.getElementById('pill');
+      const titleText = document.getElementById('titleText');
+      const subText = document.getElementById('subText');
 
-    const states = {
-      listening: {
-        class: 'state-listening',
-        icon: '🎙️',
-        title: 'Je t\'écoute...',
-        sub: 'Dis "Annuler" pour arrêter'
-      },
-      thinking: {
-        class: 'state-thinking',
-        icon: '🧠',
-        title: 'Réflexion en cours...',
-        sub: 'Analyse de votre demande'
-      },
-      speaking: {
-        class: 'state-speaking',
-        icon: '🔊',
-        title: 'E.V.A parle',
-        sub: 'Lecture de la réponse'
-      },
-      cloudworks: {
-        class: 'state-cloudworks',
-        icon: '☁️',
-        title: 'Action à distance',
-        sub: 'CloudWorks prend le contrôle'
+      if (window.eva.overlay.onSetState) {
+        window.eva.overlay.onSetState((state, text) => {
+          pill.className = 'pill state-' + state;
+          
+          if (state === 'cloudworks' || state === 'action') {
+            titleText.textContent = 'CE PC — ACTIF';
+            subText.textContent = text || 'Tâche locale en cours...';
+            pill.className = 'pill state-remote';
+          } else if (state === 'remote') {
+            titleText.textContent = 'COMMANDE À DISTANCE';
+            subText.textContent = text || 'Exécution depuis un autre appareil...';
+            pill.className = 'pill state-remote';
+          } else if (state === 'thinking') {
+            titleText.textContent = 'ANALYSE...';
+            subText.textContent = text || 'Traitement cognitif...';
+          } else if (state === 'speaking') {
+            titleText.textContent = 'E.V.A PARLE';
+            subText.textContent = text || 'Synthèse vocale en cours...';
+            pill.className = 'pill state-listening'; 
+          } else {
+            titleText.textContent = 'E.V.A - EN ÉCOUTE';
+            subText.textContent = text || 'Prête.';
+          }
+        });
       }
-    };
+    }
 
-    ipcRenderer.on('overlay:setState', (event, stateKey, customText) => {
-      const stateObj = states[stateKey];
-      if (!stateObj) return;
+    function closeOverlay() {
+      if (window.eva) {
+        if (window.eva.overlay && window.eva.overlay.sendAction) {
+          window.eva.overlay.sendAction('cancel');
+        }
+        if (window.eva.overlay && window.eva.overlay.hide) {
+          window.eva.overlay.hide();
+        }
+      }
+    }
 
-      container.className = '';
-      container.classList.add(stateObj.class);
-      container.classList.add('show');
+    /* ══════════════════════════════════════════
+       WAKE WORD — Tourne dans l'overlay (toujours visible → non throttlé)
+       Détecte "EVA" ou "Hey EVA" même quand la fenêtre principale est cachée
+    ══════════════════════════════════════════ */
+    (function initOverlayWakeWord() {
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return;
 
-      iconEl.textContent = stateObj.icon;
-      titleEl.textContent = stateObj.title;
-      subEl.textContent = customText || stateObj.sub;
-    });
+      var wakeWords = ['eva', 'éva', 'hey eva', 'e.v.a', 'eh va'];
+      var recognition = null;
+      var isListening = false;
+      var state = 'idle';
+      var buffer = '';
+      var restartTimer = null;
 
-    document.getElementById('cancel-btn').addEventListener('click', () => {
-      ipcRenderer.send('overlay:action', 'cancel');
-      container.classList.remove('show');
-      setTimeout(() => {
-        ipcRenderer.invoke('overlay:hide');
-      }, 500);
-    });
+      function hasWake(t) {
+        t = t.toLowerCase().trim();
+        return wakeWords.some(function(w) { return t.includes(w); });
+      }
+      function extractCmd(t) {
+        t = t.toLowerCase();
+        var bestIdx = -1, bestLen = 0;
+        wakeWords.forEach(function(w) {
+          var idx = t.indexOf(w);
+          if (idx !== -1 && w.length > bestLen) { bestIdx = idx; bestLen = w.length; }
+        });
+        if (bestIdx === -1) return null;
+        return t.substring(bestIdx + bestLen).replace(/^[\s,\.!?]+/, '').trim() || null;
+      }
+      function fireCommand(cmd) {
+        if (!cmd || !cmd.trim()) return;
+        if (window.eva && window.eva.overlay && window.eva.overlay.sendAction) {
+          window.eva.overlay.sendAction('wakeword', cmd.trim());
+        }
+      }
+      function scheduleRestart(ms) {
+        if (restartTimer) clearTimeout(restartTimer);
+        restartTimer = setTimeout(function() {
+          if (isListening && recognition) try { recognition.start(); } catch(e) {}
+        }, ms || 400);
+      }
+
+      function buildRecognition() {
+        var r = new SR();
+        r.lang = 'fr-FR';
+        r.continuous = true;
+        r.interimResults = true;
+        r.maxAlternatives = 1;
+        r.onresult = function(event) {
+          for (var i = event.resultIndex; i < event.results.length; i++) {
+            var tr = event.results[i][0].transcript;
+            var final = event.results[i].isFinal;
+            if (state === 'idle') {
+              if (hasWake(tr)) {
+                if (final) {
+                  var cmd = extractCmd(tr);
+                  if (cmd && cmd.length > 1) { fireCommand(cmd); }
+                  else { state = 'triggered'; buffer = ''; }
+                }
+              }
+            } else if (state === 'triggered') {
+              buffer = tr;
+              if (final && buffer.trim().length > 1) {
+                var fc = buffer.trim(); state = 'idle'; buffer = '';
+                fireCommand(fc);
+              }
+            }
+          }
+        };
+        r.onend = function() {
+          if (state === 'triggered' && buffer.trim().length > 1) {
+            var c = buffer.trim(); state = 'idle'; buffer = ''; fireCommand(c); return;
+          }
+          state = 'idle'; buffer = '';
+          if (isListening) scheduleRestart(400);
+        };
+        r.onerror = function(e) {
+          if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            isListening = false; return;
+          }
+          state = 'idle'; buffer = '';
+          if (isListening) scheduleRestart(1200);
+        };
+        return r;
+      }
+
+      // Démarrer uniquement si le wake word est activé dans le store
+      async function startIfEnabled() {
+        if (window.eva && window.eva.store) {
+          try {
+            var cfg = await window.eva.store.get('eva_config');
+            var config = typeof cfg === 'string' ? JSON.parse(cfg || '{}') : (cfg || {});
+            if (!config.wakeWordEnabled) return; // Wake word désactivé → ne pas démarrer
+          } catch(e) {}
+        }
+        if (isListening) return;
+        isListening = true;
+        recognition = buildRecognition();
+        try { recognition.start(); } catch(e) { scheduleRestart(800); }
+      }
+
+      // Écouter les changements de config pour démarrer/arrêter
+      if (window.eva && window.eva.overlay && window.eva.overlay.onSetState) {
+        window.eva.overlay.onSetState(function(st) {
+          if (st === 'wake-word-on') { startIfEnabled(); }
+          if (st === 'wake-word-off' && recognition) {
+            isListening = false;
+            try { recognition.stop(); } catch(e) {}
+            recognition = null;
+          }
+        });
+      }
+
+      // Auto-démarrer au chargement de l'overlay
+      setTimeout(startIfEnabled, 2000);
+    })();
   </script>
 </body>
 </html>

@@ -134,6 +134,8 @@ function parseEvaActions(content) {
 
   /* ── Exécuter les actions détectées ── */
   var _fileActionTypes = ['pdf','excel','pptx','txt','csv','pdf_repair'];
+  /* Actions CloudWorks nécessitant confirmation avant exécution */
+  var _cwActionTypes = ['agentic_task','screenshot','sysinfo','run_script','lock','sleep','shutdown','open_ide_file'];
   actions.forEach(function(action) {
     if (action && _fileActionTypes.indexOf(action.type) !== -1) {
       /* Capturer _evaFileTarget maintenant (avant qu'il soit remis à null) */
@@ -145,6 +147,15 @@ function parseEvaActions(content) {
         executeEvaAction(action);
         window._evaFileTarget = _prev;
       }, 0);
+    } else if (action && _cwActionTypes.indexOf(action.type) !== -1) {
+      /* Actions CloudWorks : passer par le modal de confirmation */
+      console.log('[file-gen] Action CloudWorks détectée:', action.type, action.prompt || '');
+      if (typeof window.cwConfirmAndExecute === 'function') {
+        window.cwConfirmAndExecute(action);
+      } else {
+        console.error('[file-gen] cwConfirmAndExecute non défini — exécution directe');
+        executeEvaAction(action);
+      }
     } else {
       executeEvaAction(action);
     }

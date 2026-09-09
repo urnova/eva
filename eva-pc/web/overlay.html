@@ -12,6 +12,7 @@
       --cyan: #00d4ff;
       --pink: #ff4d6d;
       --gold: #ffd700;
+      --orange: #f97316;
       --text: #e4e4ef;
     }
     
@@ -52,7 +53,7 @@
       inset: 0;
       border-radius: 16px;
       padding: 1px;
-      background: linear-gradient(135deg, rgba(0,212,255,0.4), rgba(255,255,255,0) 50%, rgba(255,77,109,0.2));
+      background: linear-gradient(135deg, rgba(249,115,22,0.4), rgba(255,255,255,0) 50%, rgba(249,115,22,0.2));
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
@@ -138,20 +139,20 @@
     }
 
     .btn-action:hover {
-      background: rgba(255, 77, 109, 0.15);
-      border-color: var(--pink);
-      color: var(--pink);
-      box-shadow: 0 0 15px rgba(255, 77, 109, 0.2);
+      background: rgba(249, 115, 22, 0.2);
+      border-color: var(--orange);
+      color: var(--orange);
+      box-shadow: 0 0 15px rgba(249, 115, 22, 0.3);
     }
     
     .btn-action svg { width: 14px; height: 14px; }
 
     /* Dynamic States */
-    /* CloudWorks / Remote State */
-    .state-remote .core-orb { background: var(--pink); box-shadow: 0 0 12px var(--pink), 0 0 24px var(--pink); animation: corePulseFast 1s ease-in-out infinite; }
-    .state-remote .ring { border-color: rgba(255, 77, 109, 0.5); }
-    .state-remote .title { color: var(--pink); text-shadow: 0 0 10px rgba(255,77,109,0.3); }
-    .state-remote.pill { border-color: rgba(255, 77, 109, 0.25); box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(255, 77, 109, 0.05); }
+    /* CloudWorks / Remote State (Orange) */
+    .state-remote .core-orb { background: var(--orange); box-shadow: 0 0 12px var(--orange), 0 0 24px var(--orange); animation: corePulseFast 1s ease-in-out infinite; }
+    .state-remote .ring { border-color: rgba(249, 115, 22, 0.5); }
+    .state-remote .title { color: var(--orange); text-shadow: 0 0 10px rgba(249, 115, 22, 0.4); }
+    .state-remote.pill { border-color: rgba(249, 115, 22, 0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(249, 115, 22, 0.1); }
 
     /* Thinking State */
     .state-thinking .core-orb { background: var(--gold); box-shadow: 0 0 12px var(--gold), 0 0 24px var(--gold); animation: corePulseFast 0.6s ease-in-out infinite; }

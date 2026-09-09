@@ -297,6 +297,9 @@ window.setIsGenerating = function(active) {
    ANNULATION D'UNE TÂCHE
 ════════════════════════════════════════════════════════════ */
 window.cancelCloudWorksTask = function(cmdId) {
+  if (typeof window.cancelCurrentCloudWorksTask === 'function') {
+    try { window.cancelCurrentCloudWorksTask(); } catch(e) {}
+  }
   if (!window.db || !window.S || !window.S.user) return;
   var uid = window.S.user.uid;
   window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId)

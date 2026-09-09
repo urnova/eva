@@ -129,12 +129,32 @@
       }, (e) => console.error('[CloudWorks] Erreur listenCommands:', e));
   }
 
+  let _currentRunningCmdRef = null;
+  let _currentRunningCancel = false;
+
+  window.cancelCurrentCloudWorksTask = async function() {
+    console.log('[CloudWorks] Interruption demandée pour la tâche en cours');
+    _currentRunningCancel = true;
+    if (_currentRunningCmdRef) {
+      try {
+        await _currentRunningCmdRef.update({
+          status: 'cancelled',
+          step: 'Tâche interrompue par l\'utilisateur',
+          updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+        });
+      } catch(e) {}
+    }
+    window.dispatchEvent(new CustomEvent('cw:task-cancelled'));
+  };
+
   /* ═══════════════════════════════════════════
      Exécution d'une commande reçue
   ═══════════════════════════════════════════ */
   async function handleCommand(cmdId, data, uid) {
     if (!window.eva || !window.eva.system) return;
     const cmdRef = window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId);
+    _currentRunningCmdRef = cmdRef;
+    _currentRunningCancel = false;
 
     // Afficher l'overlay
     if (window.eva.overlay) window.eva.overlay.show('cloudworks');
@@ -284,25 +304,25 @@
      Boucle agentique LLM local
   ═══════════════════════════════════════════ */
   async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef) {
-    const systemPrompt = `Tu es l'Agent PC Autonome d'EVA. Ton rôle est d'exécuter des commandes PowerShell sur Windows.
-TU NE DOIS PAS DONNER D'EXPLICATIONS NI DE CONSEILS. TU ES UN EXÉCUTEUR.
-
+    const systemPrompt = `Tu es l'Agent PC Autonome d'EVA sous Windows. Ton rôle est d'exécuter des commandes PowerShell.
 RÈGLES ABSOLUES :
-1. AU PREMIER TOUR, TU DOIS TOUJOURS GÉNÉRER UNE COMMANDE [CMD]...[/CMD] POUR EFFECTUER L'ACTION !
-   Tu as INTERDICTION de générer [REPORT] au premier tour. Tu dois d'abord agir.
-2. Pour exécuter une commande PowerShell, écris : [CMD]ta_commande_ici[/CMD]
-3. N'utilise [REPORT]...[/REPORT] QUE quand la commande a déjà été exécutée et a réussi !
-4. Avant de supprimer un fichier système, demande : [CONFIRM]action[/CONFIRM]
+1. NE FAIS AUCUNE EXPLICATION. AUCUN COMMENTAIRE. AUCUN BLOC DE RÉFLEXION.
+2. Pour agir sur le système, écris DIRECTEMENT et UNIQUEMENT : [CMD]ta_commande_powershell[/CMD]
+3. N'utilise [REPORT]...[/REPORT] QUE quand les commandes demandées ont déjà été exécutées avec succès !
+4. Utilise $env:USERPROFILE\\Desktop pour le Bureau, $env:USERPROFILE\\Documents pour Documents.
+5. Sois direct, rapide et précis.
 
 EXEMPLES :
 User: Crée un document texte sur mon bureau avec écrit hello world
-Assistant: [CMD] New-Item -Path "$env:USERPROFILE\\Desktop\\hello.txt" -ItemType File -Value "hello world" -Force [/CMD]
+Assistant: [CMD]New-Item -Path "$env:USERPROFILE\\Desktop\\test.txt" -ItemType File -Value "hello world" -Force[/CMD]
 
 User: Ouvre le bloc-notes
-Assistant: [CMD] Start-Process "notepad.exe" [/CMD]
+Assistant: [CMD]Start-Process "notepad.exe"[/CMD]
 
-User: Résultats des commandes: (succès)
-Assistant: [REPORT] Le document texte a été créé sur votre bureau avec succès. [/REPORT]`;
+User: Résultats des commandes:
+$ New-Item ...
+(succès)
+Assistant: [REPORT]Le fichier test.txt a bien été créé sur votre bureau.[/REPORT]`;
 
     const history = [
       { role: 'system', content: systemPrompt },
@@ -328,11 +348,23 @@ Assistant: [REPORT] Le document texte a été créé sur votre bureau avec succ�
 
     let totalCmdsExecuted = 0;
 
-    // Boucle infinie — seul [REPORT] (après exécution de commande), une erreur, ou une annulation l'arrête
+    // Boucle agentique bornée à 10 itérations max
     while (true) {
       iteration++;
 
-      // Vérifier si la tâche a été annulée depuis l'UI (web ou PC)
+      if (iteration > 10) {
+        var maxErr = 'Limite d\'itérations atteinte (10 étapes max).';
+        steps.push({ text: '\u2717 ' + maxErr, ts: new Date().toISOString() });
+        await cmdRef.update({ step: maxErr, steps, updatedAt: new Date() });
+        return { error: maxErr, steps };
+      }
+
+      // Vérifier si la tâche a été annulée depuis l'UI (overlay, stop button, Firestore)
+      if (_currentRunningCancel) {
+        console.log('[Agent] Tâche annulée localement');
+        return { error: 'Annulé par l utilisateur', steps, cancelled: true };
+      }
+
       try {
         const snap = await cmdRef.get();
         if (snap.exists && snap.data().status === 'cancelled') {
@@ -348,7 +380,11 @@ Assistant: [REPORT] Le document texte a été créé sur votre bureau avec succ�
           window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: raisonnement } }));
         }
 
-        const data = await window.eva.system.llmChat(history);
+        const data = await window.eva.system.llmChat(history, {
+          maxTokens: 384,
+          temperature: 0.1,
+          stopTriggers: ['[/CMD]', '[/REPORT]', '[/CONFIRM]']
+        });
         if (data.choices && data.choices[0] && data.choices[0].message) {
           data.message = data.choices[0].message;
         }
@@ -358,7 +394,7 @@ Assistant: [REPORT] Le document texte a été créé sur votre bureau avec succ�
         history.push({ role: 'assistant', content: text });
 
         // Demande de confirmation (fichiers sensibles)
-        var confirmMatch = text.match(/\[CONFIRM\]([\s\S]*?)\[\/CONFIRM\]/i);
+        var confirmMatch = text.match(/\[CONFIRM\]([\s\S]*?)(?:\[\/CONFIRM\]|$)/i);
         if (confirmMatch) {
           var confirmText = confirmMatch[1].trim();
           var stepConf = '\u26a0\ufe0f Confirmation requise: ' + confirmText.substring(0, 80);
@@ -371,11 +407,16 @@ Assistant: [REPORT] Le document texte a été créé sur votre bureau avec succ�
           continue;
         }
 
-        // 1. Extraire les commandes à exécuter
+        // 1. Extraire les commandes à exécuter (tolère balise fermante tronquée par stop trigger)
         var allCmds = [];
-        var cmdRegex = /\[CMD\]([\s\S]*?)\[\/CMD\]/gi;
+        var cmdRegex = /\[CMD\]([\s\S]*?)(?:\[\/CMD\]|$)/gi;
         var m;
-        while ((m = cmdRegex.exec(text)) !== null) allCmds.push(m[1].trim());
+        while ((m = cmdRegex.exec(text)) !== null) {
+          var rawCmd = m[1].trim();
+          if (rawCmd && !rawCmd.startsWith('[REPORT]')) {
+            allCmds.push(rawCmd);
+          }
+        }
 
         // Fallback : blocs de code powershell si le modèle oublie les balises [CMD]
         if (allCmds.length === 0) {
@@ -413,7 +454,7 @@ Assistant: [REPORT] Le document texte a été créé sur votre bureau avec succ�
         }
 
         // 2. Rapport final (uniquement si au moins une commande a été exécutée)
-        var reportMatch = text.match(/\[REPORT\]([\s\S]*?)\[\/REPORT\]/i);
+        var reportMatch = text.match(/\[REPORT\]([\s\S]*?)(?:\[\/REPORT\]|$)/i);
         if (reportMatch) {
           if (totalCmdsExecuted === 0) {
             console.warn('[Agent LLM] Le LLM a renvoyé un [REPORT] sans exécuter aucune commande. Rejet et demande de commande.');

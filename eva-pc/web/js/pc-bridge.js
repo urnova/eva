@@ -174,6 +174,14 @@
       if (action === 'wakeword' && data) {
         console.log('[PC Bridge] Wake word via overlay:', data);
         _submitWakeWordCommand(data);
+      } else if (action === 'cancel') {
+        console.log('[PC Bridge] Action Annuler reçue depuis l\'overlay');
+        if (typeof window.cancelCurrentCloudWorksTask === 'function') {
+          window.cancelCurrentCloudWorksTask();
+        }
+        if (typeof window.stopGeneration === 'function') {
+          window.stopGeneration();
+        }
       }
     });
   }

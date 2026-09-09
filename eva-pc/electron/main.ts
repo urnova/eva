@@ -1036,7 +1036,15 @@ async function startLLM(): Promise<boolean> {
     llamaModel = await llamaInstance.loadModel({ modelPath: resolvedModelFile });
     
     console.log('[LLM] Création du contexte...');
-    llamaContext = await llamaModel.createContext({ contextSize: 4096 });
+    const os = await import('os');
+    const cpuCount = os.cpus().length;
+    // Sur CPU, limiter les threads (ex: max 4) pour ne jamais geler le PC ou vider la batterie d'un portable
+    const optimalThreads = Math.min(4, Math.max(1, Math.floor(cpuCount / 2)));
+    console.log(`[LLM] Création du contexte (contextSize: 2048, threads: ${optimalThreads})...`);
+    llamaContext = await llamaModel.createContext({
+      contextSize: 2048,
+      threads: optimalThreads
+    });
     
     console.log('[LLM] Moteur LLM prêt !');
     _notifyLLMReady();
@@ -1080,7 +1088,7 @@ function _notifyLLMReady() {
   _rebuildTrayMenu();
 }
 
-ipcMain.handle('llm:chat', async (event, messages) => {
+ipcMain.handle('llm:chat', async (event, messages, options?: { maxTokens?: number; stopTriggers?: string[]; temperature?: number }) => {
   resetLLMTimer();
 
   const wasRunning = !!llamaContext;
@@ -1117,9 +1125,16 @@ ipcMain.handle('llm:chat', async (event, messages) => {
 
     session.setChatHistory(history);
     
+    const maxToks = (options && typeof options.maxTokens === 'number') ? options.maxTokens : 512;
+    const temp = (options && typeof options.temperature === 'number') ? options.temperature : 0.1;
+    const stopTriggers = (options && Array.isArray(options.stopTriggers))
+      ? options.stopTriggers
+      : ['[/CMD]', '[/REPORT]', '[/CONFIRM]'];
+
     const responseText = await session.prompt(promptMsg, {
-      maxTokens: 2048,
-      temperature: 0.2
+      maxTokens: maxToks,
+      temperature: temp,
+      customStopTriggers: stopTriggers
     });
     
     try { sequence.dispose(); } catch(e) {}
