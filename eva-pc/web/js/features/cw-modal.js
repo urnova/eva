@@ -22,6 +22,7 @@
       font-family:'Inter','Space Grotesk',system-ui,sans-serif;
       box-shadow:0 4px 24px rgba(0,0,0,0.35),0 0 0 1px rgba(255,255,255,0.03);
       transition:border-color 0.4s ease;
+      width:100%; max-width:580px; box-sizing:border-box; clear:both;
     }
     .cw-tracker-card.done  { border-color:rgba(0,255,136,0.25); }
     .cw-tracker-card.error { border-color:rgba(255,77,109,0.25); }
@@ -60,12 +61,6 @@
       display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
     }
 
-    /* ── Inline Approval UI ── */
-    .cw-approval-ui {
-      background:rgba(0,0,0,0.2); border:1px solid rgba(255,136,0,0.15);
-      border-radius:10px; padding:14px; margin-bottom:12px;
-    }
-    .cw-approval-text { font-size:0.7em; color:#ffaa33; margin-bottom:10px; text-align:center; font-weight:600; }
     .cw-approval-device { font-size:0.65em; color:rgba(255,255,255,0.4); text-align:center; margin-bottom:14px; }
     .cw-approval-device span { color:#ff8800; background:rgba(255,136,0,0.1); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,136,0,0.2); }
     .cw-approval-actions { display:flex; gap:10px; }
@@ -173,14 +168,17 @@ function _getOrAppendTargetBubble() {
   var msgs = document.querySelectorAll('.message.eva, .msg-eva, [data-role="assistant"]');
   var lastMsg = msgs[msgs.length - 1];
   if (!lastMsg) {
-    var chatEl = document.getElementById('messagesArea') || document.getElementById('chatMessages') || document.getElementById('chat');
+    var chatEl = document.getElementById('messagesArea') || document.getElementById('chatMessages') || document.getElementById('chat') || document.getElementById('messagesList');
     if (chatEl) {
       lastMsg = document.createElement('div');
       lastMsg.className = 'message eva';
+      var c = document.createElement('div');
+      c.className = 'msg-content';
+      lastMsg.appendChild(c);
       chatEl.appendChild(lastMsg);
     }
   }
-  return lastMsg;
+  return lastMsg ? (lastMsg.querySelector('.msg-content') || lastMsg) : null;
 }
 
 function _generateTempId() {
@@ -410,6 +408,8 @@ function _addStep(cmdId, text, state, cmdText) {
 function _finalizeTracker(cmdId, result, status) {
   var card = document.getElementById('cwTracker-' + cmdId);
   if (!card) return;
+  if (card.dataset.finalized === '1') return;
+  card.dataset.finalized = '1';
   var badge = document.getElementById('cwts-' + cmdId);
   var titleEl = card.querySelector('.cw-tracker-title');
   var footer = document.getElementById('cwFooter-' + cmdId);
@@ -455,33 +455,44 @@ function _finalizeTracker(cmdId, result, status) {
   if (_activeTrackers[cmdId] && _activeTrackers[cmdId].unsub) _activeTrackers[cmdId].unsub();
   delete _activeTrackers[cmdId];
 
-  if (Object.keys(_activeTrackers).length === 0) {
-    if (window.S) window.S.cwRunning = false;
-    _restoreInputState();
-  }
-
+  // Laisser l'état bloqué (carré rouge) jusqu'à ce qu'EVA envoie le message de résumé
   setTimeout(function() {
     window.dispatchEvent(new CustomEvent('cw:generate-summary', { detail: { cmdId: cmdId, status: status, summary: summary, result: result } }));
-  }, 600);
+  }, 400);
 }
 
 window.addEventListener('cw:task-start', function(e) {
   var d = e.detail;
   if (!d || !d.cmdId) return;
-  if (!document.getElementById('cwTracker-' + d.cmdId)) {
-    window.appendCloudWorksTracker(d.cmdId, d.prompt || 'Tâche CloudWorks à distance');
+  if (!document.getElementById('cwTracker-' + d.cmdId) && !_activeTrackers[d.cmdId]) {
+    window.appendCloudWorksTracker(d.cmdId, d.prompt || 'Tâche CloudWorks');
     var badge = document.getElementById('cwts-' + d.cmdId);
-    if (badge) badge.textContent = '⟳ Distant';
+    if (badge) badge.textContent = '⟳ En cours';
   }
 });
 
 window.appendCloudWorksTracker = function(cmdId, prompt) {
   if (!window.db || !window.S || !window.S.user) return;
-  var uid = window.S.user.uid;
+  if (!cmdId) return;
 
-  var lastMsg = _getOrAppendTargetBubble();
+  // DÉDUPLICATION ABSOLUE : une seule carte et un seul listener par tâche
+  if (document.getElementById('cwTracker-' + cmdId)) {
+    console.log('[CW Tracker] Carte déjà présente dans le DOM pour', cmdId);
+    return;
+  }
+  if (_activeTrackers[cmdId]) {
+    console.log('[CW Tracker] Listener déjà actif pour', cmdId);
+    return;
+  }
+
+  var uid = window.S.user.uid;
+  var target = _getOrAppendTargetBubble();
   var card = _createTrackerCard(cmdId, prompt);
-  lastMsg.appendChild(card);
+  if (target) {
+    target.appendChild(card);
+    var chatArea = document.getElementById('messagesArea') || document.getElementById('chatMessages');
+    if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+  }
 
   _blockInputForCW();
   if (window.S) { window.S.cwRunning = true; window.S.busy = true; }
@@ -501,10 +512,12 @@ window.appendCloudWorksTracker = function(cmdId, prompt) {
       }
 
       if (d.status === 'done' || d.status === 'error' || d.status === 'cancelled') {
-        if (d.result && d.result.steps && Array.isArray(d.result.steps)) {
+        var stepperEl = document.getElementById('cwtSteps-' + cmdId);
+        // Ne charger les étapes de Firestore QUE si le stepper est vide (ex: refresh)
+        if (stepperEl && stepperEl.children.length === 0 && d.result && d.result.steps && Array.isArray(d.result.steps)) {
           d.result.steps.forEach(function(s) {
             var text = typeof s === 'string' ? s : (s.text || JSON.stringify(s));
-            if (text !== tracker.lastStep) _addStep(cmdId, text, 'done');
+            _addStep(cmdId, text, 'done');
           });
         }
         _finalizeTracker(cmdId, d.result, d.status);
@@ -515,7 +528,7 @@ window.appendCloudWorksTracker = function(cmdId, prompt) {
 };
 
 /* ════════════════════════════════════════════════════════════
-   MESSAGE DE RÉSUMÉ EVA
+   MESSAGE DE RÉSUMÉ EVA & DÉBLOCAGE INPUT
 ════════════════════════════════════════════════════════════ */
 window.addEventListener('cw:generate-summary', function(e) {
   var detail = e.detail;
@@ -535,8 +548,18 @@ window.addEventListener('cw:generate-summary', function(e) {
     msg = "⚠️ **Erreur CloudWorks**\n\n" + (summary || "Erreur inconnue.") + "\n\nVeux-tu que je réessaie ?";
   }
 
+  // Nettoyer l'historique de réflexion pour éviter les faux panneaux 'Réflexion'
+  if (typeof window.clearThinkingHistory === 'function') window.clearThinkingHistory();
+
   if (typeof window.streamEvaMsg === 'function') window.streamEvaMsg(msg);
   else if (typeof window.addMessage === 'function') window.addMessage('assistant', msg);
+
+  // Débloquer l'input (remettre l'avion et masquer le carré rouge) UNE FOIS QU'EVA A FINI
+  if (window.S) {
+    window.S.cwRunning = false;
+    window.S.busy = false;
+  }
+  _restoreInputState();
 });
 
 console.log('[CW Modal] Chargé v3 ✓ — UI Orange & Inline Approvals');

@@ -310,15 +310,23 @@ window.addFinalThinkingStep = function(label, detail) {
 
 /* Stoppe la génération en cours */
 window.stopGeneration = function() {
-  if (!S.busy) return;
+  if (S.cwRunning && typeof window.cancelCloudWorksTask === 'function') {
+    if (window._cwActiveTrackers) {
+      Object.keys(window._cwActiveTrackers).forEach(window.cancelCloudWorksTask);
+    }
+  }
   _generationAborted = true;
+  S.cwRunning = false;
+  S.busy = false;
   hideTyping();
   streamEvaMsg('*Génération interrompue par l\'utilisateur.*');
   toast('Génération arrêtée', 'info');
 };
 
 function hideTyping() {
-  S.busy = false;
+  if (!S.cwRunning) {
+    S.busy = false;
+  }
   if (_thinkTimer) { clearInterval(_thinkTimer); _thinkTimer = null; }
   var el = document.getElementById('typingInd');
   if (el) el.remove();
@@ -326,14 +334,16 @@ function hideTyping() {
   if (window.EvaCharacter && typeof window.EvaCharacter.setIdle === 'function') {
     try { window.EvaCharacter.setIdle(); } catch(_) {}
   }
-  /* Restaurer le bouton Envoyer */
-  var sendBtn = document.getElementById('sendBtn');
-  var stopBtn = document.getElementById('stopBtn');
-  if (sendBtn && stopBtn) {
-    stopBtn.style.display = 'none';
-    sendBtn.style.display = 'inline-flex';
-    var input = document.getElementById('msgInput');
-    sendBtn.disabled = !(input && input.value.trim()) && (!S.images || !S.images.length) && (!S.documents || !S.documents.length);
+  /* Ne restaurer le bouton Envoyer QUE si aucune tâche CloudWorks n'est en cours */
+  if (!S.cwRunning) {
+    var sendBtn = document.getElementById('sendBtn');
+    var stopBtn = document.getElementById('stopBtn');
+    if (sendBtn && stopBtn) {
+      stopBtn.style.display = 'none';
+      sendBtn.style.display = 'inline-flex';
+      var input = document.getElementById('msgInput');
+      sendBtn.disabled = !(input && input.value.trim()) && (!S.images || !S.images.length) && (!S.documents || !S.documents.length);
+    }
   }
 }
 
@@ -720,11 +730,15 @@ async function handleSend() {
   var origSys = window.EVA_SYSTEM_PROMPT;
   window.EVA_SYSTEM_PROMPT = sysPrompt;
 
-  window.setThinkingPhase(_SVG_THINK_SPARK, 'Génère...', 'Je compose ma réponse...');
-
   var result = await window.EVAChatHandler.sendMessage(msgContent, { tone: S.tone });
 
   window.EVA_SYSTEM_PROMPT = origSys;
+
+  var hasCW = result.content && /\[ACTION:\s*\{[^}]*"(agentic_task|screenshot|sysinfo|run_script|lock|sleep|shutdown|open_ide_file)"/i.test(result.content);
+  if (hasCW) {
+    S.cwRunning = true;
+    S.busy = true;
+  }
   hideTyping();
 
   /* — Si l'utilisateur a cliqué Stop pendant la génération, on ignore la réponse — */
@@ -906,7 +920,9 @@ function streamEvaMsg(content) {
     thoughtPanel.appendChild(thoughtHeader);
     thoughtPanel.appendChild(thoughtBody);
     msgContent.appendChild(thoughtPanel);
+    _thinkHistory = [];
   }
+  window.clearThinkingHistory = function() { _thinkHistory = []; };
 
   // Bulle
   var bubble = document.createElement('div');

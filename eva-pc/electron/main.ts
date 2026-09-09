@@ -872,10 +872,11 @@ ipcMain.handle('terminal:kill', (_event, termId: string) => {
   return { success: false }
 })
 
-// â”€â”€â”€ IPC Handlers â€” System Commands â”€â”€â”€
+// ─── IPC Handlers — System Commands ───
 ipcMain.handle('system:exec', async (_event, cmd: string) => {
   return new Promise(resolve => {
-    child_process.exec(cmd, { timeout: 10000 }, (error, stdout, stderr) => {
+    const shell = process.platform === 'win32' ? 'powershell.exe' : '/bin/bash';
+    child_process.exec(cmd, { timeout: 30000, shell }, (error, stdout, stderr) => {
       if (error) resolve({ success: false, error: error.message, stderr })
       else resolve({ success: true, stdout, stderr })
     })

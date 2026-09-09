@@ -284,26 +284,25 @@
      Boucle agentique LLM local
   ═══════════════════════════════════════════ */
   async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef) {
-    const systemPrompt = `Tu es l'Agent PC Autonome d'EVA. Ton unique rôle est d'agir comme un terminal PowerShell muet.
-TU NE DOIS SOUS AUCUN PRÉTEXTE RÉFLÉCHIR, PARLER OU DONNER DES EXPLICATIONS.
-TU N'ES PAS UN CHATBOT. TU ES UN EXÉCUTEUR DE COMMANDES.
+    const systemPrompt = `Tu es l'Agent PC Autonome d'EVA. Ton rôle est d'exécuter des commandes PowerShell sur Windows.
+TU NE DOIS PAS DONNER D'EXPLICATIONS NI DE CONSEILS. TU ES UN EXÉCUTEUR.
 
-RÈGLES ABSOLUES ET STRICTES :
-1. Pour exécuter une commande PowerShell, génère EXACTEMENT et UNIQUEMENT : [CMD]ta_commande_powershell_ici[/CMD]
-2. Pour signaler que l'ordre est accompli, génère EXACTEMENT et UNIQUEMENT : [REPORT]Tâche accomplie : explication de ce qui a été fait[/REPORT]
-3. Avant de supprimer un fichier important, génère EXACTEMENT et UNIQUEMENT : [CONFIRM]description de l'action[/CONFIRM]
+RÈGLES ABSOLUES :
+1. AU PREMIER TOUR, TU DOIS TOUJOURS GÉNÉRER UNE COMMANDE [CMD]...[/CMD] POUR EFFECTUER L'ACTION !
+   Tu as INTERDICTION de générer [REPORT] au premier tour. Tu dois d'abord agir.
+2. Pour exécuter une commande PowerShell, écris : [CMD]ta_commande_ici[/CMD]
+3. N'utilise [REPORT]...[/REPORT] QUE quand la commande a déjà été exécutée et a réussi !
+4. Avant de supprimer un fichier système, demande : [CONFIRM]action[/CONFIRM]
 
-EXEMPLES DE COMPORTEMENT ATTENDU :
+EXEMPLES :
 User: Crée un document texte sur mon bureau avec écrit hello world
-Assistant: [CMD] New-Item -Path "$env:USERPROFILE\Desktop\hello.txt" -ItemType File -Value "hello world" -Force [/CMD]
+Assistant: [CMD] New-Item -Path "$env:USERPROFILE\\Desktop\\hello.txt" -ItemType File -Value "hello world" -Force [/CMD]
 
 User: Ouvre le bloc-notes
 Assistant: [CMD] Start-Process "notepad.exe" [/CMD]
 
-User: (Résultat de la commande: succès)
-Assistant: [REPORT] J'ai créé le fichier hello.txt sur le bureau. [/REPORT]
-
-INTERDIT : Ne dis jamais "Voici la commande", "Je vais le faire", ou "EVA: web_create_document". Écris uniquement les balises [CMD] ou [REPORT].`;
+User: Résultats des commandes: (succès)
+Assistant: [REPORT] Le document texte a été créé sur votre bureau avec succès. [/REPORT]`;
 
     const history = [
       { role: 'system', content: systemPrompt },
@@ -327,7 +326,9 @@ INTERDIT : Ne dis jamais "Voici la commande", "Je vais le faire", ou "EVA: web_c
     await cmdRef.update({ step: firstStep, steps, updatedAt: new Date() });
     window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: firstStep } }));
 
-    // Boucle infinie — seul [REPORT], une erreur, ou une annulation l'arrête
+    let totalCmdsExecuted = 0;
+
+    // Boucle infinie — seul [REPORT] (après exécution de commande), une erreur, ou une annulation l'arrête
     while (true) {
       iteration++;
 
@@ -352,17 +353,9 @@ INTERDIT : Ne dis jamais "Voici la commande", "Je vais le faire", ou "EVA: web_c
           data.message = data.choices[0].message;
         }
         const text = (data.message && data.message.content) ? data.message.content : '';
-        if (!text) { history.push({ role: 'user', content: 'Utilise [CMD] ou [REPORT].' }); continue; }
+        console.log('[Agent LLM step ' + iteration + ' raw output]:', text);
+        if (!text) { history.push({ role: 'user', content: 'Utilise [CMD] pour agir sur le système.' }); continue; }
         history.push({ role: 'assistant', content: text });
-
-        // Rapport final ?
-        var reportMatch = text.match(/\[REPORT\]([\s\S]*?)\[\/REPORT\]/i);
-        if (reportMatch) {
-          finalReport = reportMatch[1].trim();
-          steps.push({ text: '\u2713 ' + finalReport.substring(0, 120), ts: new Date().toISOString() });
-          await cmdRef.update({ step: 'Termin\u00e9 \u2713', steps, updatedAt: new Date() });
-          break;
-        }
 
         // Demande de confirmation (fichiers sensibles)
         var confirmMatch = text.match(/\[CONFIRM\]([\s\S]*?)\[\/CONFIRM\]/i);
@@ -378,11 +371,20 @@ INTERDIT : Ne dis jamais "Voici la commande", "Je vais le faire", ou "EVA: web_c
           continue;
         }
 
-        // Commandes à exécuter (plusieurs possibles)
+        // 1. Extraire les commandes à exécuter
         var allCmds = [];
         var cmdRegex = /\[CMD\]([\s\S]*?)\[\/CMD\]/gi;
         var m;
         while ((m = cmdRegex.exec(text)) !== null) allCmds.push(m[1].trim());
+
+        // Fallback : blocs de code powershell si le modèle oublie les balises [CMD]
+        if (allCmds.length === 0) {
+          var codeBlockRegex = /```(?:powershell|cmd|sh|bash)?\s*\n([\s\S]*?)```/gi;
+          while ((m = codeBlockRegex.exec(text)) !== null) {
+            var raw = m[1].trim();
+            if (raw && !raw.startsWith('[REPORT]')) allCmds.push(raw);
+          }
+        }
 
         if (allCmds.length > 0) {
           var results = [];
@@ -401,14 +403,30 @@ INTERDIT : Ne dis jamais "Voici la commande", "Je vais le faire", ou "EVA: web_c
               steps.push({ text: stepResult, ts: new Date().toISOString() });
               await cmdRef.update({ step: stepResult, steps, updatedAt: new Date() });
               results.push('$ ' + cmd + '\n' + out);
+              totalCmdsExecuted++;
             } catch(e) {
               results.push('$ ' + cmd + '\nErreur: ' + e.message);
             }
           }
-          history.push({ role: 'user', content: 'R\u00e9sultats des commandes:\n' + results.join('\n---\n') + '\n\nContinue ou termine avec [REPORT].' });
-        } else {
-          history.push({ role: 'user', content: 'Utilise [CMD] commande [/CMD] pour agir, ou [REPORT] r\u00e9sum\u00e9 [/REPORT] pour finir.' });
+          history.push({ role: 'user', content: 'R\u00e9sultats des commandes:\n' + results.join('\n---\n') + '\n\nSi la tâche est finie, résume avec [REPORT]...[/REPORT]. Sinon continue avec [CMD]...[/CMD].' });
+          continue;
         }
+
+        // 2. Rapport final (uniquement si au moins une commande a été exécutée)
+        var reportMatch = text.match(/\[REPORT\]([\s\S]*?)\[\/REPORT\]/i);
+        if (reportMatch) {
+          if (totalCmdsExecuted === 0) {
+            console.warn('[Agent LLM] Le LLM a renvoyé un [REPORT] sans exécuter aucune commande. Rejet et demande de commande.');
+            history.push({ role: 'user', content: 'ERREUR : Tu n\'as exécuté AUCUNE commande PowerShell ! Tu dois obligatoirement exécuter l\'action avec [CMD]commande[/CMD] avant d\'envoyer [REPORT]. Génère la commande PowerShell maintenant.' });
+            continue;
+          }
+          finalReport = reportMatch[1].trim();
+          steps.push({ text: '\u2713 ' + finalReport.substring(0, 120), ts: new Date().toISOString() });
+          await cmdRef.update({ step: 'Termin\u00e9 \u2713', steps, updatedAt: new Date() });
+          break;
+        }
+
+        history.push({ role: 'user', content: 'Utilise [CMD] commande [/CMD] pour exécuter une commande PowerShell, ou [REPORT] r\u00e9sum\u00e9 [/REPORT] pour finir.' });
       } catch(e) {
         var errMsg = e && e.message ? e.message : String(e);
         var stepErr = '\u2717 Erreur: ' + errMsg.substring(0, 120);
