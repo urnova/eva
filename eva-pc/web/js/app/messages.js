@@ -573,19 +573,12 @@ async function handleSend() {
     userCtx += '- Si CloudWorks est désactivé, dis-le à l\'utilisateur et propose de l\'activer dans les paramètres\n';
     userCtx += '- Identifie-toi comme étant sur ce PC précis, pas sur le web\n';
 
-    userCtx += '
-DÉTECTION AUTOMATIQUE CLOUDWORKS (TRES IMPORTANT) :
-';
-    userCtx += '1. Si l\'utilisateur mentionne un chemin EXPLICITE sur son système (sur mon Bureau, dans mes Documents, dans C:\, sur le disque dur, etc.) -> c\'est une tâche CloudWorks locale.
-';
-    userCtx += '2. INTERDICTION FORMELLE : N\'utilise JAMAIS l\'action "create_document" ou "create_file" pour des fichiers destinés au PC local. Ces outils créent des fichiers virtuels dans le chat web.
-';
-    userCtx += '3. Pour créer un vrai fichier sur le PC de l\'utilisateur, tu DOIS déléguer la tâche en utilisant [ACTION:{"type":"agentic_task","prompt":"Crée un fichier sur le bureau avec le contenu...","deviceId":"' + deviceId + '"}]
-';
-    userCtx += '4. Rédige le "prompt" de l\'agentic_task en langage naturel clair (ex: "Crée un document texte sur le bureau contenant Bonjour"). Ne génère pas de code ou de fausses fonctions comme web_create_document.
-';
-    userCtx += '5. Si la demande est générique sans chemin (ex: crée-moi un résumé), utilise create_document pour le générer dans le chat.
-';
+    userCtx += '\nDETECTION AUTOMATIQUE CLOUDWORKS (TRES IMPORTANT) :\n';
+    userCtx += '1. Si l\'utilisateur mentionne un chemin EXPLICITE sur son systeme -> c\'est une tache CloudWorks locale.\n';
+    userCtx += '2. INTERDICTION FORMELLE : N\'utilise JAMAIS create_document pour des fichiers destines au PC local.\n';
+    userCtx += '3. Pour creer un vrai fichier sur le PC, delegue avec [ACTION:{"type":"agentic_task","prompt":"...","deviceId":"' + deviceId + '"}]\n';
+    userCtx += '4. Redige le prompt en langage naturel.\n';
+    userCtx += '5. Si la demande est generique, utilise create_document.\n';
   } else {
     // === VERSION WEB ===
     userCtx += '\nENVIRONNEMENT : Tu tournes sur la version Web/Navigateur. Tu n\'es PAS sur le PC localement.\n';

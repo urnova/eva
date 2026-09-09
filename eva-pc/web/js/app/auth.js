@@ -1,4 +1,4 @@
-﻿/* ═══ AUTH ═══ */
+/* ═══ AUTH ═══ */
 function initAuth() {
   auth.onAuthStateChanged(function(user) {
     if (!user) { window.location.href = '/login'; return; }
@@ -24,19 +24,44 @@ function initAuth() {
       if (!window.eva && ua.os.name) osName = ua.os.name;
     }
     
-    db.collection('users').doc(user.uid).collection('sessions').doc(S.sessionId).set({
-      device: devType,
-      browser: browserName,
-      os: osName,
-      lastSeen: window.timestamp ? window.timestamp() : new Date(),
-      connectedAt: window.timestamp ? window.timestamp() : new Date(),
-      online: true
-    }, { merge: true });
+    // Vérifier si le token ou la session a été révoqué(e)
+    user.getIdToken(true).catch(function(err) {
+      if (err && (err.code === 'auth/user-token-expired' || err.code === 'auth/user-disabled' || err.code === 'auth/invalid-user-token' || err.code === 'auth/user-not-found')) {
+        console.warn('[AUTH] Session ou token Firebase révoqué :', err);
+        auth.signOut().then(function() {
+          localStorage.removeItem('eva_session_id');
+          window.location.href = '/login';
+        });
+      }
+    });
+
+    var sessionRef = db.collection('users').doc(user.uid).collection('sessions').doc(S.sessionId);
+    sessionRef.get().then(function(docSnap) {
+      if (docSnap.exists && docSnap.data().revoke === true) {
+        console.warn('[AUTH] Session marquée comme révoquée, déconnexion immédiate...');
+        auth.signOut().then(function() {
+          localStorage.removeItem('eva_session_id');
+          window.location.href = '/login';
+        });
+        return;
+      }
+
+      sessionRef.set({
+        device: devType,
+        browser: browserName,
+        os: osName,
+        lastSeen: window.timestamp ? window.timestamp() : new Date(),
+        connectedAt: window.timestamp ? window.timestamp() : new Date(),
+        online: true
+      }, { merge: true });
+    }).catch(function(e) {
+      console.warn('[AUTH] Erreur lecture session locale :', e);
+    });
     
     // Keep alive every 5 minutes
     setInterval(function() {
       if (S.user) {
-        db.collection('users').doc(S.user.uid).collection('sessions').doc(S.sessionId).update({
+        sessionRef.update({
           lastSeen: window.timestamp ? window.timestamp() : new Date(),
           online: true
         }).catch(function(){});
@@ -45,24 +70,20 @@ function initAuth() {
     
     window.addEventListener('beforeunload', function() {
       if (S.user && S.sessionId) {
-        db.collection('users').doc(S.user.uid).collection('sessions').doc(S.sessionId).update({
+        sessionRef.update({
           online: false,
           lastSeen: window.timestamp ? window.timestamp() : new Date()
         }).catch(function(){});
       }
     });
 
-    // Écouter si la session a été révoquée
-    db.collection('users').doc(user.uid).collection('sessions').doc(S.sessionId).onSnapshot(function(doc) {
+    // Écouter si la session a été révoquée en direct
+    sessionRef.onSnapshot(function(doc) {
       if (doc.exists && doc.data().revoke === true) {
+        console.warn('[AUTH] Session révoquée en temps réel');
         auth.signOut().then(function() {
           localStorage.removeItem('eva_session_id');
-          window.location.reload();
-        });
-      } else if (!doc.exists) {
-        auth.signOut().then(function() {
-          localStorage.removeItem('eva_session_id');
-          window.location.reload();
+          window.location.href = '/login';
         });
       }
     });
