@@ -580,8 +580,13 @@ async function handleSend() {
     userCtx += '\nRÈGLES IMPORTANTES POUR CE PC :\n';
     userCtx += '- Pour toute action système sur CE PC, génère [ACTION:{...}] avec "deviceId":"' + deviceId + '"\n';
     userCtx += '- EXÉCUTION INSTANTANÉE (CRITIQUE) : Pour toute tâche sur ce PC (fichiers, dossiers, navigation, scripts), inclus TOUJOURS le script PowerShell direct et complet dans la propriété "command" pour une exécution immédiate sans latence :\n';
-    userCtx += '  [ACTION:{"type":"agentic_task","prompt":"Description courte","command":"Script PowerShell direct avec chemins $env:USERPROFILE\\\\Desktop...","deviceId":"' + deviceId + '"}]\n';
-    userCtx += '  Règles PowerShell : Chemins par défaut $env:USERPROFILE\\Desktop pour le Bureau. Crée TOUJOURS les dossiers avant les fichiers (New-Item -ItemType Directory -Force). Ajoute -Force partout. Pour ouvrir Edge ou une URL : Start-Process msedge "URL".\n';
+    userCtx += '  [ACTION:{"type":"agentic_task","prompt":"Description courte","command":"Script PowerShell direct avec chemins obligatoirement entre guillemets doubles...","deviceId":"' + deviceId + '"}]\n';
+    userCtx += '  RÈGLES POWERSHELL OBLIGATOIRES :\n';
+    userCtx += '  1. GUILLEMETS DOUBLES OBLIGATOIRES AUTOUR DE CHAQUE CHEMIN : Ex: "$env:USERPROFILE\\Desktop\\Mon Fichier.txt", "$env:USERPROFILE\\Desktop\\Fichiers Test". Ne JAMAIS écrire de chemin sans guillemets !\n';
+    userCtx += '  2. Créer TOUJOURS les dossiers AVANT de déplacer ou créer des fichiers dedans : New-Item -Path "$env:USERPROFILE\\Desktop\\Fichiers Test" -ItemType Directory -Force;\n';
+    userCtx += '  3. Déplacer des fichiers : Move-Item -Path "$env:USERPROFILE\\Desktop\\test1.txt" -Destination "$env:USERPROFILE\\Desktop\\Fichiers Test" -Force;\n';
+    userCtx += '  4. Créer des fichiers texte avec contenu : Set-Content -Path "$env:USERPROFILE\\Desktop\\test1.txt" -Value \'Hello World 1\' -Encoding utf8 -Force;\n';
+    userCtx += '  5. Pour ouvrir Edge ou une URL : Start-Process msedge "URL";\n';
     userCtx += '- Si CloudWorks est désactivé, dis-le à l\'utilisateur et propose de l\'activer dans les paramètres\n';
     userCtx += '- Identifie-toi comme étant sur ce PC précis, pas sur le web\n';
 
@@ -674,7 +679,11 @@ async function handleSend() {
         'Dès que l\'utilisateur demande d\'effectuer une action sur son PC (créer/supprimer/déplacer des fichiers ou dossiers, ouvrir Edge/navigateur, lancer une vidéo, ouvrir une application, ou message contenant [CloudWorks]) :\n' +
         'TU DOIS OBLIGATOIREMENT GÉNÉRER LE BLOC [ACTION:{"type":"agentic_task","prompt":"...","command":"...","deviceId":"' + deviceId + '"}] !\n' +
         'IL EST FORMELLEMENT INTERDIT DE RÉPONDRE AVEC UN PLAN DE TEXTE SANS CE BLOC ACTION !\n' +
-        'Dans la propriété "command", écris TOUJOURS le script PowerShell direct complet avec chemins $env:USERPROFILE\\Desktop et -Force pour une exécution instantanée sans latence.\n' +
+        'Dans la propriété "command", écris TOUJOURS le script PowerShell direct complet avec :\n' +
+        '- Chemins OBLIGATOIREMENT entre guillemets doubles (ex: "$env:USERPROFILE\\Desktop\\test1.txt", "$env:USERPROFILE\\Desktop\\Fichiers Test") !\n' +
+        '- Crée TOUJOURS les dossiers AVANT de déplacer ou créer des fichiers dedans (New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier" -ItemType Directory -Force) !\n' +
+        '- Déplacement de fichiers : Move-Item -Path "$env:USERPROFILE\\Desktop\\test1.txt" -Destination "$env:USERPROFILE\\Desktop\\Dossier" -Force\n' +
+        '- Ajoute -Force partout pour une exécution instantanée sans demande de confirmation.\n' +
         'Format de réponse obligatoire : Une courte phrase d\'introduction amicale (ex: "Je m\'en occupe tout de suite !") suivie IMMÉDIATEMENT du bloc ACTION.\n\n---\n\n';
     }
 
@@ -693,7 +702,7 @@ async function handleSend() {
 
   var msgContent = text;
   if (isCWPCTask && window.eva) {
-    msgContent = '[RAPPEL SYSTÈME : Action PC locale demandée. Tu DOIS inclure le bloc ACTION à la fin de ta réponse : [ACTION:{"type":"agentic_task","prompt":"...","command":"<Script PowerShell direct avec chemins $env:USERPROFILE\\\\Desktop et -Force>","deviceId":"' + deviceId + '"}]. INTERDICTION de répondre sans ce bloc ACTION !]\n\n' + msgContent;
+    msgContent = '[RAPPEL SYSTÈME : Action PC locale demandée. Tu DOIS inclure le bloc ACTION à la fin de ta réponse : [ACTION:{"type":"agentic_task","prompt":"...","command":"<Script PowerShell direct complet avec chemins obligatoirement entre guillemets doubles et -Force>","deviceId":"' + deviceId + '"}]. INTERDICTION de répondre sans ce bloc ACTION !]\n\n' + msgContent;
   }
     if (allImages.length) {
       window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine votre image...');

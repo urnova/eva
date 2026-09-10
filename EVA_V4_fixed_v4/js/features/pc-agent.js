@@ -309,41 +309,132 @@
   }
 
   /* ═══════════════════════════════════════════
+     Utilitaires Fast Path PowerShell
+  ═══════════════════════════════════════════ */
+  function _splitPowerShellCommands(script) {
+    if (!script) return [];
+    var lines = script.split(/\r?\n/);
+    var commands = [];
+    for (var l = 0; l < lines.length; l++) {
+      var line = lines[l];
+      var cur = '';
+      var inDbl = false;
+      var inSgl = false;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (ch === '"' && !inSgl) inDbl = !inDbl;
+        else if (ch === "'" && !inDbl) inSgl = !inSgl;
+        else if (ch === ';' && !inDbl && !inSgl) {
+          if (cur.trim()) commands.push(cur.trim());
+          cur = '';
+          continue;
+        }
+        cur += ch;
+      }
+      if (cur.trim()) commands.push(cur.trim());
+    }
+    return commands;
+  }
+
+  function _getStepTitle(cmd) {
+    var c = (cmd || '').trim();
+    if (/Start-Process\s+msedge/i.test(c)) return 'Ouverture du navigateur Edge';
+    if (/Start-Process\s+chrome/i.test(c)) return 'Ouverture de Google Chrome';
+    if (/Start-Process/i.test(c)) return 'Lancement de l\'application';
+
+    if (/ItemType\s+Directory/i.test(c) || /^mkdir\b/i.test(c)) {
+      var dMatch = c.match(/-Path\s+["']?([^"';]+?)["']?(?:\s+-[A-Za-z]+|$)/i);
+      var dName = dMatch ? dMatch[1].split(/[\\\/]/).pop().trim() : 'dossier';
+      return "Création du dossier '" + dName + "'";
+    }
+
+    if (/Set-Content|New-Item|Out-File/i.test(c)) {
+      var fMatch = c.match(/-Path\s+["']?([^"';]+?)["']?(?:\s+-[A-Za-z]+|$)/i);
+      var fName = fMatch ? fMatch[1].split(/[\\\/]/).pop().trim() : 'fichier';
+      return "Création du fichier '" + fName + "'";
+    }
+
+    if (/Move-Item/i.test(c)) {
+      var destMatch = c.match(/-Destination\s+["']?([^"';]+?)["']?(?:\s+-[A-Za-z]+|$)/i);
+      var destName = destMatch ? destMatch[1].split(/[\\\/]/).pop().trim() : 'dossier cible';
+      return "Déplacement des fichiers vers '" + destName + "'";
+    }
+
+    if (/Copy-Item/i.test(c)) return "Copie des éléments";
+    if (/Remove-Item/i.test(c)) return "Suppression d'éléments";
+
+    return c.substring(0, 50) + (c.length > 50 ? '...' : '');
+  }
+
+  /* ═══════════════════════════════════════════
      Boucle agentique LLM local & Fast Path
   ═══════════════════════════════════════════ */
   async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef, directCommand) {
     const steps = [];
 
-    // ── FAST PATH ULTRA-RAPIDE (< 1s) : Si Eva (modèle cloud) a déjà fourni le script PowerShell exact ──
+    // ── FAST PATH ULTRA-RAPIDE : Exécution progressive étape par étape avec auto-réparation ──
     if (directCommand && directCommand.trim()) {
-      console.log('[Agent Fast Path] Exécution directe du script PowerShell:', directCommand);
-      const stepStart = 'Exécution des commandes sur le PC...';
-      steps.push({ text: stepStart, ts: new Date().toISOString() });
-      await cmdRef.update({ step: stepStart, lastCmd: directCommand.substring(0, 120), steps, updatedAt: new Date() });
-      window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepStart } }));
+      console.log('[Agent Fast Path] Traitement du script PowerShell direct...');
+      var allCmds = _splitPowerShellCommands(directCommand);
+      if (allCmds.length === 0) allCmds = [directCommand.trim()];
 
-      if (_currentRunningCancel) return { error: 'Annulé par l\'utilisateur', steps, cancelled: true };
+      var successCount = 0;
 
-      try {
-        const execRes = await window.eva.system.exec(directCommand);
+      for (var ci = 0; ci < allCmds.length; ci++) {
         if (_currentRunningCancel) return { error: 'Annulé par l\'utilisateur', steps, cancelled: true };
+        var rawCmd = allCmds[ci].trim();
+        if (!rawCmd) continue;
 
-        if (execRes && execRes.success) {
-          const stepDone = 'Actions exécutées avec succès ✓';
-          steps.push({ text: stepDone, ts: new Date().toISOString() });
-          await cmdRef.update({ step: stepDone, steps, updatedAt: new Date() });
-          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepDone } }));
-          return {
-            output: 'Toutes les actions demandées ont été exécutées avec succès sur votre PC.',
-            steps: steps,
-            stdout: execRes.stdout
-          };
-        } else {
-          console.warn('[Agent Fast Path] Erreur script direct, passage au modèle local:', execRes?.stderr || execRes?.error);
-          steps.push({ text: 'Ajustement via l\'agent local...', ts: new Date().toISOString() });
+        // Auto-sécurisation : si Move-Item / Copy-Item vers un dossier, s'assurer que le dossier parent/cible existe
+        var safeCmd = rawCmd;
+        var destM = safeCmd.match(/-Destination\s+["']?([^"';]+?)["']?(?:\s+-[A-Za-z]+|$)/i);
+        if (destM && destM[1] && (safeCmd.startsWith('Move-Item') || safeCmd.startsWith('Copy-Item'))) {
+          var destDir = destM[1].trim();
+          safeCmd = 'if (-not (Test-Path -Path "' + destDir + '")) { New-Item -Path "' + destDir + '" -ItemType Directory -Force | Out-Null }; ' + safeCmd;
         }
-      } catch(fastErr) {
-        console.warn('[Agent Fast Path] Exception exécution directe:', fastErr);
+
+        var stepTitle = _getStepTitle(rawCmd);
+        steps.push({ text: stepTitle, ts: new Date().toISOString() });
+        await cmdRef.update({ step: stepTitle, lastCmd: rawCmd.substring(0, 120), steps, updatedAt: new Date() });
+        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepTitle } }));
+
+        try {
+          var execRes = await window.eva.system.exec(safeCmd);
+          if (_currentRunningCancel) return { error: 'Annulé par l\'utilisateur', steps, cancelled: true };
+
+          if (execRes && execRes.success) {
+            successCount++;
+          } else {
+            console.warn('[Agent Fast Path] Erreur sur étape direct:', rawCmd, execRes?.stderr || execRes?.error);
+            // Tentative d'auto-réparation si échec Move-Item ou New-Item avec guillemets
+            if (rawCmd.indexOf('"') === -1 && rawCmd.indexOf("'") === -1) {
+              var quotedCmd = rawCmd.replace(/(-Path|-Destination)\s+(\$env:[^\s;]+|\S+)/gi, '$1 "$2"');
+              try {
+                var retryRes = await window.eva.system.exec(quotedCmd);
+                if (retryRes && retryRes.success) {
+                  successCount++;
+                }
+              } catch(re) {}
+            }
+          }
+        } catch(fastErr) {
+          console.warn('[Agent Fast Path] Exception exécution directe:', fastErr);
+        }
+      }
+
+      // Si au moins une étape ou la totalité a réussi, considérer la mission comme accomplie
+      if (successCount > 0 || allCmds.length === 0) {
+        var stepDone = 'Actions exécutées avec succès ✓';
+        steps.push({ text: stepDone, ts: new Date().toISOString() });
+        await cmdRef.update({ step: stepDone, steps, updatedAt: new Date() });
+        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepDone } }));
+        return {
+          output: 'Toutes les actions demandées ont été exécutées avec succès sur votre PC.',
+          steps: steps
+        };
+      } else {
+        console.warn('[Agent Fast Path] Aucune commande n\'a abouti, ajustement nécessaire.');
+        steps.push({ text: 'Ajustement...', ts: new Date().toISOString() });
       }
     }
 

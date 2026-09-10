@@ -889,7 +889,10 @@ let activeExecProcess: any = null;
 ipcMain.handle('system:exec', async (_event, cmd: string) => {
   return new Promise(resolve => {
     const shell = process.platform === 'win32' ? 'powershell.exe' : '/bin/bash';
-    const proc = child_process.exec(cmd, { timeout: 30000, shell }, (error, stdout, stderr) => {
+    const fullCmd = process.platform === 'win32'
+      ? `$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ${cmd}`
+      : cmd;
+    const proc = child_process.exec(fullCmd, { timeout: 45000, shell }, (error, stdout, stderr) => {
       activeExecProcess = null;
       if (error) resolve({ success: false, error: error.message, stderr })
       else resolve({ success: true, stdout, stderr })
