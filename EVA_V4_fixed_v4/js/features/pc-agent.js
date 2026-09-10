@@ -305,13 +305,17 @@
   ═══════════════════════════════════════════ */
   async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef) {
     const systemPrompt = `Tu es l'Agent PC Windows d'EVA. RÈGLES ABSOLUES :
-1. Réponds UNIQUEMENT par des commandes PowerShell valides dans un bloc [CMD]commandes[/CMD]. AUCUN texte explicatif ni commentaire.
-2. Chemins : Bureau = $env:USERPROFILE\\Desktop | Documents = $env:USERPROFILE\\Documents.
-3. Pour plusieurs fichiers ou dossiers, mets TOUTES les commandes PowerShell dans le MÊME bloc [CMD] séparées par des sauts de ligne.
-4. Exemples :
+1. Réponds UNIQUEMENT par des commandes PowerShell valides dans un bloc [CMD]commandes[/CMD]. Commence directement par [CMD] sans AUCUN texte avant ni politesse.
+2. Chemins par défaut : Bureau = $env:USERPROFILE\\Desktop | Documents = $env:USERPROFILE\\Documents.
+3. Tâches complexes (plusieurs fichiers/dossiers/actions) : mets TOUTES les commandes PowerShell dans le MÊME bloc [CMD] séparées par des sauts de ligne ou points-virgules.
+4. Ordre logique obligatoire : crée TOUJOURS les dossiers AVANT d'y créer ou d'y déplacer des fichiers :
+   New-Item -Path "$env:USERPROFILE\\Desktop\\MonDossier" -ItemType Directory -Force
+5. Liens web / Vidéos : pour ouvrir un lien ou l'enregistrer dans un fichier, utilise directement l'URL demandée (ex Rick Roll: https://www.youtube.com/watch?v=dQw4w9WgXcQ) et/ou lance le navigateur avec Start-Process msedge "URL".
+6. Exemples :
 [CMD]New-Item -Path "$env:USERPROFILE\\Desktop\\test.txt" -ItemType File -Value "Hello" -Force[/CMD]
-[CMD]New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier" -ItemType Directory -Force
-New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier\\f1.txt" -ItemType File -Value "1" -Force[/CMD]`;
+[CMD]New-Item -Path "$env:USERPROFILE\\Desktop\\Fichiers Test" -ItemType Directory -Force
+New-Item -Path "$env:USERPROFILE\\Desktop\\Fichiers Test\\test1.txt" -ItemType File -Value "Hello World" -Force
+Start-Process msedge "https://www.youtube.com/watch?v=dQw4w9WgXcQ"[/CMD]`;
 
     const history = [
       { role: 'system', content: systemPrompt },
@@ -337,12 +341,12 @@ New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier\\f1.txt" -ItemType File -Valu
 
     let totalCmdsExecuted = 0;
 
-      // Boucle agentique bornée à 3 itérations max
+      // Boucle agentique bornée à 5 itérations max
       while (true) {
         iteration++;
 
-        if (iteration > 3) {
-          var maxErr = 'Limite d\'itérations atteinte (3 étapes max).';
+        if (iteration > 5) {
+          var maxErr = 'Limite d\'itérations atteinte (5 étapes max).';
           steps.push({ text: '\u2717 ' + maxErr, ts: new Date().toISOString() });
           await cmdRef.update({ step: maxErr, steps, updatedAt: new Date() });
           return { error: maxErr, steps };
@@ -370,7 +374,7 @@ New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier\\f1.txt" -ItemType File -Valu
           }
 
           const data = await window.eva.system.llmChat(history, {
-            maxTokens: 256,
+            maxTokens: 768,
             temperature: 0.1,
             sessionId: cmdId,
             stopTriggers: ['[/CMD]', '[/REPORT]', '[/CONFIRM]']
@@ -380,7 +384,7 @@ New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier\\f1.txt" -ItemType File -Valu
           }
           const text = (data.message && data.message.content) ? data.message.content : '';
           console.log('[Agent LLM step ' + iteration + ' raw output]:', text);
-          if (!text) { history.push({ role: 'user', content: 'Utilise [CMD] pour agir sur le système.' }); continue; }
+          if (!text) { history.push({ role: 'user', content: 'Génère directement la commande PowerShell dans [CMD]...[/CMD].' }); continue; }
           history.push({ role: 'assistant', content: text });
 
           // Demande de confirmation (fichiers sensibles)
@@ -408,12 +412,22 @@ New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier\\f1.txt" -ItemType File -Valu
             }
           }
 
-          // Fallback : blocs de code powershell si le modèle oublie les balises [CMD]
+          // Fallback 1 : blocs de code powershell si le modèle oublie les balises [CMD]
           if (allCmds.length === 0) {
             var codeBlockRegex = /```(?:powershell|cmd|sh|bash)?\s*\n([\s\S]*?)```/gi;
             while ((m = codeBlockRegex.exec(text)) !== null) {
               var raw = m[1].trim();
               if (raw && !raw.startsWith('[REPORT]')) allCmds.push(raw);
+            }
+          }
+
+          // Fallback 2 : lignes de commandes PowerShell brutes
+          if (allCmds.length === 0) {
+            var rawLines = text.split('\n').map(function(l){ return l.trim(); }).filter(function(l){
+              return /^(New-Item|Start-Process|Move-Item|Copy-Item|Remove-Item|Set-Content|Add-Content|Get-ChildItem|mkdir|del|rm|copy|move)\b/i.test(l);
+            });
+            if (rawLines.length > 0) {
+              allCmds.push(rawLines.join('\n'));
             }
           }
 
@@ -452,14 +466,22 @@ New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier\\f1.txt" -ItemType File -Valu
               break;
             }
 
-            // 2) Pour les actions directes (créer, ouvrir, fermer, supprimer, lancer, etc.)
-            // si toutes les commandes ont réussi, terminer immédiatement sans second appel LLM lourd !
+            // 2) Pour les actions directes : terminer immédiatement avec un résumé propre
             var isDirectAction = /(crée|cree|créer|creer|écris|ecris|écrire|ecrire|ajoute|ajouter|supprime|supprimer|efface|effacer|ouvre|ouvrir|ferme|fermer|lance|lancer|tue|tuer|kill|déplace|deplace|copie|copier|installe|installer)/i.test(userPrompt);
             if (allSucceeded && isDirectAction) {
-              finalReport = 'Action exécutée avec succès : ' + allCmds.map(function(c){ return c.substring(0, 80); }).join(' ; ');
+              finalReport = 'Toutes les actions demandées ont été exécutées avec succès sur votre PC.';
               steps.push({ text: '\u2713 ' + finalReport, ts: new Date().toISOString() });
               await cmdRef.update({ step: 'Termin\u00e9 \u2713', steps, updatedAt: new Date() });
               break;
+            }
+
+            // Si échec : demander au modèle de corriger spécifiquement l'erreur
+            if (!allSucceeded) {
+              history.push({
+                role: 'user',
+                content: 'Des erreurs sont survenues lors de l\'exécution :\n' + results.join('\n---\n') + '\n\nAnalyse l\'erreur ci-dessus, corrige les chemins ou la syntaxe, et réponds UNIQUEMENT avec la commande PowerShell corrigée dans [CMD]...[/CMD].'
+              });
+              continue;
             }
 
             history.push({ role: 'user', content: 'R\u00e9sultats des commandes:\n' + results.join('\n---\n') + '\n\nSi la tâche est finie, résume avec [REPORT]...[/REPORT]. Ne génère plus de commande.' });

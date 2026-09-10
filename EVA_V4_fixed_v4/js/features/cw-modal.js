@@ -571,11 +571,11 @@ window.addEventListener('cw:generate-summary', async function(e) {
       try {
         if (typeof window.setEvaStatus === 'function') window.setEvaStatus('EVA ÉCRIT...', 'writing');
         var askPrompt = `[RÉCAPITULATIF SYSTÈME CLOUDWORKS]
-L'utilisateur avait demandé : "${promptText || 'Tâche système'}".
-L'agent PC a terminé avec succès l'exécution.
-Détails d'exécution : ${summary || JSON.stringify(result.report || result.output || 'Toutes les commandes ont réussi.')}.
+Demande initiale de l'utilisateur : "${promptText || 'Tâche système'}".
+Statut : L'agent PC a terminé avec succès l'exécution sur le PC.
+Résumé : ${summary || 'Toutes les actions ont été effectuées avec succès.'}.
 
-Consigne : Rédige une réponse courte (2 à 3 phrases), naturelle, chaleureuse et précise à la première personne (en tant qu'EVA), confirmant exactement ce qui a été fait et où se trouvent les éléments créés ou modifiés sur le PC (par exemple sur le Bureau ou dans les dossiers indiqués). Ne mentionne pas de code brut ou de balises techniques.`;
+Consigne pour EVA : Rédige une réponse courte (2 à 3 phrases), naturelle, chaleureuse et personnalisée à la première personne (en tant qu'EVA). Confirme précisément ce qui a été créé ou ouvert sur le PC (fichiers, dossiers, Bureau, liens...) sans mentionner aucune commande technique ni code PowerShell. Termine en demandant si l'utilisateur a besoin d'autre chose.`;
 
         var origSys = window.EVA_SYSTEM_PROMPT;
         window.EVA_SYSTEM_PROMPT = "Tu es EVA, l'assistante personnelle de l'utilisateur. Tu viens d'accomplir une tâche sur son PC. Fais un compte-rendu clair, précis, personnalisé et amical.";
@@ -591,17 +591,14 @@ Consigne : Rédige une réponse courte (2 à 3 phrases), naturelle, chaleureuse 
         }
       } catch(err) {
         console.warn('[CW Summary] Erreur génération IA:', err);
+      } finally {
+        if (typeof window.setEvaStatus === 'function') window.setEvaStatus(null);
       }
     }
 
-    // Fallback intelligent si l'appel IA échoue ou n'est pas disponible
+    // Fallback intelligent si l'appel IA échoue ou n'est pas disponible (aucun code brut)
     if (!msg || !msg.trim()) {
-      var details = summary || (result && (result.report || result.output)) || '';
-      if (details) {
-        msg = `C'est tout bon ! J'ai bien exécuté votre demande sur votre PC :\n\n${details}\n\nTout est en place. Souhaitez-vous que je fasse autre chose ?`;
-      } else {
-        msg = `C'est tout bon ! Votre tâche a bien été exécutée avec succès sur votre PC. Souhaitez-vous que je fasse autre chose ?`;
-      }
+      msg = "C'est tout bon ! J'ai bien effectué toutes les actions demandées sur votre PC. Vos fichiers et dossiers sont prêts. Souhaitez-vous que je fasse autre chose ?";
     }
   } else if (status === 'cancelled') {
     msg = "La tâche sur votre PC a été arrêtée. N'hésitez pas si vous souhaitez la relancer ou faire autre chose.";
