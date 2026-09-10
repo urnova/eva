@@ -672,20 +672,22 @@ async function handleSend() {
     var isCWPCTask = /\[CloudWorks\]/i.test(text) || 
       /(crée|cree|créer|creer|créez|ecris|écris|écrire|supprime|supprimer|efface|ouvre|ouvrir|lance|lancer|déplace|deplace|copie|copier)\b.*(fichier|dossier|bureau|desktop|document|edge|chrome|navigateur|pc)/i.test(text);
 
-    var desktopAgentHeader = '';
-    if (window.eva) {
-      desktopAgentHeader = '⚠️ TU TOURNES SUR L\'APPLICATION PC LOCALE (E.V.A DESKTOP) — DEVICE ID : ' + deviceId + '\n' +
-        'RÈGLE ABSOLUE ET PRIORITÉ SUPRÊME :\n' +
-        'Dès que l\'utilisateur demande d\'effectuer une action sur son PC (créer/supprimer/déplacer des fichiers ou dossiers, ouvrir Edge/navigateur, lancer une vidéo, ouvrir une application, ou message contenant [CloudWorks]) :\n' +
-        'TU DOIS OBLIGATOIREMENT GÉNÉRER LE BLOC [ACTION:{"type":"agentic_task","prompt":"...","command":"...","deviceId":"' + deviceId + '"}] !\n' +
-        'IL EST FORMELLEMENT INTERDIT DE RÉPONDRE AVEC UN PLAN DE TEXTE SANS CE BLOC ACTION !\n' +
-        'Dans la propriété "command", écris TOUJOURS le script PowerShell direct complet avec :\n' +
-        '- Chemins OBLIGATOIREMENT entre guillemets doubles (ex: "$env:USERPROFILE\\Desktop\\test1.txt", "$env:USERPROFILE\\Desktop\\Fichiers Test") !\n' +
-        '- Crée TOUJOURS les dossiers AVANT de déplacer ou créer des fichiers dedans (New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier" -ItemType Directory -Force) !\n' +
-        '- Déplacement de fichiers : Move-Item -Path "$env:USERPROFILE\\Desktop\\test1.txt" -Destination "$env:USERPROFILE\\Desktop\\Dossier" -Force\n' +
-        '- Ajoute -Force partout pour une exécution instantanée sans demande de confirmation.\n' +
-        'Format de réponse obligatoire : Une courte phrase d\'introduction amicale (ex: "Je m\'en occupe tout de suite !") suivie IMMÉDIATEMENT du bloc ACTION.\n\n---\n\n';
-    }
+    var targetPC = (S.cwDevices && S.cwDevices.length > 0)
+      ? (S.cwDevices.find(function(d){ return d.online; }) || S.cwDevices[0])
+      : null;
+    var targetDeviceId = (targetPC && (targetPC.deviceId || targetPC.id)) || deviceId || 'PC-principal';
+
+    var desktopAgentHeader = '⚠️ CLOUDWORKS ACTIVÉ — CONTRÔLE SYSTÈME DU PC (Cible : ' + targetDeviceId + ')\n' +
+      'RÈGLE ABSOLUE ET PRIORITÉ SUPRÊME :\n' +
+      'Dès que l\'utilisateur demande d\'effectuer une action sur son PC (créer/supprimer/déplacer des fichiers ou dossiers, ouvrir Edge/navigateur, lancer une vidéo, ouvrir une application, ou message contenant [CloudWorks]) :\n' +
+      'TU DOIS OBLIGATOIREMENT GÉNÉRER LE BLOC [ACTION:{"type":"agentic_task","prompt":"...","command":"...","deviceId":"' + targetDeviceId + '"}] !\n' +
+      'IL EST FORMELLEMENT INTERDIT DE RÉPONDRE AVEC UN PLAN DE TEXTE SANS CE BLOC ACTION !\n' +
+      'Dans la propriété "command", écris TOUJOURS le script PowerShell direct complet avec :\n' +
+      '- Chemins OBLIGATOIREMENT entre guillemets doubles (ex: "$env:USERPROFILE\\Desktop\\test1.txt", "$env:USERPROFILE\\Desktop\\Fichiers Test") !\n' +
+      '- Crée TOUJOURS les dossiers AVANT de déplacer ou créer des fichiers dedans (New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier" -ItemType Directory -Force) !\n' +
+      '- Déplacement de fichiers : Move-Item -Path "$env:USERPROFILE\\Desktop\\test1.txt" -Destination "$env:USERPROFILE\\Desktop\\Dossier" -Force\n' +
+      '- Ajoute -Force partout pour une exécution instantanée sans demande de confirmation.\n' +
+      'Format de réponse obligatoire : Une courte phrase d\'introduction amicale (ex: "Je m\'en occupe tout de suite sur votre PC !") suivie IMMÉDIATEMENT du bloc ACTION.\n\n---\n\n';
 
     /* Prompt complet pour les providers cloud (Puter, OpenAI, Claude, etc.) */
     if (_hasActiveTone) {
@@ -700,9 +702,14 @@ async function handleSend() {
   var isCWPCTask = /\[CloudWorks\]/i.test(text) || 
     /(crée|cree|créer|creer|créez|ecris|écris|écrire|supprime|supprimer|efface|ouvre|ouvrir|lance|lancer|déplace|deplace|copie|copier)\b.*(fichier|dossier|bureau|desktop|document|edge|chrome|navigateur|pc)/i.test(text);
 
+  var targetPC = (S.cwDevices && S.cwDevices.length > 0)
+    ? (S.cwDevices.find(function(d){ return d.online; }) || S.cwDevices[0])
+    : null;
+  var targetDeviceId = (targetPC && (targetPC.deviceId || targetPC.id)) || deviceId || 'PC-principal';
+
   var msgContent = text;
-  if (isCWPCTask && window.eva) {
-    msgContent = '[RAPPEL SYSTÈME : Action PC locale demandée. Tu DOIS inclure le bloc ACTION à la fin de ta réponse : [ACTION:{"type":"agentic_task","prompt":"...","command":"<Script PowerShell direct complet avec chemins obligatoirement entre guillemets doubles et -Force>","deviceId":"' + deviceId + '"}]. INTERDICTION de répondre sans ce bloc ACTION !]\n\n' + msgContent;
+  if (isCWPCTask) {
+    msgContent = '[RAPPEL SYSTÈME : Action PC demandée. Tu DOIS inclure le bloc ACTION à la fin de ta réponse : [ACTION:{"type":"agentic_task","prompt":"...","command":"<Script PowerShell direct complet avec chemins obligatoirement entre guillemets doubles et -Force>","deviceId":"' + targetDeviceId + '"}]. INTERDICTION de répondre sans ce bloc ACTION !]\n\n' + msgContent;
   }
     if (allImages.length) {
       window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine votre image...');
@@ -766,7 +773,7 @@ async function handleSend() {
   var hasCW = result.content && /\[ACTION:\s*\{[^}]*"(agentic_task|screenshot|sysinfo|run_script|lock|sleep|shutdown|open_ide_file)"/i.test(result.content);
 
   // ── FILET DE SÉCURITÉ ABSOLU : Si le modèle a omis le tag [ACTION] sur une tâche PC/CloudWorks ──
-  if (!hasCW && isCWPCTask && window.eva) {
+  if (!hasCW && isCWPCTask) {
     console.warn('[CloudWorks Safety Net] Le modèle n\'a pas généré [ACTION], activation automatique de CloudWorks');
     hasCW = true;
     var rawTaskPrompt = (text || '').replace(/^\[CloudWorks\]\s*/i, '').trim();
@@ -775,7 +782,7 @@ async function handleSend() {
         executeEvaAction({
           type: 'agentic_task',
           prompt: rawTaskPrompt,
-          deviceId: deviceId,
+          deviceId: targetDeviceId,
           command: null
         });
       }

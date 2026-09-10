@@ -356,9 +356,8 @@ window.cwConfirmAndExecute = async function(action) {
     return;
   }
   
-  // Sur l'application PC locale, les requêtes agentic_task et lectures système n'ont pas besoin de double confirmation
-  var isLocalPC = !!(window.eva && window.eva.system);
-  var needsConfirm = !isLocalPC || ['shutdown', 'sleep', 'lock'].indexOf(action.type) !== -1;
+  // Les requêtes agentic_task et lectures système n'ont pas besoin de double confirmation bloquante (PC et Web/Mobile)
+  var needsConfirm = ['shutdown', 'sleep', 'lock'].indexOf(action.type) !== -1;
 
   if (needsConfirm) {
     var isRemote = window.location.href.includes('app.eva') || window.location.href.includes('127.0.0.1');
