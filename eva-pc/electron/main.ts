@@ -560,6 +560,17 @@ ipcMain.on('overlay:action', (_event, action, data) => {
     return;
   }
   // Autres actions (cancel, etc.) → forwarded tel quel
+  if (action === 'cancel') {
+    console.log('[Main] Cancel reçu depuis overlay : arrêt LLM et processus');
+    if (activeAbortController) {
+      try { activeAbortController.abort(); } catch(e) {}
+      activeAbortController = null;
+    }
+    if (activeExecProcess) {
+      try { child_process.execSync(`taskkill /F /T /PID ${activeExecProcess.pid}`); } catch(e) {}
+      activeExecProcess = null;
+    }
+  }
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('overlay:action', action, data);
   }
@@ -872,14 +883,18 @@ ipcMain.handle('terminal:kill', (_event, termId: string) => {
   return { success: false }
 })
 
+let activeExecProcess: any = null;
+
 // ─── IPC Handlers — System Commands ───
 ipcMain.handle('system:exec', async (_event, cmd: string) => {
   return new Promise(resolve => {
     const shell = process.platform === 'win32' ? 'powershell.exe' : '/bin/bash';
-    child_process.exec(cmd, { timeout: 30000, shell }, (error, stdout, stderr) => {
+    const proc = child_process.exec(cmd, { timeout: 30000, shell }, (error, stdout, stderr) => {
+      activeExecProcess = null;
       if (error) resolve({ success: false, error: error.message, stderr })
       else resolve({ success: true, stdout, stderr })
-    })
+    });
+    activeExecProcess = proc;
   })
 })
 
@@ -1060,8 +1075,13 @@ async function startLLM(): Promise<boolean> {
 let activeSessionId: string | null = null;
 let activeChatSession: any = null;
 let activeSequence: any = null;
+let activeAbortController: AbortController | null = null;
 
 function disposeActiveSession() {
+  if (activeAbortController) {
+    try { activeAbortController.abort(); } catch(e) {}
+    activeAbortController = null;
+  }
   if (activeSequence) {
     try { activeSequence.dispose(); } catch(e) {}
     activeSequence = null;
@@ -1161,14 +1181,30 @@ ipcMain.handle('llm:chat', async (event, messages, options?: { maxTokens?: numbe
       ? options.stopTriggers
       : ['[/CMD]', '[/REPORT]', '[/CONFIRM]'];
 
-    const responseText = await session.prompt(promptMsg, {
-      maxTokens: maxToks,
-      temperature: temp,
-      customStopTriggers: stopTriggers,
-      budgets: {
-        thoughtTokens: 0
+    activeAbortController = new AbortController();
+
+    let responseText = "";
+    try {
+      responseText = await session.prompt(promptMsg, {
+        maxTokens: maxToks,
+        temperature: temp,
+        customStopTriggers: stopTriggers,
+        signal: activeAbortController.signal,
+        stopOnAbortSignal: true,
+        budgets: {
+          thoughtTokens: 0
+        }
+      });
+    } catch (err: any) {
+      if (activeAbortController?.signal?.aborted || err?.name === 'AbortError') {
+        console.log('[LLM] Prompt interrompu par AbortController');
+        disposeActiveSession();
+        return { choices: [{ message: { role: 'assistant', content: '' } }], aborted: true };
       }
-    });
+      throw err;
+    } finally {
+      activeAbortController = null;
+    }
     
     // Si pas de session persistante, libérer la séquence
     if (!targetSessionId) {
@@ -1183,6 +1219,25 @@ ipcMain.handle('llm:chat', async (event, messages, options?: { maxTokens?: numbe
     console.error('[LLM API] Erreur:', err?.message || err);
     throw new Error(err?.message || String(err));
   }
+});
+
+ipcMain.handle('llm:abort', async () => {
+  console.log('[LLM] llm:abort appelé');
+  if (activeAbortController) {
+    try { activeAbortController.abort(); } catch(e) {}
+    activeAbortController = null;
+  }
+  if (activeExecProcess) {
+    try {
+      if (process.platform === 'win32') {
+        child_process.execSync(`taskkill /F /T /PID ${activeExecProcess.pid}`);
+      } else {
+        activeExecProcess.kill('SIGKILL');
+      }
+    } catch(e) {}
+    activeExecProcess = null;
+  }
+  return { success: true };
 });
 
 ipcMain.handle('llm:reset-session', async () => {

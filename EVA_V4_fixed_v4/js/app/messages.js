@@ -558,6 +558,7 @@ async function handleSend() {
   }
 
   // Injection date/heure courante — EVA connaît ainsi l'heure pour créer alarmes/rappels
+  var deviceId = window._cwDeviceId || localStorage.getItem('cw_device_id') || 'PC-inconnu';
   if (S.cwDevices && S.cwDevices.length > 0) {
     userCtx += '\n\nÉTAT CLOUDWORKS (Vos Appareils Connectés) :\n';
     S.cwDevices.forEach(function(d) {
@@ -566,8 +567,35 @@ async function handleSend() {
     userCtx += 'Si l\'utilisateur te demande d\'exécuter une tâche sur son PC, tu utiliseras l\'outil Tâche PC [ACTION:{"type":"agentic_task","prompt":"..."}]. S\'il y a des PC en ligne, la commande y sera envoyée.\n';
   }
 
-  // Web uniquement — pas de window.eva sur le navigateur
-    // Détecter les PC en ligne pour le site web
+  if (window.eva) {
+    // === VERSION PC DESKTOP ===
+    userCtx += '\nENVIRONNEMENT : Tu tournes SUR l\'application PC locale E.V.A Desktop.\n';
+    userCtx += 'DEVICE ID de ce PC : ' + deviceId + '\n';
+
+    // Statut LLM (si disponible)
+    if (window._llmStatus !== undefined) {
+      userCtx += 'LLM LOCAL : ' + (window._llmStatus ? 'Actif (tu peux déléguer des tâches autonomes complexes au LLM local)' : 'Inactif') + '\n';
+    }
+
+    userCtx += '\nRÈGLES IMPORTANTES POUR CE PC :\n';
+    userCtx += '- Pour toute action système sur CE PC, génère [ACTION:{...}] avec "deviceId":"' + deviceId + '"\n';
+    userCtx += '- EXÉCUTION INSTANTANÉE (CRITIQUE) : Pour toute tâche sur ce PC (fichiers, dossiers, navigation, scripts), inclus TOUJOURS le script PowerShell direct et complet dans la propriété "command" pour une exécution immédiate sans latence :\n';
+    userCtx += '  [ACTION:{"type":"agentic_task","prompt":"Description courte","command":"Script PowerShell direct avec chemins $env:USERPROFILE\\\\Desktop...","deviceId":"' + deviceId + '"}]\n';
+    userCtx += '  Règles PowerShell : Chemins par défaut $env:USERPROFILE\\Desktop pour le Bureau. Crée TOUJOURS les dossiers avant les fichiers (New-Item -ItemType Directory -Force). Ajoute -Force partout. Pour ouvrir Edge ou une URL : Start-Process msedge "URL".\n';
+    userCtx += '- Si CloudWorks est désactivé, dis-le à l\'utilisateur et propose de l\'activer dans les paramètres\n';
+    userCtx += '- Identifie-toi comme étant sur ce PC précis, pas sur le web\n';
+
+    userCtx += '\nDETECTION AUTOMATIQUE CLOUDWORKS (TRES IMPORTANT) :\n';
+    userCtx += '1. Si l\'utilisateur mentionne un chemin EXPLICITE sur son systeme -> c\'est une tache CloudWorks locale.\n';
+    userCtx += '2. INTERDICTION FORMELLE : N\'utilise JAMAIS create_document pour des fichiers destines au PC local.\n';
+    userCtx += '3. Pour creer un vrai fichier sur le PC, delegue avec [ACTION:{"type":"agentic_task","prompt":"...","command":"...","deviceId":"' + deviceId + '"}]\n';
+    userCtx += '4. Redige le prompt en langage naturel.\n';
+    userCtx += '5. Si la demande est generique, utilise create_document.\n';
+  } else {
+    // === VERSION WEB ===
+    userCtx += '\nENVIRONNEMENT : Tu tournes sur la version Web/Navigateur. Tu n\'es PAS sur le PC localement.\n';
+
+    // Détecter les PC en ligne
     var onlinePCs = [];
     var offlinePCs = [];
     if (S.cwDevices && S.cwDevices.length > 0) {
@@ -577,30 +605,25 @@ async function handleSend() {
       });
     }
 
-    userCtx += '\nENVIRONNEMENT : Tu tournes sur la version Web/Navigateur. Pour agir sur un PC, tu dois utiliser CloudWorks.\n';
-
     if (onlinePCs.length === 0 && offlinePCs.length === 0) {
-      userCtx += 'CloudWorks : Aucun appareil PC enregistré. Pour utiliser CloudWorks, l\'utilisateur doit installer EVA Desktop (disponible sur https://github.com/urnova/eva/releases/latest). Une fois l\'application installée et connectée avec le même compte, le PC apparaîtra automatiquement ici.\n';
+      userCtx += 'CloudWorks : Aucun appareil PC enregistré. L\'utilisateur doit installer EVA Desktop.\n';
     } else if (onlinePCs.length === 0) {
-      userCtx += 'CloudWorks : Aucun PC en ligne (' + offlinePCs.length + ' hors ligne). Tu ne peux pas exécuter de tâches PC en ce moment. Informe l\'utilisateur.\n';
+      userCtx += 'CloudWorks : Aucun PC en ligne actuellement (' + offlinePCs.length + ' hors ligne). Impossible d\'exécuter des tâches PC.\n';
     } else if (onlinePCs.length === 1) {
-      userCtx += 'CloudWorks : 1 PC disponible : ' + (onlinePCs[0].deviceName || onlinePCs[0].deviceId) + ' [ID: ' + onlinePCs[0].deviceId + '] — En ligne.\n';
-      userCtx += 'Pour une tâche sur ce PC, génère [ACTION:{"type":"...","deviceId":"' + onlinePCs[0].deviceId + '","prompt":"..."}].\n';
+      userCtx += 'CloudWorks : 1 PC en ligne : ' + (onlinePCs[0].deviceName || onlinePCs[0].deviceId) + ' (ID: ' + onlinePCs[0].deviceId + ')\n';
+      userCtx += 'Pour des tâches sur ce PC, génère [ACTION:{...,"deviceId":"' + onlinePCs[0].deviceId + '"}]\n';
     } else {
-      userCtx += 'CloudWorks : ' + onlinePCs.length + ' PC disponibles en ligne :\n';
+      userCtx += 'CloudWorks : ' + onlinePCs.length + ' PC en ligne :\n';
       onlinePCs.forEach(function(d) {
-        userCtx += '  - ' + (d.deviceName || d.deviceId) + ' [ID: ' + d.deviceId + ']\n';
+        userCtx += '  - ' + (d.deviceName || d.deviceId) + ' (ID: ' + d.deviceId + ') — En ligne\n';
       });
-      userCtx += 'Si l\'utilisateur ne précise pas, demande-lui sur quel PC exécuter la tâche. Génère ensuite [ACTION:{...,"deviceId":"<id choisi>"}].\n';
+      userCtx += 'Demande à l\'utilisateur sur quel PC exécuter la tâche, ou utilise le premier disponible si évident.\n';
     }
-
-    userCtx += '\nDÉTECTION AUTOMATIQUE CLOUDWORKS :\n';
-    userCtx += 'Si la demande mentionne un chemin système explicite (Bureau, Documents, C:\\\\, /home/, dossier X, disque dur, etc.) → tâche CloudWorks sur le PC en ligne.\n';
-    userCtx += 'Si générique sans chemin → crée dans le chat. Si doute → demande confirmation.\n';
-
-        if (offlinePCs.length > 0) {
-      userCtx += 'Hors ligne (indisponibles) : ' + offlinePCs.map(function(d){ return d.deviceName || d.deviceId; }).join(', ') + '\n';
+    if (offlinePCs.length > 0) {
+      userCtx += 'PCs hors ligne (non disponibles) : ' + offlinePCs.map(function(d){ return d.deviceName || d.deviceId; }).join(', ') + '\n';
     }
+    userCtx += 'Pour toute tâche sur un PC, génère [ACTION:{...}] avec le bon deviceId du PC cible en ligne.\n';
+  }
 
   var _now = new Date();
   var _dateStr = _now.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
@@ -625,7 +648,7 @@ async function handleSend() {
       '- Note → [ACTION:{"type":"note","title":"Titre","body":"Contenu"}]\n' +
       '- Alarme → [ACTION:{"type":"alarm","time":"HH:MM","label":"Libellé","repeat":"once"}]\n' +
       '- Rappel → [ACTION:{"type":"reminder","text":"Texte","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
-      '- Tâche PC → [ACTION:{"type":"agentic_task","prompt":"..."}]\n' +
+      '- Tâche PC (créer fichier, dossier, renommer, rechercher, exécuter) → [ACTION:{"type":"agentic_task","prompt":"Instructions complètes et précises..."}]\n' +
       '- Agenda → [ACTION:{"type":"event","title":"Titre","date":"YYYY-MM-DD","time":"HH:MM"}]\n' +
       '- Excel → [ACTION:{"type":"excel","filename":"data.xlsx","headers":["Col1","Col2"],"rows":[["val1","val2"]]}]\n' +
       '- R\u00C8GLE IMPORTANTE : Toujours \u00E9crire une r\u00E9ponse textuelle amicale avant le bloc ACTION (ex: Voici le document)\n' +
@@ -641,17 +664,37 @@ async function handleSend() {
       '```stats\nMétrique: Valeur``` (chiffres clés), ```timeline\n2024 → Événement``` (chronologie)\n' +
       '\nDate : ' + _dateStr + ' — Heure : ' + _timeStr + '.';
   } else {
+    var isCWPCTask = /\[CloudWorks\]/i.test(text) || 
+      /(crée|cree|créer|creer|créez|ecris|écris|écrire|supprime|supprimer|efface|ouvre|ouvrir|lance|lancer|déplace|deplace|copie|copier)\b.*(fichier|dossier|bureau|desktop|document|edge|chrome|navigateur|pc)/i.test(text);
+
+    var desktopAgentHeader = '';
+    if (window.eva) {
+      desktopAgentHeader = '⚠️ TU TOURNES SUR L\'APPLICATION PC LOCALE (E.V.A DESKTOP) — DEVICE ID : ' + deviceId + '\n' +
+        'RÈGLE ABSOLUE ET PRIORITÉ SUPRÊME :\n' +
+        'Dès que l\'utilisateur demande d\'effectuer une action sur son PC (créer/supprimer/déplacer des fichiers ou dossiers, ouvrir Edge/navigateur, lancer une vidéo, ouvrir une application, ou message contenant [CloudWorks]) :\n' +
+        'TU DOIS OBLIGATOIREMENT GÉNÉRER LE BLOC [ACTION:{"type":"agentic_task","prompt":"...","command":"...","deviceId":"' + deviceId + '"}] !\n' +
+        'IL EST FORMELLEMENT INTERDIT DE RÉPONDRE AVEC UN PLAN DE TEXTE SANS CE BLOC ACTION !\n' +
+        'Dans la propriété "command", écris TOUJOURS le script PowerShell direct complet avec chemins $env:USERPROFILE\\Desktop et -Force pour une exécution instantanée sans latence.\n' +
+        'Format de réponse obligatoire : Une courte phrase d\'introduction amicale (ex: "Je m\'en occupe tout de suite !") suivie IMMÉDIATEMENT du bloc ACTION.\n\n---\n\n';
+    }
+
     /* Prompt complet pour les providers cloud (Puter, OpenAI, Claude, etc.) */
     if (_hasActiveTone) {
       /* Le mode actif passe EN PREMIER pour garantir la priorité */
-      sysPrompt = '⚠️ MODE ACTIF — PRIORITÉ ABSOLUE (applique à CHAQUE réponse) :\n' + toneInstruction + '\n\n---\n\n' +
+      sysPrompt = desktopAgentHeader + '⚠️ MODE ACTIF — PRIORITÉ ABSOLUE (applique à CHAQUE réponse) :\n' + toneInstruction + '\n\n---\n\n' +
         SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx;
     } else {
-      sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
+      sysPrompt = desktopAgentHeader + SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
     }
   }
 
+  var isCWPCTask = /\[CloudWorks\]/i.test(text) || 
+    /(crée|cree|créer|creer|créez|ecris|écris|écrire|supprime|supprimer|efface|ouvre|ouvrir|lance|lancer|déplace|deplace|copie|copier)\b.*(fichier|dossier|bureau|desktop|document|edge|chrome|navigateur|pc)/i.test(text);
+
   var msgContent = text;
+  if (isCWPCTask && window.eva) {
+    msgContent = '[RAPPEL SYSTÈME : Action PC locale demandée. Tu DOIS inclure le bloc ACTION à la fin de ta réponse : [ACTION:{"type":"agentic_task","prompt":"...","command":"<Script PowerShell direct avec chemins $env:USERPROFILE\\\\Desktop et -Force>","deviceId":"' + deviceId + '"}]. INTERDICTION de répondre sans ce bloc ACTION !]\n\n' + msgContent;
+  }
     if (allImages.length) {
       window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine votre image...');
       try {
@@ -680,13 +723,11 @@ async function handleSend() {
       }
     }
 
-    // Recherche web si nécessaire
+    // Recherche web si nécessaire (DÉSACTIVÉE si tâche locale PC pour ne pas polluer l'instruction)
     var _isLocalProv = (_activeProv === 'lmstudio' || _activeProv === 'ollama' ||
                       _activeProv === 'qwen'    || _activeProv === 'eva');
 
-  // needsSearch = triggers standard (météo, bourse, actu...) -> S'applique à TOUS
-  // needsSearchLocal = triggers étendus (toute question avec "?") -> Seulement pour les modèles locaux
-  var _shouldSearch = window.EVAWebSearch && (
+  var _shouldSearch = !isCWPCTask && window.EVAWebSearch && (
     window.EVAWebSearch.needsSearch(msgContent) ||
     (_isLocalProv && window.EVAWebSearch.needsSearchLocal && window.EVAWebSearch.needsSearchLocal(msgContent))
   );
@@ -709,13 +750,29 @@ async function handleSend() {
   var origSys = window.EVA_SYSTEM_PROMPT;
   window.EVA_SYSTEM_PROMPT = sysPrompt;
 
-  window.setThinkingPhase(_SVG_THINK_SPARK, 'Génère...', 'Je compose ma réponse...');
-
   var result = await window.EVAChatHandler.sendMessage(msgContent, { tone: S.tone });
 
   window.EVA_SYSTEM_PROMPT = origSys;
 
   var hasCW = result.content && /\[ACTION:\s*\{[^}]*"(agentic_task|screenshot|sysinfo|run_script|lock|sleep|shutdown|open_ide_file)"/i.test(result.content);
+
+  // ── FILET DE SÉCURITÉ ABSOLU : Si le modèle a omis le tag [ACTION] sur une tâche PC/CloudWorks ──
+  if (!hasCW && isCWPCTask && window.eva) {
+    console.warn('[CloudWorks Safety Net] Le modèle n\'a pas généré [ACTION], activation automatique de CloudWorks');
+    hasCW = true;
+    var rawTaskPrompt = (text || '').replace(/^\[CloudWorks\]\s*/i, '').trim();
+    setTimeout(function() {
+      if (typeof executeEvaAction === 'function') {
+        executeEvaAction({
+          type: 'agentic_task',
+          prompt: rawTaskPrompt,
+          deviceId: deviceId,
+          command: null
+        });
+      }
+    }, 250);
+  }
+
   if (hasCW) {
     S.cwRunning = true;
     S.busy = true;
@@ -1568,6 +1625,3 @@ function initChatDragDropPaste() {
 window.initChatDragDropPaste = initChatDragDropPaste;
 
 /* CloudWorks tracker functions removed, see cw-modal.js */
-
-
-

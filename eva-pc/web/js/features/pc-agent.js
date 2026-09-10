@@ -135,6 +135,13 @@
   window.cancelCurrentCloudWorksTask = async function() {
     console.log('[CloudWorks] Interruption demandée pour la tâche en cours');
     _currentRunningCancel = true;
+    try {
+      if (window.eva && window.eva.system && typeof window.eva.system.llmAbort === 'function') {
+        await window.eva.system.llmAbort();
+      }
+    } catch(e) {
+      console.warn('[CloudWorks] Erreur llmAbort:', e);
+    }
     if (_currentRunningCmdRef) {
       try {
         await _currentRunningCmdRef.update({
@@ -176,8 +183,9 @@
       }
       else if (data.type === 'agentic_task') {
         const prompt = data.payload?.prompt || 'Aucun prompt';
-        await cmdRef.update({ status: 'running', updatedAt: new Date(), step: 'Démarrage du LLM local...' });
-        resultData = await runAgenticLoop(prompt, cmdId, uid, cmdRef);
+        const directCmd = data.payload?.command || null;
+        await cmdRef.update({ status: 'running', updatedAt: new Date(), step: directCmd ? 'Exécution des commandes...' : 'Démarrage du LLM local...' });
+        resultData = await runAgenticLoop(prompt, cmdId, uid, cmdRef, directCmd);
         status = (resultData && resultData.cancelled) ? 'cancelled' : ((resultData && resultData.error) ? 'error' : 'done');
       }
       else if (data.type === 'sysinfo') {
@@ -301,9 +309,44 @@
   }
 
   /* ═══════════════════════════════════════════
-     Boucle agentique LLM local
+     Boucle agentique LLM local & Fast Path
   ═══════════════════════════════════════════ */
-  async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef) {
+  async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef, directCommand) {
+    const steps = [];
+
+    // ── FAST PATH ULTRA-RAPIDE (< 1s) : Si Eva (modèle cloud) a déjà fourni le script PowerShell exact ──
+    if (directCommand && directCommand.trim()) {
+      console.log('[Agent Fast Path] Exécution directe du script PowerShell:', directCommand);
+      const stepStart = 'Exécution des commandes sur le PC...';
+      steps.push({ text: stepStart, ts: new Date().toISOString() });
+      await cmdRef.update({ step: stepStart, lastCmd: directCommand.substring(0, 120), steps, updatedAt: new Date() });
+      window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepStart } }));
+
+      if (_currentRunningCancel) return { error: 'Annulé par l\'utilisateur', steps, cancelled: true };
+
+      try {
+        const execRes = await window.eva.system.exec(directCommand);
+        if (_currentRunningCancel) return { error: 'Annulé par l\'utilisateur', steps, cancelled: true };
+
+        if (execRes && execRes.success) {
+          const stepDone = 'Actions exécutées avec succès ✓';
+          steps.push({ text: stepDone, ts: new Date().toISOString() });
+          await cmdRef.update({ step: stepDone, steps, updatedAt: new Date() });
+          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepDone } }));
+          return {
+            output: 'Toutes les actions demandées ont été exécutées avec succès sur votre PC.',
+            steps: steps,
+            stdout: execRes.stdout
+          };
+        } else {
+          console.warn('[Agent Fast Path] Erreur script direct, passage au modèle local:', execRes?.stderr || execRes?.error);
+          steps.push({ text: 'Ajustement via l\'agent local...', ts: new Date().toISOString() });
+        }
+      } catch(fastErr) {
+        console.warn('[Agent Fast Path] Exception exécution directe:', fastErr);
+      }
+    }
+
     const systemPrompt = `Tu es l'Agent PC Windows d'EVA. RÈGLES ABSOLUES :
 1. Réponds UNIQUEMENT par des commandes PowerShell valides dans un bloc [CMD]commandes[/CMD]. Commence directement par [CMD] sans AUCUN texte avant ni politesse.
 2. Chemins par défaut : Bureau = $env:USERPROFILE\\Desktop | Documents = $env:USERPROFILE\\Documents.
@@ -321,7 +364,6 @@ Start-Process msedge "https://www.youtube.com/watch?v=dQw4w9WgXcQ"[/CMD]`;
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ];
-    const steps = [];
     let finalReport = '';
     let iteration = 0;
 
@@ -341,12 +383,12 @@ Start-Process msedge "https://www.youtube.com/watch?v=dQw4w9WgXcQ"[/CMD]`;
 
     let totalCmdsExecuted = 0;
 
-      // Boucle agentique bornée à 5 itérations max
+      // Boucle agentique bornée à 3 itérations max
       while (true) {
         iteration++;
 
-        if (iteration > 5) {
-          var maxErr = 'Limite d\'itérations atteinte (5 étapes max).';
+        if (iteration > 3) {
+          var maxErr = 'Limite d\'itérations atteinte (3 étapes max).';
           steps.push({ text: '\u2717 ' + maxErr, ts: new Date().toISOString() });
           await cmdRef.update({ step: maxErr, steps, updatedAt: new Date() });
           return { error: maxErr, steps };
@@ -374,11 +416,18 @@ Start-Process msedge "https://www.youtube.com/watch?v=dQw4w9WgXcQ"[/CMD]`;
           }
 
           const data = await window.eva.system.llmChat(history, {
-            maxTokens: 768,
+            maxTokens: 256,
             temperature: 0.1,
             sessionId: cmdId,
-            stopTriggers: ['[/CMD]', '[/REPORT]', '[/CONFIRM]']
+            stopTriggers: ['[/CMD]', '[/REPORT]', '[/CONFIRM]', '\n\n\n']
           });
+
+          // Vérification immédiate après llmChat
+          if (_currentRunningCancel) {
+            console.log('[Agent] Tâche annulée pendant/après llmChat');
+            return { error: 'Annulé par l utilisateur', steps, cancelled: true };
+          }
+
           if (data.choices && data.choices[0] && data.choices[0].message) {
             data.message = data.choices[0].message;
           }
@@ -435,6 +484,9 @@ Start-Process msedge "https://www.youtube.com/watch?v=dQw4w9WgXcQ"[/CMD]`;
             var results = [];
             var allSucceeded = true;
             for (var ci = 0; ci < allCmds.length; ci++) {
+              if (_currentRunningCancel) {
+                return { error: 'Annulé par l utilisateur', steps, cancelled: true };
+              }
               var cmd = allCmds[ci];
               var stepText = 'Ex\u00e9cution [' + (ci+1) + '/' + allCmds.length + ']: ' + cmd.substring(0, 80) + (cmd.length > 80 ? '...' : '');
               steps.push({ text: stepText, ts: new Date().toISOString() });

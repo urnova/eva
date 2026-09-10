@@ -126,7 +126,7 @@ ACTIONS DISPONIBLES : Quand l'utilisateur te demande de créer une note, une ala
 - Pour une note : [ACTION:{"type":"note","title":"Titre de la note","body":"Contenu","tag":"optionnel"}]
 - Pour une alarme : [ACTION:{"type":"alarm","time":"HH:MM","label":"Libellé","repeat":"once"}] (repeat = once/daily/weekdays/weekend)
 - Pour un rappel : [ACTION:{"type":"reminder","text":"Texte du rappel","date":"YYYY-MM-DD","time":"HH:MM"}]
-  - Pour déléguer une tâche complexe au PC de l'utilisateur (chercher des fichiers, générer, trier) : [ACTION:{"type":"agentic_task","prompt":"Instructions complètes de la tâche..."}]
+  - Pour déléguer une tâche au PC de l'utilisateur (fichiers, dossiers, navigation, etc.) : Écris TOUJOURS une phrase d'introduction chaleureuse et naturelle avant le bloc ACTION (ex: "Je m'en occupe tout de suite !"), puis : [ACTION:{"type":"agentic_task","prompt":"Description courte","command":"Script PowerShell direct avec chemins $env:USERPROFILE\\Desktop..."}]
   - Pour un événement agenda : [ACTION:{"type":"event","title":"Titre","date":"YYYY-MM-DD","time":"HH:MM","description":"optionnel"}]
 
 OUTILS DE CRÉATION DE FICHIERS — RÈGLES ABSOLUES :

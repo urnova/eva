@@ -82,6 +82,7 @@ const evaAPI = {
     llmCheck: () => ipcRenderer.invoke('llm:check'),
     llmDownload: () => ipcRenderer.invoke('llm:download'),
     llmResetSession: () => ipcRenderer.invoke('llm:reset-session'),
+    llmAbort: () => ipcRenderer.invoke('llm:abort'),
     cpuLoad: () => ipcRenderer.invoke('system:cpuLoad'),
     screenshot: () => ipcRenderer.invoke('system:screenshot'),
     exec: (cmd: string) => ipcRenderer.invoke('system:exec', cmd),

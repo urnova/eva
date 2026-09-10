@@ -194,6 +194,13 @@ function parseEvaActions(content) {
     clean = clean.slice(0, 12000) + '\n\n_[Réponse tronquée pour des raisons de performance]_';
   }
 
+  /* ── Si une tâche agentique CloudWorks est présente, NE PAS tronquer l'introduction d'EVA ── */
+  var hasCWAction = actions.some(function(a) { return a && a.type === 'agentic_task'; });
+  if (hasCWAction) {
+    window._lastEvaSuggestions = suggestions;
+    return clean.trim();
+  }
+
   /* ── Si des fichiers ont été générés, réduire le texte à 1 phrase courte ── */
   var FILE_TYPES = ['pdf', 'excel', 'pptx', 'txt', 'csv'];
   var hasFileAction = actions.some(function(a) { return a && FILE_TYPES.indexOf(a.type) !== -1; });
@@ -220,7 +227,7 @@ async function executeEvaAction(action) {
   try {
     if (action.type === 'agentic_task') {
       try {
-        var onlineDevice = action.deviceId || null;
+        var onlineDevice = action.deviceId || window._cwDeviceId || (typeof localStorage !== 'undefined' ? localStorage.getItem('cw_device_id') : null) || null;
           if (!onlineDevice) {
             var snap = await window.db.collection('cloudworks').doc(uid).collection('devices').where('deviceType','==','windows').get();
             snap.forEach(function(d) { if (d.data().online) onlineDevice = d.id; });
@@ -230,7 +237,10 @@ async function executeEvaAction(action) {
           var cmdRef = await window.db.collection('cloudworks').doc(uid).collection('commands').add({
             deviceId: onlineDevice,
             type: 'agentic_task',
-            payload: { prompt: action.prompt || "Trouve un moyen de le faire." },
+            payload: {
+              prompt: action.prompt || "Trouve un moyen de le faire.",
+              command: action.command || null
+            },
             status: 'pending',
             createdAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
           });
@@ -240,7 +250,7 @@ async function executeEvaAction(action) {
           if (window.toast) window.toast('Action échouée : Le PC Agent est déconnecté.', 'error');
         }
       } catch(e) { console.error('Erreur agentic_task:', e); }
-    } else if (action.type === 'note') {
+        } else if (action.type === 'note') {
       setEvaStatus('📝 CRÉATION NOTE...', 'action');
       await db.collection('users').doc(uid).collection('notes').add({
         title: action.title || 'Note d\'EVA',

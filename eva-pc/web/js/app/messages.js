@@ -578,15 +578,17 @@ async function handleSend() {
     }
 
     userCtx += '\nRÈGLES IMPORTANTES POUR CE PC :\n';
-    userCtx += '- Pour toute action système sur CE PC (fichiers, screenshots, scripts), génère [ACTION:{...}] avec "deviceId":"' + deviceId + '"\n';
-    userCtx += '- Si l\'utilisateur demande une tâche complexe en plusieurs étapes, utilise [ACTION:{"type":"agentic_task","prompt":"...","deviceId":"' + deviceId + '"}]\n';
+    userCtx += '- Pour toute action système sur CE PC, génère [ACTION:{...}] avec "deviceId":"' + deviceId + '"\n';
+    userCtx += '- EXÉCUTION INSTANTANÉE (CRITIQUE) : Pour toute tâche sur ce PC (fichiers, dossiers, navigation, scripts), inclus TOUJOURS le script PowerShell direct et complet dans la propriété "command" pour une exécution immédiate sans latence :\n';
+    userCtx += '  [ACTION:{"type":"agentic_task","prompt":"Description courte","command":"Script PowerShell direct avec chemins $env:USERPROFILE\\\\Desktop...","deviceId":"' + deviceId + '"}]\n';
+    userCtx += '  Règles PowerShell : Chemins par défaut $env:USERPROFILE\\Desktop pour le Bureau. Crée TOUJOURS les dossiers avant les fichiers (New-Item -ItemType Directory -Force). Ajoute -Force partout. Pour ouvrir Edge ou une URL : Start-Process msedge "URL".\n';
     userCtx += '- Si CloudWorks est désactivé, dis-le à l\'utilisateur et propose de l\'activer dans les paramètres\n';
     userCtx += '- Identifie-toi comme étant sur ce PC précis, pas sur le web\n';
 
     userCtx += '\nDETECTION AUTOMATIQUE CLOUDWORKS (TRES IMPORTANT) :\n';
     userCtx += '1. Si l\'utilisateur mentionne un chemin EXPLICITE sur son systeme -> c\'est une tache CloudWorks locale.\n';
     userCtx += '2. INTERDICTION FORMELLE : N\'utilise JAMAIS create_document pour des fichiers destines au PC local.\n';
-    userCtx += '3. Pour creer un vrai fichier sur le PC, delegue avec [ACTION:{"type":"agentic_task","prompt":"...","deviceId":"' + deviceId + '"}]\n';
+    userCtx += '3. Pour creer un vrai fichier sur le PC, delegue avec [ACTION:{"type":"agentic_task","prompt":"...","command":"...","deviceId":"' + deviceId + '"}]\n';
     userCtx += '4. Redige le prompt en langage naturel.\n';
     userCtx += '5. Si la demande est generique, utilise create_document.\n';
   } else {
@@ -662,17 +664,37 @@ async function handleSend() {
       '```stats\nMétrique: Valeur``` (chiffres clés), ```timeline\n2024 → Événement``` (chronologie)\n' +
       '\nDate : ' + _dateStr + ' — Heure : ' + _timeStr + '.';
   } else {
+    var isCWPCTask = /\[CloudWorks\]/i.test(text) || 
+      /(crée|cree|créer|creer|créez|ecris|écris|écrire|supprime|supprimer|efface|ouvre|ouvrir|lance|lancer|déplace|deplace|copie|copier)\b.*(fichier|dossier|bureau|desktop|document|edge|chrome|navigateur|pc)/i.test(text);
+
+    var desktopAgentHeader = '';
+    if (window.eva) {
+      desktopAgentHeader = '⚠️ TU TOURNES SUR L\'APPLICATION PC LOCALE (E.V.A DESKTOP) — DEVICE ID : ' + deviceId + '\n' +
+        'RÈGLE ABSOLUE ET PRIORITÉ SUPRÊME :\n' +
+        'Dès que l\'utilisateur demande d\'effectuer une action sur son PC (créer/supprimer/déplacer des fichiers ou dossiers, ouvrir Edge/navigateur, lancer une vidéo, ouvrir une application, ou message contenant [CloudWorks]) :\n' +
+        'TU DOIS OBLIGATOIREMENT GÉNÉRER LE BLOC [ACTION:{"type":"agentic_task","prompt":"...","command":"...","deviceId":"' + deviceId + '"}] !\n' +
+        'IL EST FORMELLEMENT INTERDIT DE RÉPONDRE AVEC UN PLAN DE TEXTE SANS CE BLOC ACTION !\n' +
+        'Dans la propriété "command", écris TOUJOURS le script PowerShell direct complet avec chemins $env:USERPROFILE\\Desktop et -Force pour une exécution instantanée sans latence.\n' +
+        'Format de réponse obligatoire : Une courte phrase d\'introduction amicale (ex: "Je m\'en occupe tout de suite !") suivie IMMÉDIATEMENT du bloc ACTION.\n\n---\n\n';
+    }
+
     /* Prompt complet pour les providers cloud (Puter, OpenAI, Claude, etc.) */
     if (_hasActiveTone) {
       /* Le mode actif passe EN PREMIER pour garantir la priorité */
-      sysPrompt = '⚠️ MODE ACTIF — PRIORITÉ ABSOLUE (applique à CHAQUE réponse) :\n' + toneInstruction + '\n\n---\n\n' +
+      sysPrompt = desktopAgentHeader + '⚠️ MODE ACTIF — PRIORITÉ ABSOLUE (applique à CHAQUE réponse) :\n' + toneInstruction + '\n\n---\n\n' +
         SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx;
     } else {
-      sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
+      sysPrompt = desktopAgentHeader + SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
     }
   }
 
+  var isCWPCTask = /\[CloudWorks\]/i.test(text) || 
+    /(crée|cree|créer|creer|créez|ecris|écris|écrire|supprime|supprimer|efface|ouvre|ouvrir|lance|lancer|déplace|deplace|copie|copier)\b.*(fichier|dossier|bureau|desktop|document|edge|chrome|navigateur|pc)/i.test(text);
+
   var msgContent = text;
+  if (isCWPCTask && window.eva) {
+    msgContent = '[RAPPEL SYSTÈME : Action PC locale demandée. Tu DOIS inclure le bloc ACTION à la fin de ta réponse : [ACTION:{"type":"agentic_task","prompt":"...","command":"<Script PowerShell direct avec chemins $env:USERPROFILE\\\\Desktop et -Force>","deviceId":"' + deviceId + '"}]. INTERDICTION de répondre sans ce bloc ACTION !]\n\n' + msgContent;
+  }
     if (allImages.length) {
       window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine votre image...');
       try {
@@ -701,13 +723,11 @@ async function handleSend() {
       }
     }
 
-    // Recherche web si nécessaire
+    // Recherche web si nécessaire (DÉSACTIVÉE si tâche locale PC pour ne pas polluer l'instruction)
     var _isLocalProv = (_activeProv === 'lmstudio' || _activeProv === 'ollama' ||
                       _activeProv === 'qwen'    || _activeProv === 'eva');
 
-  // needsSearch = triggers standard (météo, bourse, actu...) -> S'applique à TOUS
-  // needsSearchLocal = triggers étendus (toute question avec "?") -> Seulement pour les modèles locaux
-  var _shouldSearch = window.EVAWebSearch && (
+  var _shouldSearch = !isCWPCTask && window.EVAWebSearch && (
     window.EVAWebSearch.needsSearch(msgContent) ||
     (_isLocalProv && window.EVAWebSearch.needsSearchLocal && window.EVAWebSearch.needsSearchLocal(msgContent))
   );
@@ -735,6 +755,24 @@ async function handleSend() {
   window.EVA_SYSTEM_PROMPT = origSys;
 
   var hasCW = result.content && /\[ACTION:\s*\{[^}]*"(agentic_task|screenshot|sysinfo|run_script|lock|sleep|shutdown|open_ide_file)"/i.test(result.content);
+
+  // ── FILET DE SÉCURITÉ ABSOLU : Si le modèle a omis le tag [ACTION] sur une tâche PC/CloudWorks ──
+  if (!hasCW && isCWPCTask && window.eva) {
+    console.warn('[CloudWorks Safety Net] Le modèle n\'a pas généré [ACTION], activation automatique de CloudWorks');
+    hasCW = true;
+    var rawTaskPrompt = (text || '').replace(/^\[CloudWorks\]\s*/i, '').trim();
+    setTimeout(function() {
+      if (typeof executeEvaAction === 'function') {
+        executeEvaAction({
+          type: 'agentic_task',
+          prompt: rawTaskPrompt,
+          deviceId: deviceId,
+          command: null
+        });
+      }
+    }, 250);
+  }
+
   if (hasCW) {
     S.cwRunning = true;
     S.busy = true;

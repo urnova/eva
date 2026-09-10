@@ -308,6 +308,9 @@ window.cancelCloudWorksTask = function(cmdId) {
   if (typeof window.cancelCurrentCloudWorksTask === 'function') {
     try { window.cancelCurrentCloudWorksTask(); } catch(e) {}
   }
+  if (window.eva && window.eva.system && typeof window.eva.system.llmAbort === 'function') {
+    try { window.eva.system.llmAbort(); } catch(e) {}
+  }
   if (!window.db || !window.S || !window.S.user) return;
   var uid = window.S.user.uid;
   window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId)
@@ -328,6 +331,12 @@ window.cancelCloudWorksTask = function(cmdId) {
     clearInterval(t);
     stopBtn.addEventListener('click', function() {
       if (window.S && window.S.cwRunning) {
+        if (typeof window.cancelCurrentCloudWorksTask === 'function') {
+          try { window.cancelCurrentCloudWorksTask(); } catch(e) {}
+        }
+        if (window.eva && window.eva.system && typeof window.eva.system.llmAbort === 'function') {
+          try { window.eva.system.llmAbort(); } catch(e) {}
+        }
         var activeIds = Object.keys(_activeTrackers);
         if (activeIds.length > 0) activeIds.forEach(window.cancelCloudWorksTask);
       } else {
@@ -347,11 +356,16 @@ window.cwConfirmAndExecute = async function(action) {
     return;
   }
   
-  var isRemote = window.location.href.includes('app.eva') || window.location.href.includes('127.0.0.1');
-  var targetName = isRemote ? 'CloudWorks à distance (PC)' : 'Ce PC';
+  // Sur l'application PC locale, les requêtes agentic_task et lectures système n'ont pas besoin de double confirmation
+  var isLocalPC = !!(window.eva && window.eva.system);
+  var needsConfirm = !isLocalPC || ['shutdown', 'sleep', 'lock'].indexOf(action.type) !== -1;
 
-  var confirmed = await _showConfirmModalInline(action, targetName);
-  if (!confirmed) return;
+  if (needsConfirm) {
+    var isRemote = window.location.href.includes('app.eva') || window.location.href.includes('127.0.0.1');
+    var targetName = isRemote ? 'CloudWorks à distance (PC)' : 'Ce PC';
+    var confirmed = await _showConfirmModalInline(action, targetName);
+    if (!confirmed) return;
+  }
 
   if (typeof executeEvaAction === 'function') {
     executeEvaAction(action);
@@ -456,7 +470,7 @@ function _finalizeTracker(cmdId, result, status) {
   if (status === 'cancelled' && !summary) summary = "Tâche interrompue par l'utilisateur.";
   if (status === 'error' && !summary) summary = 'Une erreur est survenue.';
 
-  if (summary) {
+  if (status !== 'done' && summary) {
     var summaryEl = document.createElement('div');
     summaryEl.className = 'cw-tracker-summary' + (status === 'error' ? ' error' : status === 'cancelled' ? ' cancelled' : '');
     summaryEl.textContent = summary.substring(0, 300) + (summary.length > 300 ? '…' : '');
@@ -573,7 +587,7 @@ window.addEventListener('cw:generate-summary', async function(e) {
         var askPrompt = `[RÉCAPITULATIF SYSTÈME CLOUDWORKS]
 Demande initiale de l'utilisateur : "${promptText || 'Tâche système'}".
 Statut : L'agent PC a terminé avec succès l'exécution sur le PC.
-Résumé : ${summary || 'Toutes les actions ont été effectuées avec succès.'}.
+Résumé technique : ${summary || 'Toutes les actions ont été effectuées avec succès.'}.
 
 Consigne pour EVA : Rédige une réponse courte (2 à 3 phrases), naturelle, chaleureuse et personnalisée à la première personne (en tant qu'EVA). Confirme précisément ce qui a été créé ou ouvert sur le PC (fichiers, dossiers, Bureau, liens...) sans mentionner aucune commande technique ni code PowerShell. Termine en demandant si l'utilisateur a besoin d'autre chose.`;
 
@@ -584,10 +598,8 @@ Consigne pour EVA : Rédige une réponse courte (2 à 3 phrases), naturelle, cha
 
         if (sumRes && sumRes.success && sumRes.content && sumRes.content.trim()) {
           var rawMsg = sumRes.content.trim();
-          if (typeof window.parseEvaActions === 'function') {
-            rawMsg = window.parseEvaActions(rawMsg);
-          }
-          if (rawMsg && rawMsg.trim()) msg = rawMsg.trim();
+          rawMsg = rawMsg.replace(/\[ACTION:[\s\S]*?\]/gi, '').trim();
+          if (rawMsg) msg = rawMsg;
         }
       } catch(err) {
         console.warn('[CW Summary] Erreur génération IA:', err);
@@ -601,7 +613,7 @@ Consigne pour EVA : Rédige une réponse courte (2 à 3 phrases), naturelle, cha
       msg = "C'est tout bon ! J'ai bien effectué toutes les actions demandées sur votre PC. Vos fichiers et dossiers sont prêts. Souhaitez-vous que je fasse autre chose ?";
     }
   } else if (status === 'cancelled') {
-    msg = "La tâche sur votre PC a été arrêtée. N'hésitez pas si vous souhaitez la relancer ou faire autre chose.";
+    msg = "La tâche sur votre PC a bien été arrêtée. N'hésitez pas si vous souhaitez la relancer ou que je fasse autre chose !";
   } else {
     msg = `⚠️ Une difficulté est survenue lors de l'exécution sur votre PC :\n\n${summary || "Erreur inconnue."}\n\nSouhaitez-vous que je réessaie ?`;
   }
