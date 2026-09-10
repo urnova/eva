@@ -1057,7 +1057,21 @@ async function startLLM(): Promise<boolean> {
   }
 }
 
+let activeSessionId: string | null = null;
+let activeChatSession: any = null;
+let activeSequence: any = null;
+
+function disposeActiveSession() {
+  if (activeSequence) {
+    try { activeSequence.dispose(); } catch(e) {}
+    activeSequence = null;
+  }
+  activeChatSession = null;
+  activeSessionId = null;
+}
+
 function stopLLM() {
+  disposeActiveSession();
   if (llamaContext) {
     console.log('[LLM] Arrêt et libération de la RAM...');
     try { llamaContext.dispose(); } catch(e) {}
@@ -1088,7 +1102,7 @@ function _notifyLLMReady() {
   _rebuildTrayMenu();
 }
 
-ipcMain.handle('llm:chat', async (event, messages, options?: { maxTokens?: number; stopTriggers?: string[]; temperature?: number }) => {
+ipcMain.handle('llm:chat', async (event, messages, options?: { maxTokens?: number; stopTriggers?: string[]; temperature?: number; sessionId?: string }) => {
   resetLLMTimer();
 
   const wasRunning = !!llamaContext;
@@ -1101,29 +1115,45 @@ ipcMain.handle('llm:chat', async (event, messages, options?: { maxTokens?: numbe
     throw new Error("MODEL_MISSING");
   }
 
-  let sequence: any = null;
+  const targetSessionId = options?.sessionId || null;
+  let session: any = null;
+
   try {
     const { LlamaChatSession } = await getLlamaCpp();
-    sequence = llamaContext.getSequence();
-    const session = new LlamaChatSession({
-      contextSequence: sequence
-    });
 
-    const history: any[] = [];
     let promptMsg = "";
-
-    for (let i = 0; i < messages.length; i++) {
-      const m = messages[i];
-      if (i === messages.length - 1 && m.role === 'user') {
-        promptMsg = m.content;
-        break;
-      }
-      if (m.role === 'system') history.push({ type: 'system', text: m.content });
-      else if (m.role === 'user') history.push({ type: 'user', text: m.content });
-      else if (m.role === 'assistant') history.push({ type: 'model', response: [m.content] });
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.role === 'user') {
+      promptMsg = lastMsg.content;
+    } else {
+      promptMsg = messages.map((m: any) => m.content).join("\n");
     }
 
-    session.setChatHistory(history);
+    // Réutiliser la session et son cache KV si on continue la même tâche
+    if (targetSessionId && activeSessionId === targetSessionId && activeChatSession) {
+      session = activeChatSession;
+    } else {
+      disposeActiveSession();
+      activeSequence = llamaContext.getSequence();
+      session = new LlamaChatSession({
+        contextSequence: activeSequence
+      });
+
+      const history: any[] = [];
+      for (let i = 0; i < messages.length - 1; i++) {
+        const m = messages[i];
+        if (m.role === 'system') history.push({ type: 'system', text: m.content });
+        else if (m.role === 'user') history.push({ type: 'user', text: m.content });
+        else if (m.role === 'assistant') history.push({ type: 'model', response: [m.content] });
+      }
+
+      session.setChatHistory(history);
+
+      if (targetSessionId) {
+        activeSessionId = targetSessionId;
+        activeChatSession = session;
+      }
+    }
     
     const maxToks = (options && typeof options.maxTokens === 'number') ? options.maxTokens : 256;
     const temp = (options && typeof options.temperature === 'number') ? options.temperature : 0.1;
@@ -1140,16 +1170,24 @@ ipcMain.handle('llm:chat', async (event, messages, options?: { maxTokens?: numbe
       }
     });
     
-    try { sequence.dispose(); } catch(e) {}
+    // Si pas de session persistante, libérer la séquence
+    if (!targetSessionId) {
+      disposeActiveSession();
+    }
     
     return {
       choices: [{ message: { role: 'assistant', content: responseText } }]
     };
   } catch (err: any) {
-    try { if (sequence) sequence.dispose(); } catch(e) {}
+    disposeActiveSession();
     console.error('[LLM API] Erreur:', err?.message || err);
     throw new Error(err?.message || String(err));
   }
+});
+
+ipcMain.handle('llm:reset-session', async () => {
+  disposeActiveSession();
+  return { success: true };
 });
 
 ipcMain.handle('llm:start', async () => {

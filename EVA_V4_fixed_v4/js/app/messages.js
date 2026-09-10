@@ -740,6 +740,9 @@ async function handleSend() {
     }
 
     var cleanContent = parseEvaActions(result.content);
+    if (hasCW && (!cleanContent || cleanContent.trim().length < 5)) {
+      cleanContent = "Je m'en occupe tout de suite ! Je lance l'exécution sur votre PC via CloudWorks.";
+    }
     if (cleanContent && cleanContent.trim()) {
       streamEvaMsg(cleanContent);
     }

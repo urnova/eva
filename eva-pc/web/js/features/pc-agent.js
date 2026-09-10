@@ -304,25 +304,14 @@
      Boucle agentique LLM local
   ═══════════════════════════════════════════ */
   async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef) {
-    const systemPrompt = `Tu es l'Agent PC Autonome d'EVA sous Windows. Ton rôle est d'exécuter des commandes PowerShell.
-RÈGLES ABSOLUES :
-1. NE FAIS AUCUNE EXPLICATION. AUCUN COMMENTAIRE. AUCUN BLOC DE RÉFLEXION.
-2. Pour agir sur le système, écris DIRECTEMENT et UNIQUEMENT : [CMD]ta_commande_powershell[/CMD]
-3. N'utilise [REPORT]...[/REPORT] QUE quand les commandes demandées ont déjà été exécutées avec succès !
-4. Utilise $env:USERPROFILE\\Desktop pour le Bureau, $env:USERPROFILE\\Documents pour Documents.
-5. Sois direct, rapide et précis.
-
-EXEMPLES :
-User: Crée un document texte sur mon bureau avec écrit hello world
-Assistant: [CMD]New-Item -Path "$env:USERPROFILE\\Desktop\\test.txt" -ItemType File -Value "hello world" -Force[/CMD]
-
-User: Ouvre le bloc-notes
-Assistant: [CMD]Start-Process "notepad.exe"[/CMD]
-
-User: Résultats des commandes:
-$ New-Item ...
-(succès)
-Assistant: [REPORT]Le fichier test.txt a bien été créé sur votre bureau.[/REPORT]`;
+    const systemPrompt = `Tu es l'Agent PC Windows d'EVA. RÈGLES ABSOLUES :
+1. Réponds UNIQUEMENT par des commandes PowerShell valides dans un bloc [CMD]commandes[/CMD]. AUCUN texte explicatif ni commentaire.
+2. Chemins : Bureau = $env:USERPROFILE\\Desktop | Documents = $env:USERPROFILE\\Documents.
+3. Pour plusieurs fichiers ou dossiers, mets TOUTES les commandes PowerShell dans le MÊME bloc [CMD] séparées par des sauts de ligne.
+4. Exemples :
+[CMD]New-Item -Path "$env:USERPROFILE\\Desktop\\test.txt" -ItemType File -Value "Hello" -Force[/CMD]
+[CMD]New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier" -ItemType Directory -Force
+New-Item -Path "$env:USERPROFILE\\Desktop\\Dossier\\f1.txt" -ItemType File -Value "1" -Force[/CMD]`;
 
     const history = [
       { role: 'system', content: systemPrompt },
@@ -383,6 +372,7 @@ Assistant: [REPORT]Le fichier test.txt a bien été créé sur votre bureau.[/RE
           const data = await window.eva.system.llmChat(history, {
             maxTokens: 256,
             temperature: 0.1,
+            sessionId: cmdId,
             stopTriggers: ['[/CMD]', '[/REPORT]', '[/CONFIRM]']
           });
           if (data.choices && data.choices[0] && data.choices[0].message) {
@@ -466,7 +456,7 @@ Assistant: [REPORT]Le fichier test.txt a bien été créé sur votre bureau.[/RE
             // si toutes les commandes ont réussi, terminer immédiatement sans second appel LLM lourd !
             var isDirectAction = /(crée|cree|créer|creer|écris|ecris|écrire|ecrire|ajoute|ajouter|supprime|supprimer|efface|effacer|ouvre|ouvrir|ferme|fermer|lance|lancer|tue|tuer|kill|déplace|deplace|copie|copier|installe|installer)/i.test(userPrompt);
             if (allSucceeded && isDirectAction) {
-              finalReport = 'Action exécutée avec succès sur votre PC.';
+              finalReport = 'Action exécutée avec succès : ' + allCmds.map(function(c){ return c.substring(0, 80); }).join(' ; ');
               steps.push({ text: '\u2713 ' + finalReport, ts: new Date().toISOString() });
               await cmdRef.update({ step: 'Termin\u00e9 \u2713', steps, updatedAt: new Date() });
               break;
@@ -499,6 +489,12 @@ Assistant: [REPORT]Le fichier test.txt a bien été créé sur votre bureau.[/RE
         return { error: errMsg, steps };
       }
     }
+
+    try {
+      if (window.eva && window.eva.system && typeof window.eva.system.llmResetSession === 'function') {
+        await window.eva.system.llmResetSession();
+      }
+    } catch(e) {}
 
     if (!finalReport) finalReport = 'T\u00e2che termin\u00e9e.';
     return { output: finalReport, steps };

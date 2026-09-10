@@ -148,14 +148,16 @@ function parseEvaActions(content) {
         window._evaFileTarget = _prev;
       }, 0);
     } else if (action && _cwActionTypes.indexOf(action.type) !== -1) {
-      /* Actions CloudWorks : passer par le modal de confirmation */
+      /* Actions CloudWorks : différer légèrement pour laisser le temps au message d'introduction d'EVA de s'afficher */
       console.log('[file-gen] Action CloudWorks détectée:', action.type, action.prompt || '');
-      if (typeof window.cwConfirmAndExecute === 'function') {
-        window.cwConfirmAndExecute(action);
-      } else {
-        console.error('[file-gen] cwConfirmAndExecute non défini — exécution directe');
-        executeEvaAction(action);
-      }
+      setTimeout(function() {
+        if (typeof window.cwConfirmAndExecute === 'function') {
+          window.cwConfirmAndExecute(action);
+        } else {
+          console.error('[file-gen] cwConfirmAndExecute non défini — exécution directe');
+          executeEvaAction(action);
+        }
+      }, 80);
     } else {
       executeEvaAction(action);
     }

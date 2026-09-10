@@ -220,9 +220,15 @@ function _showConfirmModalInline(action, deviceName) {
     </div>
   `;
 
-  var lastMsg = _getOrAppendTargetBubble();
-  if (lastMsg) {
-    lastMsg.appendChild(card);
+  var chatList = document.getElementById('messagesList') || document.getElementById('chatMessages') || document.getElementById('messagesArea');
+  if (chatList) {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'message cw-message-item pending';
+    wrapper.id = 'cwMsgWrapper-' + tempId;
+    wrapper.style.cssText = 'width:100%; display:flex; justify-content:flex-start; margin:8px 0;';
+    wrapper.appendChild(card);
+    chatList.appendChild(wrapper);
+    if (typeof window.scrollDown === 'function') window.scrollDown();
     var chatArea = document.getElementById('messagesArea') || document.getElementById('chatMessages');
     if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
   }
@@ -249,7 +255,9 @@ window._cwModalRespond = function(confirmed, tempId) {
     } else {
       var ui = document.getElementById('cwApproveUI-' + tempId);
       if (ui) ui.style.display = 'none';
-      card.remove(); 
+      var cardWrapper = document.getElementById('cwMsgWrapper-' + tempId);
+      if (cardWrapper) cardWrapper.remove();
+      else card.remove();
     }
   }
 
@@ -489,10 +497,16 @@ window.appendCloudWorksTracker = function(cmdId, prompt) {
   }
 
   var uid = window.S.user.uid;
-  var target = _getOrAppendTargetBubble();
+  var chatList = document.getElementById('messagesList') || document.getElementById('chatMessages') || document.getElementById('messagesArea');
   var card = _createTrackerCard(cmdId, prompt);
-  if (target) {
-    target.appendChild(card);
+  if (chatList) {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'message cw-message-item';
+    wrapper.id = 'cwMsgWrapper-' + cmdId;
+    wrapper.style.cssText = 'width:100%; display:flex; justify-content:flex-start; margin:10px 0;';
+    wrapper.appendChild(card);
+    chatList.appendChild(wrapper);
+    if (typeof window.scrollDown === 'function') window.scrollDown();
     var chatArea = document.getElementById('messagesArea') || document.getElementById('chatMessages');
     if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
   }
@@ -533,31 +547,77 @@ window.appendCloudWorksTracker = function(cmdId, prompt) {
 /* ════════════════════════════════════════════════════════════
    MESSAGE DE RÉSUMÉ EVA & DÉBLOCAGE INPUT
 ════════════════════════════════════════════════════════════ */
-window.addEventListener('cw:generate-summary', function(e) {
+window.addEventListener('cw:generate-summary', async function(e) {
   var detail = e.detail;
+  var cmdId   = detail.cmdId;
   var status  = detail.status;
   var summary = detail.summary || '';
   var result  = detail.result || {};
 
-  var reportText = result.report || result.output || summary || '';
-  var msg = '';
-  if (status === 'done') {
-    msg = reportText
-      ? "✅ **Tâche CloudWorks terminée**\n\n" + reportText + "\n\nSouhaites-tu que je fasse autre chose ?"
-      : "✅ **Tâche CloudWorks terminée avec succès.** Souhaites-tu que je fasse autre chose ?";
-  } else if (status === 'cancelled') {
-    msg = "■ **Tâche arrêtée** par l'utilisateur. Dis-moi si tu veux relancer.";
-  } else {
-    msg = "⚠️ **Erreur CloudWorks**\n\n" + (summary || "Erreur inconnue.") + "\n\nVeux-tu que je réessaie ?";
-  }
-
   // Nettoyer l'historique de réflexion pour éviter les faux panneaux 'Réflexion'
   if (typeof window.clearThinkingHistory === 'function') window.clearThinkingHistory();
+
+  var promptText = '';
+  var card = document.getElementById('cwTracker-' + cmdId);
+  if (card) {
+    var promptEl = card.querySelector('.cw-tracker-prompt');
+    if (promptEl) promptText = promptEl.textContent.trim();
+  }
+
+  var msg = '';
+  if (status === 'done') {
+    // Génération d'un vrai récapitulatif contextualisé et non générique par EVA
+    if (window.EVAChatHandler && typeof window.EVAChatHandler.sendMessage === 'function') {
+      try {
+        if (typeof window.setEvaStatus === 'function') window.setEvaStatus('EVA ÉCRIT...', 'writing');
+        var askPrompt = `[RÉCAPITULATIF SYSTÈME CLOUDWORKS]
+L'utilisateur avait demandé : "${promptText || 'Tâche système'}".
+L'agent PC a terminé avec succès l'exécution.
+Détails d'exécution : ${summary || JSON.stringify(result.report || result.output || 'Toutes les commandes ont réussi.')}.
+
+Consigne : Rédige une réponse courte (2 à 3 phrases), naturelle, chaleureuse et précise à la première personne (en tant qu'EVA), confirmant exactement ce qui a été fait et où se trouvent les éléments créés ou modifiés sur le PC (par exemple sur le Bureau ou dans les dossiers indiqués). Ne mentionne pas de code brut ou de balises techniques.`;
+
+        var origSys = window.EVA_SYSTEM_PROMPT;
+        window.EVA_SYSTEM_PROMPT = "Tu es EVA, l'assistante personnelle de l'utilisateur. Tu viens d'accomplir une tâche sur son PC. Fais un compte-rendu clair, précis, personnalisé et amical.";
+        var sumRes = await window.EVAChatHandler.sendMessage(askPrompt, { tone: (window.S && window.S.tone) || 'friendly' });
+        window.EVA_SYSTEM_PROMPT = origSys;
+
+        if (sumRes && sumRes.success && sumRes.content && sumRes.content.trim()) {
+          var rawMsg = sumRes.content.trim();
+          if (typeof window.parseEvaActions === 'function') {
+            rawMsg = window.parseEvaActions(rawMsg);
+          }
+          if (rawMsg && rawMsg.trim()) msg = rawMsg.trim();
+        }
+      } catch(err) {
+        console.warn('[CW Summary] Erreur génération IA:', err);
+      }
+    }
+
+    // Fallback intelligent si l'appel IA échoue ou n'est pas disponible
+    if (!msg || !msg.trim()) {
+      var details = summary || (result && (result.report || result.output)) || '';
+      if (details) {
+        msg = `C'est tout bon ! J'ai bien exécuté votre demande sur votre PC :\n\n${details}\n\nTout est en place. Souhaitez-vous que je fasse autre chose ?`;
+      } else {
+        msg = `C'est tout bon ! Votre tâche a bien été exécutée avec succès sur votre PC. Souhaitez-vous que je fasse autre chose ?`;
+      }
+    }
+  } else if (status === 'cancelled') {
+    msg = "La tâche sur votre PC a été arrêtée. N'hésitez pas si vous souhaitez la relancer ou faire autre chose.";
+  } else {
+    msg = `⚠️ Une difficulté est survenue lors de l'exécution sur votre PC :\n\n${summary || "Erreur inconnue."}\n\nSouhaitez-vous que je réessaie ?`;
+  }
 
   if (typeof window.streamEvaMsg === 'function') window.streamEvaMsg(msg);
   else if (typeof window.addMessage === 'function') window.addMessage('assistant', msg);
 
-  // Débloquer l'input (remettre l'avion et masquer le carré rouge) UNE FOIS QU'EVA A FINI
+  // Sauvegarder dans la conversation active pour que le résumé persiste
+  if (typeof window.saveConvMsg === 'function') {
+    window.saveConvMsg(promptText ? ('[CloudWorks] ' + promptText) : '[CloudWorks Tâche]', msg);
+  }
+
+  // Débloquer l'input UNE FOIS QU'EVA A FINI
   if (window.S) {
     window.S.cwRunning = false;
     window.S.busy = false;
