@@ -570,6 +570,9 @@ ipcMain.on('overlay:action', (_event, action, data) => {
       try { child_process.execSync(`taskkill /F /T /PID ${activeExecProcess.pid}`); } catch(e) {}
       activeExecProcess = null;
     }
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.hide();
+    }
   }
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('overlay:action', action, data);

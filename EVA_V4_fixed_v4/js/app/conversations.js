@@ -1,5 +1,5 @@
 async function loadConvs() {
-  if (!S.user) return;
+  if (!S.user) { document.dispatchEvent(new CustomEvent('eva:appFullyLoaded')); return; }
   try {
     var pinnedSnap = await db.collection('users').doc(S.user.uid)
       .collection('conversations').where('isPinned', '==', true).get();
@@ -23,6 +23,9 @@ async function loadConvs() {
     S.convs = all;
     renderConvs();
   } catch(e) { console.error('loadConvs:',e); }
+  
+  // Signaler que l'interface est prete pour enlever le splash screen
+  document.dispatchEvent(new CustomEvent('eva:appFullyLoaded'));
 }
 
 function renderConvs(filter) {
@@ -161,7 +164,11 @@ async function loadConv(id) {
     snap.forEach(function(d) {
       var m = Object.assign({id:d.id}, d.data());
       S.messages.push(m);
-      ctx.push({role: m.role === 'eva' ? 'assistant' : 'user', content: m.content});
+      if (m.role === 'eva' || m.role === 'assistant') {
+        ctx.push({role: 'assistant', content: m.content});
+      } else if (m.role === 'user') {
+        ctx.push({role: 'user', content: m.content});
+      }
     });
     if (window.EVAChatHandler) window.EVAChatHandler.setContext(ctx);
     renderMsgs();
@@ -243,7 +250,7 @@ async function togglePinConv(id, isPinned) {
 window.togglePinConv = togglePinConv;
 
 async function saveConvMsg(userMsg, evaMsg) {
-  if (!S.user) return;
+  if (!S.user) { document.dispatchEvent(new CustomEvent('eva:appFullyLoaded')); return; }
   try {
     var ref;
     if (!S.convId) {
@@ -286,3 +293,52 @@ async function saveConvMsg(userMsg, evaMsg) {
     }
   } catch(e) { console.error('saveConvMsg:',e); }
 }
+
+async function saveEvaOnlyMsg(evaMsg) {
+  if (!S.user) return;
+  try {
+    var ref;
+    if (!S.convId) {
+      ref = db.collection('users').doc(S.user.uid).collection('conversations').doc();
+      S.convId = ref.id;
+      var data = {title: 'Tâche CloudWorks', lastMessage: (evaMsg || '').slice(0,80), createdAt: window.timestamp(), updatedAt: window.timestamp(), aiProvider: getActiveProvider(), aiModel: getActiveModel()};
+      await ref.set(data);
+      S.convs.unshift(Object.assign({id: ref.id}, data));
+      var hdr = document.getElementById('convTitleHeader');
+      if (hdr) hdr.textContent = data.title;
+    } else {
+      ref = db.collection('users').doc(S.user.uid).collection('conversations').doc(S.convId);
+      await ref.update({lastMessage: (evaMsg || '').slice(0,80), updatedAt: window.timestamp()});
+      var c = S.convs.find(function(x){return x.id === S.convId;});
+      if (c) c.lastMessage = (evaMsg || '').slice(0,80);
+    }
+    var msgs = ref.collection('messages');
+    await msgs.add({role: 'eva', content: evaMsg, timestamp: window.timestamp()});
+
+    S.convs.sort(function(a, b) {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      if (a.isPinned && b.isPinned) return (b.pinnedAt || 0) - (a.pinnedAt || 0);
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
+    });
+    renderConvs();
+  } catch(e) { console.error('saveEvaOnlyMsg:', e); }
+}
+window.saveEvaOnlyMsg = saveEvaOnlyMsg;
+
+async function saveCustomMsg(msgData) {
+  if (!S.user || !S.convId) return null;
+  try {
+    var ref = db.collection('users').doc(S.user.uid).collection('conversations').doc(S.convId);
+    var msgs = ref.collection('messages');
+    var toSave = Object.assign({}, msgData, {
+      timestamp: msgData.timestamp || window.timestamp()
+    });
+    var docRef = await msgs.add(toSave);
+    return docRef.id;
+  } catch(e) {
+    console.error('saveCustomMsg:', e);
+    return null;
+  }
+}
+window.saveCustomMsg = saveCustomMsg;

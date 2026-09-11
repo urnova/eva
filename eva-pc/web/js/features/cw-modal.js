@@ -311,6 +311,9 @@ window.cancelCloudWorksTask = function(cmdId) {
   if (window.eva && window.eva.system && typeof window.eva.system.llmAbort === 'function') {
     try { window.eva.system.llmAbort(); } catch(e) {}
   }
+  if (window.eva && window.eva.overlay && typeof window.eva.overlay.hide === 'function') {
+    try { window.eva.overlay.hide(); } catch(e) {}
+  }
   if (!window.db || !window.S || !window.S.user) return;
   var uid = window.S.user.uid;
   window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId)
@@ -321,6 +324,29 @@ window.cancelCloudWorksTask = function(cmdId) {
     });
 };
 
+// Écoute bidirectionnelle : interruption CloudWorks déclenchée depuis la bulle overlay Electron
+if (window.eva && window.eva.overlay && typeof window.eva.overlay.onAction === 'function') {
+  window.eva.overlay.onAction(function(action, data) {
+    console.log('[CW Modal] Action overlay reçue:', action, data);
+    if (action === 'cancel') {
+      if (typeof window.cancelCurrentCloudWorksTask === 'function') {
+        try { window.cancelCurrentCloudWorksTask(); } catch(e) {}
+      }
+      var activeIds = Object.keys(_activeTrackers || {});
+      if (activeIds.length > 0) activeIds.forEach(window.cancelCloudWorksTask);
+      if (typeof window.stopGeneration === 'function') {
+        try { window.stopGeneration(); } catch(e) {}
+      }
+      if (window.eva && window.eva.overlay && typeof window.eva.overlay.hide === 'function') {
+        try { window.eva.overlay.hide(); } catch(e) {}
+      }
+      if (typeof window.toast === 'function') {
+        window.toast('Tâche interrompue depuis l\'overlay', 'info');
+      }
+    }
+  });
+}
+
 (function() {
   var maxTry = 20, n = 0;
   var t = setInterval(function() {
@@ -330,6 +356,9 @@ window.cancelCloudWorksTask = function(cmdId) {
     if (!stopBtn) return;
     clearInterval(t);
     stopBtn.addEventListener('click', function() {
+      if (window.eva && window.eva.overlay && typeof window.eva.overlay.hide === 'function') {
+        try { window.eva.overlay.hide(); } catch(e) {}
+      }
       if (window.S && window.S.cwRunning) {
         if (typeof window.cancelCurrentCloudWorksTask === 'function') {
           try { window.cancelCurrentCloudWorksTask(); } catch(e) {}
@@ -337,7 +366,7 @@ window.cancelCloudWorksTask = function(cmdId) {
         if (window.eva && window.eva.system && typeof window.eva.system.llmAbort === 'function') {
           try { window.eva.system.llmAbort(); } catch(e) {}
         }
-        var activeIds = Object.keys(_activeTrackers);
+        var activeIds = Object.keys(_activeTrackers || {});
         if (activeIds.length > 0) activeIds.forEach(window.cancelCloudWorksTask);
       } else {
         if (typeof window.stopGeneration === 'function') window.stopGeneration();
@@ -429,6 +458,73 @@ function _addStep(cmdId, text, state, cmdText) {
   if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
 }
 
+/* ════════════════════════════════════════════════════════════
+   API PUBLIQUE : renderSavedTrackerCard (Restauration d'historique)
+════════════════════════════════════════════════════════════ */
+window.renderSavedTrackerCard = function(msgData) {
+  var wrapper = document.createElement('div');
+  wrapper.className = 'message cw-message-item';
+  wrapper.id = 'cwSavedMsg-' + (msgData.cmdId || Math.random().toString(36).slice(2));
+  wrapper.style.cssText = 'width:100%; display:flex; justify-content:flex-start; margin:10px 0;';
+
+  var status = msgData.status || 'done';
+  var card = document.createElement('div');
+  card.className = 'cw-tracker-card ' + status;
+  card.dataset.finalized = '1';
+
+  var badgeText = status === 'done' ? '✓ Terminé' : (status === 'cancelled' ? '■ Annulé' : '✗ Erreur');
+  var titleText = status === 'done' ? 'CloudWorks — Terminé ✓' : (status === 'cancelled' ? 'CloudWorks — Arrêté' : 'CloudWorks — Erreur');
+
+  var stepsHtml = '';
+  var steps = msgData.steps || [];
+  if (Array.isArray(steps) && steps.length > 0) {
+    steps.forEach(function(s) {
+      var stState = s.state || (status === 'done' ? 'done' : 'error');
+      var icon = stState === 'done' ? '✓' : (stState === 'error' ? '✗' : '✓');
+      stepsHtml += `
+        <div class="cw-stepper-item ${stState}">
+          <div class="cw-step-connector"></div>
+          <div class="cw-step-dot">${icon}</div>
+          <div class="cw-step-content">
+            <div class="cw-step-label">${_esc(s.text || '')}</div>
+            ${s.cmdText ? '<div class="cw-step-cmd">' + _esc(s.cmdText.substring(0, 80)) + '</div>' : ''}
+          </div>
+        </div>
+      `;
+    });
+  } else {
+    stepsHtml = `
+      <div class="cw-stepper-item ${status === 'done' ? 'done' : 'error'}">
+        <div class="cw-step-connector"></div>
+        <div class="cw-step-dot">${status === 'done' ? '✓' : '✗'}</div>
+        <div class="cw-step-content">
+          <div class="cw-step-label">${_esc(msgData.prompt || 'Exécution des commandes CloudWorks')}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  var summaryHtml = '';
+  if (status !== 'done' && msgData.summary) {
+    summaryHtml = `<div class="cw-tracker-summary ${status}">${_esc(msgData.summary.substring(0, 300))}</div>`;
+  }
+
+  card.innerHTML = `
+    <div class="cw-tracker-header">
+      <div class="cw-tracker-icon-wrap">⚙️</div>
+      <span class="cw-tracker-title">${titleText}</span>
+      <span class="cw-tracker-badge ${status}">${badgeText}</span>
+    </div>
+    <div class="cw-tracker-body">
+      <div class="cw-tracker-prompt">${_esc(msgData.prompt || 'Tâche CloudWorks')}</div>
+      <div class="cw-stepper">${stepsHtml}</div>
+      ${summaryHtml}
+    </div>
+  `;
+  wrapper.appendChild(card);
+  return wrapper;
+};
+
 function _finalizeTracker(cmdId, result, status) {
   var card = document.getElementById('cwTracker-' + cmdId);
   if (!card) return;
@@ -476,8 +572,70 @@ function _finalizeTracker(cmdId, result, status) {
     card.appendChild(summaryEl);
   }
 
+  // Extraire les étapes affichées dans le stepper pour les persister en base
+  var steps = [];
+  if (stepperEl) {
+    stepperEl.querySelectorAll('.cw-stepper-item').forEach(function(item) {
+      var lbl = item.querySelector('.cw-step-label');
+      var cmd = item.querySelector('.cw-step-cmd');
+      var isErr = item.classList.contains('error');
+      var stepTxt = lbl ? lbl.textContent.trim() : '';
+      if (stepTxt) {
+        steps.push({
+          text: stepTxt,
+          cmdText: cmd ? cmd.textContent.trim() : null,
+          state: isErr ? 'error' : 'done'
+        });
+      }
+    });
+  }
+  if (steps.length === 0 && result && result.steps && Array.isArray(result.steps)) {
+    steps = result.steps.map(function(s) {
+      return typeof s === 'string' ? { text: s, state: 'done' } : { text: s.text || JSON.stringify(s), state: s.state || 'done', cmdText: s.cmdText || null };
+    });
+  }
+  var promptEl = card.querySelector('.cw-tracker-prompt');
+  var promptText = (promptEl ? promptEl.textContent.trim() : '') || (_activeTrackers[cmdId] && _activeTrackers[cmdId].prompt) || 'Tâche CloudWorks';
+
+  if (steps.length === 0) {
+    steps = [{ text: promptText || 'Exécution des commandes CloudWorks', state: status === 'done' ? 'done' : 'error' }];
+  }
+
+  var tracker = _activeTrackers[cmdId];
+  var uid = window.S && window.S.user && window.S.user.uid;
+  var convId = (tracker && tracker.convId) || (window.S && window.S.convId);
+  var msgDocId = tracker && tracker.msgDocId;
+
+  if (uid && convId && window.db) {
+    var updatePayload = {
+      status: status,
+      steps: steps,
+      summary: summary || '',
+      updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+    };
+    if (msgDocId) {
+      window.db.collection('users').doc(uid).collection('conversations').doc(convId).collection('messages').doc(msgDocId).update(updatePayload)
+        .catch(function(e) { console.warn('[CW Tracker] Erreur màj Firestore tracker:', e); });
+    } else {
+      var fullTrackerMsg = Object.assign({
+        role: 'cloudworks',
+        type: 'cw_tracker',
+        cmdId: cmdId,
+        prompt: promptText,
+        timestamp: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+      }, updatePayload);
+      window.db.collection('users').doc(uid).collection('conversations').doc(convId).collection('messages').add(fullTrackerMsg)
+        .catch(function(e) { console.warn('[CW Tracker] Erreur add fallback tracker:', e); });
+    }
+  }
+
   if (_activeTrackers[cmdId] && _activeTrackers[cmdId].unsub) _activeTrackers[cmdId].unsub();
   delete _activeTrackers[cmdId];
+
+  // Masquer la bulle overlay dès que la tâche est finalisée (succès, annulation ou erreur)
+  if (window.eva && window.eva.overlay && typeof window.eva.overlay.hide === 'function') {
+    try { window.eva.overlay.hide(); } catch(e) {}
+  }
 
   // Laisser l'état bloqué (carré rouge) jusqu'à ce qu'EVA envoie le message de résumé
   setTimeout(function() {
@@ -510,6 +668,7 @@ window.appendCloudWorksTracker = function(cmdId, prompt) {
   }
 
   var uid = window.S.user.uid;
+  var convId = window.S.convId;
   var chatList = document.getElementById('messagesList') || document.getElementById('chatMessages') || document.getElementById('messagesArea');
   var card = _createTrackerCard(cmdId, prompt);
   if (chatList) {
@@ -527,8 +686,29 @@ window.appendCloudWorksTracker = function(cmdId, prompt) {
   _blockInputForCW();
   if (window.S) { window.S.cwRunning = true; window.S.busy = true; }
 
-  var tracker = { unsub: null, lastStep: null, stepCount: 0, startMs: Date.now() };
+  var tracker = { unsub: null, lastStep: null, stepCount: 0, startMs: Date.now(), msgDocId: null, convId: convId, prompt: prompt };
   _activeTrackers[cmdId] = tracker;
+
+  // Persister immédiatement la carte dans les messages de la conversation active pour l'historique
+  if (convId && window.db) {
+    var trackerMsgData = {
+      role: 'cloudworks',
+      type: 'cw_tracker',
+      cmdId: cmdId,
+      prompt: prompt || 'Tâche CloudWorks',
+      status: 'running',
+      steps: [],
+      timestamp: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+    };
+    window.db.collection('users').doc(uid).collection('conversations').doc(convId).collection('messages').add(trackerMsgData)
+      .then(function(docRef) {
+        tracker.msgDocId = docRef.id;
+        console.log('[CW Tracker] Carte initialisée dans Firestore avec ID:', docRef.id);
+      })
+      .catch(function(err) {
+        console.warn('[CW Tracker] Erreur persist initial tracker:', err);
+      });
+  }
 
   tracker.unsub = window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId)
     .onSnapshot(function(doc) {
@@ -620,9 +800,25 @@ Consigne pour EVA : Rédige une réponse courte (2 à 3 phrases), naturelle, cha
   if (typeof window.streamEvaMsg === 'function') window.streamEvaMsg(msg);
   else if (typeof window.addMessage === 'function') window.addMessage('assistant', msg);
 
-  // Sauvegarder dans la conversation active pour que le résumé persiste
-  if (typeof window.saveConvMsg === 'function') {
-    window.saveConvMsg(promptText ? ('[CloudWorks] ' + promptText) : '[CloudWorks Tâche]', msg);
+  // Sauvegarder dans la conversation active UNIQUEMENT le message de récapitulatif d'EVA (aucun faux message utilisateur résiduel)
+  if (typeof window.saveEvaOnlyMsg === 'function') {
+    await window.saveEvaOnlyMsg(msg);
+  } else if (window.S && window.S.user && window.S.convId && window.db) {
+    try {
+      var convRef = window.db.collection('users').doc(window.S.user.uid).collection('conversations').doc(window.S.convId);
+      await convRef.collection('messages').add({
+        role: 'eva',
+        content: msg,
+        timestamp: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+      });
+      await convRef.update({
+        lastMessage: msg.slice(0, 80),
+        updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+      });
+      var c = window.S.convs && window.S.convs.find(function(x){ return x.id === window.S.convId; });
+      if (c) c.lastMessage = msg.slice(0, 80);
+      if (typeof window.renderConvs === 'function') window.renderConvs();
+    } catch(e) { console.error('[CW Summary] Erreur sauvegarde résumé EVA:', e); }
   }
 
   // Débloquer l'input UNE FOIS QU'EVA A FINI

@@ -842,6 +842,23 @@ function renderMdDom(text, container) {
 }
 
 function buildMsgDom(msg) {
+  if (msg.role === 'cloudworks' || msg.type === 'cw_tracker') {
+    if (typeof window.renderSavedTrackerCard === 'function') {
+      return window.renderSavedTrackerCard(msg);
+    }
+  }
+  if (msg.role === 'user' && typeof msg.content === 'string' && (msg.content.startsWith('[CloudWorks] ') || msg.content === '[CloudWorks Tâche]')) {
+    if (typeof window.renderSavedTrackerCard === 'function') {
+      var cleanP = msg.content.replace(/^\[CloudWorks\]\s*/i, '').trim();
+      return window.renderSavedTrackerCard({
+        role: 'cloudworks',
+        type: 'cw_tracker',
+        prompt: cleanP || 'Tâche CloudWorks',
+        status: 'done',
+        steps: [{ text: cleanP || 'Actions système exécutées avec succès', state: 'done' }]
+      });
+    }
+  }
   var isEva = msg.role === 'eva' || msg.role === 'assistant';
   var div = document.createElement('div');
   div.className = 'message ' + (isEva ? 'eva' : 'user');

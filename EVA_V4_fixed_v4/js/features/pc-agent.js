@@ -151,6 +151,9 @@
         });
       } catch(e) {}
     }
+    if (window.eva && window.eva.overlay && typeof window.eva.overlay.hide === 'function') {
+      try { window.eva.overlay.hide(); } catch(e) {}
+    }
     window.dispatchEvent(new CustomEvent('cw:task-cancelled'));
   };
 
