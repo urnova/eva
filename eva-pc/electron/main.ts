@@ -331,6 +331,13 @@ function _rebuildTrayMenu() {
     },
     { type: 'separator' },
     {
+      label: '🔄 Rechercher des mises à jour',
+      click: () => {
+        _lastUpdateCheck = 0;
+        _checkForUpdatesIfNeeded(true);
+      }
+    },
+    {
       label: '💬 Nouveau chat',
       click: () => { mainWindow?.show(); mainWindow?.webContents.send('new-chat') }
     },
@@ -453,16 +460,29 @@ function launchMainApp() {
 
 var _lastUpdateCheck = 0;
 
-function _checkForUpdatesIfNeeded() {
-  if (isDev) return;
+function _checkForUpdatesIfNeeded(manual: boolean = false) {
+  if (isDev && !manual) return;
   var now = Date.now();
-  // Max 1 check toutes les 15 minutes
-  if (now - _lastUpdateCheck < 15 * 60 * 1000) return;
+  // Max 1 check automatique toutes les 15 minutes
+  if (!manual && (now - _lastUpdateCheck < 15 * 60 * 1000)) return;
   _lastUpdateCheck = now;
   try {
-    autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+    if (manual) {
+      new Notification({ title: 'E.V.A Assistant', body: 'Recherche de mise à jour en cours...' }).show();
+    }
+    autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+      console.error('[AutoUpdater] Erreur:', err);
+      if (manual) {
+        new Notification({ title: 'E.V.A Assistant', body: 'Impossible de vérifier les mises à jour actuellement.' }).show();
+      }
+    });
   } catch(e) {}
 }
+
+// Vérification périodique des mises à jour toutes les 30 minutes
+setInterval(() => {
+  _checkForUpdatesIfNeeded(false);
+}, 30 * 60 * 1000);
 
 function toggleWindow() {
   if (!mainWindow) return
@@ -502,7 +522,14 @@ ipcMain.on('app:quit-ready', () => {
 
 app.on('will-quit', () => {
   // Désenregistrer tous les raccourcis
-  globalShortcut.unregisterAll()
+  globalShortcut.unregisterAll();
+  try { stopLLM(); } catch(e) {}
+  if (_sttProcess) { try { _sttProcess.kill(); } catch(e) {} _sttProcess = null; }
+  if (_ttsProcess) { try { _ttsProcess.kill(); } catch(e) {} _ttsProcess = null; }
+  if (activeExecProcess) {
+    try { child_process.execSync(`taskkill /F /T /PID ${activeExecProcess.pid}`); } catch(e) {}
+    activeExecProcess = null;
+  }
 })
 
 app.on('window-all-closed', () => {
@@ -1279,70 +1306,95 @@ ipcMain.handle('llm:download', async (event) => {
   const llmDir = path.join(resourcesPath, 'models');
   if (!fs.existsSync(llmDir)) fs.mkdirSync(llmDir, { recursive: true });
 
-  
   const modelFile = path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
   const tempFile = modelFile + '.tmp';
   
-  const url = "https://huggingface.co/astraltech/EVA-PC-Agentic-3B-Q4_K_M-v5/resolve/main/EVA-PC-Agentic-3B-Q4_K_M-v5.gguf";
+  const initialUrl = "https://huggingface.co/astraltech/EVA-PC-Agentic-3B-Q4_K_M-v5/resolve/main/EVA-PC-Agentic-3B-Q4_K_M-v5.gguf";
   const token = "hf_" + "HHJeFQtG" + "LjWyDsoe" + "IbKuzGSj" + "hLcyEczyin";
 
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(tempFile);
-    
-    const options = {
-      headers: {
-        'Authorization': `Bearer ${token}`,
+    let activeReq: any = null;
+
+    function followDownload(currentUrl: string, redirectCount: number = 0) {
+      if (redirectCount > 10) {
+        try { file.end(); fs.unlinkSync(tempFile); } catch(e) {}
+        return reject(new Error('Trop de redirections lors du téléchargement du modèle'));
+      }
+
+      const parsedUrl = new URL(currentUrl);
+      const isHttps = parsedUrl.protocol === 'https:';
+      const lib = isHttps ? https : require('http');
+
+      const headers: Record<string, string> = {
         'User-Agent': 'EVA-Assistant'
+      };
+
+      // N'envoyer le Bearer token que si l'hôte est huggingface.co (pour éviter erreur 400 sur S3/CloudFront)
+      if (parsedUrl.hostname.endsWith('huggingface.co')) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-    };
-    
-    const req = https.get(url, options, (res) => {
-      if (res.statusCode === 301 || res.statusCode === 302) {
-        const redirectUrl = res.headers.location as string;
-        https.get(redirectUrl, options, (redirectRes) => {
-          handleResponse(redirectRes);
-        }).on('error', (err: any) => reject(err));
-        return;
-      }
-      handleResponse(res);
-    });
-    
-    req.on('error', (err: any) => {
-      fs.unlink(tempFile, () => {});
-      reject(err);
-    });
-    
-    function handleResponse(response: any) {
-      if (response.statusCode !== 200) {
-        reject(new Error(`Failed to download: ${response.statusCode}`));
-        return;
-      }
-      
-      const totalBytes = parseInt(response.headers['content-length'] || '0', 10);
-      let downloadedBytes = 0;
-      
-      response.on('data', (chunk: any) => {
-        downloadedBytes += chunk.length;
-        file.write(chunk);
-        
-        if (totalBytes > 0) {
-          const progress = Math.round((downloadedBytes / totalBytes) * 100);
-          event.sender.send('llm:download-progress', { progress, downloadedBytes, totalBytes });
+
+      activeReq = lib.get(currentUrl, { headers }, (res: any) => {
+        if ([301, 302, 303, 307, 308].includes(res.statusCode)) {
+          const redirectLocation = res.headers.location;
+          if (!redirectLocation) {
+            try { file.end(); fs.unlinkSync(tempFile); } catch(e) {}
+            return reject(new Error('Redirection sans en-tête location'));
+          }
+          const nextUrl = new URL(redirectLocation, currentUrl).toString();
+          return followDownload(nextUrl, redirectCount + 1);
         }
+
+        if (res.statusCode !== 200) {
+          try { file.end(); fs.unlinkSync(tempFile); } catch(e) {}
+          return reject(new Error(`Échec du téléchargement (HTTP ${res.statusCode})`));
+        }
+
+        const totalBytes = parseInt(res.headers['content-length'] || '0', 10);
+        let downloadedBytes = 0;
+        let lastReportTime = 0;
+
+        res.on('data', (chunk: any) => {
+          downloadedBytes += chunk.length;
+          file.write(chunk);
+
+          const now = Date.now();
+          if (totalBytes > 0 && (now - lastReportTime > 250 || downloadedBytes === totalBytes)) {
+            lastReportTime = now;
+            const progress = Math.round((downloadedBytes / totalBytes) * 100);
+            try {
+              if (event.sender && !event.sender.isDestroyed()) {
+                event.sender.send('llm:download-progress', { progress, downloadedBytes, totalBytes });
+              }
+            } catch(e) {}
+          }
+        });
+
+        res.on('end', () => {
+          file.end();
+          try {
+            if (fs.existsSync(modelFile)) fs.unlinkSync(modelFile);
+            fs.renameSync(tempFile, modelFile);
+            resolve({ success: true });
+          } catch(err) {
+            reject(err);
+          }
+        });
+
+        res.on('error', (err: any) => {
+          try { file.end(); fs.unlinkSync(tempFile); } catch(e) {}
+          reject(err);
+        });
       });
-      
-      response.on('end', () => {
-        file.end();
-        fs.renameSync(tempFile, modelFile);
-        resolve({ success: true });
-      });
-      
-      response.on('error', (err: any) => {
-        file.end();
-        fs.unlink(tempFile, () => {});
+
+      activeReq.on('error', (err: any) => {
+        try { file.end(); fs.unlinkSync(tempFile); } catch(e) {}
         reject(err);
       });
     }
+
+    followDownload(initialUrl, 0);
   });
 });
 

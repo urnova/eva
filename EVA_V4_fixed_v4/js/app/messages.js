@@ -588,6 +588,7 @@ async function handleSend() {
     userCtx += '  4. Créer des fichiers texte avec contenu : Set-Content -Path "$env:USERPROFILE\\Desktop\\test1.txt" -Value \'Hello World 1\' -Encoding utf8 -Force;\n';
     userCtx += '  5. Pour ouvrir Edge ou une URL : Start-Process msedge "URL";\n';
     userCtx += '- Si CloudWorks est désactivé, dis-le à l\'utilisateur et propose de l\'activer dans les paramètres\n';
+    userCtx += '- Si l\'utilisateur demande spécifiquement d\'utiliser le LLM local ou d\'exécuter avec le modèle autonome alors que le modèle n\'est pas téléchargé, invite-le à aller dans l\'onglet CloudWorks pour cliquer sur "Télécharger le modèle (2.0 Go)"\n';
     userCtx += '- Identifie-toi comme étant sur ce PC précis, pas sur le web\n';
 
     userCtx += '\nDETECTION AUTOMATIQUE CLOUDWORKS (TRES IMPORTANT) :\n';
@@ -615,12 +616,17 @@ async function handleSend() {
     } else if (onlinePCs.length === 0) {
       userCtx += 'CloudWorks : Aucun PC en ligne actuellement (' + offlinePCs.length + ' hors ligne). Impossible d\'exécuter des tâches PC.\n';
     } else if (onlinePCs.length === 1) {
-      userCtx += 'CloudWorks : 1 PC en ligne : ' + (onlinePCs[0].deviceName || onlinePCs[0].deviceId) + ' (ID: ' + onlinePCs[0].deviceId + ')\n';
-      userCtx += 'Pour des tâches sur ce PC, génère [ACTION:{...,"deviceId":"' + onlinePCs[0].deviceId + '"}]\n';
+      var pc = onlinePCs[0];
+      userCtx += 'CloudWorks : 1 PC en ligne : ' + (pc.deviceName || pc.deviceId) + ' (ID: ' + pc.deviceId + ')\n';
+      if (pc.llmModelInstalled === false) {
+        userCtx += 'NOTE : Le modèle local (LLM) n\'est pas encore téléchargé sur ce PC. Pour les tâches nécessitant le modèle autonome local, invite l\'utilisateur à ouvrir l\'onglet CloudWorks sur son application PC et à cliquer sur "Télécharger le modèle (2 Go)".\n';
+      }
+      userCtx += 'Pour des tâches sur ce PC, génère [ACTION:{...,"deviceId":"' + pc.deviceId + '"}]\n';
     } else {
       userCtx += 'CloudWorks : ' + onlinePCs.length + ' PC en ligne :\n';
       onlinePCs.forEach(function(d) {
-        userCtx += '  - ' + (d.deviceName || d.deviceId) + ' (ID: ' + d.deviceId + ') — En ligne\n';
+        var llmNote = d.llmModelInstalled === false ? ' (LLM local non téléchargé)' : '';
+        userCtx += '  - ' + (d.deviceName || d.deviceId) + ' (ID: ' + d.deviceId + ')' + llmNote + ' — En ligne\n';
       });
       userCtx += 'Demande à l\'utilisateur sur quel PC exécuter la tâche, ou utilise le premier disponible si évident.\n';
     }

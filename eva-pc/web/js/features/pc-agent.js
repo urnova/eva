@@ -61,6 +61,15 @@
       // Exposer globalement pour le system prompt
       window._cwDeviceId = deviceId;
 
+      // Vérifier si le modèle LLM local est installé sur ce PC
+      let llmModelInstalled = false;
+      if (window.eva && window.eva.system && window.eva.system.llmCheck) {
+        try {
+          const chk = await window.eva.system.llmCheck();
+          llmModelInstalled = !!(chk && chk.exists);
+        } catch(e) {}
+      }
+
       const ts = typeof window.timestamp === 'function' ? window.timestamp() : new Date();
       const docRef = window.db.collection('cloudworks').doc(uid).collection('devices').doc(deviceId);
       window.pcAgentDocRef = docRef;
@@ -73,13 +82,23 @@
         macAddress: macAddress || null,
         osVersion: osInfo,
         online: true,
+        llmModelInstalled: llmModelInstalled,
         lastSeen: ts,
         updatedAt: ts,
         sessionId: (window.S && window.S.sessionId) ? window.S.sessionId : null,
         appVersion: (window.eva && window.eva.app) ? await window.eva.app.version().catch(()=>'?') : '?'
       }, { merge: true }); // merge:true = réutilise le document existant si même MAC
 
-      console.log('[CloudWorks] Enregistré sous ID:', deviceId, '| Hostname:', hostname);
+      console.log('[CloudWorks] Enregistré sous ID:', deviceId, '| Hostname:', hostname, '| LLM installé:', llmModelInstalled);
+
+      // Écouter si le modèle vient d'être téléchargé depuis l'interface CloudWorks
+      window.addEventListener('cw:model-installed', () => {
+        console.log('[CloudWorks] Événement cw:model-installed reçu — mise à jour Firestore');
+        docRef.update({
+          llmModelInstalled: true,
+          updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+        }).catch(()=>{});
+      });
 
       // Écouter les commandes
       listenCommands(uid);

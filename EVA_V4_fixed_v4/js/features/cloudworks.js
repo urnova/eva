@@ -221,6 +221,7 @@ function renderDevices(snap) {
             '<span class="cw-badge ' + (online ? 'cw-badge-on' : 'cw-badge-off') + '">' +
               (online ? 'EN LIGNE' : 'HORS LIGNE') +
             '</span>' +
+            (online && d.llmModelInstalled === false ? '<span class="cw-badge" style="background:rgba(249,115,22,0.15);color:#f97316;border:1px solid rgba(249,115,22,0.3);margin-left:4px;font-size:0.65em;">LLM non téléchargé</span>' : '') +
             ipHtml +
           '</div>' +
         '</div>' +
@@ -229,6 +230,7 @@ function renderDevices(snap) {
       '<div class="cw-card-meta">' +
         '<span class="cw-meta-item"><span class="cw-meta-dot"></span>Vu le ' + seen + '</span>' +
         (d.osVersion ? '<span class="cw-meta-item"><span class="cw-meta-dot"></span>' + esc(d.osVersion) + '</span>' : '') +
+        (online ? (d.llmModelInstalled === false ? '<span class="cw-meta-item" style="color:#f97316;"><span class="cw-meta-dot" style="background:#f97316;"></span>Modèle local non téléchargé sur ce PC</span>' : '<span class="cw-meta-item" style="color:#00ff88;"><span class="cw-meta-dot" style="background:#00ff88;"></span>Modèle local installé</span>') : '') +
       '</div>' +
       actionsHtml;
 

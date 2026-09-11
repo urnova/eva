@@ -50,7 +50,7 @@ function _renderPCLayout(container, uid) {
       <div class="cw-section-header">
         <span class="cw-section-icon">🤖</span>
         <span class="cw-section-title">LLM Local</span>
-        <div id="cwLLMBadge" class="cw-badge cw-badge-off">● Arrêté</div>
+        <div id="cwLLMBadge" class="cw-badge cw-badge-off">○ Arrêté</div>
       </div>
       <div class="cw-section-body">
         <div id="cwLLMInfo" class="cw-llm-info">
@@ -59,7 +59,21 @@ function _renderPCLayout(container, uid) {
           <div class="cw-info-row"><span class="cw-info-label">Statut</span><span id="cwLLMStatus" class="cw-info-value">—</span></div>
         </div>
         <div class="cw-llm-actions">
-          <button class="cw-btn cw-btn-warning" onclick="window._cwRestartLLM()">⟳ Redémarrage d'urgence</button>
+          <button class="cw-btn cw-btn-warning" id="cwRestartLLMBtn" onclick="window._cwRestartLLM()">⟳ Redémarrage d'urgence</button>
+          <button class="cw-btn cw-btn-primary" id="cwDownloadLLMBtn" style="display:none;" onclick="window._cwDownloadLLM()">⬇ Télécharger le modèle IA (2.0 Go)</button>
+        </div>
+        <div id="cwDownloadProgressWrap" style="display:none; margin-top:14px; padding:12px; background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.2); border-radius:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75em; margin-bottom:6px;">
+            <span id="cwDownloadStatusText" style="color:var(--text,#e4e4ef); font-weight:600;">Téléchargement du modèle IA...</span>
+            <span id="cwDownloadPercent" style="color:var(--cyan,#00d4ff); font-weight:700;">0%</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:8px; overflow:hidden;">
+            <div id="cwDownloadBar" style="width:0%; height:100%; background:linear-gradient(90deg, var(--cyan,#00d4ff), #3b82f6); transition:width 0.3s ease;"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.68em; color:var(--text-muted,#88889a); margin-top:6px;">
+            <span id="cwDownloadBytes">0 Mo / 2048 Mo</span>
+            <span>Hugging Face (sécurisé)</span>
+          </div>
         </div>
       </div>
     </div>
@@ -145,8 +159,41 @@ async function _initLLMPanel() {
   _llmPollInterval = setInterval(_checkLLMHealth, 10000);
 }
 
+var _isDownloadingLLM = false;
+
 // Vérification directe de l'état du moteur LLM via IPC Electron (node-llama-cpp)
 async function _checkLLMHealth() {
+  if (_isDownloadingLLM) return;
+  var downloadBtn = document.getElementById('cwDownloadLLMBtn');
+  var restartBtn = document.getElementById('cwRestartLLMBtn');
+  var agenticBtn = document.querySelector('.cw-agentic-box button');
+
+  // 1. Vérifier si le fichier modèle est présent sur le disque
+  if (window.eva && window.eva.system && window.eva.system.llmCheck) {
+    try {
+      var chk = await window.eva.system.llmCheck();
+      if (!chk || !chk.exists) {
+        _updateLLMBadge('not-downloaded');
+        if (downloadBtn) downloadBtn.style.display = 'inline-flex';
+        if (restartBtn) restartBtn.style.display = 'none';
+        if (agenticBtn) {
+          agenticBtn.disabled = true;
+          agenticBtn.title = 'Modèle local non téléchargé (rendez-vous en haut pour le télécharger)';
+        }
+        return;
+      }
+    } catch(e) {}
+  }
+
+  // Si le modèle est présent :
+  if (downloadBtn) downloadBtn.style.display = 'none';
+  if (restartBtn) restartBtn.style.display = 'inline-flex';
+  if (agenticBtn) {
+    agenticBtn.disabled = false;
+    agenticBtn.title = '';
+  }
+
+  // 2. Vérifier si le moteur tourne actuellement
   if (window.eva && window.eva.system && window.eva.system.llmStatus) {
     try {
       var res = await window.eva.system.llmStatus();
@@ -168,7 +215,15 @@ function _updateLLMBadge(state) {
   var statusEl = document.getElementById('cwLLMStatus');
   if (!badge) return;
 
-  if (state === true) {
+  if (state === 'not-downloaded') {
+    badge.textContent = '○ Non téléchargé';
+    badge.className = 'cw-badge cw-badge-warning';
+    if (statusEl) statusEl.textContent = 'Modèle local non installé (2.0 Go requis)';
+  } else if (state === 'downloading') {
+    badge.textContent = '⬇ Téléchargement...';
+    badge.className = 'cw-badge cw-badge-starting';
+    if (statusEl) statusEl.textContent = 'Téléchargement en cours depuis Hugging Face...';
+  } else if (state === true) {
     badge.textContent = '● Actif';
     badge.className = 'cw-badge cw-badge-on';
     if (statusEl) statusEl.textContent = 'Moteur IA opérationnel (node-llama-cpp)';
@@ -188,6 +243,74 @@ function _updateLLMBadge(state) {
 }
 
 async function _updateLLMStatus() { await _checkLLMHealth(); }
+
+window._cwDownloadLLM = async function() {
+  if (_isDownloadingLLM) return;
+  if (!window.eva || !window.eva.system || !window.eva.system.llmDownload) {
+    if (typeof window.toast === 'function') window.toast('Téléchargement non supporté sur cette plateforme', 'error');
+    return;
+  }
+
+  var downloadBtn = document.getElementById('cwDownloadLLMBtn');
+  var progressWrap = document.getElementById('cwDownloadProgressWrap');
+  var bar = document.getElementById('cwDownloadBar');
+  var percentEl = document.getElementById('cwDownloadPercent');
+  var bytesEl = document.getElementById('cwDownloadBytes');
+  var statusText = document.getElementById('cwDownloadStatusText');
+
+  _isDownloadingLLM = true;
+  _updateLLMBadge('downloading');
+  if (downloadBtn) { downloadBtn.disabled = true; downloadBtn.style.opacity = '0.5'; }
+  if (progressWrap) progressWrap.style.display = 'block';
+
+  // Écouter la progression en temps réel émise par Electron
+  if (window.eva.onLLMDownloadProgress) {
+    window.eva.onLLMDownloadProgress(function(data) {
+      var pct = data.progress || 0;
+      if (bar) bar.style.width = pct + '%';
+      if (percentEl) percentEl.textContent = pct + '%';
+      if (bytesEl && data.downloadedBytes) {
+        var dlMB = (data.downloadedBytes / (1024 * 1024)).toFixed(1);
+        var totalMB = (data.totalBytes / (1024 * 1024)).toFixed(1);
+        bytesEl.textContent = dlMB + ' Mo / ' + totalMB + ' Mo';
+      }
+    });
+  }
+
+  try {
+    _addActivity('Téléchargement du modèle IA local lancé...', 'pending');
+    var res = await window.eva.system.llmDownload();
+    if (res && res.success) {
+      if (bar) bar.style.width = '100%';
+      if (percentEl) percentEl.textContent = '100%';
+      if (statusText) statusText.textContent = 'Téléchargement terminé ! Chargement en cours...';
+
+      _addActivity('Modèle IA téléchargé avec succès (2 Go)', 'done');
+      if (typeof window.toast === 'function') window.toast('Modèle IA téléchargé avec succès !', 'success');
+
+      // Notifier l'agent local que le modèle est installé
+      window.dispatchEvent(new CustomEvent('cw:model-installed'));
+
+      // Attendre un court instant puis démarrer le LLM si CloudWorks est actif
+      setTimeout(async function() {
+        if (progressWrap) progressWrap.style.display = 'none';
+        _isDownloadingLLM = false;
+        await window._cwStartLLM();
+        await _checkLLMHealth();
+      }, 1500);
+    } else {
+      throw new Error(res && res.error ? res.error : 'Échec du téléchargement');
+    }
+  } catch(err) {
+    console.error('[CloudWorks] Erreur download LLM:', err);
+    _isDownloadingLLM = false;
+    _updateLLMBadge('not-downloaded');
+    if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.style.opacity = '1'; }
+    if (statusText) statusText.textContent = 'Erreur : ' + err.message;
+    if (typeof window.toast === 'function') window.toast('Erreur lors du téléchargement : ' + err.message, 'error');
+    _addActivity('Erreur téléchargement modèle : ' + err.message, 'error');
+  }
+};
 
 window._cwStartLLM = async function() {
   var badge = document.getElementById('cwLLMBadge');
@@ -463,6 +586,7 @@ window.loadCloudWorks = loadCloudWorks;
     .cw-badge-on { background:rgba(0,255,136,0.15); color:#00ff88; border:1px solid rgba(0,255,136,0.3); }
     .cw-badge-off { background:rgba(136,136,154,0.15); color:#88889a; border:1px solid rgba(136,136,154,0.2); }
     .cw-badge-starting { background:rgba(255,200,0,0.15); color:#ffc800; border:1px solid rgba(255,200,0,0.3); }
+    .cw-badge-warning { background:rgba(249,115,22,0.15); color:#f97316; border:1px solid rgba(249,115,22,0.3); }
     .cw-badge-unknown { background:rgba(255,100,100,0.15); color:#ff6464; border:1px solid rgba(255,100,100,0.3); }
     .cw-llm-info { margin-bottom:12px; }
     .cw-info-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid rgba(0,212,255,0.07); }
