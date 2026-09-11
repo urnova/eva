@@ -4,31 +4,18 @@
   nsExec::Exec 'taskkill /F /IM "eva-assistant.exe" /T'
   nsExec::Exec 'taskkill /F /IM "EVA Assistant.exe"'
   Sleep 600
-
-  ; 2. Sauvegarder le dossier models hors du repertoire INSTDIR des le lancement de l'installateur (pour proteger contre l'ancien desinstallateur)
-  ${If} ${FileExists} "$INSTDIR\resources\models"
-    Rename "$INSTDIR\resources\models" "$INSTDIR-models-backup"
-    DetailPrint "Sauvegarde du modele LLM locale terminee (depuis customInit)."
-  ${EndIf}
-!macroend
-
-!macro customUnInit
-  ; Sauvegarder le dossier models hors du repertoire INSTDIR avant la desinstallation
-  ${If} ${FileExists} "$INSTDIR\resources\models"
-    Rename "$INSTDIR\resources\models" "$INSTDIR-models-backup"
-    DetailPrint "Sauvegarde du modele LLM locale terminee (mise a jour)."
-  ${EndIf}
 !macroend
 
 !include "LogicLib.nsh"
 
 !macro customInstall
-
-  ; Restaurer la sauvegarde des modeles si elle existe
+  ; 1. Si un ancien dossier backup temporaire existait (suite a un crash d'une ancienne version), restaurer le fichier
   ${If} ${FileExists} "$INSTDIR-models-backup"
-    CreateDirectory "$INSTDIR\resources"
-    Rename "$INSTDIR-models-backup" "$INSTDIR\resources\models"
-    DetailPrint "Restauration du modele LLM local terminee."
+    ${If} ${FileExists} "$INSTDIR-models-backup\EVA-PC-Agentic-3B-Q4_K_M-v5.gguf"
+      CreateDirectory "$INSTDIR\resources\models"
+      CopyFiles /SILENT "$INSTDIR-models-backup\EVA-PC-Agentic-3B-Q4_K_M-v5.gguf" "$INSTDIR\resources\models\"
+    ${EndIf}
+    RMDir /r "$INSTDIR-models-backup"
   ${EndIf}
 
   ; 2. S'assurer que le dossier resources\models existe dans le repertoire d'installation
