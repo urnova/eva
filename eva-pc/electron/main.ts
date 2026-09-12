@@ -789,15 +789,141 @@ ipcMain.handle('fs:read', async (_event, filePath: string) => {
   }
 })
 
+async function generatePdfFromHtmlOrText(filePath: string, htmlOrText: string, options?: { title?: string, landscape?: boolean }): Promise<{ success: boolean, path?: string, error?: string }> {
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+    let fullHtml = htmlOrText;
+    const isHtml = /<html|<body|<div|<p|<h[1-6]/i.test(htmlOrText);
+    if (!isHtml) {
+      const docTitle = options?.title || path.basename(filePath, '.pdf');
+      const lines = htmlOrText.split('\n');
+      let inList = false;
+      const formattedParts: string[] = [];
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('# ')) {
+          if (inList) { formattedParts.push('</ul>'); inList = false; }
+          formattedParts.push(`<h1>${trimmed.slice(2)}</h1>`);
+        } else if (trimmed.startsWith('## ')) {
+          if (inList) { formattedParts.push('</ul>'); inList = false; }
+          formattedParts.push(`<h2>${trimmed.slice(3)}</h2>`);
+        } else if (trimmed.startsWith('### ')) {
+          if (inList) { formattedParts.push('</ul>'); inList = false; }
+          formattedParts.push(`<h3>${trimmed.slice(4)}</h3>`);
+        } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+          if (!inList) { formattedParts.push('<ul>'); inList = true; }
+          formattedParts.push(`<li>${trimmed.slice(2)}</li>`);
+        } else if (!trimmed) {
+          if (inList) { formattedParts.push('</ul>'); inList = false; }
+          formattedParts.push('<br/>');
+        } else {
+          if (inList) { formattedParts.push('</ul>'); inList = false; }
+          formattedParts.push(`<p>${trimmed}</p>`);
+        }
+      }
+      if (inList) formattedParts.push('</ul>');
+
+      fullHtml = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>${docTitle}</title>
+  <style>
+    @page { size: A4 ${options?.landscape ? 'landscape' : 'portrait'}; margin: 15mm 20mm; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: #1a1a24;
+      line-height: 1.6;
+      font-size: 13pt;
+      margin: 0;
+      padding: 0;
+    }
+    .header-bar {
+      border-bottom: 3px solid #00d4ff;
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+    }
+    h1 { color: #0b132b; font-size: 22pt; margin: 0 0 6px 0; }
+    h2 { color: #1c2541; font-size: 16pt; margin-top: 24px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+    h3 { color: #3a506b; font-size: 13pt; margin-top: 16px; margin-bottom: 6px; }
+    p { margin: 6px 0; }
+    ul { margin: 6px 0 12px 20px; padding: 0; }
+    li { margin: 4px 0; }
+    .badge { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 6px; font-size: 10pt; font-weight: 600; }
+    .footer { font-size: 9pt; color: #94a3b8; border-top: 1px solid #e2e8f0; margin-top: 36px; padding-top: 10px; text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="header-bar">
+    <div class="badge">E.V.A Document Officiel</div>
+    <h1>${docTitle}</h1>
+  </div>
+  <div class="content">
+    ${formattedParts.join('\n')}
+  </div>
+  <div class="footer">Généré le ${new Date().toLocaleDateString('fr-FR')} par E.V.A Assistant</div>
+</body>
+</html>`;
+    }
+
+    const pdfWin = new BrowserWindow({
+      show: false,
+      width: 850,
+      height: 1100,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    await pdfWin.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(fullHtml));
+    await new Promise(r => setTimeout(r, 400));
+
+    const pdfBuffer = await pdfWin.webContents.printToPDF({
+      pageSize: 'A4',
+      landscape: !!options?.landscape,
+      printBackground: true,
+      margins: { top: 0.4, bottom: 0.4, left: 0.4, right: 0.4 }
+    });
+
+    fs.writeFileSync(filePath, pdfBuffer);
+    pdfWin.destroy();
+    return { success: true, path: filePath };
+  } catch (e: any) {
+    console.error('[PDF Generator] Erreur:', e);
+    return { success: false, error: String(e.message || e) };
+  }
+}
+
 ipcMain.handle('fs:write', async (_event, filePath: string, content: string) => {
   try {
-    fs.mkdirSync(path.dirname(filePath), { recursive: true })
-    fs.writeFileSync(filePath, content, 'utf-8')
-    return { success: true }
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    if (filePath.toLowerCase().endsWith('.pdf') && !content.startsWith('%PDF-')) {
+      return await generatePdfFromHtmlOrText(filePath, content);
+    }
+    fs.writeFileSync(filePath, content, 'utf-8');
+    return { success: true };
   } catch (e) {
-    return { success: false, error: String(e) }
+    return { success: false, error: String(e) };
   }
-})
+});
+
+ipcMain.handle('fs:createPdf', async (_event, filePath: string, htmlOrText: string, options?: any) => {
+  return await generatePdfFromHtmlOrText(filePath, htmlOrText, options);
+});
+
+ipcMain.handle('fs:writeBinary', async (_event, filePath: string, base64Data: string) => {
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    const buffer = Buffer.from(base64Data, 'base64');
+    fs.writeFileSync(filePath, buffer);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: String(e.message || e) };
+  }
+});
 
 ipcMain.handle('fs:delete', async (_event, filePath: string) => {
   try {
@@ -1301,6 +1427,33 @@ ipcMain.handle('llm:check', async () => {
   return { exists };
 });
 
+let activeDownloadReq: any = null;
+let activeDownloadFile: any = null;
+let activeDownloadTempFile: string | null = null;
+let isDownloadCancelled = false;
+
+ipcMain.handle('llm:cancel-download', async () => {
+  isDownloadCancelled = true;
+  console.log('[LLM] Annulation du téléchargement demandée...');
+  if (activeDownloadReq) {
+    try { activeDownloadReq.destroy(); } catch(e) {}
+    activeDownloadReq = null;
+  }
+  if (activeDownloadFile) {
+    try { activeDownloadFile.end(); } catch(e) {}
+    activeDownloadFile = null;
+  }
+  if (activeDownloadTempFile) {
+    try {
+      if (fs.existsSync(activeDownloadTempFile)) {
+        fs.unlinkSync(activeDownloadTempFile);
+      }
+    } catch(e) {}
+    activeDownloadTempFile = null;
+  }
+  return { success: true, cancelled: true };
+});
+
 ipcMain.handle('llm:download', async (event) => {
   const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
   const llmDir = path.join(resourcesPath, 'models');
@@ -1312,19 +1465,59 @@ ipcMain.handle('llm:download', async (event) => {
   const initialUrl = "https://huggingface.co/astraltech/EVA-PC-Agentic-3B-Q4_K_M-v5/resolve/main/EVA-PC-Agentic-3B-Q4_K_M-v5.gguf";
   const token = "hf_" + "HHJeFQtG" + "LjWyDsoe" + "IbKuzGSj" + "hLcyEczyin";
 
+  isDownloadCancelled = false;
+  activeDownloadTempFile = tempFile;
+
   return new Promise((resolve, reject) => {
+    try {
+      if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+    } catch(e) {}
+
     const file = fs.createWriteStream(tempFile);
-    let activeReq: any = null;
+    activeDownloadFile = file;
+
+    const cleanup = (deleteTemp = true) => {
+      if (activeDownloadReq) {
+        try { activeDownloadReq.destroy(); } catch(e) {}
+        activeDownloadReq = null;
+      }
+      if (activeDownloadFile) {
+        try { activeDownloadFile.end(); } catch(e) {}
+        activeDownloadFile = null;
+      }
+      if (deleteTemp && activeDownloadTempFile) {
+        try {
+          if (fs.existsSync(activeDownloadTempFile)) {
+            fs.unlinkSync(activeDownloadTempFile);
+          }
+        } catch(e) {}
+        activeDownloadTempFile = null;
+      }
+    };
+
+    file.on('error', (err: any) => {
+      console.error('[LLM Download] Erreur write stream:', err);
+      cleanup(false);
+      if (isDownloadCancelled) {
+        resolve({ success: false, cancelled: true });
+      } else {
+        reject(new Error('Erreur écriture fichier modèle: ' + err.message));
+      }
+    });
 
     function followDownload(currentUrl: string, redirectCount: number = 0) {
+      if (isDownloadCancelled) {
+        cleanup();
+        return resolve({ success: false, cancelled: true });
+      }
       if (redirectCount > 10) {
-        try { file.end(); fs.unlinkSync(tempFile); } catch(e) {}
+        cleanup();
         return reject(new Error('Trop de redirections lors du téléchargement du modèle'));
       }
 
       const parsedUrl = new URL(currentUrl);
       const isHttps = parsedUrl.protocol === 'https:';
-      const lib = isHttps ? https : require('http');
+      const lib = isHttps ? https : http;
 
       const headers: Record<string, string> = {
         'User-Agent': 'EVA-Assistant'
@@ -1335,11 +1528,17 @@ ipcMain.handle('llm:download', async (event) => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      activeReq = lib.get(currentUrl, { headers }, (res: any) => {
+      activeDownloadReq = lib.get(currentUrl, { headers }, (res: any) => {
+        if (isDownloadCancelled) {
+          try { res.destroy(); } catch(e) {}
+          cleanup();
+          return resolve({ success: false, cancelled: true });
+        }
+
         if ([301, 302, 303, 307, 308].includes(res.statusCode)) {
           const redirectLocation = res.headers.location;
           if (!redirectLocation) {
-            try { file.end(); fs.unlinkSync(tempFile); } catch(e) {}
+            cleanup();
             return reject(new Error('Redirection sans en-tête location'));
           }
           const nextUrl = new URL(redirectLocation, currentUrl).toString();
@@ -1347,7 +1546,7 @@ ipcMain.handle('llm:download', async (event) => {
         }
 
         if (res.statusCode !== 200) {
-          try { file.end(); fs.unlinkSync(tempFile); } catch(e) {}
+          cleanup();
           return reject(new Error(`Échec du téléchargement (HTTP ${res.statusCode})`));
         }
 
@@ -1356,8 +1555,17 @@ ipcMain.handle('llm:download', async (event) => {
         let lastReportTime = 0;
 
         res.on('data', (chunk: any) => {
+          if (isDownloadCancelled) {
+            try { res.destroy(); } catch(e) {}
+            cleanup();
+            return resolve({ success: false, cancelled: true });
+          }
           downloadedBytes += chunk.length;
-          file.write(chunk);
+          try {
+            file.write(chunk);
+          } catch(e) {
+            console.error('[LLM Download] Erreur write chunk:', e);
+          }
 
           const now = Date.now();
           if (totalBytes > 0 && (now - lastReportTime > 250 || downloadedBytes === totalBytes)) {
@@ -1372,25 +1580,42 @@ ipcMain.handle('llm:download', async (event) => {
         });
 
         res.on('end', () => {
-          file.end();
-          try {
-            if (fs.existsSync(modelFile)) fs.unlinkSync(modelFile);
-            fs.renameSync(tempFile, modelFile);
-            resolve({ success: true });
-          } catch(err) {
-            reject(err);
+          if (isDownloadCancelled) {
+            cleanup();
+            return resolve({ success: false, cancelled: true });
           }
+          file.end(() => {
+            try {
+              if (fs.existsSync(modelFile)) fs.unlinkSync(modelFile);
+              fs.renameSync(tempFile, modelFile);
+              activeDownloadReq = null;
+              activeDownloadFile = null;
+              activeDownloadTempFile = null;
+              resolve({ success: true });
+            } catch(err) {
+              cleanup();
+              reject(err);
+            }
+          });
         });
 
         res.on('error', (err: any) => {
-          try { file.end(); fs.unlinkSync(tempFile); } catch(e) {}
-          reject(err);
+          cleanup();
+          if (isDownloadCancelled) {
+            resolve({ success: false, cancelled: true });
+          } else {
+            reject(err);
+          }
         });
       });
 
-      activeReq.on('error', (err: any) => {
-        try { file.end(); fs.unlinkSync(tempFile); } catch(e) {}
-        reject(err);
+      activeDownloadReq.on('error', (err: any) => {
+        cleanup();
+        if (isDownloadCancelled) {
+          resolve({ success: false, cancelled: true });
+        } else {
+          reject(err);
+        }
       });
     }
 
@@ -1416,22 +1641,24 @@ ipcMain.handle('cloudworks:disable', async () => {
 
 // ─── IPC Handlers — STT (Speech-to-Text via PowerShell Windows SR) ───
 // webkitSpeechRecognition ne fonctionne pas dans Electron (pas de clé API Google)
-// → Utilise System.Speech.Recognition de Windows, 100% offline
+// → Utilise System.Speech.Recognition de Windows, 100% offline avec streaming UTF-8
 let _sttProcess: any = null;
 
 ipcMain.handle('stt:start', async (event) => {
   if (_sttProcess) return { success: true, alreadyRunning: true };
 
-  // Script PowerShell : reconnaissance vocale continue en français
+  // Script PowerShell : reconnaissance vocale continue en français avec hypothèses en direct
   const psLines = [
+    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
     "Add-Type -AssemblyName System.Speech",
     "try { $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine([System.Globalization.CultureInfo]::GetCultureInfo('fr-FR')) } catch { $r = New-Object System.Speech.Recognition.SpeechRecognitionEngine }",
     "$grammar = New-Object System.Speech.Recognition.DictationGrammar",
     "$r.LoadGrammar($grammar)",
     "$r.SetInputToDefaultAudioDevice()",
-    "Register-ObjectEvent -InputObject $r -EventName 'SpeechRecognized' -Action { param($s,$e); $txt=$e.Result.Text; [Console]::Out.WriteLine($txt); [Console]::Out.Flush() } | Out-Null",
+    "Register-ObjectEvent -InputObject $r -EventName 'SpeechRecognized' -Action { param($s,$e); if ($e.Result -and $e.Result.Text) { [Console]::Out.WriteLine('FINAL:' + $e.Result.Text); [Console]::Out.Flush() } } | Out-Null",
+    "Register-ObjectEvent -InputObject $r -EventName 'SpeechHypothesized' -Action { param($s,$e); if ($e.Result -and $e.Result.Text) { [Console]::Out.WriteLine('INTERIM:' + $e.Result.Text); [Console]::Out.Flush() } } | Out-Null",
     "$r.RecognizeAsync([System.Speech.Recognition.RecognizeMode]::Multiple)",
-    "while($true) { Start-Sleep -Seconds 1 }"
+    "while($true) { Start-Sleep -Milliseconds 250 }"
   ];
   const psCmd = psLines.join('; ');
 
@@ -1443,9 +1670,24 @@ ipcMain.handle('stt:start', async (event) => {
     });
 
     _sttProcess.stdout.on('data', (data: Buffer) => {
-      const text = data.toString().trim();
-      if (text && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('stt:result', { text });
+      const raw = data.toString('utf8');
+      const lines = raw.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        if (line.startsWith('FINAL:')) {
+          const text = line.substring(6).trim();
+          if (text && mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('stt:result', { text, isFinal: true });
+          }
+        } else if (line.startsWith('INTERIM:')) {
+          const text = line.substring(8).trim();
+          if (text && mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('stt:result', { text, isFinal: false });
+          }
+        } else if (line) {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('stt:result', { text: line, isFinal: true });
+          }
+        }
       }
     });
 
@@ -1462,7 +1704,7 @@ ipcMain.handle('stt:start', async (event) => {
       }
     });
 
-    console.log('[STT] PowerShell Windows STT démarré');
+    console.log('[STT] PowerShell Windows STT démarré (fr-FR)');
     return { success: true };
   } catch(e) {
     console.error('[STT] Erreur spawn PowerShell:', e);
@@ -1472,7 +1714,11 @@ ipcMain.handle('stt:start', async (event) => {
 
 ipcMain.handle('stt:stop', async () => {
   if (_sttProcess) {
-    try { _sttProcess.kill(); } catch(e) {}
+    try {
+      const { execSync } = require('child_process');
+      try { execSync(`taskkill /F /T /PID ${_sttProcess.pid}`, { stdio: 'ignore' }); } catch(e) {}
+      _sttProcess.kill();
+    } catch(e) {}
     _sttProcess = null;
   }
   return { success: true };

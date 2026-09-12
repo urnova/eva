@@ -687,6 +687,16 @@ async function revokeDevice(token, isSelf) {
 window.revokeDevice = revokeDevice;
 
 async function testNotification() {
+  if (window.eva && window.eva.app && window.eva.app.notify) {
+    try {
+      await window.eva.app.notify('🧪 Test E.V.A (Windows)', 'Les notifications natives Windows fonctionnent parfaitement !');
+      toast('✅ Notification native Windows envoyée !', 'success');
+      return;
+    } catch(e) {
+      console.warn('[PC] app.notify error:', e);
+    }
+  }
+
   if (!('Notification' in window) || Notification.permission !== 'granted') {
     toast('Activez d\'abord les notifications', 'error');
     return;
@@ -710,6 +720,14 @@ window.testNotification = testNotification;
 /* Affiche une notification système directe (new Notification) sans service worker.
    La méthode la plus fiable en foreground — fonctionne sur Chrome, Edge, Firefox. */
 function _showDirectNotif(title, body, data) {
+  if (window.eva && window.eva.app && window.eva.app.notify) {
+    try {
+      window.eva.app.notify(title || 'E.V.A', body || '');
+      return;
+    } catch(e) {
+      console.warn('[PC] app.notify error:', e);
+    }
+  }
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try {
     var opts = {

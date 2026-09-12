@@ -1,927 +1,766 @@
-/* EVA V4 — CLOUDWORKS.JS — Paths: cloudworks/{uid}/devices & cloudworks/{uid}/commands */
+/* EVA PC — CLOUDWORKS.JS — Version EXCLUSIVE Application Desktop */
+/* Ce fichier est EXCLUSIF à l'application PC — ne PAS copier sur le site web */
 (function() {
 'use strict';
 
 var _cwUnsub = null;
 var _cwResultUnsub = null;
-var _cwActivityLog = [];
-var MAX_LOG = 4;
+var _cwDevicesUnsub = null;
+var _llmPollInterval = null;
 
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 /* ══════════════════════════════════════════
-   LISTENER DE FOND — démarre dès l'auth
-   Peuple S.cwDevices MÊME si le panneau CW n'est jamais ouvert
-   (mobile, nav directe, etc.)
+   LOAD — initialise tout
 ══════════════════════════════════════════ */
-var _bgDeviceUnsub = null;
+async function loadCloudWorks() {
+  if (!window.S || !window.S.user) return;
+  var uid = S.user.uid;
+  var container = document.getElementById('cwDeviceList');
+  if (!container) return;
 
-function _startBackgroundDeviceListener(uid) {
-  if (_bgDeviceUnsub) return; // déjà actif
-  if (!window.db) return;
   try {
-    _bgDeviceUnsub = window.db.collection('cloudworks').doc(uid).collection('devices')
-      .onSnapshot(function(snap) {
-        var arr = [];
-        snap.forEach(function(doc) {
-          var d = Object.assign({ id: doc.id, deviceId: doc.id }, doc.data());
-          var online = d.online === true;
-          if (online && d.lastSeen && d.lastSeen.toDate) {
-            if (Date.now() - d.lastSeen.toDate().getTime() > 120000) online = false;
-          }
-          arr.push(Object.assign({}, d, { online: online }));
-        });
-        if (window.S) window.S.cwDevices = arr;
-        window._cwDevicesCache = arr;
-        var nb = arr.filter(function(d) { return d.online; }).length;
-        console.log('[CW] Listener fond: ' + arr.length + ' appareils, ' + nb + ' en ligne');
-      }, function(err) {
-        console.warn('[CW] Listener fond erreur:', err);
-      });
-  } catch(e) {
-    console.warn('[CW] Impossible de démarrer le listener fond:', e);
+    // Injecter la structure PC complète
+    _renderPCLayout(container, uid);
+  } catch(e) { console.error('[CloudWorks] Erreur _renderPCLayout:', e); }
+
+  try {
+    // Initialiser le polling LLM
+    _initLLMPanel();
+  } catch(e) { console.error('[CloudWorks] Erreur _initLLMPanel:', e); }
+
+  try {
+    // Charger les devices (autres PC)
+    _loadDevices(uid);
+  } catch(e) { console.error('[CloudWorks] Erreur _loadDevices:', e); }
+
+  try {
+    // Charger l'activité récente
+    _loadActivity(uid);
+  } catch(e) { console.error('[CloudWorks] Erreur _loadActivity:', e); }
+}
+
+/* ══════════════════════════════════════════
+   LAYOUT PC — injecte les sections principales
+══════════════════════════════════════════ */
+function _renderPCLayout(container, uid) {
+  container.innerHTML = `
+    <!-- SECTION 1 : LLM LOCAL -->
+    <div class="cw-section cw-llm-section">
+      <div class="cw-section-header">
+        <span class="cw-section-icon">🤖</span>
+        <span class="cw-section-title">LLM Local</span>
+        <div id="cwLLMBadge" class="cw-badge cw-badge-off">○ Arrêté</div>
+      </div>
+      <div class="cw-section-body">
+        <div id="cwLLMInfo" class="cw-llm-info">
+          <div class="cw-info-row"><span class="cw-info-label">Modèle</span><span id="cwLLMModel" class="cw-info-value">EVA V5 — 3B Q4_K_M</span></div>
+          <div class="cw-info-row"><span class="cw-info-label">Engine</span><span class="cw-info-value">node-llama-cpp</span></div>
+          <div class="cw-info-row"><span class="cw-info-label">Statut</span><span id="cwLLMStatus" class="cw-info-value">—</span></div>
+        </div>
+        <div class="cw-llm-actions">
+          <button class="cw-btn cw-btn-warning" id="cwRestartLLMBtn" onclick="window._cwRestartLLM()">⟳ Redémarrage d'urgence</button>
+          <button class="cw-btn cw-btn-primary" id="cwDownloadLLMBtn" style="display:none;" onclick="window._cwDownloadLLM()">⬇ Télécharger le modèle IA (2.0 Go)</button>
+        </div>
+        <div id="cwDownloadProgressWrap" style="display:none; margin-top:14px; padding:12px; background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.2); border-radius:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75em; margin-bottom:6px;">
+            <span id="cwDownloadStatusText" style="color:var(--text,#e4e4ef); font-weight:600;">Téléchargement du modèle IA...</span>
+            <span id="cwDownloadPercent" style="color:var(--cyan,#00d4ff); font-weight:700;">0%</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:8px; overflow:hidden;">
+            <div id="cwDownloadBar" style="width:0%; height:100%; background:linear-gradient(90deg, var(--cyan,#00d4ff), #3b82f6); transition:width 0.3s ease;"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.68em; color:var(--text-muted,#88889a); margin-top:6px;">
+            <span id="cwDownloadBytes">0 Mo / 2048 Mo</span>
+            <span>Hugging Face (sécurisé)</span>
+          </div>
+          <div id="cwDownloadETA" style="font-size:0.72em; color:var(--cyan,#00d4ff); margin-top:6px; display:none;">Calcul du temps restant...</div>
+          <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+            <button class="cw-btn" id="cwCancelDownloadBtn" style="padding:4px 10px; font-size:0.75em; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; cursor:pointer;" onclick="window._cwCancelDownloadLLM()">✕ Annuler le téléchargement</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2 : COMMANDES RAPIDES -->
+    <div class="cw-section">
+      <div class="cw-section-header">
+        <span class="cw-section-icon">⚡</span>
+        <span class="cw-section-title">Commandes rapides — Ce PC</span>
+      </div>
+      <div class="cw-section-body">
+        <div class="cw-quick-grid">
+          <button class="cw-quick-btn" onclick="window._cwQuickCmd('screenshot')">
+            <span class="cw-quick-icon">📸</span>
+            <span>Capture d'écran</span>
+          </button>
+          <button class="cw-quick-btn" onclick="window._cwQuickCmd('sysinfo')">
+            <span class="cw-quick-icon">💻</span>
+            <span>Infos système</span>
+          </button>
+          <button class="cw-quick-btn" onclick="window._cwQuickCmd('open_explorer')">
+            <span class="cw-quick-icon">📁</span>
+            <span>Explorateur</span>
+          </button>
+        </div>
+        <div class="cw-agentic-box">
+          <div class="cw-agentic-label">Tâche IA libre (LLM local)</div>
+          <textarea id="cwAgenticPrompt" class="cw-textarea" placeholder="Ex: Crée un fichier test.txt sur le Bureau et mets-y 'Bonjour'..." rows="3"></textarea>
+          <button class="cw-btn cw-btn-primary cw-btn-full" onclick="window._cwRunAgenticTask()">🤖 Exécuter avec le LLM</button>
+          <div id="cwAgenticStatus" class="cw-agentic-status" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3 : APPAREILS CONNECTÉS (collapsable) -->
+    <div class="cw-section cw-collapsable" id="cwDevicesSection">
+      <div class="cw-section-header cw-collapsable-header" onclick="window._cwToggleDevices()">
+        <span class="cw-section-icon">🖥️</span>
+        <span class="cw-section-title">Appareils connectés</span>
+        <div class="cw-stat-badges">
+          <span class="cw-stat-badge online"><span id="cwStatOnline">0</span> en ligne</span>
+          <span class="cw-stat-badge offline"><span id="cwStatOffline">0</span> hors ligne</span>
+        </div>
+        <span id="cwDevicesChevron" class="cw-chevron">▼</span>
+      </div>
+      <div class="cw-section-body" id="cwDevicesBody" style="display:none">
+        <div id="cwDeviceListInner"><div class="cw-empty"><div class="cw-spinner"></div>Chargement…</div></div>
+      </div>
+    </div>
+
+    <!-- SECTION 4 : ACTIVITÉ RÉCENTE -->
+    <div class="cw-section">
+      <div class="cw-section-header">
+        <span class="cw-section-icon">📋</span>
+        <span class="cw-section-title">Activité récente</span>
+      </div>
+      <div class="cw-section-body">
+        <div id="cwActivityList"><div class="cw-empty">Aucune commande récente</div></div>
+      </div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════
+   LLM PANEL
+══════════════════════════════════════════ */
+async function _initLLMPanel() {
+  _updateLLMBadge(null);
+
+  if (window.eva && window.eva.onLLMStatusChanged) {
+    window.eva.onLLMStatusChanged(function(status) {
+      console.log('[CloudWorks] Événement LLM status:', status);
+      _updateLLMBadge(status.running);
+      if (status.running) {
+        _addActivity('LLM local prêt et opérationnel', 'done');
+      }
+    });
+  }
+
+  await _checkLLMHealth();
+
+  if (_llmPollInterval) clearInterval(_llmPollInterval);
+  _llmPollInterval = setInterval(_checkLLMHealth, 10000);
+}
+
+var _isDownloadingLLM = false;
+
+// Vérification directe de l'état du moteur LLM via IPC Electron (node-llama-cpp)
+async function _checkLLMHealth() {
+  if (_isDownloadingLLM) return;
+  var downloadBtn = document.getElementById('cwDownloadLLMBtn');
+  var restartBtn = document.getElementById('cwRestartLLMBtn');
+  var agenticBtn = document.querySelector('.cw-agentic-box button');
+
+  // 1. Vérifier si le fichier modèle est présent sur le disque
+  if (window.eva && window.eva.system && window.eva.system.llmCheck) {
+    try {
+      var chk = await window.eva.system.llmCheck();
+      if (!chk || !chk.exists) {
+        _updateLLMBadge('not-downloaded');
+        if (downloadBtn) downloadBtn.style.display = 'inline-flex';
+        if (restartBtn) restartBtn.style.display = 'none';
+        if (agenticBtn) {
+          agenticBtn.disabled = true;
+          agenticBtn.title = 'Modèle local non téléchargé (rendez-vous en haut pour le télécharger)';
+        }
+        return;
+      }
+    } catch(e) {}
+  }
+
+  // Si le modèle est présent :
+  if (downloadBtn) downloadBtn.style.display = 'none';
+  if (restartBtn) restartBtn.style.display = 'inline-flex';
+  if (agenticBtn) {
+    agenticBtn.disabled = false;
+    agenticBtn.title = '';
+  }
+
+  // 2. Vérifier si le moteur tourne actuellement
+  if (window.eva && window.eva.system && window.eva.system.llmStatus) {
+    try {
+      var res = await window.eva.system.llmStatus();
+      if (res && res.running) {
+        _updateLLMBadge(true);
+      } else {
+        _updateLLMBadge(false);
+      }
+    } catch(e) {
+      _updateLLMBadge(false);
+    }
+  } else {
+    _updateLLMBadge(false);
   }
 }
 
-// Attend que window.S.user soit défini par auth.js (évite les races conditions Firebase)
-// N'utilise PAS onAuthStateChanged directement — auth.js le gère déjà
-function _hookAuthForDeviceListener() {
-  var attempt = 0, maxAttempts = 120; // 60 secondes max
-  var check = setInterval(function() {
-    attempt++;
-    if (attempt > maxAttempts) { clearInterval(check); return; }
-    // window.S.user est défini par auth.js APRÈS que Firebase ait bien initialisé le token
-    if (window.S && window.S.user && window.S.user.uid && window.db) {
-      clearInterval(check);
-      var uid = window.S.user.uid;
-      // Délai 1s supplémentaire pour s\'assurer que le token est propagé à Firestore
-      setTimeout(function() {
-        _startBackgroundDeviceListener(uid);
-        _startBackgroundResultsListener(uid);
-      }, 1000);
-    }
-  }, 500);
-}
-_hookAuthForDeviceListener();
+function _updateLLMBadge(state) {
+  var badge = document.getElementById('cwLLMBadge');
+  var statusEl = document.getElementById('cwLLMStatus');
+  if (!badge) return;
 
-// Listener de fond pour les RÉSULTATS — s'active dès l'auth, même si panneau CW fermé
-var _bgResultsUnsub = null;
-function _startBackgroundResultsListener(uid) {
-  if (_bgResultsUnsub) return;
-  if (!window.db) return;
-  try {
-    _bgResultsUnsub = window.db.collection('cloudworks').doc(uid).collection('commands')
-      .orderBy('updatedAt', 'desc').limit(20)
-      .onSnapshot(function(snap) {
-        _handleResultsSnap(snap);
-      }, function(err) {
-        console.warn('[CW] Listener résultats fond erreur:', err);
-      });
-  } catch(e) {}
+  if (state === 'not-downloaded') {
+    badge.textContent = '○ Non téléchargé';
+    badge.className = 'cw-badge cw-badge-warning';
+    if (statusEl) statusEl.textContent = 'Modèle local non installé (2.0 Go requis)';
+  } else if (state === 'downloading') {
+    badge.textContent = '⬇ Téléchargement...';
+    badge.className = 'cw-badge cw-badge-starting';
+    if (statusEl) statusEl.textContent = 'Téléchargement en cours depuis Hugging Face...';
+  } else if (state === true) {
+    badge.textContent = '● Actif';
+    badge.className = 'cw-badge cw-badge-on';
+    if (statusEl) statusEl.textContent = 'Moteur IA opérationnel (node-llama-cpp)';
+  } else if (state === 'starting') {
+    badge.textContent = '⟳ En chargement...';
+    badge.className = 'cw-badge cw-badge-starting';
+    if (statusEl) statusEl.textContent = 'Chargement du modèle en mémoire...';
+  } else if (state === false) {
+    badge.textContent = '○ Arrêté';
+    badge.className = 'cw-badge cw-badge-off';
+    if (statusEl) statusEl.textContent = 'Non démarré';
+  } else {
+    badge.textContent = '? Vérification...';
+    badge.className = 'cw-badge cw-badge-unknown';
+    if (statusEl) statusEl.textContent = 'Vérification en cours...';
+  }
 }
-// Déclencher ce listener en même temps que le listener d'appareils
-var _origHook = _startBackgroundDeviceListener;
-_startBackgroundDeviceListener = function(uid) {
-  _origHook(uid);
-  _startBackgroundResultsListener(uid);
+
+async function _updateLLMStatus() { await _checkLLMHealth(); }
+
+var _dlStartTime = 0;
+var _dlLastBytes = 0;
+var _dlLastTime = 0;
+var _dlSpeed = 0;
+
+window._cwCancelDownloadLLM = async function() {
+  var cancelBtn = document.getElementById('cwCancelDownloadBtn');
+  if (cancelBtn) {
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = 'Annulation...';
+  }
+
+  try {
+    if (window.eva && window.eva.system && window.eva.system.llmCancelDownload) {
+      await window.eva.system.llmCancelDownload();
+    } else if (window.eva && window.eva.llmCancelDownload) {
+      await window.eva.llmCancelDownload();
+    }
+  } catch(e) {
+    console.error('[CloudWorks] Erreur annulation download:', e);
+  }
+
+  _isDownloadingLLM = false;
+  _dlStartTime = 0;
+  _dlLastBytes = 0;
+  _dlLastTime = 0;
+  _dlSpeed = 0;
+
+  var progressWrap = document.getElementById('cwDownloadProgressWrap');
+  if (progressWrap) progressWrap.style.display = 'none';
+
+  var downloadBtn = document.getElementById('cwDownloadLLMBtn');
+  if (downloadBtn) {
+    downloadBtn.disabled = false;
+    downloadBtn.style.opacity = '1';
+    downloadBtn.style.display = 'inline-flex';
+  }
+  if (cancelBtn) {
+    cancelBtn.disabled = false;
+    cancelBtn.textContent = '✕ Annuler le téléchargement';
+  }
+
+  _updateLLMBadge('not-downloaded');
+  _addActivity('Téléchargement du modèle IA annulé', 'info');
+  if (typeof window.toast === 'function') window.toast('Téléchargement annulé', 'info');
+};
+
+window._cwDownloadLLM = async function() {
+  if (_isDownloadingLLM) return;
+  if (!window.eva || !window.eva.system || !window.eva.system.llmDownload) {
+    if (typeof window.toast === 'function') window.toast('Téléchargement non supporté sur cette plateforme', 'error');
+    return;
+  }
+
+  var downloadBtn = document.getElementById('cwDownloadLLMBtn');
+  var progressWrap = document.getElementById('cwDownloadProgressWrap');
+  var bar = document.getElementById('cwDownloadBar');
+  var percentEl = document.getElementById('cwDownloadPercent');
+  var bytesEl = document.getElementById('cwDownloadBytes');
+  var statusText = document.getElementById('cwDownloadStatusText');
+  var etaEl = document.getElementById('cwDownloadETA');
+  var cancelBtn = document.getElementById('cwCancelDownloadBtn');
+
+  _isDownloadingLLM = true;
+  _dlStartTime = 0;
+  _dlLastBytes = 0;
+  _dlLastTime = 0;
+  _dlSpeed = 0;
+
+  _updateLLMBadge('downloading');
+  if (downloadBtn) { downloadBtn.disabled = true; downloadBtn.style.opacity = '0.5'; }
+  if (cancelBtn) { cancelBtn.disabled = false; cancelBtn.textContent = '✕ Annuler le téléchargement'; }
+  if (bar) bar.style.width = '0%';
+  if (percentEl) percentEl.textContent = '0%';
+  if (statusText) statusText.textContent = 'Connexion à Hugging Face...';
+  if (etaEl) { etaEl.style.display = 'block'; etaEl.textContent = 'Calcul du temps restant...'; }
+  if (progressWrap) progressWrap.style.display = 'block';
+
+  // Écouter la progression en temps réel émise par Electron
+  if (window.eva.onLLMDownloadProgress) {
+    window.eva.onLLMDownloadProgress(function(data) {
+      if (!_isDownloadingLLM) return;
+      var pct = data.progress || 0;
+      if (bar) bar.style.width = pct + '%';
+      if (percentEl) percentEl.textContent = pct + '%';
+      if (bytesEl && data.downloadedBytes) {
+        var dlMB = (data.downloadedBytes / (1024 * 1024)).toFixed(1);
+        var totalMB = (data.totalBytes / (1024 * 1024)).toFixed(1);
+        bytesEl.textContent = dlMB + ' Mo / ' + totalMB + ' Mo';
+      }
+
+      if (etaEl && data.totalBytes > 0 && data.downloadedBytes > 0) {
+        var now = Date.now();
+        if (!_dlStartTime) {
+          _dlStartTime = now;
+          _dlLastTime = now;
+          _dlLastBytes = data.downloadedBytes;
+        }
+
+        var elapsedSec = (now - _dlLastTime) / 1000;
+        if (elapsedSec >= 0.8) {
+          var bytesDiff = data.downloadedBytes - _dlLastBytes;
+          var instantSpeed = bytesDiff / elapsedSec;
+          _dlSpeed = _dlSpeed === 0 ? instantSpeed : (_dlSpeed * 0.7 + instantSpeed * 0.3);
+          _dlLastTime = now;
+          _dlLastBytes = data.downloadedBytes;
+        }
+
+        if (_dlSpeed > 1024) {
+          var remainingBytes = Math.max(0, data.totalBytes - data.downloadedBytes);
+          var remainingSec = Math.round(remainingBytes / _dlSpeed);
+          var speedMB = (_dlSpeed / (1024 * 1024)).toFixed(1);
+
+          var finishDate = new Date(now + (remainingSec * 1000));
+          var finishH = String(finishDate.getHours()).padStart(2, '0');
+          var finishM = String(finishDate.getMinutes()).padStart(2, '0');
+          var finishStr = finishH + 'h' + finishM;
+
+          var timeStr = '';
+          if (remainingSec < 60) {
+            timeStr = remainingSec + ' s';
+          } else {
+            var mins = Math.floor(remainingSec / 60);
+            var secs = remainingSec % 60;
+            timeStr = mins + ' min ' + (secs < 10 ? '0' : '') + secs + ' s';
+          }
+
+          etaEl.style.display = 'block';
+          etaEl.textContent = '⏳ ~' + timeStr + ' restantes (fin estimée vers ' + finishStr + ') · ' + speedMB + ' Mo/s';
+        }
+      }
+    });
+  }
+
+  try {
+    _addActivity('Téléchargement du modèle IA local lancé...', 'pending');
+    var res = await window.eva.system.llmDownload();
+    if (res && res.cancelled) {
+      _isDownloadingLLM = false;
+      _updateLLMBadge('not-downloaded');
+      if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.style.opacity = '1'; downloadBtn.style.display = 'inline-flex'; }
+      if (progressWrap) progressWrap.style.display = 'none';
+      return;
+    }
+
+    if (res && res.success) {
+      if (bar) bar.style.width = '100%';
+      if (percentEl) percentEl.textContent = '100%';
+      if (statusText) statusText.textContent = 'Téléchargement terminé ! Chargement en cours...';
+      if (etaEl) etaEl.style.display = 'none';
+
+      _addActivity('Modèle IA téléchargé avec succès (2 Go)', 'done');
+      if (typeof window.toast === 'function') window.toast('Modèle IA téléchargé avec succès !', 'success');
+
+      // Notifier l'agent local que le modèle est installé
+      window.dispatchEvent(new CustomEvent('cw:model-installed'));
+
+      // Attendre un court instant puis démarrer le LLM si CloudWorks est actif
+      setTimeout(async function() {
+        if (progressWrap) progressWrap.style.display = 'none';
+        _isDownloadingLLM = false;
+        await window._cwStartLLM();
+        await _checkLLMHealth();
+      }, 1500);
+    } else {
+      throw new Error(res && res.error ? res.error : 'Échec du téléchargement');
+    }
+  } catch(err) {
+    if (!_isDownloadingLLM) return;
+    console.error('[CloudWorks] Erreur download LLM:', err);
+    _isDownloadingLLM = false;
+    _updateLLMBadge('not-downloaded');
+    if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.style.opacity = '1'; downloadBtn.style.display = 'inline-flex'; }
+    if (statusText) statusText.textContent = 'Erreur : ' + err.message;
+    if (typeof window.toast === 'function') window.toast('Erreur lors du téléchargement : ' + err.message, 'error');
+    _addActivity('Erreur téléchargement modèle : ' + err.message, 'error');
+  }
+};
+
+window._cwStartLLM = async function() {
+  var badge = document.getElementById('cwLLMBadge');
+  if (badge) { badge.textContent = '⟳ Démarrage...'; badge.className = 'cw-badge cw-badge-starting'; }
+  if (window.eva && window.eva.system && window.eva.system.llmStart) {
+    try {
+      var r = await window.eva.system.llmStart();
+      _updateLLMStatus();
+      _addActivity('LLM local démarré manuellement', r.success ? 'done' : 'error');
+    } catch(e) { _addActivity('Erreur démarrage LLM: ' + e.message, 'error'); }
+  }
+};
+
+window._cwStopLLM = async function() {
+  if (window.eva && window.eva.system && window.eva.system.llmStop) {
+    try {
+      await window.eva.system.llmStop();
+      _updateLLMStatus();
+      _addActivity('LLM local arrêté manuellement', 'done');
+    } catch(e) {}
+  }
+};
+
+window._cwRestartLLM = async function() {
+  await window._cwStopLLM();
+  setTimeout(window._cwStartLLM, 1500);
 };
 
 /* ══════════════════════════════════════════
-   LOAD — initialise listeners (panneau CW ouvert)
+   COMMANDES RAPIDES & TASKEUR IA
 ══════════════════════════════════════════ */
-  async function loadCloudWorks() {
-  if (!window.S || !window.S.user) return;
-  var uid = S.user.uid;
-  var list = document.getElementById('cwDeviceList');
-  if (!list) return;
-  list.innerHTML = '<div class="cw-empty"><div class="cw-spinner"></div>Chargement des appareils\u2026</div>';
-  _setStats(null, null, null);
-  if (_cwUnsub) { _cwUnsub(); _cwUnsub = null; }
-  if (_cwResultUnsub) { _cwResultUnsub(); _cwResultUnsub = null; }
+window._cwQuickCmd = async function(type) {
+  if (!window.pcAgent || !window.S || !window.S.user) return;
+  var statusEl = document.getElementById('cwAgenticStatus');
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '⟳ ' + type + ' en cours...'; statusEl.className = 'cw-agentic-status running'; }
+
   try {
-    _cwUnsub = window.db.collection('cloudworks').doc(uid).collection('devices')
-      .onSnapshot(function(snap) { renderDevices(snap); },
-      function(err) {
-        list.innerHTML = '<div class="cw-empty"><div class="cw-empty-icon">\uD83D\uDCE1</div>Impossible de charger les appareils.<br><small style="opacity:0.6">Vérifiez votre connexion.</small></div>';
+    var cmdId = await window.pcAgent.sendCommand(type, {}, window.S.user.uid);
+    if (type === 'open_explorer') {
+      if (window.eva && window.eva.system) {
+        await window.eva.system.exec('explorer.exe');
+        if (statusEl) { statusEl.textContent = '✓ Explorateur ouvert'; statusEl.className = 'cw-agentic-status done'; }
+      }
+      return;
+    }
+
+    var tries = 0;
+    var pollRes = setInterval(async function() {
+      tries++;
+      if (tries > 30) { clearInterval(pollRes); return; }
+      var doc = await window.db.collection('cloudworks').doc(window.S.user.uid).collection('commands').doc(cmdId).get();
+      var d = doc.data();
+      if (d && (d.status === 'done' || d.status === 'error')) {
+        clearInterval(pollRes);
+        if (statusEl) {
+          statusEl.textContent = d.status === 'done' ? '✓ Commande terminée' : '✗ Erreur: ' + (d.result?.error || '');
+          statusEl.className = 'cw-agentic-status ' + d.status;
+        }
+        _updateLLMStatus();
+      }
+    }, 1000);
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = '✗ Erreur: ' + e.message; statusEl.className = 'cw-agentic-status error'; }
+  }
+};
+
+window._cwRunAgenticTask = async function() {
+  var promptEl = document.getElementById('cwAgenticPrompt');
+  var statusEl = document.getElementById('cwAgenticStatus');
+  if (!promptEl || !window.S || !window.S.user) return;
+  var prompt = promptEl.value.trim();
+  if (!prompt) return;
+
+  if (!window.CWAgent || !window.CWTools) {
+    if (window.toast) window.toast('Module CWAgent non chargé. Rechargez l\'application.', 'error');
+    return;
+  }
+
+  statusEl.style.display = 'block';
+  statusEl.className = 'cw-agentic-status running';
+  statusEl.innerHTML =
+    '<div class="cw-task-header">Envoi au LLM local...</div>' +
+    '<div class="cw-task-steps" id="cwTaskSteps"></div>' +
+    '<button class="cw-btn cw-btn-danger cw-btn-sm" style="margin-top:8px;" onclick="window._cwStopAgent()">Arrêter</button>';
+
+  var stepsEl = document.getElementById('cwTaskSteps');
+
+  var approvalMode = true;
+  var autonomousMode = false;
+  try {
+    var settingsDoc = await window.db.collection('users').doc(window.S.user.uid).get();
+    var settingsData = settingsDoc.data();
+    if (settingsData && settingsData.cloudworks) {
+      if (settingsData.cloudworks.approvalMode !== undefined) approvalMode = settingsData.cloudworks.approvalMode;
+      if (settingsData.cloudworks.autonomousMode !== undefined) autonomousMode = settingsData.cloudworks.autonomousMode;
+    }
+  } catch(e) {}
+
+  var agent = new window.CWAgent(window.S.user.uid, {
+    approvalMode: approvalMode,
+    autonomousMode: autonomousMode
+  });
+  window._activeAgent = agent;
+
+  var header = statusEl.querySelector('.cw-task-header');
+
+  var result = await agent.run(prompt, stepsEl, function(text, cls) {
+    if (header) header.textContent = text;
+  });
+
+  if (result.success) {
+    if (header) header.textContent = 'Tâche terminée';
+    statusEl.className = 'cw-agentic-status done';
+    promptEl.value = '';
+    _addActivity('Tâche IA: ' + prompt.substring(0, 50), 'done');
+  } else {
+    if (header) header.textContent = 'Erreur: ' + (result.error || 'Inconnue');
+    statusEl.className = 'cw-agentic-status error';
+    _addActivity('Tâche IA erreur: ' + prompt.substring(0, 30), 'error');
+  }
+
+  window._activeAgent = null;
+};
+
+window._cwStopAgent = function() {
+  if (window._activeAgent) window._activeAgent.stop();
+  if (window.CWAgentStop) window.CWAgentStop();
+};
+
+window._cwToggleDevices = function() {
+  var body = document.getElementById('cwDevicesBody');
+  var chevron = document.getElementById('cwDevicesChevron');
+  if (!body) return;
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chevron) chevron.textContent = open ? '▼' : '▲';
+};
+
+/* ══════════════════════════════════════════
+   APPAREILS CONNECTÉS
+══════════════════════════════════════════ */
+function _loadDevices(uid) {
+  if (!window.db) return;
+  if (_cwDevicesUnsub) { _cwDevicesUnsub(); _cwDevicesUnsub = null; }
+  var container = document.getElementById('cwDeviceListInner');
+
+  try {
+    _cwDevicesUnsub = window.db.collection('cloudworks').doc(uid).collection('devices')
+      .onSnapshot(function(snap) {
+        var total = snap.size;
+        var online = 0;
+        var offline = 0;
+        var html = '';
+
+        if (snap.empty) {
+          if (container) container.innerHTML = '<div class="cw-empty">Aucun autre appareil enregistré</div>';
+          _setStats(0, 0, 0);
+          return;
+        }
+
+        snap.forEach(function(doc) {
+          var d = doc.data();
+          var isOnline = !!d.online;
+          if (isOnline) online++; else offline++;
+
+          var deviceName = d.deviceName || d.name || doc.id;
+          var os = d.os || d.deviceType || 'Windows';
+          var lastSeen = d.updatedAt ? (d.updatedAt.toDate ? d.updatedAt.toDate().toLocaleString('fr-FR') : new Date(d.updatedAt).toLocaleString('fr-FR')) : 'Inconnu';
+          var statusCls = isOnline ? 'online' : 'offline';
+          var statusDot = isOnline ? '● En ligne' : '○ Hors ligne';
+
+          html += `
+            <div class="cw-device-card ${statusCls}">
+              <span class="cw-device-icon">💻</span>
+              <div style="flex:1;">
+                <div class="cw-device-name">${esc(deviceName)}</div>
+                <div class="cw-device-meta">OS: ${esc(os)} · <span class="cw-device-status-${statusCls}">${statusDot}</span></div>
+                <div class="cw-device-seen">Dernière activité: ${esc(lastSeen)}</div>
+              </div>
+            </div>
+          `;
+        });
+
+        if (container) container.innerHTML = html;
+        _setStats(total, online, offline);
+      }, function(err) {
+        console.warn('[CloudWorks] Devices snapshot error:', err);
+        if (container) container.innerHTML = '<div class="cw-empty">Impossible de charger les appareils</div>';
         _setStats(0, 0, 0);
       });
-    _cwResultUnsub = window.db.collection('cloudworks').doc(uid).collection('commands')
-      .orderBy('updatedAt','desc')
-      .limit(MAX_LOG)
-      .onSnapshot(function(snap) { _handleResultsSnap(snap); });
   } catch(e) {
-    list.innerHTML = '<div class="cw-empty"><div class="cw-empty-icon">⚠️</div>Erreur Firebase.</div>';
-    _setStats(0, 0, 0);
+    console.error('[CloudWorks] Erreur initialisation devices:', e);
   }
+}
+
+/* ══════════════════════════════════════════
+   ACTIVITÉ
+══════════════════════════════════════════ */
+function _loadActivity(uid) {
+  if (!window.db) return;
+  if (_cwResultUnsub) { _cwResultUnsub(); _cwResultUnsub = null; }
+  try {
+    _cwResultUnsub = window.db.collection('cloudworks').doc(uid).collection('commands')
+      .orderBy('updatedAt', 'desc')
+      .limit(10)
+      .onSnapshot(function(snap) { _renderActivity(snap); }, function(err) {
+        console.warn('[CloudWorks] Activity snapshot error:', err);
+      });
+  } catch(e) {
+    console.error('[CloudWorks] Erreur initialisation activité:', e);
+  }
+}
+
+function _renderActivity(snap) {
+  var el = document.getElementById('cwActivityList');
+  if (!el) return;
+  if (snap.empty) { el.innerHTML = '<div class="cw-empty">Aucune commande récente</div>'; return; }
+  var html = '';
+  snap.forEach(function(doc) {
+    var d = doc.data();
+    var ts = d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate().toLocaleString('fr-FR') : '';
+    var icon = d.status === 'done' ? '✓' : d.status === 'error' ? '✗' : d.status === 'running' ? '⟳' : '·';
+    var cls = 'cw-activity-item ' + (d.status || '');
+    var label = d.type || 'commande';
+    if (d.payload && d.payload.prompt) label += ': ' + d.payload.prompt.substring(0, 40) + '…';
+    html += `<div class="${cls}"><span class="cw-act-icon">${icon}</span><span class="cw-act-label">${esc(label)}</span><span class="cw-act-time">${ts}</span></div>`;
+  });
+  el.innerHTML = html;
+}
+
+function _addActivity(text, status) {
+  var el = document.getElementById('cwActivityList');
+  if (!el) return;
+  var icon = status === 'done' ? '✓' : status === 'error' ? '✗' : '·';
+  var entry = document.createElement('div');
+  entry.className = 'cw-activity-item ' + (status || '');
+  entry.innerHTML = `<span class="cw-act-icon">${icon}</span><span class="cw-act-label">${esc(text)}</span><span class="cw-act-time">${new Date().toLocaleString('fr-FR')}</span>`;
+  el.prepend(entry);
+  while (el.children.length > 10) el.removeChild(el.lastChild);
 }
 
 /* ══════════════════════════════════════════
    STATS
 ══════════════════════════════════════════ */
 function _setStats(total, online, offline) {
-  var tEl = document.getElementById('cwStatTotal');
   var oEl = document.getElementById('cwStatOnline');
   var fEl = document.getElementById('cwStatOffline');
-  if (tEl) tEl.textContent = total !== null ? total : '—';
-  if (oEl) oEl.textContent = online !== null ? online : '—';
-  if (fEl) fEl.textContent = offline !== null ? offline : '—';
+  var tEl = document.getElementById('cwStatTotal');
+  if (oEl) oEl.textContent = online !== null ? online : '0';
+  if (fEl) fEl.textContent = offline !== null ? offline : '0';
+  if (tEl) tEl.textContent = total !== null ? total : '0';
 }
 
 /* ══════════════════════════════════════════
-   RENDER DEVICES
+   API GLOBALE
 ══════════════════════════════════════════ */
-function renderDevices(snap) {
-  var list = document.getElementById('cwDeviceList');
-  if (!list) return;
-  if (snap.empty) {
-    list.innerHTML = '<div class="cw-empty"><div class="cw-empty-icon">\uD83D\uDCBB</div><div class="cw-empty-title">AUCUN APPAREIL CONNECTÉ</div>Installez EVA Desktop sur votre PC pour qu\'il apparaisse ici automatiquement.</div>';
-    _setStats(0, 0, 0);
-    return;
-  }
-
-  var totalCount = 0, onlineCount = 0;
-  list.innerHTML = '';
-  var _cwDevArr = []; /* peuple S.cwDevices pour le system prompt EVA */
-
-  snap.forEach(function(doc) {
-    var d = Object.assign({id: doc.id}, doc.data());
-    var online = d.online === true;
-    if (online && d.lastSeen && d.lastSeen.toDate) {
-      var diffMs = Date.now() - d.lastSeen.toDate().getTime();
-      if (diffMs > 120000) {
-        online = false;
-        d.online = false;
-      }
-    }
-    var seen = d.lastSeen && d.lastSeen.toDate ? d.lastSeen.toDate().toLocaleString('fr-FR') : 'Inconnu';
-    var iconMap = {mac: '🍎', linux: '🐧', windows: '🖥️'};
-    var icon = iconMap[d.deviceType] || '🖥️';
-    var typeLabel = {mac: 'macOS', linux: 'Linux', windows: 'Windows'}[d.deviceType] || 'PC';
-    var did = esc(d.id);
-    var dname = esc(d.deviceName || d.deviceId);
-    totalCount++;
-    if (online) onlineCount++;
-    _cwDevArr.push(Object.assign({}, d, { online: online }));
-
-    var c = document.createElement('div');
-    c.className = 'cw-card' + (online ? ' cw-card-online' : ' cw-card-offline');
-
-    var actionsHtml = '<div class="cw-card-divider"></div><div class="cw-card-actions">';
-    if (online) {
-      actionsHtml +=
-        /* Screenshot */
-        '<button class="cw-action-btn" onclick="cwCmd(\'' + did + '\',\'screenshot\')" title="Capture d\'écran du bureau">' +
-          '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Capture' +
-        '</button>' +
-        /* Infos système */
-        '<button class="cw-action-btn" onclick="cwCmd(\'' + did + '\',\'sysinfo\')" title="RAM, CPU, disque, réseau">' +
-          '<svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Infos Système' +
-        '</button>' +
-        /* Ouvrir dans IDE */
-        '<button class="cw-action-btn" onclick="cwPromptIDE(\'' + did + '\')" title="Ouvrir un fichier dans l\'IDE">' +
-          '<svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>IDE' +
-        '</button>' +
-        /* Exécuter script */
-        '<button class="cw-action-btn" onclick="cwPromptScript(\'' + did + '\')" title="Exécuter un script ou une commande">' +
-          '<svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>Exécuter' +
-        '</button>' +
-        /* Verrouiller */
-        '<button class="cw-action-btn" onclick="cwCmd(\'' + did + '\',\'lock\')">' +
-          '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Verrouiller' +
-        '</button>' +
-        /* Veille */
-        '<button class="cw-action-btn" onclick="cwCmd(\'' + did + '\',\'sleep\')">' +
-          '<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>Veille' +
-        '</button>' +
-        /* Éteindre */
-        '<button class="cw-action-btn cw-danger" onclick="cwCmd(\'' + did + '\',\'shutdown\')">' +
-          '<svg viewBox="0 0 24 24"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>Éteindre' +
-        '</button>';
-    }
-    actionsHtml +=
-      '<button class="cw-action-btn cw-remove' + (online ? ' cw-remove-inline' : '') + '" onclick="cwRemoveDevice(\'' + did + '\',\'' + dname + '\')">' +
-        '<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>' +
-        (online ? 'Retirer' : 'Retirer l\'appareil') +
-      '</button>' +
-    '</div>';
-
-    var ipHtml = d.localIP ? '<div class="cw-card-ip">' + esc(d.localIP) + '</div>' : '';
-
-    c.innerHTML =
-      '<div class="cw-card-inner">' +
-        '<div class="cw-card-top">' +
-          '<div class="cw-card-left">' +
-            '<div class="cw-card-iconwrap">' + icon + '</div>' +
-            '<div class="cw-card-info">' +
-              '<div class="cw-card-name">' + dname + '</div>' +
-              '<div class="cw-card-sub">' + typeLabel + (d.macAddress ? ' · ' + esc(d.macAddress) : ' · ' + esc(d.deviceId || d.id)) + '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="cw-card-right">' +
-            '<span class="cw-badge ' + (online ? 'cw-badge-on' : 'cw-badge-off') + '">' +
-              (online ? 'EN LIGNE' : 'HORS LIGNE') +
-            '</span>' +
-            (online && d.llmModelInstalled === false ? '<span class="cw-badge" style="background:rgba(249,115,22,0.15);color:#f97316;border:1px solid rgba(249,115,22,0.3);margin-left:4px;font-size:0.65em;">LLM non téléchargé</span>' : '') +
-            ipHtml +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="cw-card-divider"></div>' +
-      '<div class="cw-card-meta">' +
-        '<span class="cw-meta-item"><span class="cw-meta-dot"></span>Vu le ' + seen + '</span>' +
-        (d.osVersion ? '<span class="cw-meta-item"><span class="cw-meta-dot"></span>' + esc(d.osVersion) + '</span>' : '') +
-        (online ? (d.llmModelInstalled === false ? '<span class="cw-meta-item" style="color:#f97316;"><span class="cw-meta-dot" style="background:#f97316;"></span>Modèle local non téléchargé sur ce PC</span>' : '<span class="cw-meta-item" style="color:#00ff88;"><span class="cw-meta-dot" style="background:#00ff88;"></span>Modèle local installé</span>') : '') +
-      '</div>' +
-      actionsHtml;
-
-    list.appendChild(c);
-  });
-
-    /* Mettre à jour S.cwDevices pour le system prompt EVA */
-  if (window.S) window.S.cwDevices = _cwDevArr;
-  window._cwDevicesCache = _cwDevArr;
-  _setStats(totalCount, onlineCount, totalCount - onlineCount);
-}
+window.loadCloudWorks = loadCloudWorks;
 
 /* ══════════════════════════════════════════
-   SEND COMMAND
+   STYLES INJECTÉS
 ══════════════════════════════════════════ */
-async function cwCmd(deviceId, type, payload) {
-  if (!window.S || !window.S.user) return;
-  var msgs = {shutdown: 'Éteindre ce PC ?', lock: 'Verrouiller ce PC ?', sleep: 'Mettre en veille ?'};
-  if (msgs[type] && !confirm(msgs[type])) return;
-  try {
-    var ref = window.db.collection('cloudworks').doc(S.user.uid).collection('commands').doc();
-    await ref.set({
-      deviceId: deviceId,
-      type: type,
-      payload: payload || {},
-      status: 'pending',
-      createdAt: window.timestamp(),
-      updatedAt: window.timestamp()
-    });
-    var labels = {
-      screenshot: '📸 Capture demandée…',
-      sysinfo: '📊 Infos système demandées…',
-      lock: '🔒 Verrouillage…',
-      sleep: '💤 Mise en veille…',
-      shutdown: '⏻ Extinction…',
-      run_script: '⚡ Script envoyé…',
-      open_ide_file: '💻 Ouverture dans l\'IDE…',
-      agentic_task: '🤖 Tâche IA…'
-    };
-    // Pour agentic_task : afficher le début du prompt dans le label
-    var entryLabel = labels[type] || type;
-    if (type === 'agentic_task' && payload && payload.prompt) {
-      var shortPrompt = payload.prompt.trim().replace(/\s+/g, ' ');
-      entryLabel = '🤖 ' + (shortPrompt.length > 48 ? shortPrompt.substring(0, 48) + '…' : shortPrompt);
-    } else if (type === 'run_script' && payload && payload.command) {
-      entryLabel = '⚡ ' + (payload.command.length > 42 ? payload.command.substring(0, 42) + '…' : payload.command);
-    }
-    if (window.toast) window.toast(labels[type] || 'Commande envoyée', 'success');
-    _addLogEntry({type: type, deviceId: deviceId, status: 'pending', label: entryLabel, createdAt: new Date(), cmdId: ref.id});
-
-    // ── Tracker dans le chat pour les tâches agentiques ──
-    if (type === 'agentic_task') {
-      _injectWebTracker(ref.id, (payload && payload.prompt) || 'Tâche en cours…', deviceId);
-    }
-  } catch(e) {
-    if (window.toast) window.toast('Erreur : ' + e.message, 'error');
-  }
-}
-
-/* ══════════════════════════════════════════
-   TRACKER WEB — Stepper vertical dans le chat
-   (miroir du tracker PC — cw-modal.js)
-══════════════════════════════════════════ */
-var _webTrackers = {}; // cmdId → { unsub, lastStep }
-
-(function _injectWebTrackerStyles() {
-  if (document.getElementById('cw-web-tracker-styles')) return;
+(function injectStyles() {
+  if (document.getElementById('cw-pc-styles')) return;
   var s = document.createElement('style');
-  s.id = 'cw-web-tracker-styles';
+  s.id = 'cw-pc-styles';
   s.textContent = `
-    .cww-card {
-      margin:12px 0; background:linear-gradient(145deg,rgba(10,12,28,0.96),rgba(15,18,38,0.92));
-      border:1px solid rgba(0,212,255,0.18); border-radius:16px; overflow:hidden;
-      font-family:'Inter','Space Grotesk',system-ui,sans-serif;
-      box-shadow:0 4px 24px rgba(0,0,0,0.35);
-      transition:border-color 0.4s ease;
-    }
-    .cww-card.done { border-color:rgba(0,255,136,0.25); }
-    .cww-card.error,.cww-card.cancelled { border-color:rgba(255,77,109,0.22); }
-    .cww-header {
-      display:flex; align-items:center; gap:10px; padding:11px 15px;
-      background:rgba(0,212,255,0.05); border-bottom:1px solid rgba(0,212,255,0.1);
-    }
-    .cww-icon { width:28px;height:28px;border-radius:7px;background:rgba(0,212,255,0.1);
-      border:1px solid rgba(0,212,255,0.2);display:flex;align-items:center;justify-content:center;font-size:13px; }
-    .cww-title { font-size:0.75em;font-weight:700;color:#00d4ff;flex:1; }
-    .cww-badge {
-      font-size:0.59em;padding:2px 8px;border-radius:20px;font-weight:600;
-      background:rgba(255,200,0,0.1);color:#ffc800;border:1px solid rgba(255,200,0,0.22);
-      animation:cwwBlink 2s ease-in-out infinite;
-    }
-    .cww-badge.done{background:rgba(0,255,136,0.1);color:#00ff88;border-color:rgba(0,255,136,0.22);animation:none;}
-    .cww-badge.error,.cww-badge.cancelled{background:rgba(255,77,109,0.1);color:#ff4d6d;border-color:rgba(255,77,109,0.22);animation:none;}
-    @keyframes cwwBlink{0%,100%{opacity:1}50%{opacity:0.5}}
-    .cww-body { padding:13px 15px; }
-    .cww-prompt {
-      font-size:0.71em;color:rgba(200,205,235,0.65);margin-bottom:14px;
-      padding:7px 11px;border-left:2px solid rgba(0,212,255,0.3);
-      border-radius:0 6px 6px 0;background:rgba(255,255,255,0.025);line-height:1.4;
-    }
-    .cww-stepper { display:flex;flex-direction:column; }
-    .cww-step {
-      display:flex;gap:11px;position:relative;
-      animation:cwwIn 0.22s ease;
-    }
-    @keyframes cwwIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-    .cww-connector {
-      position:absolute;left:11px;top:26px;bottom:0;width:2px;border-radius:1px;
-      background:linear-gradient(to bottom,rgba(0,212,255,0.25),rgba(0,212,255,0.04));
-    }
-    .cww-step.done > .cww-connector {
-      background:linear-gradient(to bottom,rgba(0,255,136,0.35),rgba(0,255,136,0.06));
-    }
-    .cww-dot {
-      width:24px;height:24px;border-radius:50%;flex-shrink:0;
-      display:flex;align-items:center;justify-content:center;
-      font-size:10px;position:relative;z-index:1;margin-top:2px;
-    }
-    .cww-step.pending .cww-dot{background:rgba(255,255,255,0.03);border:1.5px dashed rgba(255,255,255,0.1);color:rgba(255,255,255,0.18);}
-    .cww-step.running .cww-dot{background:rgba(255,200,0,0.1);border:1.5px solid rgba(255,200,0,0.45);color:#ffc800;
-      box-shadow:0 0 14px rgba(255,200,0,0.25);animation:cwwGlow 1.4s ease-in-out infinite;}
-    @keyframes cwwGlow{0%,100%{box-shadow:0 0 8px rgba(255,200,0,0.15)}50%{box-shadow:0 0 18px rgba(255,200,0,0.4)}}
-    .cww-step.done .cww-dot{background:rgba(0,255,136,0.1);border:1.5px solid rgba(0,255,136,0.4);color:#00ff88;}
-    .cww-step.error .cww-dot{background:rgba(255,77,109,0.1);border:1.5px solid rgba(255,77,109,0.4);color:#ff4d6d;}
-    .cww-content{flex:1;min-width:0;padding:3px 0 14px;}
-    .cww-step:last-child .cww-content{padding-bottom:0;}
-    .cww-label{font-size:0.73em;font-weight:500;line-height:1.4;}
-    .cww-step.pending .cww-label{color:rgba(200,205,235,0.22);}
-    .cww-step.running .cww-label{color:#e4e4ef;}
-    .cww-step.done    .cww-label{color:rgba(200,210,220,0.55);}
-    .cww-step.error   .cww-label{color:#ff6b84;}
-    .cww-cmd{font-size:0.61em;font-family:'Space Mono',monospace;color:rgba(180,185,215,0.3);margin-top:2px;}
-    .cww-step.running .cww-cmd{color:rgba(255,200,0,0.4);}
-    .cww-footer{padding:0 15px 13px;}
-    .cww-cancel-btn{
-      width:100%;padding:7px 14px;border:1px solid rgba(255,77,109,0.2);
-      border-radius:9px;background:rgba(255,77,109,0.05);color:rgba(255,77,109,0.65);
-      font-size:0.67em;font-weight:600;cursor:pointer;transition:all 0.18s ease;
-      display:flex;align-items:center;justify-content:center;gap:6px;
-    }
-    .cww-cancel-btn:hover{background:rgba(255,77,109,0.12);color:#ff4d6d;}
-    .cww-summary{
-      margin:0 15px 13px;padding:10px 13px;
-      background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.14);
-      border-radius:9px;font-size:0.71em;color:rgba(200,220,210,0.85);line-height:1.5;
-    }
-    .cww-summary.error,.cww-summary.cancelled{
-      background:rgba(255,77,109,0.05);border-color:rgba(255,77,109,0.14);color:rgba(220,200,205,0.85);
-    }
+    .cw-section { background:rgba(0,212,255,0.04); border:1px solid rgba(0,212,255,0.12); border-radius:14px; margin-bottom:14px; overflow:hidden; }
+    .cw-section-header { display:flex; align-items:center; gap:10px; padding:14px 16px; background:rgba(0,212,255,0.06); }
+    .cw-section-icon { font-size:1.1em; }
+    .cw-section-title { font-size:0.82em; font-weight:700; color:var(--cyan,#00d4ff); letter-spacing:0.08em; flex:1; }
+    .cw-section-body { padding:14px 16px; }
+    .cw-badge { font-size:0.72em; padding:3px 10px; border-radius:20px; font-weight:700; }
+    .cw-badge-on { background:rgba(0,255,136,0.15); color:#00ff88; border:1px solid rgba(0,255,136,0.3); }
+    .cw-badge-off { background:rgba(136,136,154,0.15); color:#88889a; border:1px solid rgba(136,136,154,0.2); }
+    .cw-badge-starting { background:rgba(255,200,0,0.15); color:#ffc800; border:1px solid rgba(255,200,0,0.3); }
+    .cw-badge-warning { background:rgba(249,115,22,0.15); color:#f97316; border:1px solid rgba(249,115,22,0.3); }
+    .cw-badge-unknown { background:rgba(255,100,100,0.15); color:#ff6464; border:1px solid rgba(255,100,100,0.3); }
+    .cw-llm-info { margin-bottom:12px; }
+    .cw-info-row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid rgba(0,212,255,0.07); }
+    .cw-info-label { font-size:0.72em; color:#88889a; }
+    .cw-info-value { font-size:0.72em; color:#e4e4ef; font-family:monospace; }
+    .cw-llm-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .cw-btn { padding:7px 14px; border-radius:8px; border:none; cursor:pointer; font-size:0.75em; font-family:inherit; font-weight:600; transition:0.15s; }
+    .cw-btn-primary { background:var(--cyan,#00d4ff); color:#000; }
+    .cw-btn-primary:hover { opacity:0.85; }
+    .cw-btn-warning { background:rgba(255,200,0,0.15); color:#ffc800; border:1px solid rgba(255,200,0,0.25); }
+    .cw-btn-warning:hover { background:rgba(255,200,0,0.25); }
+    .cw-btn-danger { background:rgba(255,77,109,0.15); color:#ff4d6d; border:1px solid rgba(255,77,109,0.25); }
+    .cw-btn-full { width:100%; margin-top:8px; }
+    .cw-quick-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+    .cw-quick-btn { background:rgba(0,212,255,0.07); border:1px solid rgba(0,212,255,0.15); border-radius:10px; padding:12px 8px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; transition:0.15s; color:var(--text,#e4e4ef); font-size:0.72em; font-family:inherit; }
+    .cw-quick-btn:hover { background:rgba(0,212,255,0.14); border-color:rgba(0,212,255,0.35); }
+    .cw-quick-icon { font-size:1.4em; }
+    .cw-agentic-box { margin-top:4px; }
+    .cw-agentic-label { font-size:0.72em; color:#88889a; margin-bottom:6px; }
+    .cw-textarea { width:100%; background:rgba(0,0,0,0.3); border:1px solid rgba(0,212,255,0.15); border-radius:8px; padding:10px; color:var(--text,#e4e4ef); font-size:0.78em; font-family:'Space Mono',monospace; resize:vertical; outline:none; }
+    .cw-textarea:focus { border-color:rgba(0,212,255,0.4); }
+    .cw-agentic-status { margin-top:8px; padding:8px 12px; border-radius:8px; font-size:0.75em; font-family:'Space Mono',monospace; }
+    .cw-agentic-status.running { background:rgba(255,200,0,0.1); color:#ffc800; border:1px solid rgba(255,200,0,0.2); }
+    .cw-agentic-status.done { background:rgba(0,255,136,0.1); color:#00ff88; border:1px solid rgba(0,255,136,0.2); }
+    .cw-agentic-status.error { background:rgba(255,77,109,0.1); color:#ff4d6d; border:1px solid rgba(255,77,109,0.2); }
+    .cw-collapsable-header { cursor:pointer; user-select:none; }
+    .cw-collapsable-header:hover { background:rgba(0,212,255,0.1); }
+    .cw-chevron { margin-left:auto; color:#88889a; font-size:0.8em; }
+    .cw-stat-badges { display:flex; gap:6px; }
+    .cw-stat-badge { font-size:0.68em; padding:2px 8px; border-radius:12px; }
+    .cw-stat-badge.online { background:rgba(0,255,136,0.12); color:#00ff88; }
+    .cw-stat-badge.offline { background:rgba(136,136,154,0.12); color:#88889a; }
+    .cw-device-card { display:flex; align-items:center; gap:12px; padding:10px 12px; background:rgba(0,0,0,0.2); border-radius:10px; margin-bottom:8px; border:1px solid rgba(0,212,255,0.08); }
+    .cw-device-card.offline { opacity:0.6; }
+    .cw-device-icon { font-size:1.2em; }
+    .cw-device-name { font-size:0.8em; font-weight:700; color:#e4e4ef; }
+    .cw-device-meta { font-size:0.68em; color:#88889a; }
+    .cw-device-status-online { color:#00ff88; font-weight:600; }
+    .cw-device-status-offline { color:#88889a; }
+    .cw-device-seen { font-size:0.65em; color:rgba(136,136,154,0.6); margin-top:2px; }
+    .cw-activity-item { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid rgba(0,212,255,0.06); font-size:0.72em; }
+    .cw-act-icon { width:16px; text-align:center; }
+    .cw-activity-item.done .cw-act-icon { color:#00ff88; }
+    .cw-activity-item.error .cw-act-icon { color:#ff4d6d; }
+    .cw-activity-item.running .cw-act-icon { color:#ffc800; }
+    .cw-act-label { flex:1; color:#e4e4ef; }
+    .cw-act-time { color:#88889a; font-size:0.9em; white-space:nowrap; }
+    .cw-empty { padding:20px; text-align:center; color:#88889a; font-size:0.78em; }
+    .cw-task-header { font-weight:700; margin-bottom:6px; }
+    .cw-task-steps { max-height:180px; overflow-y:auto; border-top:1px solid rgba(0,212,255,0.1); margin-top:6px; padding-top:6px; }
+    .cw-task-step { padding:3px 0; font-size:0.9em; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .cw-task-step.done { color:#00ff88; }
+    .cw-task-step.error { color:#ff4d6d; }
+    .cw-task-step.running { color:#ffc800; }
+    .cw-task-step.pending { color:#88889a; }
+    .cw-spinner { width:20px; height:20px; border:2px solid rgba(0,212,255,0.2); border-top-color:var(--cyan,#00d4ff); border-radius:50%; animation:cwSpin 0.8s linear infinite; margin:0 auto 8px; }
+    @keyframes cwSpin { to { transform:rotate(360deg); } }
   `;
   document.head.appendChild(s);
 })();
 
-function _escW(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function _injectWebTracker(cmdId, prompt, deviceId) {
-  if (!window.S || !window.S.user || !window.db) return;
-  _injectWebTrackerStyles();
-  var uid = window.S.user.uid;
-
-  // Créer la card
-  var card = document.createElement('div');
-  card.className = 'cww-card';
-  card.id = 'cwwTracker-' + cmdId;
-  card.innerHTML = `
-    <div class="cww-header">
-      <div class="cww-icon">⚙️</div>
-      <span class="cww-title">CloudWorks Agent</span>
-      <span class="cww-badge" id="cwwBadge-${cmdId}">⟳ En cours</span>
-    </div>
-    <div class="cww-body">
-      <div class="cww-prompt">${_escW(prompt)}</div>
-      <div class="cww-stepper" id="cwwSteps-${cmdId}"></div>
-    </div>
-    <div class="cww-footer" id="cwwFooter-${cmdId}">
-      <button class="cww-cancel-btn" onclick="window._cwwCancel('${cmdId}','${uid}')">■ Arrêter la tâche</button>
-    </div>
-  `;
-
-  // Insérer dans le dernier message EVA ou créer un container
-  var msgs = document.querySelectorAll('.message.eva,.msg-eva,[data-role="assistant"]');
-  var lastMsg = msgs[msgs.length - 1];
-  if (!lastMsg) {
-    var chatEl = document.getElementById('messagesArea') || document.getElementById('chatMessages') || document.getElementById('chat');
-    if (chatEl) {
-      lastMsg = document.createElement('div');
-      lastMsg.className = 'message eva';
-      chatEl.appendChild(lastMsg);
-    }
-  }
-  if (lastMsg) lastMsg.appendChild(card);
-
-  // Bloquer le bouton Send + afficher Stop
-  var sendBtn = document.getElementById('sendBtn');
-  var stopBtn = document.getElementById('stopBtn');
-  if (sendBtn) sendBtn.style.display = 'none';
-  if (stopBtn) stopBtn.style.display = 'inline-flex';
-  if (window.S) { window.S.cwRunning = true; window.S.busy = true; }
-
-  var tracker = { unsub: null, lastStep: null };
-  _webTrackers[cmdId] = tracker;
-
-  // Listener Firestore
-  tracker.unsub = window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId)
-    .onSnapshot(function(doc) {
-      var d = doc.data();
-      if (!d) return;
-
-      if (d.step && d.step !== tracker.lastStep) {
-        tracker.lastStep = d.step;
-        var isActive = (d.status !== 'done' && d.status !== 'error' && d.status !== 'cancelled');
-        _addWebStep(cmdId, d.step, isActive ? 'running' : 'done', d.lastCmd || null);
-      }
-
-      if (d.status === 'done' || d.status === 'error' || d.status === 'cancelled') {
-        if (d.result && d.result.steps && Array.isArray(d.result.steps)) {
-          d.result.steps.forEach(function(s) {
-            var t = typeof s === 'string' ? s : (s.text || '');
-            if (t && t !== tracker.lastStep) _addWebStep(cmdId, t, 'done');
-          });
-        }
-        _finalizeWebTracker(cmdId, d.result, d.status);
-      }
-    }, function(err) {
-      console.error('[CW Web Tracker] Erreur:', err);
-      _finalizeWebTracker(cmdId, { error: err.message }, 'error');
-    });
-}
-
-function _addWebStep(cmdId, text, state, cmdText) {
-  var el = document.getElementById('cwwSteps-' + cmdId);
-  if (!el) return;
-  var prev = el.querySelector('.cww-step.running');
-  if (prev) {
-    prev.classList.remove('running');
-    prev.classList.add('done');
-    var d = prev.querySelector('.cww-dot');
-    if (d) d.textContent = '✓';
-    if (!prev.querySelector('.cww-connector')) {
-      var conn = document.createElement('div');
-      conn.className = 'cww-connector';
-      prev.insertBefore(conn, prev.firstChild);
-    }
-  }
-  var icon = state === 'done' ? '✓' : state === 'error' ? '✗' : '⟳';
-  var item = document.createElement('div');
-  item.className = 'cww-step ' + (state || 'running');
-  item.innerHTML = `<div class="cww-dot">${icon}</div>
-    <div class="cww-content">
-      <div class="cww-label">${_escW(text)}</div>
-      ${cmdText ? '<div class="cww-cmd">' + _escW(cmdText.substring(0,80)) + '</div>' : ''}
-    </div>`;
-  el.appendChild(item);
-  var chat = document.getElementById('messagesArea') || document.getElementById('chatMessages');
-  if (chat) chat.scrollTop = chat.scrollHeight;
-}
-
-function _finalizeWebTracker(cmdId, result, status) {
-  var card = document.getElementById('cwwTracker-' + cmdId);
-  if (!card) return;
-  var badge  = document.getElementById('cwwBadge-' + cmdId);
-  var footer = document.getElementById('cwwFooter-' + cmdId);
-  var title  = card.querySelector('.cww-title');
-
-  // Finir la dernière étape
-  var el = document.getElementById('cwwSteps-' + cmdId);
-  if (el) {
-    var last = el.querySelector('.cww-step.running');
-    if (last) {
-      last.classList.remove('running');
-      last.classList.add(status === 'done' ? 'done' : 'error');
-      var d = last.querySelector('.cww-dot');
-      if (d) d.textContent = status === 'done' ? '✓' : '✗';
-    }
-  }
-
-  if (status === 'done') {
-    card.classList.add('done');
-    if (badge) { badge.textContent = '✓ Terminé'; badge.className = 'cww-badge done'; }
-    if (title) title.textContent = 'CloudWorks — Terminé ✓';
-  } else if (status === 'cancelled') {
-    card.classList.add('cancelled');
-    if (badge) { badge.textContent = '■ Arrêté'; badge.className = 'cww-badge cancelled'; }
-    if (title) title.textContent = 'CloudWorks — Arrêté';
-  } else {
-    card.classList.add('error');
-    if (badge) { badge.textContent = '✗ Erreur'; badge.className = 'cww-badge error'; }
-    if (title) title.textContent = 'CloudWorks — Erreur';
-  }
-  if (footer) footer.style.display = 'none';
-
-  // Résumé
-  var summary = (result && (result.output || result.report || result.error)) || '';
-  if (!summary) summary = status === 'done' ? 'Tâche terminée.' : status === 'cancelled' ? 'Arrêté par l\'utilisateur.' : 'Erreur inconnue.';
-  var sum = document.createElement('div');
-  sum.className = 'cww-summary' + (status !== 'done' ? ' ' + status : '');
-  sum.textContent = summary.substring(0, 300) + (summary.length > 300 ? '…' : '');
-  card.appendChild(sum);
-
-  if (_webTrackers[cmdId] && _webTrackers[cmdId].unsub) _webTrackers[cmdId].unsub();
-  delete _webTrackers[cmdId];
-
-  // Restaurer l'input si plus aucune tâche active
-  if (Object.keys(_webTrackers).length === 0) {
-    if (window.S) { window.S.cwRunning = false; window.S.busy = false; }
-    var sb = document.getElementById('sendBtn');
-    var st = document.getElementById('stopBtn');
-    if (st) st.style.display = 'none';
-    if (sb) { sb.style.display = 'inline-flex'; sb.disabled = false; }
-  }
-
-  // Message de résumé EVA
-  setTimeout(function() {
-    var msg = status === 'done'
-      ? '✅ **Tâche CloudWorks terminée**\n\n' + summary + '\n\nSouhaites-tu autre chose ?'
-      : status === 'cancelled'
-        ? '■ **Tâche arrêtée** par l\'utilisateur.'
-        : '⚠️ **Erreur CloudWorks** : ' + summary;
-    if (typeof window.streamEvaMsg === 'function') {
-      window.streamEvaMsg(msg);
-    } else if (typeof window.addMessage === 'function') {
-      window.addMessage('assistant', msg);
-    }
-  }, 600);
-}
-
-// Exposer la fonction d'annulation pour le web
-window._cwwCancel = function(cmdId, uid) {
-  if (!window.db) return;
-  window.db.collection('cloudworks').doc(uid).collection('commands').doc(cmdId)
-    .update({ status: 'cancelled', updatedAt: window.timestamp ? window.timestamp() : new Date() })
-    .catch(function(e) {
-      console.error('[CW Web Tracker] Erreur annulation:', e);
-      _finalizeWebTracker(cmdId, { error: 'Annulé localement' }, 'cancelled');
-    });
-};
-
-// Patch du stopBtn web pour gérer CW
-(function() {
-  var t = setInterval(function() {
-    var stopBtn = document.getElementById('stopBtn');
-    if (!stopBtn) return;
-    clearInterval(t);
-    stopBtn.addEventListener('click', function() {
-      if (window.S && window.S.cwRunning) {
-        // Annuler toutes les tâches web actives
-        var uid = window.S.user && window.S.user.uid;
-        if (uid) {
-          Object.keys(_webTrackers).forEach(function(cmdId) {
-            window._cwwCancel(cmdId, uid);
-          });
-        }
-      } else if (typeof window.stopGeneration === 'function') {
-        window.stopGeneration();
-      }
-    }, true);
-  }, 400);
 })();
-
-
-
-/* ══════════════════════════════════════════
-   PROMPTS — IDE & SCRIPT
-══════════════════════════════════════════ */
-function cwPromptIDE(deviceId) {
-  cwShowInputModal({
-    title: '💻 Ouvrir dans l\'IDE',
-    label: 'Chemin du fichier à ouvrir',
-    placeholder: 'Ex: C:\\Users\\moi\\projet\\main.py',
-    confirmLabel: 'Ouvrir',
-    onConfirm: function(val) {
-      if (!val.trim()) return;
-      cwCmd(deviceId, 'open_ide_file', {filePath: val.trim()});
-    }
-  });
-}
-
-function cwPromptScript(deviceId) {
-  cwShowInputModal({
-    title: '⚡ Exécuter un script',
-    label: 'Commande ou chemin du script',
-    placeholder: 'Ex: python script.py  ou  npm run build',
-    confirmLabel: 'Exécuter',
-    textarea: true,
-    onConfirm: function(val) {
-      if (!val.trim()) return;
-      cwCmd(deviceId, 'run_script', {command: val.trim()});
-    }
-  });
-}
-
-/* ══════════════════════════════════════════
-   INPUT MODAL
-══════════════════════════════════════════ */
-function cwShowInputModal(opts) {
-  var existing = document.getElementById('cwInputModal');
-  if (existing) existing.remove();
-
-  var m = document.createElement('div');
-  m.id = 'cwInputModal';
-  m.className = 'cw-modal-overlay';
-  m.innerHTML =
-    '<div class="cw-modal-box">' +
-      '<div class="cw-modal-title">' + opts.title + '</div>' +
-      '<label class="cw-modal-label">' + opts.label + '</label>' +
-      (opts.textarea ?
-        '<textarea class="cw-modal-input cw-modal-textarea" id="cwInputField" placeholder="' + esc(opts.placeholder || '') + '" rows="4">' + esc(opts.defaultValue || '') + '</textarea>' :
-        '<input class="cw-modal-input" id="cwInputField" type="text" placeholder="' + esc(opts.placeholder || '') + '" value="' + esc(opts.defaultValue || '') + '">'
-      ) +
-      '<div class="cw-modal-actions">' +
-        '<button class="cw-modal-cancel" onclick="document.getElementById(\'cwInputModal\').remove()">Annuler</button>' +
-        '<button class="cw-modal-confirm" id="cwInputConfirm">' + esc(opts.confirmLabel || 'Confirmer') + '</button>' +
-      '</div>' +
-    '</div>';
-
-  document.body.appendChild(m);
-  var field = document.getElementById('cwInputField');
-  if (field) setTimeout(function(){ field.focus(); }, 80);
-
-  document.getElementById('cwInputConfirm').onclick = function() {
-    var val = field ? field.value : '';
-    opts.onConfirm(val);
-    m.remove();
-  };
-
-  m.addEventListener('click', function(e){ if (e.target === m) m.remove(); });
-}
-
-/* ══════════════════════════════════════════
-   RESULT LISTENER — Firestore real-time
-   _cwPageLoadTime : seules les commandes complétées APRÈS ce timestamp
-   déclenchent un modal. Les anciennes sont affichées dans le log seulement.
-══════════════════════════════════════════ */
-var _cwPageLoadTime = Date.now();
-
-function _handleResultsSnap(snap) {
-  snap.docChanges().forEach(function(change) {
-    if (change.type !== 'added' && change.type !== 'modified') return;
-    var data = change.doc.data();
-    if (data.status !== 'done' && data.status !== 'error') return;
-
-    // Toujours mettre à jour l'historique d'activité (log)
-    _updateLogEntry(change.doc.id, data);
-
-    // ── GARDE TEMPORELLE ──
-    // Afficher un modal uniquement si la commande a été terminée APRÈS le chargement de la page.
-    // Évite que les captures/infos demandées depuis un autre appareil s'affichent en boucle.
-    var updAt = data.updatedAt;
-    var completedMs = 0;
-    if (updAt && typeof updAt.toDate === 'function') {
-      completedMs = updAt.toDate().getTime();
-    } else if (updAt && updAt.seconds) {
-      completedMs = updAt.seconds * 1000;
-    }
-    if (completedMs <= _cwPageLoadTime) return; // Résultat antérieur → log uniquement, pas de modal
-
-    // Nouveau résultat → afficher modal
-    if (data.type === 'screenshot' && data.status === 'done' && data.result && data.result.imageBase64) {
-      var mime = (data.result.mimeType || 'image/jpeg');
-      cwShowScreenshot(data.result.imageBase64, data.deviceId, mime);
-    }
-    if (data.type === 'sysinfo' && data.status === 'done' && data.result) {
-      cwShowSysInfo(data.result, data.deviceId);
-    }
-    if (data.type === 'run_script' && data.status === 'done') {
-      cwShowScriptResult(data.result, data.deviceId);
-    }
-  });
-  _renderActivityLog();
-}
-
-/* ══════════════════════════════════════════
-   SCREENSHOT MODAL
-══════════════════════════════════════════ */
-function cwShowScreenshot(base64, deviceId, mimeType) {
-  mimeType = mimeType || 'image/jpeg';
-  var existing = document.getElementById('cwScreenModal');
-  if (existing) existing.remove();
-
-  var ts = new Date().toLocaleTimeString('fr-FR');
-  var m = document.createElement('div');
-  m.id = 'cwScreenModal';
-  m.className = 'cw-modal-overlay';
-  m.innerHTML =
-    '<div class="cw-modal-box cw-screenshot-box">' +
-      '<div class="cw-modal-title" style="margin-bottom:8px;">📸 Capture d\'écran <span style="font-size:0.75em;opacity:0.5;font-weight:400;">' + ts + '</span></div>' +
-      '<div style="font-size:0.72em;color:var(--text-muted);margin-bottom:14px;">Appareil : ' + esc(deviceId) + '</div>' +
-      '<div class="cw-screenshot-wrap">' +
-        '<img src="data:' + mimeType + ';base64,' + base64 + '" class="cw-screenshot-img" alt="Capture d\'écran" onclick="this.classList.toggle(\'cw-screenshot-zoomed\')">' +
-        '<div class="cw-screenshot-hint">Cliquer sur l\'image pour zoomer</div>' +
-      '</div>' +
-      '<div class="cw-modal-actions" style="margin-top:16px;">' +
-        '<button class="cw-modal-cancel" onclick="document.getElementById(\'cwScreenModal\').remove()">Fermer</button>' +
-        '<a class="cw-modal-confirm" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;" href="data:image/png;base64,' + base64 + '" download="eva-capture-' + Date.now() + '.png">⬇ Télécharger</a>' +
-      '</div>' +
-    '</div>';
-
-  document.body.appendChild(m);
-  m.addEventListener('click', function(e){ if (e.target === m) m.remove(); });
-  if (window.toast) window.toast('📸 Capture reçue !', 'success');
-}
-
-/* ══════════════════════════════════════════
-   SYSINFO MODAL
-══════════════════════════════════════════ */
-function cwShowSysInfo(result, deviceId) {
-  var existing = document.getElementById('cwSysInfoModal');
-  if (existing) existing.remove();
-
-  function row(label, val, color) {
-    return '<div class="cw-si-row"><span class="cw-si-label">' + esc(label) + '</span>' +
-      '<span class="cw-si-val" style="' + (color ? 'color:' + color : '') + '">' + esc(String(val || '—')) + '</span></div>';
-  }
-  function bar(label, pct) {
-    var color = pct > 85 ? '#ff4d6d' : pct > 60 ? '#ffaa44' : '#4ade80';
-    return '<div class="cw-si-row"><span class="cw-si-label">' + esc(label) + '</span>' +
-      '<div class="cw-si-bar-wrap"><div class="cw-si-bar" style="width:' + Math.min(100,pct) + '%;background:' + color + '"></div></div>' +
-      '<span class="cw-si-pct" style="color:' + color + '">' + Math.round(pct) + '%</span></div>';
-  }
-
-  var content =
-    '<div class="cw-si-section">Système</div>' +
-    row('Appareil', deviceId) +
-    row('OS', result.os) +
-    row('Hostname', result.hostname) +
-    row('Uptime', result.uptime) +
-    '<div class="cw-si-section">Processeur</div>' +
-    row('CPU', result.cpu) +
-    (result.cpuUsage != null ? bar('Utilisation CPU', result.cpuUsage) : '') +
-    '<div class="cw-si-section">Mémoire</div>' +
-    (result.ramUsage != null ? bar('RAM utilisée', result.ramUsage) : '') +
-    row('RAM totale', result.ramTotal) +
-    row('RAM libre', result.ramFree) +
-    '<div class="cw-si-section">Stockage</div>' +
-    (result.diskUsage != null ? bar('Disque principal', result.diskUsage) : '') +
-    row('Disque total', result.diskTotal) +
-    row('Disque libre', result.diskFree) +
-    '<div class="cw-si-section">Réseau</div>' +
-    row('IP locale', result.localIP) +
-    row('IP publique', result.publicIP);
-
-  var m = document.createElement('div');
-  m.id = 'cwSysInfoModal';
-  m.className = 'cw-modal-overlay';
-  m.innerHTML =
-    '<div class="cw-modal-box cw-sysinfo-box">' +
-      '<div class="cw-modal-title">📊 Infos Système</div>' +
-      '<div class="cw-si-grid">' + content + '</div>' +
-      '<div class="cw-modal-actions" style="margin-top:16px;">' +
-        '<button class="cw-modal-confirm" onclick="document.getElementById(\'cwSysInfoModal\').remove()">Fermer</button>' +
-      '</div>' +
-    '</div>';
-
-  document.body.appendChild(m);
-  m.addEventListener('click', function(e){ if (e.target === m) m.remove(); });
-  if (window.toast) window.toast('📊 Infos système reçues', 'success');
-}
-
-/* ══════════════════════════════════════════
-   SCRIPT RESULT MODAL
-══════════════════════════════════════════ */
-function cwShowScriptResult(result, deviceId) {
-  var existing = document.getElementById('cwScriptModal');
-  if (existing) existing.remove();
-
-  var output = (result && result.stdout) ? result.stdout : (result && result.output) ? result.output : '(aucune sortie)';
-  var errOutput = (result && result.stderr) ? result.stderr : '';
-  var exitCode = (result && result.exitCode != null) ? result.exitCode : '—';
-
-  var m = document.createElement('div');
-  m.id = 'cwScriptModal';
-  m.className = 'cw-modal-overlay';
-  m.innerHTML =
-    '<div class="cw-modal-box cw-script-box">' +
-      '<div class="cw-modal-title">⚡ Résultat du script <span style="font-size:0.7em;opacity:0.5;">code : ' + esc(String(exitCode)) + '</span></div>' +
-      '<div style="font-size:0.72em;color:var(--text-muted);margin-bottom:10px;">Appareil : ' + esc(deviceId) + '</div>' +
-      '<pre class="cw-script-output">' + esc(output) + '</pre>' +
-      (errOutput ? '<pre class="cw-script-output cw-script-err">' + esc(errOutput) + '</pre>' : '') +
-      '<div class="cw-modal-actions" style="margin-top:14px;">' +
-        '<button class="cw-modal-confirm" onclick="document.getElementById(\'cwScriptModal\').remove()">Fermer</button>' +
-      '</div>' +
-    '</div>';
-
-  document.body.appendChild(m);
-  m.addEventListener('click', function(e){ if (e.target === m) m.remove(); });
-  if (window.toast) window.toast('⚡ Script terminé (code ' + exitCode + ')', exitCode === 0 || exitCode === '0' ? 'success' : 'error');
-}
-
-/* ══════════════════════════════════════════
-   ACTIVITY LOG
-══════════════════════════════════════════ */
-var _knownResults = {};
-
-function _addLogEntry(entry) {
-  _cwActivityLog.unshift(entry);
-  if (_cwActivityLog.length > MAX_LOG) _cwActivityLog.pop();
-  _renderActivityLog();
-}
-
-function _updateLogEntry(cmdId, data) {
-  if (_knownResults[cmdId]) return;
-  _knownResults[cmdId] = true;
-  var typeLabels = {
-    screenshot: '📸 Capture',
-    sysinfo: '📊 Infos système',
-    lock: '🔒 Verrouillage',
-    sleep: '💤 Veille',
-    shutdown: '⏻ Extinction',
-    run_script: '⚡ Script',
-    open_ide_file: '💻 IDE',
-    agentic_task: '🤖 Tâche IA'
-  };
-  // Pour agentic_task : afficher le début du prompt si disponible
-  var entryLabel = typeLabels[data.type] || data.type;
-  if (data.type === 'agentic_task' && data.payload && data.payload.prompt) {
-    var p = data.payload.prompt.trim().replace(/\s+/g, ' ');
-    entryLabel = '🤖 ' + (p.length > 48 ? p.substring(0, 48) + '…' : p);
-  } else if (data.type === 'run_script' && data.payload && data.payload.command) {
-    entryLabel = '⚡ ' + (data.payload.command.length > 42 ? data.payload.command.substring(0, 42) + '…' : data.payload.command);
-  }
-  var entry = {
-    type: data.type,
-    deviceId: data.deviceId,
-    status: data.status,
-    label: entryLabel,
-    createdAt: data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate() : new Date()
-  };
-  _cwActivityLog = _cwActivityLog.filter(function(e){ return e.type !== data.type || e.deviceId !== data.deviceId || e.status !== 'pending'; });
-  _cwActivityLog.unshift(entry);
-  if (_cwActivityLog.length > MAX_LOG) _cwActivityLog.pop();
-}
-
-function _renderActivityLog() {
-  var el = document.getElementById('cwActivityLog');
-  if (!el) return;
-  if (_cwActivityLog.length === 0) {
-    el.innerHTML = '<div class="cw-log-empty">Aucune commande récente</div>';
-    return;
-  }
-  el.innerHTML = _cwActivityLog.map(function(e) {
-    var statusIcon = e.status === 'done' ? '<span class="cw-log-dot cw-log-done"></span>' :
-                     e.status === 'error' ? '<span class="cw-log-dot cw-log-err"></span>' :
-                     '<span class="cw-log-dot cw-log-pending"></span>';
-    var statusLabel = e.status === 'done' ? 'Terminé' : e.status === 'error' ? 'Erreur' : 'En attente…';
-    var ts = e.createdAt ? e.createdAt.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
-    return '<div class="cw-log-item">' +
-      statusIcon +
-      '<div class="cw-log-info">' +
-        '<span class="cw-log-label">' + esc(e.label || e.type) + '</span>' +
-        '<span class="cw-log-device">' + esc(e.deviceId || '') + '</span>' +
-      '</div>' +
-      '<div class="cw-log-right">' +
-        '<span class="cw-log-status">' + statusLabel + '</span>' +
-        '<span class="cw-log-time">' + ts + '</span>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
-
-/* ══════════════════════════════════════════
-   REMOVE DEVICE
-══════════════════════════════════════════ */
-async function cwRemoveDevice(deviceId, deviceName) {
-    if (!window.S || !window.S.user) return;
-    if (!confirm('Retirer ' + deviceName + ' de votre compte ?\n\nL\'appareil sera déconnecté.')) return;
-    try {
-        const docSnap = await window.db.collection('cloudworks').doc(S.user.uid).collection('devices').doc(deviceId).get();
-        if (docSnap.exists && docSnap.data().sessionId) {
-            await window.db.collection('users').doc(S.user.uid).collection('sessions').doc(docSnap.data().sessionId).update({revoke: true}).catch(()=>{});
-        }
-        await window.db.collection('cloudworks').doc(S.user.uid).collection('devices').doc(deviceId).delete();
-        if (window.toast) window.toast('Appareil retiré et session révoquée.', 'success');
-    } catch(e) {
-        if (window.toast) window.toast('Erreur : ' + e.message, 'error');
-    }
-}
-
-/* ══════════════════════════════════════════
-   EXPORTS
-══════════════════════════════════════════ */
-window.loadCloudWorks    = loadCloudWorks;
-window.cwCmd             = cwCmd;
-window.cwRemoveDevice    = cwRemoveDevice;
-window.cwPromptIDE       = cwPromptIDE;
-window.cwPromptScript    = cwPromptScript;
-window.cwShowScreenshot  = cwShowScreenshot;
-window.cwShowSysInfo     = cwShowSysInfo;
-window.cwShowScriptResult= cwShowScriptResult;
-})();
-
-
-

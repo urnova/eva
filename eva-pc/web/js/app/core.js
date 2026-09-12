@@ -963,6 +963,7 @@ window.getDynamicSysPrompt = async function() {
 window._currentViewerDoc = null;
 
 window.openDocumentViewer = function(doc) {
+  if (!doc) return;
   window._currentViewerDoc = doc;
   var overlay = document.getElementById('fileViewerOverlay');
   var header = document.getElementById('fileViewerHeader');
@@ -971,60 +972,77 @@ window.openDocumentViewer = function(doc) {
   var imgContent = document.getElementById('imageViewerContent');
   var downloadBtn = document.getElementById('fileViewerDownloadBtn');
   var printBtn = document.getElementById('fileViewerPrintBtn');
+  var systemBtn = document.getElementById('fileViewerSystemBtn');
   if(!overlay) return;
   
-  header.innerText = doc.name || 'Document';
-  content.style.display = 'none';
-  iframe.style.display = 'none';
-  imgContent.style.display = 'none';
-  downloadBtn.style.display = 'flex';
-  printBtn.style.display = 'flex';
+  if (header) header.innerText = doc.name || 'Document';
+  if (content) content.style.display = 'none';
+  if (iframe) iframe.style.display = 'none';
+  if (imgContent) imgContent.style.display = 'none';
+  if (downloadBtn) downloadBtn.style.display = 'flex';
+  if (printBtn) printBtn.style.display = 'flex';
+  if (systemBtn) {
+    var hasLocalPath = !!(doc.path || doc.filePath || (doc.url && !doc.url.startsWith('blob:') && !doc.url.startsWith('data:')));
+    systemBtn.style.display = (window.eva && window.eva.fs && hasLocalPath) ? 'flex' : 'none';
+  }
   
   if (doc.url) {
     if (doc.ext === 'pdf') {
-      iframe.src = doc.url + '#toolbar=0';
-      iframe.style.display = 'block';
+      if (iframe) {
+        iframe.src = doc.url + '#toolbar=0';
+        iframe.style.display = 'block';
+      }
       /* Change download button label to indicate print-to-PDF flow */
       if (downloadBtn) { downloadBtn.title = 'Cliquez pour ouvrir la boîte de dialogue Imprimer — choisissez « Enregistrer en PDF »'; }
     } else if (doc.ext === 'html') {
       /* HTML → render in iframe so the user sees the actual page */
-      iframe.src = doc.url;
-      iframe.style.display = 'block';
+      if (iframe) {
+        iframe.src = doc.url;
+        iframe.style.display = 'block';
+      }
     } else if (['js', 'css', 'json', 'txt', 'csv', 'md'].includes(doc.ext)) {
-      content.style.display = 'block';
-      content.style.fontFamily = "'Space Mono', monospace";
-      if (doc.text) {
-        content.textContent = doc.text;
-      } else {
-        // Fetch text from blob URL
-        fetch(doc.url).then(r => r.text()).then(t => { content.textContent = t; });
+      if (content) {
+        content.style.display = 'block';
+        content.style.fontFamily = "'Space Mono', monospace";
+        if (doc.text) {
+          content.textContent = doc.text;
+        } else {
+          // Fetch text from blob URL
+          fetch(doc.url).then(r => r.text()).then(t => { content.textContent = t; }).catch(function(){});
+        }
       }
     } else {
       // Pour les autres formats (Excel, PPT, docx, etc.), la prévisualisation native iframe ne marche pas offline sans office viewer
       // On affiche le texte extrait s'il existe, sinon on indique que la visualisation complète n'est pas dispo mais téléchargeable.
       var slidesData = window._evaSlidesCache && window._evaSlidesCache[doc.url];
-      if (slidesData && slidesData.length) {
-        content.style.display = 'block';
-        content.innerHTML = '';
-        if (typeof _renderPptxPreview === 'function') {
-          _renderPptxPreview(slidesData, content);
+      if (content) {
+        if (slidesData && slidesData.length) {
+          content.style.display = 'block';
+          content.innerHTML = '';
+          if (typeof _renderPptxPreview === 'function') {
+            _renderPptxPreview(slidesData, content);
+          } else {
+            content.style.cssText += ';background:#1a1a2e;padding:16px;';
+            content.innerHTML = '<div style="color:#00d4ff;text-align:center;padding:40px;font-size:0.9em;">Aperçu des ' + slidesData.length + ' diapositives — Téléchargez le .pptx pour une lecture complète.</div>';
+          }
+          if (printBtn) printBtn.style.display = 'none';
         } else {
-          content.style.cssText += ';background:#1a1a2e;padding:16px;';
-          content.innerHTML = '<div style="color:#00d4ff;text-align:center;padding:40px;font-size:0.9em;">Aperçu des ' + slidesData.length + ' diapositives — Téléchargez le .pptx pour une lecture complète.</div>';
+          content.style.display = 'block';
+          content.innerHTML = '<div style="color:var(--text-muted);text-align:center;margin-top:40px;font-size:0.9em;">Téléchargez le fichier .' + (doc.ext || 'document') + ' pour le visualiser dans votre application dédiée.</div>';
+          if (printBtn) printBtn.style.display = 'none';
         }
-        printBtn.style.display = 'none';
-      } else {
-        content.style.display = 'block';
-        content.innerHTML = '<div style="color:var(--text-muted);text-align:center;margin-top:40px;font-size:0.9em;">Téléchargez le fichier .pptx pour le visualiser dans PowerPoint ou LibreOffice.</div>';
-        printBtn.style.display = 'none';
       }
     }
   } else if (doc.text) {
-    content.style.display = 'block';
-    content.textContent = doc.text;
+    if (content) {
+      content.style.display = 'block';
+      content.textContent = doc.text;
+    }
   } else {
-    content.style.display = 'block';
-    content.innerHTML = '<div style="color:var(--text-muted);text-align:center;margin-top:20px;">Contenu du document non disponible (non lu ou non sauvegardé dans cette session).</div>';
+    if (content) {
+      content.style.display = 'block';
+      content.innerHTML = '<div style="color:var(--text-muted);text-align:center;margin-top:20px;">Contenu du document non disponible (non lu ou non sauvegardé dans cette session).</div>';
+    }
   }
   
   overlay.style.display = 'flex';
@@ -1040,18 +1058,37 @@ window.openImageViewer = function(url) {
   var imgContent = document.getElementById('imageViewerContent');
   var downloadBtn = document.getElementById('fileViewerDownloadBtn');
   var printBtn = document.getElementById('fileViewerPrintBtn');
+  var systemBtn = document.getElementById('fileViewerSystemBtn');
   if(!overlay) return;
   
-  header.innerText = 'Image';
-  content.style.display = 'none';
-  iframe.style.display = 'none';
-  imgContent.style.display = 'block';
-  downloadBtn.style.display = 'flex';
-  printBtn.style.display = 'flex';
-  imgContent.src = url;
+  if (header) header.innerText = 'Image';
+  if (content) content.style.display = 'none';
+  if (iframe) iframe.style.display = 'none';
+  if (imgContent) {
+    imgContent.style.display = 'block';
+    imgContent.src = url;
+  }
+  if (downloadBtn) downloadBtn.style.display = 'flex';
+  if (printBtn) printBtn.style.display = 'flex';
+  if (systemBtn) systemBtn.style.display = 'none';
   
   overlay.style.display = 'flex';
   setTimeout(function(){ overlay.style.opacity = '1'; }, 10);
+};
+
+window.openCurrentFileInSystem = function() {
+  if (!window._currentViewerDoc) return;
+  var doc = window._currentViewerDoc;
+  var targetPath = doc.path || doc.filePath;
+  if (!targetPath && doc.url && !doc.url.startsWith('blob:') && !doc.url.startsWith('data:')) {
+    targetPath = doc.url;
+  }
+  if (targetPath && window.eva && window.eva.fs && window.eva.fs.openPath) {
+    window.eva.fs.openPath(targetPath);
+    if (typeof toast === 'function') toast('Ouverture dans l\'application par défaut…', 'info');
+  } else if (doc.url) {
+    window.open(doc.url, '_blank');
+  }
 };
 
 window.closeFileViewer = function() {

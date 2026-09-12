@@ -27,12 +27,17 @@ function _startElectronSTT(onResult, onEnd) {
   _onEndCallback = onEnd || null;
   _committed = '';
 
-  // Écoute les résultats de la reconnaissance
+  // Écoute les résultats de la reconnaissance (interim + final)
   window.eva.stt.onResult(function(result) {
     if (!_isListening) return;
     if (result && result.text) {
-      _committed += (_committed ? ' ' : '') + result.text.trim();
-      if (_onResultCallback) _onResultCallback(_committed, false);
+      if (result.isFinal) {
+        _committed += (_committed ? ' ' : '') + result.text.trim();
+        if (_onResultCallback) _onResultCallback(_committed, true);
+      } else {
+        var interim = _committed + (_committed ? ' ' : '') + result.text.trim();
+        if (_onResultCallback) _onResultCallback(interim, false);
+      }
     }
   });
 
@@ -46,16 +51,20 @@ function _startElectronSTT(onResult, onEnd) {
     if (res && res.success) {
       _isListening = true;
       _useElectronSTT = true;
-      console.log('[STT] Windows SAPI (offline) démarré');
+      console.log('[STT] Windows SAPI (offline fr-FR) démarré');
     } else {
-      console.warn('[STT] SAPI indisponible, fallback navigateur');
+      console.warn('[STT] SAPI indisponible:', res && res.error);
+      _isListening = false;
       _useElectronSTT = false;
-      _startWebSTT(onResult, onEnd);
+      if (typeof toast === 'function') toast('Erreur reconnaissance vocale: ' + (res?.error || 'SAPI indisponible'), 'error');
+      if (_onEndCallback) _onEndCallback();
     }
   }).catch(function(e) {
-    console.warn('[STT] Erreur SAPI, fallback navigateur:', e);
+    console.warn('[STT] Erreur SAPI:', e);
+    _isListening = false;
     _useElectronSTT = false;
-    _startWebSTT(onResult, onEnd);
+    if (typeof toast === 'function') toast('Erreur reconnaissance vocale: ' + e.message, 'error');
+    if (_onEndCallback) _onEndCallback();
   });
 }
 

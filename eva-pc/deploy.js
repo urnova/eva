@@ -8,14 +8,16 @@ if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 process.env.TEMP = tempDir;
 process.env.TMP = tempDir;
 
-// Auto-increment version patch
+// Auto-increment version patch if not already set to target
 const packagePath = 'package.json';
 const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-const versionParts = pkg.version.split('.');
-versionParts[2] = parseInt(versionParts[2], 10) + 1;
-pkg.version = versionParts.join('.');
-fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + '\n');
-console.log("?? Version bumpée à " + pkg.version);
+if (pkg.version !== '5.5.0') {
+    const versionParts = pkg.version.split('.');
+    versionParts[2] = parseInt(versionParts[2], 10) + 1;
+    pkg.version = versionParts.join('.');
+    fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + '\n');
+}
+console.log("🚀 Version : " + pkg.version);
 
 // Le token est découpé en plusieurs variables pour tromper les bots d'analyse
 const t1 = "ghp";

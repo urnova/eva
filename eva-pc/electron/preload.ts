@@ -47,6 +47,8 @@ const evaAPI = {
     saveDialog: (options: unknown) => ipcRenderer.invoke('fs:saveDialog', options),
     openPath: (filePath: string) => ipcRenderer.invoke('fs:openPath', filePath),
     showInExplorer: (filePath: string) => ipcRenderer.invoke('fs:showInExplorer', filePath),
+    createPdf: (filePath: string, htmlOrText: string, options?: any) => ipcRenderer.invoke('fs:createPdf', filePath, htmlOrText, options),
+    writeBinary: (filePath: string, base64Data: string) => ipcRenderer.invoke('fs:writeBinary', filePath, base64Data),
     drives: () => ipcRenderer.invoke('fs:drives'),
     homedir: () => ipcRenderer.invoke('fs:homedir')
   },
@@ -81,6 +83,7 @@ const evaAPI = {
     llmStatus: () => ipcRenderer.invoke('llm:status'),
     llmCheck: () => ipcRenderer.invoke('llm:check'),
     llmDownload: () => ipcRenderer.invoke('llm:download'),
+    llmCancelDownload: () => ipcRenderer.invoke('llm:cancel-download'),
     llmResetSession: () => ipcRenderer.invoke('llm:reset-session'),
     llmAbort: () => ipcRenderer.invoke('llm:abort'),
     cpuLoad: () => ipcRenderer.invoke('system:cpuLoad'),
@@ -189,6 +192,14 @@ const evaAPI = {
     speak: (text: string) => ipcRenderer.invoke('tts:speak', text),
     stop: () => ipcRenderer.invoke('tts:stop'),
   },
+
+  // ── LLM Shortcuts ──
+  llmDownload: () => ipcRenderer.invoke('llm:download'),
+  llmCancelDownload: () => ipcRenderer.invoke('llm:cancel-download'),
+  llmStart: () => ipcRenderer.invoke('llm:start'),
+  llmStop: () => ipcRenderer.invoke('llm:stop'),
+  llmCheck: () => ipcRenderer.invoke('llm:check'),
+  llmStatus: () => ipcRenderer.invoke('llm:status'),
 
 overlay: {
     show: (state?: string) => ipcRenderer.invoke('overlay:show', state),

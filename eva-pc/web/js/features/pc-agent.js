@@ -360,6 +360,9 @@
 
   function _getStepTitle(cmd) {
     var c = (cmd || '').trim();
+    if ((/Get-ChildItem/i.test(c) && /Move-Item/i.test(c)) || (/LastWriteTime/i.test(c) && /Move-Item/i.test(c))) {
+      return "Organisation et tri des fichiers par date...";
+    }
     if (/Start-Process\s+msedge/i.test(c)) return 'Ouverture du navigateur Edge';
     if (/Start-Process\s+chrome/i.test(c)) return 'Ouverture de Google Chrome';
     if (/Start-Process/i.test(c)) return 'Lancement de l\'application';
@@ -394,69 +397,154 @@
   async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef, directCommand) {
     const steps = [];
 
-    // ── FAST PATH ULTRA-RAPIDE : Exécution progressive étape par étape avec auto-réparation ──
+    // ── FAST PATH ULTRA-RAPIDE : Exécution progressive ou script unifié ──
     if (directCommand && directCommand.trim()) {
       console.log('[Agent Fast Path] Traitement du script PowerShell direct...');
-      var allCmds = _splitPowerShellCommands(directCommand);
-      if (allCmds.length === 0) allCmds = [directCommand.trim()];
+      var cleanScript = directCommand.trim();
 
-      var successCount = 0;
+      // Normalisation automatique des chemins Windows FR (ex: captures d'écran dans Pictures)
+      // Sur le disque réel Windows, le dossier est Pictures\Screenshots
+      cleanScript = cleanScript
+        .replace(/(\$env:USERPROFILE|%USERPROFILE%|[A-Z]:\\[^\\]+)\\Images\\(captures?\s*d['’]écran|screenshots)/gi, '$1\\Pictures\\Screenshots')
+        .replace(/(\$env:USERPROFILE|%USERPROFILE%|[A-Z]:\\[^\\]+)\\Pictures\\(captures?\s*d['’]écran)/gi, '$1\\Pictures\\Screenshots')
+        .replace(/Images\\(captures?\s*d['’]écran|screenshots)/gi, 'Pictures\\Screenshots')
+        .replace(/Pictures\\(captures?\s*d['’]écran)/gi, 'Pictures\\Screenshots')
+        .replace(/\\Images\\/gi, '\\Pictures\\')
+        .replace(/['"]\$env:USERPROFILE\\Images['"]/gi, '"$env:USERPROFILE\\Pictures"');
 
-      for (var ci = 0; ci < allCmds.length; ci++) {
-        if (_currentRunningCancel) return { error: 'Annulé par l\'utilisateur', steps, cancelled: true };
-        var rawCmd = allCmds[ci].trim();
-        if (!rawCmd) continue;
-
-        // Auto-sécurisation : si Move-Item / Copy-Item vers un dossier, s'assurer que le dossier parent/cible existe
-        var safeCmd = rawCmd;
-        var destM = safeCmd.match(/-Destination\s+["']?([^"';]+?)["']?(?:\s+-[A-Za-z]+|$)/i);
-        if (destM && destM[1] && (safeCmd.startsWith('Move-Item') || safeCmd.startsWith('Copy-Item'))) {
-          var destDir = destM[1].trim();
-          safeCmd = 'if (-not (Test-Path -Path "' + destDir + '")) { New-Item -Path "' + destDir + '" -ItemType Directory -Force | Out-Null }; ' + safeCmd;
-        }
-
-        var stepTitle = _getStepTitle(rawCmd);
-        steps.push({ text: stepTitle, ts: new Date().toISOString() });
-        await cmdRef.update({ step: stepTitle, lastCmd: rawCmd.substring(0, 120), steps, updatedAt: new Date() });
-        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepTitle } }));
+      // Interception directe pour tri/organisation des captures d'écran via folder_organize
+      if (/(trier|tri|organiser|ranger|classer)/i.test(userPrompt) && /(capture|screenshot)/i.test(userPrompt) && window.CWTools) {
+        var orgStep = 'Organisation et vérification des captures d\'écran par date...';
+        steps.push({ text: orgStep, ts: new Date().toISOString() });
+        await cmdRef.update({ step: orgStep, steps, updatedAt: new Date() });
+        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: orgStep } }));
 
         try {
-          var execRes = await window.eva.system.exec(safeCmd);
-          if (_currentRunningCancel) return { error: 'Annulé par l\'utilisateur', steps, cancelled: true };
+          var orgRes = await window.CWTools.executeTool('folder_organize', {
+            sourcePath: '$env:USERPROFILE\\Pictures\\Screenshots',
+            groupBy: 'date_month',
+            dryRun: false
+          });
 
-          if (execRes && execRes.success) {
-            successCount++;
-          } else {
-            console.warn('[Agent Fast Path] Erreur sur étape direct:', rawCmd, execRes?.stderr || execRes?.error);
-            // Tentative d'auto-réparation si échec Move-Item ou New-Item avec guillemets
-            if (rawCmd.indexOf('"') === -1 && rawCmd.indexOf("'") === -1) {
-              var quotedCmd = rawCmd.replace(/(-Path|-Destination)\s+(\$env:[^\s;]+|\S+)/gi, '$1 "$2"');
-              try {
-                var retryRes = await window.eva.system.exec(quotedCmd);
-                if (retryRes && retryRes.success) {
-                  successCount++;
-                }
-              } catch(re) {}
-            }
+          if (orgRes && orgRes.success) {
+            var stepDone = orgRes.result.message || 'Organisation réussie ✓';
+            steps.push({ text: stepDone, ts: new Date().toISOString() });
+            await cmdRef.update({ step: 'Terminé ✓', steps, updatedAt: new Date() });
+            window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: 'Terminé ✓' } }));
+            return {
+              output: stepDone,
+              steps: steps
+            };
           }
-        } catch(fastErr) {
-          console.warn('[Agent Fast Path] Exception exécution directe:', fastErr);
+        } catch(eOrg) {
+          console.warn('[Agent Fast Path] Erreur folder_organize:', eOrg);
         }
       }
 
-      // Si au moins une étape ou la totalité a réussi, considérer la mission comme accomplie
-      if (successCount > 0 || allCmds.length === 0) {
-        var stepDone = 'Actions exécutées avec succès ✓';
-        steps.push({ text: stepDone, ts: new Date().toISOString() });
-        await cmdRef.update({ step: stepDone, steps, updatedAt: new Date() });
-        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepDone } }));
-        return {
-          output: 'Toutes les actions demandées ont été exécutées avec succès sur votre PC.',
-          steps: steps
-        };
+      // Détection des structures complexes : boucles (foreach, for, while), conditions (if), accolades {}, ou pipeline multi-lignes
+      var hasBlockStructure = /foreach\s*\(|if\s*\(|while\s*\(|function\b|\{|\}/i.test(cleanScript);
+      var isMultiLine = cleanScript.indexOf('\n') !== -1;
+
+      if (hasBlockStructure || (isMultiLine && cleanScript.includes('$'))) {
+        // Exécution en script PowerShell unifié pour préserver toutes les variables et structures de contrôle
+        console.log('[Agent Fast Path] Exécution en script unifié PowerShell...');
+        var stepTitle = _getStepTitle(cleanScript) || 'Exécution des opérations demandées...';
+        steps.push({ text: stepTitle, ts: new Date().toISOString() });
+        await cmdRef.update({ step: stepTitle, lastCmd: cleanScript.substring(0, 120), steps, updatedAt: new Date() });
+        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepTitle } }));
+
+        try {
+          var execRes = await window.eva.system.exec(cleanScript);
+          if (_currentRunningCancel) return { error: 'Annulé par l\'utilisateur', steps, cancelled: true };
+
+          var hasRealError = !execRes.success || (execRes.stderr && (execRes.stderr.includes('Exception') || execRes.stderr.includes('Cannot find') || execRes.stderr.includes('Introuvable') || execRes.stderr.includes('Error:')));
+
+          if (!hasRealError) {
+            // Post-vérification si création de fichier
+            var createdFileMatch = cleanScript.match(/(?:Set-Content|New-Item|Out-File)[^;]*?-Path\s+["']?([^"';\r\n]+)["']?/i);
+            var verifyOk = true;
+            if (createdFileMatch && window.CWTools) {
+              try {
+                var vPath = createdFileMatch[1].trim();
+                var vRes = await window.CWTools.executeTool('process_verify', { type: 'file', target: vPath });
+                if (vRes && vRes.result && (!vRes.result.exists || vRes.result.isEmpty)) {
+                  verifyOk = false;
+                  console.warn('[Agent Fast Path] Post-vérification échouée pour:', vPath);
+                }
+              } catch(ve) {}
+            }
+
+            if (verifyOk) {
+              var stepDone = 'Actions exécutées avec succès ✓';
+              steps.push({ text: stepDone, ts: new Date().toISOString() });
+              await cmdRef.update({ step: stepDone, steps, updatedAt: new Date() });
+              window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepDone } }));
+              return {
+                output: 'Toutes les actions demandées ont été exécutées avec succès sur votre PC.',
+                steps: steps
+              };
+            }
+          } else {
+            console.warn('[Agent Fast Path] Échec du script unifié:', execRes?.error || execRes?.stderr);
+            steps.push({ text: 'Ajustement et analyse...', ts: new Date().toISOString() });
+          }
+        } catch(e) {
+          console.warn('[Agent Fast Path] Exception script unifié:', e);
+        }
       } else {
-        console.warn('[Agent Fast Path] Aucune commande n\'a abouti, ajustement nécessaire.');
-        steps.push({ text: 'Ajustement...', ts: new Date().toISOString() });
+        // Commandes séquentielles simples
+        var allCmds = _splitPowerShellCommands(cleanScript);
+        if (allCmds.length === 0) allCmds = [cleanScript];
+        var successCount = 0;
+
+        for (var ci = 0; ci < allCmds.length; ci++) {
+          if (_currentRunningCancel) return { error: 'Annulé par l\'utilisateur', steps, cancelled: true };
+          var rawCmd = allCmds[ci].trim();
+          if (!rawCmd) continue;
+
+          var safeCmd = rawCmd;
+          var destM = safeCmd.match(/-Destination\s+["']?([^"';]+?)["']?(?:\s+-[A-Za-z]+|$)/i);
+          if (destM && destM[1] && (safeCmd.startsWith('Move-Item') || safeCmd.startsWith('Copy-Item'))) {
+            var destDir = destM[1].trim();
+            safeCmd = 'if (-not (Test-Path -Path "' + destDir + '")) { New-Item -Path "' + destDir + '" -ItemType Directory -Force | Out-Null }; ' + safeCmd;
+          }
+
+          var stepTitle = _getStepTitle(rawCmd);
+          steps.push({ text: stepTitle, ts: new Date().toISOString() });
+          await cmdRef.update({ step: stepTitle, lastCmd: rawCmd.substring(0, 120), steps, updatedAt: new Date() });
+          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepTitle } }));
+
+          try {
+            var execRes = await window.eva.system.exec(safeCmd);
+            if (_currentRunningCancel) return { error: 'Annulé par l\'utilisateur', steps, cancelled: true };
+
+            if (execRes && execRes.success && (!execRes.stderr || !execRes.stderr.includes('Error'))) {
+              successCount++;
+            } else {
+              console.warn('[Agent Fast Path] Erreur sur étape:', rawCmd, execRes?.stderr || execRes?.error);
+              if (rawCmd.indexOf('"') === -1 && rawCmd.indexOf("'") === -1) {
+                var quotedCmd = rawCmd.replace(/(-Path|-Destination)\s+(\$env:[^\s;]+|\S+)/gi, '$1 "$2"');
+                try {
+                  var retryRes = await window.eva.system.exec(quotedCmd);
+                  if (retryRes && retryRes.success) successCount++;
+                } catch(re) {}
+              }
+            }
+          } catch(fastErr) {
+            console.warn('[Agent Fast Path] Exception exécution directe:', fastErr);
+          }
+        }
+
+        if (successCount === allCmds.length && allCmds.length > 0) {
+          var stepDone = 'Actions exécutées avec succès ✓';
+          steps.push({ text: stepDone, ts: new Date().toISOString() });
+          await cmdRef.update({ step: stepDone, steps, updatedAt: new Date() });
+          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepDone } }));
+          return {
+            output: 'Toutes les actions demandées ont été exécutées avec succès sur votre PC.',
+            steps: steps
+          };
+        }
       }
     }
 

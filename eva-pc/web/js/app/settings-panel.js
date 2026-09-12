@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    SETTINGS
 ═══════════════════════════════════════════════════ */
 function openSettings(section) {
@@ -858,13 +858,14 @@ function renderSettings(section) {
     setTimeout(loadSessions, 100);
       setTimeout(renderAccountDevices, 100);
   } else if (section === 'notifications') {
-    var notifPerm = ('Notification' in window) ? Notification.permission : 'unavailable';
+    var isPcApp = !!(window.eva && window.eva.app);
+    var notifPerm = isPcApp ? 'granted' : (('Notification' in window) ? Notification.permission : 'unavailable');
     var _svgCheck   = '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:3px;stroke:#4ade80;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="20 6 9 17 4 12"/></svg>';
     var _svgCross   = '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:3px;stroke:#f87171;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
     var _svgClock   = '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:3px;stroke:var(--text-muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
     var _svgWarn    = '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:3px;stroke:var(--text-dim);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-    var permLabel = {granted:_svgCheck+'Autorisées', denied:_svgCross+'Bloquées', default:_svgClock+'Non configurées', unavailable:_svgWarn+'Non supporté'}[notifPerm] || notifPerm;
-    var permColor = {granted:'var(--cyan)', denied:'#ff4d6d', default:'var(--text-muted)', unavailable:'var(--text-dim)'}[notifPerm] || 'var(--text-muted)';
+    var permLabel = isPcApp ? (_svgCheck+'Natives (Windows)') : ({granted:_svgCheck+'Autorisées', denied:_svgCross+'Bloquées', default:_svgClock+'Non configurées', unavailable:_svgWarn+'Non supporté'}[notifPerm] || notifPerm);
+    var permColor = isPcApp ? 'var(--cyan)' : ({granted:'var(--cyan)', denied:'#ff4d6d', default:'var(--text-muted)', unavailable:'var(--text-dim)'}[notifPerm] || 'var(--text-muted)');
     var hasFcmToken = !!_fcmToken;
     /* Construire la liste unifiée : fcmDevices (objets) + orphelins dans fcmTokens */
     var _knownDevices = (S.profile && Array.isArray(S.profile.fcmDevices)) ? S.profile.fcmDevices.filter(function(d){ return d && d.token; }) : [];
@@ -881,36 +882,57 @@ function renderSettings(section) {
     c.innerHTML =
       '<div class="settings-section">' +
       '<div class="settings-section-title">Notifications</div>' +
-      '<div style="background:rgba(123,139,245,0.08);border:1px solid rgba(123,139,245,0.25);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:0.72em;color:var(--text-muted);line-height:1.5;">' +
-        '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:5px;stroke:#7b8bf5;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-        '<strong style="color:#7b8bf5">Nouveau :</strong> Grâce à la technologie Vercel Serverless, vous recevez vos alertes push en temps réel, <strong>même si l’application est fermée</strong> !' +
-      '</div>' +
-      '<div class="settings-row">' +
-        '<div><div class="settings-row-label">Permission navigateur</div><div class="settings-row-sub">Chrome, Edge, Firefox, Opera</div></div>' +
-        '<div style="color:'+permColor+';font-size:0.82em;font-weight:600">'+permLabel+'</div>' +
-      '</div>' +
-      '<div class="settings-row">' +
-        '<div><div class="settings-row-label">Statut Serverless</div><div class="settings-row-sub">Actives en arrière-plan (Cloud Push)</div></div>' +
-        '<div style="color:'+fcmColor+';font-size:0.80em;font-weight:600">'+fcmStatus+'</div>' +
-      '</div>' +
-      (notifPerm !== 'granted' && notifPerm !== 'denied' && notifPerm !== 'unavailable' ?
-        '<button class="btn btn-primary" onclick="activateNotifications()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Activer les notifications</button>' +
-        '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px">Recevez vos alarmes et rappels <strong>en toutes circonstances</strong> — fonctionne nativement sur PC et Android.</div>'
-      : notifPerm === 'granted' ?
-        '<div style="display:flex;gap:8px;margin-top:10px">' +
-        '<button class="btn btn-secondary" onclick="deactivateNotifications()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="2" y1="2" x2="22" y2="22"/></svg>Désactiver</button>' +
-        (hasFcmToken ? '' : '<button class="btn btn-primary" onclick="activateNotifications()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Re-enregistrer</button>') +
+      (isPcApp ?
+        '<div style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:0.75em;color:var(--text);line-height:1.5;">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-weight:700;color:var(--cyan);">' +
+            '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' +
+            'Notifications Windows natives' +
+          '</div>' +
+          'E.V.A est intégrée au <strong>Centre de notifications de Windows</strong>. Vos rappels, alarmes, événements et notifications de mises à jour s\'affichent nativement, même lorsqu\'E.V.A est en arrière-plan dans la barre des tâches.' +
         '</div>' +
-        '<button class="btn btn-primary" onclick="testNotification()" style="margin-top:8px;width:100%;background:rgba(123,139,245,0.12);border-color:var(--cyan);display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Tester une notification</button>' +
-        '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px;display:flex;align-items:center;gap:5px">' +
-        (hasFcmToken ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Push Serverless actif — Vous recevrez des alertes même site fermé.' : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Notifications non enregistrées. Cliquez sur Re-enregistrer.') +
-        '</div>'
-      : notifPerm === 'denied' ?
-        '<div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);border-radius:10px;padding:12px;margin-top:10px;font-size:0.78em;color:var(--text-muted);display:flex;gap:8px;align-items:flex-start">' +
-        '<svg viewBox="0 0 24 24" width="14" height="14" flex-shrink:0;margin-top:1px fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-        '<span>Les notifications ont été bloquées par votre navigateur. Pour les réactiver, cliquez sur l\'icône de cadenas dans la barre d\'adresse et autorisez les notifications pour E.V.A.</span>' +
-        '</div>'
-      : '') +
+        '<div class="settings-row">' +
+          '<div><div class="settings-row-label">Système de notifications</div><div class="settings-row-sub">Centre de notifications Windows 10 & 11</div></div>' +
+          '<div style="color:var(--cyan);font-size:0.82em;font-weight:600">' + _svgCheck + 'Natives actives</div>' +
+        '</div>' +
+        '<div class="settings-row">' +
+          '<div><div class="settings-row-label">Arrière-plan PC</div><div class="settings-row-sub">Actif dans la zone des icônes cachées (Systray)</div></div>' +
+          '<div style="color:var(--cyan);font-size:0.80em;font-weight:600">' + _svgCheck + 'Toujours actif</div>' +
+        '</div>' +
+        '<button class="btn btn-primary" onclick="testNotification()" style="margin-top:12px;width:100%;background:rgba(0,212,255,0.15);border-color:var(--cyan);display:flex;align-items:center;justify-content:center;gap:6px">' +
+          '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Tester une notification Windows' +
+        '</button>'
+      :
+        '<div style="background:rgba(123,139,245,0.08);border:1px solid rgba(123,139,245,0.25);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:0.72em;color:var(--text-muted);line-height:1.5;">' +
+          '<svg viewBox="0 0 24 24" width="13" height="13" style="display:inline-block;vertical-align:middle;margin-right:5px;stroke:#7b8bf5;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+          '<strong style="color:#7b8bf5">Nouveau :</strong> Grâce à la technologie Vercel Serverless, vous recevez vos alertes push en temps réel, <strong>même si l’application est fermée</strong> !' +
+        '</div>' +
+        '<div class="settings-row">' +
+          '<div><div class="settings-row-label">Permission navigateur</div><div class="settings-row-sub">Chrome, Edge, Firefox, Opera</div></div>' +
+          '<div style="color:'+permColor+';font-size:0.82em;font-weight:600">'+permLabel+'</div>' +
+        '</div>' +
+        '<div class="settings-row">' +
+          '<div><div class="settings-row-label">Statut Serverless</div><div class="settings-row-sub">Actives en arrière-plan (Cloud Push)</div></div>' +
+          '<div style="color:'+fcmColor+';font-size:0.80em;font-weight:600">'+fcmStatus+'</div>' +
+        '</div>' +
+        (notifPerm !== 'granted' && notifPerm !== 'denied' && notifPerm !== 'unavailable' ?
+          '<button class="btn btn-primary" onclick="activateNotifications()" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Activer les notifications</button>' +
+          '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px">Recevez vos alarmes et rappels <strong>en toutes circonstances</strong> — fonctionne nativement sur PC et Android.</div>'
+        : notifPerm === 'granted' ?
+          '<div style="display:flex;gap:8px;margin-top:10px">' +
+          '<button class="btn btn-secondary" onclick="deactivateNotifications()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="2" y1="2" x2="22" y2="22"/></svg>Désactiver</button>' +
+          (hasFcmToken ? '' : '<button class="btn btn-primary" onclick="activateNotifications()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Re-enregistrer</button>') +
+          '</div>' +
+          '<button class="btn btn-primary" onclick="testNotification()" style="margin-top:8px;width:100%;background:rgba(123,139,245,0.12);border-color:var(--cyan);display:flex;align-items:center;justify-content:center;gap:6px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Tester une notification</button>' +
+          '<div style="font-size:0.71em;color:var(--text-muted);margin-top:8px;display:flex;align-items:center;gap:5px">' +
+          (hasFcmToken ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Push Serverless actif — Vous recevrez des alertes même site fermé.' : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Notifications non enregistrées. Cliquez sur Re-enregistrer.') +
+          '</div>'
+        : notifPerm === 'denied' ?
+          '<div style="background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);border-radius:10px;padding:12px;margin-top:10px;font-size:0.78em;color:var(--text-muted);display:flex;gap:8px;align-items:flex-start">' +
+          '<svg viewBox="0 0 24 24" width="14" height="14" flex-shrink:0;margin-top:1px fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+          '<span>Les notifications ont été bloquées par votre navigateur. Pour les réactiver, cliquez sur l\'icône de cadenas dans la barre d\'adresse et autorisez les notifications pour E.V.A.</span>' +
+          '</div>'
+        : '')
+      ) +
       '</div>' +
       '<div class="settings-section">' +
       '<div class="settings-section-title">Types de notifications</div>' +

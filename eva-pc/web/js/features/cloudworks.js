@@ -74,6 +74,10 @@ function _renderPCLayout(container, uid) {
             <span id="cwDownloadBytes">0 Mo / 2048 Mo</span>
             <span>Hugging Face (sécurisé)</span>
           </div>
+          <div id="cwDownloadETA" style="font-size:0.72em; color:var(--cyan,#00d4ff); margin-top:6px; display:none;">Calcul du temps restant...</div>
+          <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+            <button class="cw-btn" id="cwCancelDownloadBtn" style="padding:4px 10px; font-size:0.75em; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; cursor:pointer;" onclick="window._cwCancelDownloadLLM()">✕ Annuler le téléchargement</button>
+          </div>
         </div>
       </div>
     </div>
@@ -244,6 +248,53 @@ function _updateLLMBadge(state) {
 
 async function _updateLLMStatus() { await _checkLLMHealth(); }
 
+var _dlStartTime = 0;
+var _dlLastBytes = 0;
+var _dlLastTime = 0;
+var _dlSpeed = 0;
+
+window._cwCancelDownloadLLM = async function() {
+  var cancelBtn = document.getElementById('cwCancelDownloadBtn');
+  if (cancelBtn) {
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = 'Annulation...';
+  }
+
+  try {
+    if (window.eva && window.eva.system && window.eva.system.llmCancelDownload) {
+      await window.eva.system.llmCancelDownload();
+    } else if (window.eva && window.eva.llmCancelDownload) {
+      await window.eva.llmCancelDownload();
+    }
+  } catch(e) {
+    console.error('[CloudWorks] Erreur annulation download:', e);
+  }
+
+  _isDownloadingLLM = false;
+  _dlStartTime = 0;
+  _dlLastBytes = 0;
+  _dlLastTime = 0;
+  _dlSpeed = 0;
+
+  var progressWrap = document.getElementById('cwDownloadProgressWrap');
+  if (progressWrap) progressWrap.style.display = 'none';
+
+  var downloadBtn = document.getElementById('cwDownloadLLMBtn');
+  if (downloadBtn) {
+    downloadBtn.disabled = false;
+    downloadBtn.style.opacity = '1';
+    downloadBtn.style.display = 'inline-flex';
+  }
+  if (cancelBtn) {
+    cancelBtn.disabled = false;
+    cancelBtn.textContent = '✕ Annuler le téléchargement';
+  }
+
+  _updateLLMBadge('not-downloaded');
+  _addActivity('Téléchargement du modèle IA annulé', 'info');
+  if (typeof window.toast === 'function') window.toast('Téléchargement annulé', 'info');
+};
+
 window._cwDownloadLLM = async function() {
   if (_isDownloadingLLM) return;
   if (!window.eva || !window.eva.system || !window.eva.system.llmDownload) {
@@ -257,15 +308,28 @@ window._cwDownloadLLM = async function() {
   var percentEl = document.getElementById('cwDownloadPercent');
   var bytesEl = document.getElementById('cwDownloadBytes');
   var statusText = document.getElementById('cwDownloadStatusText');
+  var etaEl = document.getElementById('cwDownloadETA');
+  var cancelBtn = document.getElementById('cwCancelDownloadBtn');
 
   _isDownloadingLLM = true;
+  _dlStartTime = 0;
+  _dlLastBytes = 0;
+  _dlLastTime = 0;
+  _dlSpeed = 0;
+
   _updateLLMBadge('downloading');
   if (downloadBtn) { downloadBtn.disabled = true; downloadBtn.style.opacity = '0.5'; }
+  if (cancelBtn) { cancelBtn.disabled = false; cancelBtn.textContent = '✕ Annuler le téléchargement'; }
+  if (bar) bar.style.width = '0%';
+  if (percentEl) percentEl.textContent = '0%';
+  if (statusText) statusText.textContent = 'Connexion à Hugging Face...';
+  if (etaEl) { etaEl.style.display = 'block'; etaEl.textContent = 'Calcul du temps restant...'; }
   if (progressWrap) progressWrap.style.display = 'block';
 
   // Écouter la progression en temps réel émise par Electron
   if (window.eva.onLLMDownloadProgress) {
     window.eva.onLLMDownloadProgress(function(data) {
+      if (!_isDownloadingLLM) return;
       var pct = data.progress || 0;
       if (bar) bar.style.width = pct + '%';
       if (percentEl) percentEl.textContent = pct + '%';
@@ -274,16 +338,66 @@ window._cwDownloadLLM = async function() {
         var totalMB = (data.totalBytes / (1024 * 1024)).toFixed(1);
         bytesEl.textContent = dlMB + ' Mo / ' + totalMB + ' Mo';
       }
+
+      if (etaEl && data.totalBytes > 0 && data.downloadedBytes > 0) {
+        var now = Date.now();
+        if (!_dlStartTime) {
+          _dlStartTime = now;
+          _dlLastTime = now;
+          _dlLastBytes = data.downloadedBytes;
+        }
+
+        var elapsedSec = (now - _dlLastTime) / 1000;
+        if (elapsedSec >= 0.8) {
+          var bytesDiff = data.downloadedBytes - _dlLastBytes;
+          var instantSpeed = bytesDiff / elapsedSec;
+          _dlSpeed = _dlSpeed === 0 ? instantSpeed : (_dlSpeed * 0.7 + instantSpeed * 0.3);
+          _dlLastTime = now;
+          _dlLastBytes = data.downloadedBytes;
+        }
+
+        if (_dlSpeed > 1024) {
+          var remainingBytes = Math.max(0, data.totalBytes - data.downloadedBytes);
+          var remainingSec = Math.round(remainingBytes / _dlSpeed);
+          var speedMB = (_dlSpeed / (1024 * 1024)).toFixed(1);
+
+          var finishDate = new Date(now + (remainingSec * 1000));
+          var finishH = String(finishDate.getHours()).padStart(2, '0');
+          var finishM = String(finishDate.getMinutes()).padStart(2, '0');
+          var finishStr = finishH + 'h' + finishM;
+
+          var timeStr = '';
+          if (remainingSec < 60) {
+            timeStr = remainingSec + ' s';
+          } else {
+            var mins = Math.floor(remainingSec / 60);
+            var secs = remainingSec % 60;
+            timeStr = mins + ' min ' + (secs < 10 ? '0' : '') + secs + ' s';
+          }
+
+          etaEl.style.display = 'block';
+          etaEl.textContent = '⏳ ~' + timeStr + ' restantes (fin estimée vers ' + finishStr + ') · ' + speedMB + ' Mo/s';
+        }
+      }
     });
   }
 
   try {
     _addActivity('Téléchargement du modèle IA local lancé...', 'pending');
     var res = await window.eva.system.llmDownload();
+    if (res && res.cancelled) {
+      _isDownloadingLLM = false;
+      _updateLLMBadge('not-downloaded');
+      if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.style.opacity = '1'; downloadBtn.style.display = 'inline-flex'; }
+      if (progressWrap) progressWrap.style.display = 'none';
+      return;
+    }
+
     if (res && res.success) {
       if (bar) bar.style.width = '100%';
       if (percentEl) percentEl.textContent = '100%';
       if (statusText) statusText.textContent = 'Téléchargement terminé ! Chargement en cours...';
+      if (etaEl) etaEl.style.display = 'none';
 
       _addActivity('Modèle IA téléchargé avec succès (2 Go)', 'done');
       if (typeof window.toast === 'function') window.toast('Modèle IA téléchargé avec succès !', 'success');
@@ -302,10 +416,11 @@ window._cwDownloadLLM = async function() {
       throw new Error(res && res.error ? res.error : 'Échec du téléchargement');
     }
   } catch(err) {
+    if (!_isDownloadingLLM) return;
     console.error('[CloudWorks] Erreur download LLM:', err);
     _isDownloadingLLM = false;
     _updateLLMBadge('not-downloaded');
-    if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.style.opacity = '1'; }
+    if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.style.opacity = '1'; downloadBtn.style.display = 'inline-flex'; }
     if (statusText) statusText.textContent = 'Erreur : ' + err.message;
     if (typeof window.toast === 'function') window.toast('Erreur lors du téléchargement : ' + err.message, 'error');
     _addActivity('Erreur téléchargement modèle : ' + err.message, 'error');
