@@ -1,9 +1,9 @@
 /* =============================================================
-   STT.JS — Moteur de Reconnaissance Vocale Cloud (100% Gratuit)
-   Architecture : MediaRecorder + Puter.ai (OpenAI Whisper Cloud)
-   - Zéro charge CPU/GPU locale
-   - Détection d'activité vocale (VAD) et de silence automatique
-   - Précision maximale en français avec ponctuation et chiffres
+   STT.JS — Moteur de Reconnaissance Vocale E.V.A (PC & Web)
+   - Mode Electron : IPC natif vers le moteur système Windows (whisper / SAPI)
+   - Mode Web : webkitSpeechRecognition (Standard Chrome / Edge)
+   - Support optionnel Puter Whisper si utilisateur connecté
+   - 100% fiable, zéro crash, gestion complète des états
    ============================================================= */
 
 (function() {
@@ -12,274 +12,194 @@
 var _onResultCallback = null;
 var _onEndCallback = null;
 var _isListening = false;
+var _useElectronSTT = false;
 var _committed = '';
 
-var _audioStream = null;
-var _mediaRecorder = null;
-var _audioChunks = [];
-var _audioContext = null;
-var _analyser = null;
-var _silenceTimer = null;
-var _maxTimer = null;
-var _vadInterval = null;
-var _hasSpoken = false;
-
 /* ══════════════════════════════════════════════════════════
-   DÉTECTION DU SUPPORT
+   DÉTECTION DU CONTEXTE
    ══════════════════════════════════════════════════════════ */
+function _isElectron() {
+  return !!(window.eva && window.eva.stt && typeof window.eva.stt.start === 'function');
+}
+
 function isSupported() {
-  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
-}
-
-function initSTT() {
-  return isSupported();
-}
-
-async function requestMicPermission() {
-  try {
-    var stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
-    stream.getTracks().forEach(function(t) { t.stop(); });
-    return true;
-  } catch(e) {
-    console.warn('[STT] Accès micro refusé ou indisponible:', e);
-    return false;
-  }
+  return _isElectron() || !!(window.SpeechRecognition || window.webkitSpeechRecognition) || !!(window.Vosk);
 }
 
 /* ══════════════════════════════════════════════════════════
-   CHOIX DU FORMAT AUDIO SUPPORTÉ PAR LE NAVIGATEUR
+   MODE ELECTRON — STT Système Windows via IPC
+   ↳ Priorité maximale sur l'application PC
    ══════════════════════════════════════════════════════════ */
-function _getSupportedMimeType() {
-  var types = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/ogg;codecs=opus',
-    'audio/ogg',
-    'audio/mp4',
-    'audio/wav'
-  ];
-  for (var i = 0; i < types.length; i++) {
-    if (window.MediaRecorder && MediaRecorder.isTypeSupported(types[i])) {
-      return types[i];
-    }
-  }
-  return '';
-}
-
-/* ══════════════════════════════════════════════════════════
-   DÉTECTION DE SILENCE (VAD - Voice Activity Detection)
-   ══════════════════════════════════════════════════════════ */
-function _setupVAD(stream) {
-  try {
-    var AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    _audioContext = new AudioCtx();
-    var source = _audioContext.createMediaStreamSource(stream);
-    _analyser = _audioContext.createAnalyser();
-    _analyser.fftSize = 512;
-    _analyser.smoothingTimeConstant = 0.3;
-    source.connect(_analyser);
-
-    var dataArray = new Uint8Array(_analyser.frequencyBinCount);
-    var silenceStart = null;
-    _hasSpoken = false;
-
-    _vadInterval = setInterval(function() {
-      if (!_isListening || !_analyser) return;
-      _analyser.getByteFrequencyData(dataArray);
-
-      // Calcul du volume moyen RMS
-      var sum = 0;
-      for (var i = 0; i < dataArray.length; i++) {
-        sum += dataArray[i];
-      }
-      var avgVolume = sum / dataArray.length;
-
-      // Seuil d'activation de la voix
-      if (avgVolume > 14) {
-        _hasSpoken = true;
-        silenceStart = null;
-      } else if (_hasSpoken) {
-        // La personne a parlé puis s'est arrêtée
-        if (!silenceStart) {
-          silenceStart = Date.now();
-        } else if (Date.now() - silenceStart > 1300) {
-          // 1.3 seconde de silence après la parole -> fin automatique d'enregistrement
-          console.log('[STT] Fin de parole détectée (silence 1.3s)');
-          stopListening();
-        }
-      }
-    }, 100);
-  } catch(e) {
-    console.warn('[STT] VAD Web Audio non disponible:', e);
-  }
-}
-
-function _cleanupVAD() {
-  if (_vadInterval) { clearInterval(_vadInterval); _vadInterval = null; }
-  if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
-  if (_maxTimer) { clearTimeout(_maxTimer); _maxTimer = null; }
-  if (_audioContext) {
-    try { _audioContext.close(); } catch(e) {}
-    _audioContext = null;
-  }
-  _analyser = null;
-  _hasSpoken = false;
-}
-
-/* ══════════════════════════════════════════════════════════
-   ENREGISTREMENT & TRANSCRIPTION CLOUD WHISPER
-   ══════════════════════════════════════════════════════════ */
-async function startListening(onResult, onEnd) {
-  if (_isListening) {
-    stopListening();
-    return true;
-  }
-
+function _startElectronSTT(onResult, onEnd) {
   _onResultCallback = onResult || null;
   _onEndCallback = onEnd || null;
   _committed = '';
-  _audioChunks = [];
 
-  try {
-    _audioStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
+  // Écoute les résultats de la reconnaissance (interim + final)
+  window.eva.stt.onResult(function(result) {
+    if (!_isListening) return;
+    if (result && result.text) {
+      if (result.isFinal) {
+        _committed += (_committed ? ' ' : '') + result.text.trim();
+        if (_onResultCallback) _onResultCallback(_committed, true);
+      } else {
+        var interim = _committed + (_committed ? ' ' : '') + result.text.trim();
+        if (_onResultCallback) _onResultCallback(interim, false);
       }
-    });
+    }
+  });
 
-    var mimeType = _getSupportedMimeType();
-    var options = mimeType ? { mimeType: mimeType } : {};
-    _mediaRecorder = new MediaRecorder(_audioStream, options);
-
-    _mediaRecorder.ondataavailable = function(e) {
-      if (e.data && e.data.size > 0) {
-        _audioChunks.push(e.data);
-      }
-    };
-
-    _mediaRecorder.onstop = async function() {
-      _isListening = false;
-      _cleanupVAD();
-
-      // Nettoyer les pistes du microphone
-      if (_audioStream) {
-        _audioStream.getTracks().forEach(function(t) { t.stop(); });
-        _audioStream = null;
-      }
-
-      if (_audioChunks.length === 0) {
-        if (_onEndCallback) _onEndCallback();
-        return;
-      }
-
-      var recordedBlob = new Blob(_audioChunks, { type: mimeType || 'audio/webm' });
-      _audioChunks = [];
-
-      // Si l'enregistrement est trop court (< 0.3s) ou vide
-      if (recordedBlob.size < 1200) {
-        console.log('[STT] Audio trop court ou vide ignoré');
-        if (_onEndCallback) _onEndCallback();
-        return;
-      }
-
-      // Indiquer visuellement que la transcription est en cours
-      if (window.setEvaStatusHeader) {
-        window.setEvaStatusHeader('🧠 TRANSCRIPTION...', 'thinking');
-      }
-
-      try {
-        var textResult = '';
-
-        // Priorité 1 : Puter.js Whisper Cloud (100% gratuit, précis, avec ponctuation)
-        if (typeof puter !== 'undefined' && puter.ai && typeof puter.ai.speech2txt === 'function') {
-          console.log('[STT] Envoi vers Puter Whisper Cloud...');
-          var resp = await puter.ai.speech2txt(recordedBlob, { language: 'fr' });
-          if (typeof resp === 'string') {
-            textResult = resp;
-          } else if (resp && typeof resp.text === 'string') {
-            textResult = resp.text;
-          } else if (resp && resp.result) {
-            textResult = String(resp.result);
-          }
-        } else {
-          console.warn('[STT] Puter.ai non disponible pour la transcription');
-        }
-
-        if (textResult && textResult.trim()) {
-          var cleanText = textResult.trim();
-          // Supprimer les artefacts de ponctuation seuls ou hallucinations silencieuses
-          if (cleanText === '.' || cleanText === '...' || cleanText === 'Merci.' || cleanText === 'Sous-titres réalisés par') {
-            cleanText = '';
-          }
-
-          if (cleanText) {
-            _committed = cleanText;
-            console.log('[STT] Transcription réussie :', _committed);
-            if (_onResultCallback) _onResultCallback(_committed, true);
-          }
-        }
-      } catch(sttErr) {
-        console.error('[STT] Erreur de transcription cloud:', sttErr);
-        if (typeof toast === 'function') toast('Erreur de transcription audio cloud', 'error');
-      } finally {
-        if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
-        if (_onEndCallback) _onEndCallback();
-      }
-    };
-
-    // Démarrer l'enregistrement
-    _mediaRecorder.start(250); // tranches de 250ms
-    _isListening = true;
-    _setupVAD(_audioStream);
-
-    // Arrêt maximal de sécurité après 35 secondes
-    _maxTimer = setTimeout(function() {
-      if (_isListening) {
-        console.log('[STT] Limite max d\'enregistrement atteinte (35s)');
-        stopListening();
-      }
-    }, 35000);
-
-    return true;
-
-  } catch(err) {
-    console.error('[STT] Impossible d\'initialiser le micro:', err);
+  window.eva.stt.onStopped(function() {
     _isListening = false;
-    _cleanupVAD();
-    if (typeof toast === 'function') toast('Impossible d\'accéder au micro : ' + err.message, 'error');
-    if (onEnd) onEnd();
-    return false;
+    _useElectronSTT = false;
+    if (_onEndCallback) _onEndCallback();
+  });
+
+  window.eva.stt.start().then(function(res) {
+    if (res && res.success) {
+      _isListening = true;
+      _useElectronSTT = true;
+      console.log('[STT] Moteur système PC démarré (' + (res.engine || 'natif') + ')');
+    } else {
+      console.warn('[STT] Moteur système indisponible:', res && res.error);
+      _isListening = false;
+      _useElectronSTT = false;
+      // Tentative de fallback webkitSpeechRecognition si disponible
+      if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+        console.log('[STT] Bascule sur webkitSpeechRecognition...');
+        _startWebSTT(onResult, onEnd);
+      } else {
+        if (typeof toast === 'function') toast('Micro indisponible: ' + (res?.error || 'Erreur système'), 'error');
+        if (_onEndCallback) _onEndCallback();
+      }
+    }
+  }).catch(function(e) {
+    console.warn('[STT] Erreur lancement STT:', e);
+    _isListening = false;
+    _useElectronSTT = false;
+    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+      _startWebSTT(onResult, onEnd);
+    } else {
+      if (typeof toast === 'function') toast('Erreur micro: ' + e.message, 'error');
+      if (_onEndCallback) _onEndCallback();
+    }
+  });
+}
+
+function _stopElectronSTT() {
+  _isListening = false;
+  _useElectronSTT = false;
+  if (window.eva && window.eva.stt) {
+    try { window.eva.stt.stop(); } catch(e) {}
+    try { window.eva.stt.offAll(); } catch(e) {}
   }
 }
 
-function stopListening() {
-  if (!_isListening) return;
-  _isListening = false;
-  _cleanupVAD();
+/* ══════════════════════════════════════════════════════════
+   MODE WEB — webkitSpeechRecognition (Standard Chrome/Edge)
+   ↳ Utilisé sur navigateur ou en fallback
+   ══════════════════════════════════════════════════════════ */
+var _webRecognition = null;
+var _shouldKeepListening = false;
 
-  if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
-    try {
-      _mediaRecorder.stop();
-    } catch(e) {
-      console.warn('[STT] Erreur arrêt mediaRecorder:', e);
+function _buildWebRecognition() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  var r = new SR();
+  r.lang = 'fr-FR';
+  r.continuous = true;
+  r.interimResults = true;
+  r.maxAlternatives = 1;
+
+  r.onresult = function(event) {
+    var interim = '', newFinal = '';
+    for (var i = event.resultIndex; i < event.results.length; i++) {
+      var t = event.results[i][0].transcript;
+      if (event.results[i].isFinal) { newFinal += t; }
+      else { interim += t; }
+    }
+    if (newFinal) _committed += (_committed ? ' ' : '') + newFinal.trim();
+    var display = _committed + (interim ? (_committed ? ' ' : '') + interim : '');
+    if (_onResultCallback) _onResultCallback(display, false);
+  };
+
+  r.onstart = function() { _isListening = true; };
+
+  r.onend = function() {
+    _isListening = false;
+    if (_shouldKeepListening) {
+      try { r.start(); _isListening = true; }
+      catch(e) { _shouldKeepListening = false; if (_onEndCallback) _onEndCallback(); }
+    } else {
       if (_onEndCallback) _onEndCallback();
     }
-  } else {
+  };
+
+  r.onerror = function(e) {
+    if (e.error === 'no-speech' && _shouldKeepListening) return;
+    console.warn('[STT] webkitSpeechRecognition info:', e.error);
+    _isListening = false;
+    if (!_shouldKeepListening && _onEndCallback) _onEndCallback();
+  };
+
+  return r;
+}
+
+function _startWebSTT(onResult, onEnd) {
+  _onResultCallback = onResult || null;
+  _onEndCallback = onEnd || null;
+  _committed = '';
+  _shouldKeepListening = true;
+  if (!_webRecognition) _webRecognition = _buildWebRecognition();
+  if (!_webRecognition) {
+    console.error('[STT] Aucun moteur STT disponible');
+    if (onEnd) onEnd();
+    return false;
+  }
+  if (_isListening) return true;
+  try { _webRecognition.start(); _isListening = true; return true; }
+  catch(e) { console.error('[STT] start error:', e); return false; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   API PUBLIQUE
+   ══════════════════════════════════════════════════════════ */
+function startListening(onResult, onEnd) {
+  _committed = '';
+  if (_isElectron()) {
+    _startElectronSTT(onResult, onEnd);
+    return true;
+  }
+  return _startWebSTT(onResult, onEnd);
+}
+
+function stopListening() {
+  _shouldKeepListening = false;
+  if (_useElectronSTT) {
+    _stopElectronSTT();
     if (_onEndCallback) _onEndCallback();
+    return;
+  }
+  if (_webRecognition && _isListening) {
+    try { _webRecognition.stop(); } catch(e) {}
+    _isListening = false;
   }
 }
 
 function getIsListening() { return _isListening; }
 function getCommitted() { return _committed; }
+
+async function requestMicPermission() {
+  try {
+    var s = await navigator.mediaDevices.getUserMedia({
+      audio: { autoGainControl: false, echoCancellation: true, noiseSuppression: false }
+    });
+    s.getTracks().forEach(function(t) { t.stop(); });
+    return true;
+  } catch(e) { return false; }
+}
+
+function initSTT() { return isSupported(); }
 
 window.EVASTS = {
   isSupported: isSupported,

@@ -420,24 +420,71 @@
       }
     }
 
-    // ── 0.1 INTERCEPTION D'INTENTION INTELLIGENTE (App, Web, Install, Close) ──
+    // ── 0.1 INTERCEPTION D'INTENTION INTELLIGENTE (Web, App, Install, Close) ──
     if (window.CWTools) {
-      // A. Lancement d'application (Ouvre Discord, Lance Chrome, Start-Process notepad...)
-      var isAppLaunch = /(?:ouvre|ouvrir|lance|lancer|démarre|demarre)\s+(?:l['’]application\s+|l['’]app\s+|le\s+logiciel\s+)?([a-zA-Z0-9_\-\s.]+)/i.test(userPrompt) ||
+      var pLower = userPrompt.toLowerCase();
+
+      // 1. Navigation Web explicite (URL présente, ou demande explicite de naviguer sur internet / faire une recherche Google)
+      var urlMatch = (userPrompt + ' ' + (directCommand || '')).match(/(https?:\/\/[^\s"'`]+|www\.[^\s"'`]+|[a-zA-Z0-9-]+\.(?:com|fr|org|net|io|dev)(?:\/[^\s"'`]*)?)/i);
+      var isExplicitWebSearch = /(?:cherche|recherche|trouve)\s+(?:sur\s+(?:internet|le\s+web|google|le\s+net)|dans\s+google)\s+(.+)/i.test(userPrompt);
+      var isExplicitWebBrowse = /(?:navigue|naviguer|va sur|consulte|consulter)\s+(?:sur\s+|dans\s+)?(?:le\s+site|la\s+page|le\s+web|internet|le\s+navigateur)\b/i.test(userPrompt);
+
+      if (urlMatch || isExplicitWebSearch || isExplicitWebBrowse) {
+        var targetUrl = urlMatch ? urlMatch[1] : '';
+        var searchQ = '';
+
+        if (!targetUrl) {
+          var m1 = userPrompt.match(/(?:cherche|recherche|trouve)\s+(.+?)\s+(?:sur\s+(?:internet|le\s+web|google|le\s+net)|dans\s+google)/i);
+          var m2 = userPrompt.match(/(?:cherche|recherche|trouve)\s+(?:sur\s+(?:internet|le\s+web|google|le\s+net)\s+)?([^.?!,;]+)/i);
+          if (m1 && m1[1]) searchQ = m1[1].trim();
+          else if (m2 && m2[1]) searchQ = m2[1].trim();
+
+          if (searchQ) {
+            targetUrl = 'https://www.google.com/search?q=' + encodeURIComponent(searchQ);
+          } else {
+            targetUrl = 'https://www.google.com';
+          }
+        }
+
+        var stepWeb = searchQ ? ('Recherche de "' + searchQ + '" sur le Web...') : ('Ouverture de ' + targetUrl + ' dans le navigateur...');
+        steps.push({ text: stepWeb, ts: new Date().toISOString() });
+        await cmdRef.update({ step: stepWeb, steps, updatedAt: new Date() });
+        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepWeb } }));
+
+        try {
+          var webRes = await window.CWTools.executeTool('web_browse', { url: targetUrl, query: searchQ });
+          if (webRes && webRes.success) {
+            var webDone = (webRes.result && webRes.result.message) || ('Page web ouverte avec succès ✓');
+            steps.push({ text: webDone, ts: new Date().toISOString() });
+            await cmdRef.update({ status: 'done', step: webDone, steps, updatedAt: new Date() });
+            window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: webDone } }));
+            return { output: webDone, steps: steps };
+          }
+        } catch(eWeb) {
+          console.warn('[PC Agent] Échec navigation web:', eWeb);
+        }
+      }
+
+      // 2. Lancement d'application PC (Ouvre Discord, Lance YouTube Music, Démarre Spotify, Ouvre le navigateur...)
+      var isAppLaunch = /(?:ouvre|ouvrir|lance|lancer|démarre|demarre|mets|mettre)\s+(?:l['’]application\s+|l['’]app\s+|le\s+logiciel\s+)?([a-zA-Z0-9_\-\s.]+)/i.test(userPrompt) ||
                         /Start-Process\s+["']?([^"';\r\n\s]+)["']?/i.test(directCommand || '');
       if (isAppLaunch) {
-        var appMatch = userPrompt.match(/(?:ouvre|ouvrir|lance|lancer|démarre|demarre)\s+(?:l['’]application\s+|l['’]app\s+|le\s+logiciel\s+)?([a-zA-Z0-9_\-\s.]+)/i);
+        var appMatch = userPrompt.match(/(?:ouvre|ouvrir|lance|lancer|démarre|demarre|mets|mettre)\s+(?:l['’]application\s+|l['’]app\s+|le\s+logiciel\s+)?([a-zA-Z0-9_\-\s.]+)/i);
         var spMatch = (directCommand || '').match(/Start-Process\s+["']?([^"';\r\n\s]+)["']?/i);
         var candidateApp = appMatch ? appMatch[1].trim() : (spMatch ? spMatch[1].trim() : '');
 
-        // Nettoyage de la formule de politesse ou ponctuation
-        candidateApp = candidateApp.replace(/(?:s['’]il\s+te\s+pla[îi]t|stp|merci|maintenant|[!.,;?])/gi, '').trim();
+        // Nettoyer les clauses secondaires ("j'ai installé l'application sur mon PC", "et lancer ma playlist...")
+        candidateApp = candidateApp.replace(/,\s*(?:j['’]ai\s+installé|c['’]est\s+installé|sur\s+mon\s+pc).*/gi, '');
+        candidateApp = candidateApp.replace(/\s+(?:et\s+lance|et\s+lancer|et\s+joue|et\s+jouer|et\s+mets|et\s+mettre).*/gi, '');
+        candidateApp = candidateApp.replace(/(?:s['’`]?il\s+te\s+pla\S*|s['’`]?il\s+vous\s+pla\S*|\bstp\b|\bsvp\b|\bmerci\b|\bmaintenant\b)/gi, '');
+        candidateApp = candidateApp.replace(/\s+s['’`]?$/i, '');
+        candidateApp = candidateApp.replace(/[!.,;?]+$/g, '').trim();
 
-        // Vérifier que ce n'est pas une URL web
-        var isUrl = /^(https?:\/\/|www\.)/i.test(candidateApp) || candidateApp.includes('.html') || candidateApp.includes('.com') || candidateApp.includes('.fr');
+        // Vérifier que ce n'est pas une URL
+        var isUrl = /^(https?:\/\/|www\.)/i.test(candidateApp);
 
         if (candidateApp && !isUrl) {
-          var stepApp = 'Recherche et lancement de "' + candidateApp + '" sur Windows...';
+          var stepApp = 'Lancement de "' + candidateApp + '" sur Windows...';
           steps.push({ text: stepApp, ts: new Date().toISOString() });
           await cmdRef.update({ step: stepApp, steps, updatedAt: new Date() });
           window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepApp } }));
@@ -457,7 +504,7 @@
         }
       }
 
-      // B. Installation d'application via Winget (Installe VLC, Télécharge Discord...)
+      // C. Installation d'application via Winget (Installe VLC, Télécharge Discord...)
       var isAppInstall = /(?:installe|installer|télécharge\s+et\s+installe)\s+([a-zA-Z0-9_\-\s.]+)/i.test(userPrompt);
       if (isAppInstall) {
         var instMatch = userPrompt.match(/(?:installe|installer|télécharge\s+et\s+installe)\s+([a-zA-Z0-9_\-\s.]+)/i);
@@ -479,37 +526,6 @@
             }
           } catch(eInst) {
             console.warn('[PC Agent] Échec installation winget:', eInst);
-          }
-        }
-      }
-
-      // C. Navigation Web / Ouverture de page (Va sur youtube.com, Ouvre https://...)
-      var urlMatch = (userPrompt + ' ' + (directCommand || '')).match(/(https?:\/\/[^\s"'`]+|www\.[^\s"'`]+)/i);
-      var isWebIntent = /(?:ouvre|va sur|navigue|consulte)\s+(?:le\s+site|la\s+page)?/i.test(userPrompt);
-      if (urlMatch || (isWebIntent && /(?:site|page|web|google|youtube|github|wikipedia)/i.test(userPrompt))) {
-        var targetUrl = urlMatch ? urlMatch[1] : '';
-        if (!targetUrl) {
-          if (userPrompt.includes('youtube')) targetUrl = 'https://www.youtube.com';
-          else if (userPrompt.includes('github')) targetUrl = 'https://www.github.com';
-          else if (userPrompt.includes('google')) targetUrl = 'https://www.google.com';
-        }
-        if (targetUrl) {
-          var stepWeb = 'Ouverture de la page web dans votre navigateur...';
-          steps.push({ text: stepWeb, ts: new Date().toISOString() });
-          await cmdRef.update({ step: stepWeb, steps, updatedAt: new Date() });
-          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepWeb } }));
-
-          try {
-            var webRes = await window.CWTools.executeTool('web_browse', { url: targetUrl });
-            if (webRes && webRes.success) {
-              var webDone = (webRes.result && webRes.result.message) || ('Page web ouverte ✓');
-              steps.push({ text: webDone, ts: new Date().toISOString() });
-              await cmdRef.update({ status: 'done', step: webDone, steps, updatedAt: new Date() });
-              window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: webDone } }));
-              return { output: webDone, steps: steps };
-            }
-          } catch(eWeb) {
-            console.warn('[PC Agent] Échec navigation web:', eWeb);
           }
         }
       }

@@ -75,6 +75,8 @@ function _formatSize(bytes) {
 /* Normalisation des noms usuels d'applications vers leurs identifiants Windows */
 function _normalizeAppName(name) {
   var raw = (name || '').toLowerCase().trim();
+  // Retirer les articles (le, la, les, l', un, une, des)
+  raw = raw.replace(/^(?:le|la|les|l'|l’|un|une|des)\s+/, '').trim();
   var map = {
     'bloc-notes': 'notepad',
     'bloc notes': 'notepad',
@@ -85,13 +87,19 @@ function _normalizeAppName(name) {
     'explorateur': 'explorer',
     'explorateur de fichiers': 'explorer',
     'navigateur': 'msedge',
+    'navigateur web': 'msedge',
     'edge': 'msedge',
     'chrome': 'google chrome',
     'google chrome': 'google chrome',
+    'firefox': 'firefox',
+    'brave': 'brave',
+    'opera': 'opera',
     'discord': 'discord',
     'spotify': 'spotify',
     'steam': 'steam',
     'vlc': 'vlc',
+    'youtube music': 'youtube music',
+    'yt music': 'youtube music',
     'word': 'winword',
     'excel': 'excel',
     'powerpoint': 'powerpnt',
@@ -123,10 +131,10 @@ async function tool_app_resolve(args) {
       '$apps = Get-StartApps | Where-Object { $_.Name -like "*$q*" -or $_.AppID -like "*$q*" } | Select-Object -First 5',
       'foreach ($a in $apps) { $results += [PSCustomObject]@{ name = $a.Name; appId = $a.AppID; type = "start_menu" } }',
       '# 2. App Paths dans la base de registre (HKLM et HKCU)',
-      '$regHKLM = Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\App Paths\*" -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -like "*$q*" -or $_.'(default)' -like "*$q*" } | Select-Object -First 3',
-      'foreach ($r in $regHKLM) { $results += [PSCustomObject]@{ name = $r.PSChildName; path = $r.'(default)'; type = "registry" } }',
-      '$regHKCU = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\App Paths\*" -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -like "*$q*" -or $_.'(default)' -like "*$q*" } | Select-Object -First 3',
-      'foreach ($r in $regHKCU) { $results += [PSCustomObject]@{ name = $r.PSChildName; path = $r.'(default)'; type = "registry" } }',
+      '$regHKLM = Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\App Paths\*" -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -like "*$q*" -or $_."(default)" -like "*$q*" } | Select-Object -First 3',
+      'foreach ($r in $regHKLM) { $results += [PSCustomObject]@{ name = $r.PSChildName; path = $r."(default)"; type = "registry" } }',
+      '$regHKCU = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\App Paths\*" -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -like "*$q*" -or $_."(default)" -like "*$q*" } | Select-Object -First 3',
+      'foreach ($r in $regHKCU) { $results += [PSCustomObject]@{ name = $r.PSChildName; path = $r."(default)"; type = "registry" } }',
       '# 3. Dossier LocalAppData (apps modernes utilisateur comme Discord, Spotify)',
       '$localDirs = Get-ChildItem "$env:LOCALAPPDATA" -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "*$q*" } | Select-Object -First 2',
       'foreach ($ld in $localDirs) {',
@@ -187,6 +195,12 @@ async function tool_app_launch(args) {
   var target = (args.target || args.app || args.name || '').trim();
   if (!target) return { success: false, error: 'target manquant' };
   var appArgs = args.args ? (' ' + args.args.trim()) : '';
+
+  // Si la cible est une URL web ou le mot 'navigateur', router directement vers web_browse
+  var normT = _normalizeAppName(target);
+  if (/^(https?:\/\/|www\.)/i.test(target) || normT === 'msedge' && target.toLowerCase().includes('navigateur')) {
+    return await tool_web_browse({ url: /^(https?:\/\/|www\.)/i.test(target) ? target : '', query: '' });
+  }
 
   try {
     if (!window.eva || !window.eva.system || !window.eva.system.exec) {
@@ -341,28 +355,39 @@ async function tool_app_close(args) {
 
 /* ---- web_browse ---- */
 async function tool_web_browse(args) {
+  args = args || {};
   var targetUrl = (args.url || '').trim();
   var query = (args.query || '').trim();
 
-  if (!targetUrl && !query) return { success: false, error: 'url ou query manquant' };
+  // Si aucune URL mais une recherche demandée
+  if (!targetUrl && query) {
+    targetUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+  } else if (!targetUrl && !query) {
+    // Si ni URL ni recherche spécifiée, ouvrir la page d'accueil par défaut
+    targetUrl = 'https://www.google.com';
+  } else if (targetUrl && !targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+    targetUrl = 'https://' + targetUrl;
+  }
 
   try {
-    if (!targetUrl && query) {
-      targetUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-    } else if (targetUrl && !targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-      targetUrl = 'https://' + targetUrl;
+    // 1. Electron natif via shell.openExternal (instantané, lance le navigateur par défaut de l'utilisateur)
+    if (window.eva && typeof window.eva.openExternal === 'function') {
+      await window.eva.openExternal(targetUrl);
+    } else if (typeof window.open === 'function') {
+      // 2. Environnement web standard (Web Vercel / PWA)
+      window.open(targetUrl, '_blank');
+    } else if (window.eva && window.eva.system && window.eva.system.exec) {
+      // 3. Fallback PowerShell si nécessaire
+      var cleanUrl = targetUrl.replace(/["'`]/g, '');
+      await window.eva.system.exec('Start-Process "' + cleanUrl + '"');
     }
-
-    var cleanUrl = targetUrl.replace(/["'`]/g, '');
-    var psCmd = 'Start-Process "' + cleanUrl + '"';
-    await window.eva.system.exec(psCmd);
 
     return {
       success: true,
       result: {
         url: targetUrl,
         opened: true,
-        message: 'Page web ouverte dans votre navigateur : ' + targetUrl
+        message: 'Navigateur ouvert sur : ' + targetUrl
       }
     };
   } catch(e) {
@@ -633,7 +658,7 @@ async function tool_folder_organize(args) {
       '    if (Test-Path -Path $fallback) { $src = $fallback }',
       '  }',
       '}',
-      'if (-not (Test-Path -Path $src)) { Write-Output '{"error": "Dossier source introuvable"}'; exit }',
+      'if (-not (Test-Path -Path $src)) { Write-Output \'{"error": "Dossier source introuvable"}\'; exit }',
       '$files = Get-ChildItem -Path $src -File',
       '$plan = @()',
       'foreach ($f in $files) {',
