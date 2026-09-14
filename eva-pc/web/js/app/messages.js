@@ -690,15 +690,16 @@ async function handleSend() {
 
     var desktopAgentHeader = '⚠️ CLOUDWORKS ACTIVÉ — CONTRÔLE SYSTÈME DU PC (Cible : ' + targetDeviceId + ')\n' +
       'RÈGLE ABSOLUE ET PRIORITÉ SUPRÊME :\n' +
-      'Dès que l\'utilisateur demande d\'effectuer une action sur son PC (créer/supprimer/déplacer des fichiers ou dossiers, générer des documents/PDFs/exercices, ouvrir Edge/navigateur, lancer une vidéo, ouvrir une application, ou message contenant [CloudWorks], ou confirmation "go/vas-y") :\n' +
-      '1. Tu peux expliquer ton plan ou introduire chaleureusement ton action (ex: "Je m\'en occupe immédiatement ! Voici les étapes...").\n' +
-      '2. MAIS TU DOIS OBLIGATOIREMENT GÉNÉRER LE BLOC [ACTION:{"type":"agentic_task","prompt":"...","command":"...","deviceId":"' + targetDeviceId + '"}] À LA FIN DE TA RÉPONSE DANS CE MÊME MESSAGE !\n' +
-      '3. IL EST FORMELLEMENT INTERDIT DE T\'ARRÊTER AVEC UN SIMPLE PLAN OU DE DIRE "Je vais préparer cela" SANS GÉNÉRER LE BLOC ACTION !\n' +
-      '4. Dans la propriété "command", écris TOUJOURS le script PowerShell direct complet avec :\n' +
-      '   - Chemins OBLIGATOIREMENT entre guillemets doubles (ex: "$env:USERPROFILE\\Documents\\Exercices", "$env:USERPROFILE\\Desktop\\test.txt") !\n' +
-      '   - Crée TOUJOURS les dossiers cibles AVANT d\'y créer des fichiers (New-Item -Path "$env:USERPROFILE\\Documents\\Exercices" -ItemType Directory -Force) !\n' +
-      '   - Pour chaque fichier/PDF demandé, crée-le avec New-Item -Path "..." -ItemType File -Value "Contenu..." -Force !\n' +
-      '   - Ajoute -Force partout pour une exécution instantanée sans demande de confirmation.\n\n---\n\n';
+      'Dès que l\'utilisateur demande d\'effectuer une action sur son PC (ouvrir une application, naviguer sur le web, installer une app, créer/supprimer/déplacer des fichiers ou dossiers, générer des documents/PDFs/exercices, trier des captures d\'écran, etc.) :\n' +
+      '1. Introduis chaleureusement ton action (ex: "Je m\'en occupe immédiatement !").\n' +
+      '2. TU DOIS OBLIGATOIREMENT GÉNÉRER LE BLOC [ACTION:{...}] À LA FIN DE TA RÉPONSE !\n' +
+      '3. RÈGLES PAR TYPE D\'ACTION :\n' +
+      '   - Pour ouvrir une app (Discord, Chrome, Spotify, Steam, Bloc-notes...) : [ACTION:{"type":"agentic_task","prompt":"Ouvrir Discord","tool":"app_launch","args":{"target":"Discord"},"deviceId":"' + targetDeviceId + '"}]\n' +
+      '   - Pour ouvrir un site / naviguer : [ACTION:{"type":"agentic_task","prompt":"Ouvrir le site","tool":"web_browse","args":{"url":"https://..."},"deviceId":"' + targetDeviceId + '"}]\n' +
+      '   - Pour installer une application : [ACTION:{"type":"agentic_task","prompt":"Installer VLC","tool":"app_install","args":{"name":"VLC"},"deviceId":"' + targetDeviceId + '"}]\n' +
+      '   - Pour trier des captures ou fichiers : [ACTION:{"type":"agentic_task","prompt":"Trier les captures d\'écran","tool":"folder_organize","args":{"sourcePath":"$env:USERPROFILE\\Pictures\\Screenshots","groupBy":"date_month"},"deviceId":"' + targetDeviceId + '"}]\n' +
+      '   - Pour des scripts personnalisés complexes : [ACTION:{"type":"agentic_task","prompt":"...","command":"<Script PowerShell avec guillemets et -Force>","deviceId":"' + targetDeviceId + '"}]\n' +
+      '4. INTERDICTION FORMELLE de t\'arrêter sans ce bloc ACTION !\n\n---\n\n';
 
     /* Prompt complet pour les providers cloud (Puter, OpenAI, Claude, etc.) */
     if (_hasActiveTone) {
@@ -739,9 +740,9 @@ async function handleSend() {
   if (isCWPCTask) {
     if (isConfirmation && prevWasCWPlan) {
       var plannedTask = window._lastCWPlanPrompt || (lastAssistantMsg && lastAssistantMsg.content) || "Exécuter les actions sur le PC";
-      msgContent = '[RAPPEL SYSTÈME : L\'utilisateur donne son accord immédiat ("' + text + '") pour la tâche suivante : "' + plannedTask.substring(0, 300).replace(/"/g, "'") + '". Tu DOIS IMMÉDIATEMENT lancer CloudWorks avec le bloc ACTION contenant toutes les étapes : [ACTION:{"type":"agentic_task","prompt":"' + plannedTask.substring(0, 300).replace(/"/g, "'") + '","command":"<Script PowerShell direct complet avec chemins obligatoirement entre guillemets doubles et -Force>","deviceId":"' + targetDeviceId + '"}]. Rédige une phrase d\'introduction amicale et INTERDICTION formelle de redemander confirmation sans ce bloc ACTION !]\n\n' + msgContent;
+      msgContent = '[RAPPEL SYSTÈME : L\'utilisateur donne son accord immédiat ("' + text + '") pour la tâche suivante : "' + plannedTask.substring(0, 300).replace(/"/g, "'") + '". Tu DOIS IMMÉDIATEMENT lancer CloudWorks avec le bloc ACTION contenant toutes les étapes : [ACTION:{"type":"agentic_task","prompt":"' + plannedTask.substring(0, 300).replace(/"/g, "'") + '","command":"<Script PowerShell ou tool direct>","tool":"<optionnel: app_launch|web_browse|app_install|folder_organize>","deviceId":"' + targetDeviceId + '"}]. Rédige une phrase d\'introduction amicale et INTERDICTION formelle de redemander confirmation sans ce bloc ACTION !]\n\n' + msgContent;
     } else {
-      msgContent = '[RAPPEL SYSTÈME : Action PC demandée. Tu peux présenter ton plan ou tes étapes à l\'utilisateur, mais tu DOIS OBLIGATOIREMENT terminer ta réponse par le bloc ACTION avec le script PowerShell direct : [ACTION:{"type":"agentic_task","prompt":"' + text.substring(0, 200).replace(/"/g, "'") + '","command":"<Script PowerShell direct complet avec chemins obligatoirement entre guillemets doubles et -Force>","deviceId":"' + targetDeviceId + '"}]. INTERDICTION de dire "Je vais préparer cela" ou de t\'arrêter sans ce bloc ACTION !]\n\n' + msgContent;
+      msgContent = '[RAPPEL SYSTÈME : Action PC demandée. Tu peux présenter ton plan ou tes étapes à l\'utilisateur, mais tu DOIS OBLIGATOIREMENT terminer ta réponse par le bloc ACTION avec le script PowerShell direct : [ACTION:{"type":"agentic_task","prompt":"' + text.substring(0, 200).replace(/"/g, "'") + '","command":"<Script PowerShell ou tool direct>","tool":"<optionnel: app_launch|web_browse|app_install|folder_organize>","deviceId":"' + targetDeviceId + '"}]. INTERDICTION de dire "Je vais préparer cela" ou de t\'arrêter sans ce bloc ACTION !]\n\n' + msgContent;
     }
   }
     if (allImages.length) {
@@ -1042,9 +1043,13 @@ function streamEvaMsg(content) {
 
   var plain = extractTtsText(content);
 
-  // TTS
-  if (S.ttsOn && window.EVATTS && plain && plain.trim().length > 0) {
+  // TTS (Forcé en Mode Jarvis pour que l'utilisateur entende EVA en arrière-plan)
+  if ((S.ttsOn || window._isJarvisActive) && window.EVATTS && plain && plain.trim().length > 0) {
     setEvaStatus('EVA PARLE...', 'speaking');
+    if (window._isJarvisActive && window.eva && window.eva.jarvis) {
+      var preview = plain.substring(0, 100) + (plain.length > 100 ? '...' : '');
+      window.eva.jarvis.setState('speaking', preview, true);
+    }
     window.EVATTS.speakTextStreaming(plain, S.config);
   } else {
     if (window.EvaCharacter) window.EvaCharacter.setThinking();
@@ -1054,6 +1059,14 @@ function streamEvaMsg(content) {
     // on s'assure d'arrêter tout TTS en cours
     if (S.ttsOn && window.EVATTS && (!plain || plain.trim().length === 0)) {
       window.EVATTS.stopTTS();
+    }
+    if (window._isJarvisActive && window.eva && window.eva.jarvis) {
+      setTimeout(function() {
+        if (window._isJarvisActive) {
+          window.eva.jarvis.setState('hidden', '', false);
+          window._isJarvisActive = false;
+        }
+      }, 3500);
     }
   }
 

@@ -207,7 +207,7 @@
         const prompt = data.payload?.prompt || 'Aucun prompt';
         const directCmd = data.payload?.command || null;
         await cmdRef.update({ status: 'running', updatedAt: new Date(), step: directCmd ? 'Exécution des commandes...' : 'Démarrage du LLM local...' });
-        resultData = await runAgenticLoop(prompt, cmdId, uid, cmdRef, directCmd);
+        resultData = await runAgenticLoop(prompt, cmdId, uid, cmdRef, directCmd, data.payload);
         status = (resultData && resultData.cancelled) ? 'cancelled' : ((resultData && resultData.error) ? 'error' : 'done');
       }
       else if (data.type === 'sysinfo') {
@@ -394,8 +394,152 @@
   /* ═══════════════════════════════════════════
      Boucle agentique LLM local & Fast Path
   ═══════════════════════════════════════════ */
-  async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef, directCommand) {
+  async function runAgenticLoop(userPrompt, cmdId, uid, cmdRef, directCommand, payload) {
     const steps = [];
+
+    // ── 0. DISPATCHER D'OUTILS EXPLICITE (MCP / Standard Jarvis) ──
+    if (payload && (payload.tool || payload.name) && window.CWTools) {
+      var explicitTool = payload.tool || payload.name;
+      var explicitArgs = payload.args || {};
+      var toolStepMsg = 'Exécution : ' + explicitTool + '...';
+      steps.push({ text: toolStepMsg, ts: new Date().toISOString() });
+      await cmdRef.update({ step: toolStepMsg, steps, updatedAt: new Date() });
+      window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: toolStepMsg } }));
+
+      try {
+        var tRes = await window.CWTools.executeTool(explicitTool, explicitArgs);
+        if (tRes && tRes.success) {
+          var tDone = (tRes.result && (tRes.result.message || tRes.result.summary)) || ('Action ' + explicitTool + ' terminée avec succès ✓');
+          steps.push({ text: tDone, ts: new Date().toISOString() });
+          await cmdRef.update({ status: 'done', step: tDone, steps, updatedAt: new Date() });
+          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: tDone } }));
+          return { output: tDone, steps: steps };
+        }
+      } catch(tErr) {
+        console.warn('[PC Agent] Erreur outil explicite:', tErr);
+      }
+    }
+
+    // ── 0.1 INTERCEPTION D'INTENTION INTELLIGENTE (App, Web, Install, Close) ──
+    if (window.CWTools) {
+      // A. Lancement d'application (Ouvre Discord, Lance Chrome, Start-Process notepad...)
+      var isAppLaunch = /(?:ouvre|ouvrir|lance|lancer|démarre|demarre)\s+(?:l['’]application\s+|l['’]app\s+|le\s+logiciel\s+)?([a-zA-Z0-9_\-\s.]+)/i.test(userPrompt) ||
+                        /Start-Process\s+["']?([^"';\r\n\s]+)["']?/i.test(directCommand || '');
+      if (isAppLaunch) {
+        var appMatch = userPrompt.match(/(?:ouvre|ouvrir|lance|lancer|démarre|demarre)\s+(?:l['’]application\s+|l['’]app\s+|le\s+logiciel\s+)?([a-zA-Z0-9_\-\s.]+)/i);
+        var spMatch = (directCommand || '').match(/Start-Process\s+["']?([^"';\r\n\s]+)["']?/i);
+        var candidateApp = appMatch ? appMatch[1].trim() : (spMatch ? spMatch[1].trim() : '');
+
+        // Nettoyage de la formule de politesse ou ponctuation
+        candidateApp = candidateApp.replace(/(?:s['’]il\s+te\s+pla[îi]t|stp|merci|maintenant|[!.,;?])/gi, '').trim();
+
+        // Vérifier que ce n'est pas une URL web
+        var isUrl = /^(https?:\/\/|www\.)/i.test(candidateApp) || candidateApp.includes('.html') || candidateApp.includes('.com') || candidateApp.includes('.fr');
+
+        if (candidateApp && !isUrl) {
+          var stepApp = 'Recherche et lancement de "' + candidateApp + '" sur Windows...';
+          steps.push({ text: stepApp, ts: new Date().toISOString() });
+          await cmdRef.update({ step: stepApp, steps, updatedAt: new Date() });
+          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepApp } }));
+
+          try {
+            var launchRes = await window.CWTools.executeTool('app_launch', { target: candidateApp });
+            if (launchRes && launchRes.success) {
+              var launchDone = (launchRes.result && launchRes.result.message) || ('Application "' + candidateApp + '" lancée avec succès ✓');
+              steps.push({ text: launchDone, ts: new Date().toISOString() });
+              await cmdRef.update({ status: 'done', step: launchDone, steps, updatedAt: new Date() });
+              window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: launchDone } }));
+              return { output: launchDone, steps: steps };
+            }
+          } catch(eLaunch) {
+            console.warn('[PC Agent] Échec lancement direct app:', eLaunch);
+          }
+        }
+      }
+
+      // B. Installation d'application via Winget (Installe VLC, Télécharge Discord...)
+      var isAppInstall = /(?:installe|installer|télécharge\s+et\s+installe)\s+([a-zA-Z0-9_\-\s.]+)/i.test(userPrompt);
+      if (isAppInstall) {
+        var instMatch = userPrompt.match(/(?:installe|installer|télécharge\s+et\s+installe)\s+([a-zA-Z0-9_\-\s.]+)/i);
+        var appToInstall = instMatch ? instMatch[1].replace(/(?:s['’]il\s+te\s+pla[îi]t|stp|merci|[!.,;?])/gi, '').trim() : '';
+        if (appToInstall) {
+          var stepInst = 'Installation de "' + appToInstall + '" via Winget...';
+          steps.push({ text: stepInst, ts: new Date().toISOString() });
+          await cmdRef.update({ step: stepInst, steps, updatedAt: new Date() });
+          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepInst } }));
+
+          try {
+            var instRes = await window.CWTools.executeTool('app_install', { name: appToInstall });
+            if (instRes && instRes.success) {
+              var instDone = (instRes.result && instRes.result.message) || ('Application installée avec succès ✓');
+              steps.push({ text: instDone, ts: new Date().toISOString() });
+              await cmdRef.update({ status: 'done', step: instDone, steps, updatedAt: new Date() });
+              window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: instDone } }));
+              return { output: instDone, steps: steps };
+            }
+          } catch(eInst) {
+            console.warn('[PC Agent] Échec installation winget:', eInst);
+          }
+        }
+      }
+
+      // C. Navigation Web / Ouverture de page (Va sur youtube.com, Ouvre https://...)
+      var urlMatch = (userPrompt + ' ' + (directCommand || '')).match(/(https?:\/\/[^\s"'`]+|www\.[^\s"'`]+)/i);
+      var isWebIntent = /(?:ouvre|va sur|navigue|consulte)\s+(?:le\s+site|la\s+page)?/i.test(userPrompt);
+      if (urlMatch || (isWebIntent && /(?:site|page|web|google|youtube|github|wikipedia)/i.test(userPrompt))) {
+        var targetUrl = urlMatch ? urlMatch[1] : '';
+        if (!targetUrl) {
+          if (userPrompt.includes('youtube')) targetUrl = 'https://www.youtube.com';
+          else if (userPrompt.includes('github')) targetUrl = 'https://www.github.com';
+          else if (userPrompt.includes('google')) targetUrl = 'https://www.google.com';
+        }
+        if (targetUrl) {
+          var stepWeb = 'Ouverture de la page web dans votre navigateur...';
+          steps.push({ text: stepWeb, ts: new Date().toISOString() });
+          await cmdRef.update({ step: stepWeb, steps, updatedAt: new Date() });
+          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepWeb } }));
+
+          try {
+            var webRes = await window.CWTools.executeTool('web_browse', { url: targetUrl });
+            if (webRes && webRes.success) {
+              var webDone = (webRes.result && webRes.result.message) || ('Page web ouverte ✓');
+              steps.push({ text: webDone, ts: new Date().toISOString() });
+              await cmdRef.update({ status: 'done', step: webDone, steps, updatedAt: new Date() });
+              window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: webDone } }));
+              return { output: webDone, steps: steps };
+            }
+          } catch(eWeb) {
+            console.warn('[PC Agent] Échec navigation web:', eWeb);
+          }
+        }
+      }
+
+      // D. Fermeture d'application (Ferme Discord, Quitte Chrome...)
+      var isAppClose = /(?:ferme|fermer|quitte|quitter|arrête|arrete)\s+(?:l['’]application\s+|l['’]app\s+)?([a-zA-Z0-9_\-\s.]+)/i.test(userPrompt);
+      if (isAppClose && !userPrompt.includes('fenêtre')) {
+        var closeM = userPrompt.match(/(?:ferme|fermer|quitte|quitter|arrête|arrete)\s+(?:l['’]application\s+|l['’]app\s+)?([a-zA-Z0-9_\-\s.]+)/i);
+        var appToClose = closeM ? closeM[1].replace(/(?:s['’]il\s+te\s+pla[îi]t|stp|merci|[!.,;?])/gi, '').trim() : '';
+        if (appToClose) {
+          var stepClose = 'Fermeture de "' + appToClose + '"...';
+          steps.push({ text: stepClose, ts: new Date().toISOString() });
+          await cmdRef.update({ step: stepClose, steps, updatedAt: new Date() });
+          window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepClose } }));
+
+          try {
+            var closeRes = await window.CWTools.executeTool('app_close', { name: appToClose });
+            if (closeRes && closeRes.success) {
+              var closeDone = (closeRes.result && closeRes.result.message) || ('Application fermée ✓');
+              steps.push({ text: closeDone, ts: new Date().toISOString() });
+              await cmdRef.update({ status: 'done', step: closeDone, steps, updatedAt: new Date() });
+              window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: closeDone } }));
+              return { output: closeDone, steps: steps };
+            }
+          } catch(eClose) {
+            console.warn('[PC Agent] Échec fermeture app:', eClose);
+          }
+        }
+      }
+    }
 
     // ── FAST PATH ULTRA-RAPIDE : Exécution progressive ou script unifié ──
     if (directCommand && directCommand.trim()) {
@@ -695,6 +839,18 @@ Start-Process msedge "https://www.youtube.com/watch?v=dQw4w9WgXcQ"[/CMD]`;
               window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepText } }));
               try {
                 var res = await window.eva.system.exec(cmd);
+                // Rescue si Start-Process a échoué (app hors du PATH)
+                if (!res.success && window.CWTools) {
+                  var spMatch = cmd.match(/Start-Process\s+["']?([^"';\r\n\s]+)["']?/i);
+                  if (spMatch && !spMatch[1].startsWith('http')) {
+                    try {
+                      var rescueRes = await window.CWTools.executeTool('app_launch', { target: spMatch[1] });
+                      if (rescueRes && rescueRes.success) {
+                        res = { success: true, stdout: rescueRes.result?.message || 'Lancé avec succès ✓' };
+                      }
+                    } catch(re) {}
+                  }
+                }
                 var out = res.success
                   ? (res.stdout ? res.stdout.substring(0, 500) : '(succ\u00e8s, pas de sortie)')
                   : ('ERREUR: ' + (res.stderr || res.error || 'Inconnue').substring(0, 300));

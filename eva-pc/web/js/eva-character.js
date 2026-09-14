@@ -548,6 +548,7 @@ function startLoop(THREE) {
   var gm = scene.children.find(function (c) { return c.userData && c.userData.pulse !== undefined; });
   function tick() {
     raf = requestAnimationFrame(tick);
+    if (document.hidden) return;
     var dt = Math.min(clock.getDelta(), 0.05);
     T += dt;
     tick_procedural(dt);

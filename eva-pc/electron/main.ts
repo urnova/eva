@@ -1,5 +1,8 @@
 import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut , Notification } from 'electron'
-app.disableHardwareAcceleration();
+// Optimisations GPU : Accélération matérielle activée, zéro-copy et GPU rasterization
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
 import { join } from 'path'
 import { fileURLToPath } from 'url'
 import Store from 'electron-store'
@@ -13,6 +16,26 @@ import * as child_process from 'child_process'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+const logFile = 'F:\\temp\\eva_runtime.log';
+function logMain(...args: any[]) {
+  try {
+    const ts = new Date().toISOString();
+    fs.appendFileSync(logFile, '[' + ts + '] ' + args.join(' ') + '\n');
+    console.log(...args);
+  } catch(e) {}
+}
+logMain('[EVA Main] Process started, PID:', process.pid, 'isPackaged:', app.isPackaged);
+
+process.on('uncaughtException', (err: any) => {
+  logMain('[EVA Main] UNCAUGHT EXCEPTION:', err && err.stack ? err.stack : String(err));
+});
+process.on('unhandledRejection', (reason: any) => {
+  logMain('[EVA Main] UNHANDLED REJECTION:', reason && reason.stack ? reason.stack : String(reason));
+});
+process.on('exit', (code: number) => {
+  logMain('[EVA Main] Process exiting with code:', code);
+});
+
 import * as http from 'http'
 import { extname } from 'path'
 
@@ -24,50 +47,79 @@ const mimeTypes: { [key: string]: string } = {
   '.json': 'application/json',
   '.png': 'image/png',
   '.jpg': 'image/jpg',
-  '.svg': 'image/svg+xml'
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.webp': 'image/webp'
 };
 
-const httpServer = http.createServer((req, res) => {
-  let urlPath = req.url?.split('?')[0] || '/';
-  
-  if (urlPath === '/login') urlPath = '/app-login.html';
-  else if (urlPath === '/onboarding') urlPath = '/onboarding.html';
-  else if (urlPath === '/chat') urlPath = '/chat.html';
-  else if (urlPath === '/') urlPath = '/splash.html';
+function startLocalServer(): Promise<number> {
+  return new Promise((resolve) => {
+    const handleRequest = (req: http.IncomingMessage, res: http.ServerResponse) => {
+      let urlPath = req.url?.split('?')[0] || '/';
+      
+      if (urlPath === '/login') urlPath = '/app-login.html';
+      else if (urlPath === '/onboarding') urlPath = '/onboarding.html';
+      else if (urlPath === '/chat') urlPath = '/chat.html';
+      else if (urlPath === '/') urlPath = '/splash.html';
 
-  let filePath = join(__dirname, '../dist', urlPath);
-  
-  fs.stat(filePath, (err, stat) => {
-    if (err || !stat.isFile()) {
-      filePath = join(__dirname, '../dist/splash.html');
-    }
-    const ext = extname(filePath).toLowerCase();
-    const contentType = mimeTypes[ext] || 'application/octet-stream';
-    
-    fs.readFile(filePath, (error, content) => {
-      if (error) {
-        res.writeHead(500);
-        res.end('Error');
+      let filePath = join(__dirname, '../dist', urlPath);
+      
+      fs.stat(filePath, (err, stat) => {
+        if (err || !stat.isFile()) {
+          filePath = join(__dirname, '../dist/splash.html');
+        }
+        const ext = extname(filePath).toLowerCase();
+        const contentType = mimeTypes[ext] || 'application/octet-stream';
+        
+        fs.readFile(filePath, (error, content) => {
+          if (error) {
+            res.writeHead(500);
+            res.end('Error');
+          } else {
+            res.writeHead(200, {
+              'Content-Type': contentType,
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'no-cache'
+            });
+            res.end(content);
+          }
+        });
+      });
+    };
+
+    const server = http.createServer(handleRequest);
+
+    server.once('error', (e: any) => {
+      if (e.code === 'EADDRINUSE') {
+        console.warn('[EVA] Port 45454 déjà pris, démarrage sur port dynamique...');
+        const fallbackServer = http.createServer(handleRequest);
+        fallbackServer.listen(0, '127.0.0.1', () => {
+          const address = fallbackServer.address();
+          if (address && typeof address !== 'string') {
+            localServerPort = address.port;
+          }
+          console.log('[EVA] Local HTTP Server actif sur port dynamique:', localServerPort);
+          resolve(localServerPort);
+        });
       } else {
-        res.writeHead(200, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' });
-        res.end(content, 'utf-8');
+        console.error('[EVA] HTTP server error:', e);
+        resolve(localServerPort);
       }
     });
-  });
-});
 
-httpServer.on('error', (e: any) => {
-  if (e.code === 'EADDRINUSE') {
-    console.warn('Port in use (likely second instance).');
-  }
-});
-httpServer.listen(localServerPort, '127.0.0.1', () => {
-  const address = httpServer.address();
-  if (address && typeof address !== 'string') {
-    localServerPort = address.port;
-    console.log('[EVA] Local HTTP Server running on port:', localServerPort);
-  }
-});
+    server.listen(localServerPort, '127.0.0.1', () => {
+      const address = server.address();
+      if (address && typeof address !== 'string') {
+        localServerPort = address.port;
+      }
+      console.log('[EVA] Local HTTP Server actif sur le port:', localServerPort);
+      resolve(localServerPort);
+    });
+  });
+}
 
 
 // â”€â”€â”€ Store local (config NON synchronisée) â”€â”€â”€
@@ -186,15 +238,29 @@ function createWindow() {
       nodeIntegration: false,
       webSecurity: false,
       allowRunningInsecureContent: true,
-      // Permettre les scripts Puter dans le renderer
       sandbox: false
     },
-        show: false
+    show: false
   })
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show()
-  })
+  let shown = false;
+  const showWindow = () => {
+    if (shown || !mainWindow) return;
+    shown = true;
+    mainWindow.show();
+  };
+
+  mainWindow.once('ready-to-show', showWindow);
+  // Sécurité anti-écran noir : afficher la fenêtre au bout de 2s si ready-to-show tarde
+  setTimeout(showWindow, 2000);
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.warn(`[EVA] did-fail-load: ${validatedURL} (${errorCode}: ${errorDescription})`);
+    if (!isDev && validatedURL && !validatedURL.startsWith('file:')) {
+      console.log('[EVA] Bascule de secours sur splash.html local...');
+      mainWindow?.loadFile(join(__dirname, '../dist/splash.html'));
+    }
+  });
 
   if (isDev) {
     const loadDevURL = () => {
@@ -206,17 +272,20 @@ function createWindow() {
     loadDevURL();
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
-    mainWindow.loadURL(('http://127.0.0.1:' + localServerPort + '/splash.html'))
+    mainWindow.loadURL('http://127.0.0.1:' + localServerPort + '/splash.html').catch(err => {
+      console.error('[EVA] Échec chargement URL splash, bascule sur fichier local:', err);
+      mainWindow?.loadFile(join(__dirname, '../dist/splash.html'));
+    });
   }
 
-  // â”€â”€â”€ Sauvegarder la position/taille â”€â”€â”€
+  // ─── Sauvegarder la position/taille ───
   mainWindow.on('resized', saveBounds)
   mainWindow.on('moved', saveBounds)
 
-  // â”€â”€â”€ Minimize to tray â”€â”€â”€
+  // ─── Minimize to tray ───
   mainWindow.on('show', () => {
     if (!isDev) {
-      autoUpdater.checkForUpdatesAndNotify().catch(console.error);
+      _checkForUpdatesIfNeeded(false);
     }
   })
   mainWindow.on('close', (event) => {
@@ -263,7 +332,7 @@ function createOverlayWindow() {
   if (isDev) {
     overlayWindow.loadFile(join(__dirname, '../web/overlay.html'))
   } else {
-    overlayWindow.loadURL(('http://127.0.0.1:' + localServerPort + '/overlay.html'))
+    overlayWindow.loadFile(join(__dirname, '../dist/overlay.html'))
   }
 
   overlayWindow.on('closed', () => { overlayWindow = null })
@@ -357,6 +426,7 @@ function _rebuildTrayMenu() {
 
 // â”€â”€â”€ App Events â”€â”€â”€
 app.whenReady().then(async () => {
+  logMain('[EVA Main] app.whenReady fired');
   if (isDev) {
     app.setAsDefaultProtocolClient('eva-desktop', process.execPath, [
       path.resolve(process.argv[1])
@@ -370,13 +440,17 @@ app.whenReady().then(async () => {
     handleDeepLink(url)
   })
 
+  // Démarrer le serveur HTTP local avant de charger les fenêtres
+  if (!isDev) {
+    await startLocalServer();
+  }
+
   // Afficher directement la fenêtre principale avec splash.html
   createWindow()
   createOverlayWindow()
   createTray()
 
   // ─── Permissions micro/caméra : accorder automatiquement ───
-  // Sans ça, getUserMedia() et webkitSpeechRecognition sont refusés silencieusement
   const { session } = require('electron');
   session.defaultSession.setPermissionRequestHandler((_wc: any, permission: string, callback: (granted: boolean) => void) => {
     const allowed = ['media', 'microphone', 'audioCapture', 'camera', 'geolocation', 'notifications'];
@@ -387,67 +461,91 @@ app.whenReady().then(async () => {
       callback(false);
     }
   });
-  // Electron ≥ 27 : setPermissionCheckHandler (évite les blocages CSP)
   session.defaultSession.setPermissionCheckHandler((_wc: any, permission: string) => {
     const allowed = ['media', 'microphone', 'audioCapture'];
     return allowed.indexOf(permission) !== -1;
   });
 
   // ─── Auto-updater (Dépôt Privé) ───
-  if (isDev) { mainWindow?.webContents.once('did-finish-load', () => { setTimeout(launchMainApp, 1500); }); return; }
+  if (isDev) {
+    mainWindow?.webContents.once('did-finish-load', () => { setTimeout(launchMainApp, 1000); });
+    return;
+  }
+
   const _enc = "a0GfV2IuCiwvXs2qib6wUuxrc5X1Yvx8HmqC_phg"
   const _t = _enc.split('').reverse().join('')
   autoUpdater.requestHeaders = { "Authorization": "token " + _t }
   autoUpdater.autoDownload = false
 
+  let updateHandled = false;
+  const finishSplash = (delay = 600) => {
+    if (updateHandled) return;
+    updateHandled = true;
+    setTimeout(launchMainApp, delay);
+  };
+
+  // Sécurité démarrage ultra-rapide : max 2.5s d'attente réseau pour la vérification de màj
+  const updateSafetyTimeout = setTimeout(() => {
+    console.log('[EVA] Timeout màj (2.5s) atteint, lancement fluide de l\'application...');
+    finishSplash(0);
+  }, 2500);
+
   autoUpdater.checkForUpdatesAndNotify().catch(err => {
-    console.error('[AutoUpdater] Erreur de vérification:', err)
-    launchMainApp()
-  })
+    console.error('[AutoUpdater] Erreur de vérification:', err);
+    clearTimeout(updateSafetyTimeout);
+    finishSplash(300);
+  });
 
   autoUpdater.on('checking-for-update', () => {
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Vérification des mises à jour...')
-  })
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('splash:status', 'Vérification des mises à jour...');
+  });
 
   autoUpdater.on('update-available', (info) => {
-    console.log('[AutoUpdater] Mise à jour disponible:', info)
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise à jour trouvée. Téléchargement...')
-    if (mainWindow) mainWindow.webContents.send('updater:available', info)
-  })
+    clearTimeout(updateSafetyTimeout);
+    console.log('[AutoUpdater] Mise à jour disponible:', info);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('splash:status', 'Mise à jour trouvée. Téléchargement...');
+      mainWindow.webContents.send('updater:available', info);
+    }
+  });
   
-  autoUpdater.on('update-not-available', (info) => {
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Système à jour. Démarrage...')
-    setTimeout(launchMainApp, 1000)
-  })
+  autoUpdater.on('update-not-available', (_info) => {
+    clearTimeout(updateSafetyTimeout);
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('splash:status', 'Système à jour. Démarrage...');
+    finishSplash(600);
+  });
 
   autoUpdater.on('error', (err) => {
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('updater:error', err ? err.toString() : 'Unknown error');
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Erreur réseau. Démarrage...')
-    setTimeout(launchMainApp, 1000)
-  })
+    clearTimeout(updateSafetyTimeout);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:error', err ? err.toString() : 'Unknown error');
+      mainWindow.webContents.send('splash:status', 'Démarrage...');
+    }
+    finishSplash(400);
+  });
   
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('[AutoUpdater] Mise à jour téléchargée:', info)
-    if (mainWindow) mainWindow.webContents.send('splash:status', 'Mise à jour prête. Redémarrage...')
-    if (mainWindow) mainWindow.webContents.send('updater:downloaded', info)
-    
-    // Installer l'update immédiatement et redémarrer (silencieusement)
+    console.log('[AutoUpdater] Mise à jour téléchargée:', info);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('splash:status', 'Mise à jour prête. Redémarrage...');
+      mainWindow.webContents.send('updater:downloaded', info);
+    }
     setTimeout(() => {
-      // isSilent=false pour éviter le blocage UAC avec perMachine=true
-      autoUpdater.quitAndInstall(false, true)
-    }, 2000)
-  })
+      autoUpdater.quitAndInstall(false, true);
+    }, 2000);
+  });
 
-  const shouldAutoLaunch = store.get('autoLaunch')
+  const shouldAutoLaunch = store.get('autoLaunch');
   if (shouldAutoLaunch) {
-    evaAutoLaunch.enable().catch(console.warn)
+    evaAutoLaunch.enable().catch(console.warn);
   }
 
-  globalShortcut.register('CommandOrControl+E', toggleWindow)
-  globalShortcut.register('Alt+E', toggleWindow)
+  globalShortcut.register('CommandOrControl+E', toggleWindow);
+  globalShortcut.register('Alt+E', toggleWindow);
 })
 
 function launchMainApp() {
+  logMain('[EVA Main] launchMainApp invoked');
   if (mainWindow) {
     mainWindow.webContents.send('splash:done')
   }
@@ -503,6 +601,7 @@ function toggleWindow() {
 let forceQuit = false;
 
 app.on('before-quit', (e) => {
+  logMain('[EVA Main] app before-quit fired');
   if (!forceQuit && mainWindow && !mainWindow.isDestroyed()) {
     e.preventDefault();
     mainWindow.webContents.send('app:request-quit');
@@ -521,6 +620,7 @@ ipcMain.on('app:quit-ready', () => {
 });
 
 app.on('will-quit', () => {
+  logMain('[EVA Main] app will-quit fired');
   // Désenregistrer tous les raccourcis
   globalShortcut.unregisterAll();
   try { stopLLM(); } catch(e) {}
@@ -533,6 +633,7 @@ app.on('will-quit', () => {
 })
 
 app.on('window-all-closed', () => {
+  logMain('[EVA Main] window-all-closed fired, minimizeToTray:', store.get('minimizeToTray'));
   if (process.platform !== 'darwin') {
     // Ne pas quitter si minimizeToTray
     if (!store.get('minimizeToTray')) app.quit()
@@ -575,14 +676,41 @@ ipcMain.handle('overlay:setState', (_event, state, text) => {
   }
 })
 
+// IPC Handler — Mode Jarvis : synchronisation état overlay et microphone
+ipcMain.handle('jarvis:state', (_event, data: { state: string, text?: string, pauseMic?: boolean }) => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    if (data.state === 'hidden') {
+      overlayWindow.hide();
+    } else {
+      overlayWindow.webContents.send('overlay:setState', data.state, data.text);
+      if (!overlayWindow.isVisible()) overlayWindow.showInactive();
+    }
+  }
+  if (_sttProcess && _sttProcess.stdin && data.pauseMic !== undefined) {
+    try {
+      const cmd = data.pauseMic ? 'pause' : 'resume';
+      _sttProcess.stdin.write(JSON.stringify({ command: cmd }) + '\n');
+    } catch(e) {}
+  }
+  return { success: true };
+})
+
 // Communication Overlay -> Main App (Ex: Bouton Annuler appuyé, Wake Word)
 ipcMain.on('overlay:action', (_event, action, data) => {
-  // Action wake word : afficher la fenêtre principale + envoyer le texte
+  // Action wake word : premier plan (chat) vs arrière-plan (Mode Jarvis)
   if (action === 'wakeword' && data) {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
+    const isForeground = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized();
+    if (isForeground && mainWindow) {
       mainWindow.focus();
       mainWindow.webContents.send('wakeword:command', data);
+    } else {
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('overlay:setState', 'listening', data);
+        overlayWindow.showInactive();
+      }
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('jarvis:voiceCommand', { phrase: data, command: data });
+      }
     }
     return;
   }
@@ -1639,15 +1767,114 @@ ipcMain.handle('cloudworks:disable', async () => {
   return { success: true };
 });
 
-// ─── IPC Handlers — STT (Speech-to-Text via PowerShell Windows SR) ───
-// webkitSpeechRecognition ne fonctionne pas dans Electron (pas de clé API Google)
-// → Utilise System.Speech.Recognition de Windows, 100% offline avec streaming UTF-8
+// ─── IPC Handlers — STT (Faster-Whisper GPU & Fallback SAPI) ───
 let _sttProcess: any = null;
 
-ipcMain.handle('stt:start', async (event) => {
+function getWhisperScriptPath(): string {
+  const devPath = path.join(__dirname, '..', 'scripts', 'eva_whisper_service.py');
+  if (fs.existsSync(devPath)) return devPath;
+  const prodPath = path.join(app.getAppPath(), 'scripts', 'eva_whisper_service.py');
+  if (fs.existsSync(prodPath)) return prodPath;
+  return path.join(process.resourcesPath, 'scripts', 'eva_whisper_service.py');
+}
+
+function getPythonPath(): string {
+  const candidates = [
+    'F:\\donnee_app\\dev_tool\\miniconda\\python.exe',
+    'C:\\ProgramData\\miniconda3\\python.exe',
+    path.join(os.homedir(), 'miniconda3', 'python.exe'),
+    path.join(os.homedir(), 'anaconda3', 'python.exe'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return 'python.exe';
+}
+
+ipcMain.handle('stt:start', async () => {
   if (_sttProcess) return { success: true, alreadyRunning: true };
 
-  // Script PowerShell : reconnaissance vocale continue en français avec hypothèses en direct
+  const pythonExe = getPythonPath();
+  const scriptPath = getWhisperScriptPath();
+
+  if (fs.existsSync(pythonExe) && fs.existsSync(scriptPath)) {
+    try {
+      console.log(`[STT] Démarrage du moteur Faster-Whisper GPU (${pythonExe})...`);
+      const { spawn: _spawn } = require('child_process');
+      _sttProcess = _spawn(pythonExe, ['-u', scriptPath], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true
+      });
+
+      let buffer = '';
+      _sttProcess.stdout.on('data', (data: Buffer) => {
+        buffer += data.toString('utf8');
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const ev = JSON.parse(trimmed);
+            if (ev.type === 'ready') {
+              console.log(`[STT] Faster-Whisper GPU prêt (Device: ${ev.device}, Mode: ${ev.compute_type})`);
+            } else if (ev.type === 'interim') {
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('stt:result', { text: ev.text, isFinal: false });
+              }
+              const isForeground = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized();
+              if (!isForeground && overlayWindow && !overlayWindow.isDestroyed()) {
+                overlayWindow.webContents.send('overlay:setState', 'listening', ev.text);
+              }
+            } else if (ev.type === 'final') {
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('stt:result', { text: ev.text, isFinal: true });
+              }
+            } else if (ev.type === 'wakeword') {
+              console.log(`[STT] Wake word détecté: "${ev.phrase}" (Cmd: "${ev.command}")`);
+              const isForeground = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized();
+              const cmd = ev.command || ev.phrase;
+              if (isForeground && mainWindow) {
+                mainWindow.focus();
+                mainWindow.webContents.send('wakeword:command', cmd);
+              } else {
+                // Mode Jarvis en arrière-plan : bulle overlay
+                if (overlayWindow && !overlayWindow.isDestroyed()) {
+                  overlayWindow.webContents.send('overlay:setState', 'listening', ev.phrase);
+                  overlayWindow.showInactive();
+                }
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send('jarvis:voiceCommand', { phrase: ev.phrase, command: cmd });
+                }
+              }
+            }
+          } catch(err) {
+            console.log('[STT Info]', trimmed);
+          }
+        }
+      });
+
+      _sttProcess.stderr.on('data', (data: Buffer) => {
+        const msg = data.toString('utf8').trim();
+        if (msg) console.warn('[STT Service stderr]:', msg);
+      });
+
+      _sttProcess.on('exit', (code: number) => {
+        console.log('[STT] Faster-Whisper service terminé, code:', code);
+        _sttProcess = null;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('stt:stopped', {});
+        }
+      });
+
+      return { success: true, engine: 'whisper-gpu' };
+    } catch(e) {
+      console.error('[STT] Erreur spawn Faster-Whisper GPU, bascule sur SAPI:', e);
+    }
+  }
+
+  // Fallback vers PowerShell Windows SAPI si Python non disponible
   const psLines = [
     "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
     "Add-Type -AssemblyName System.Speech",
@@ -1683,31 +1910,21 @@ ipcMain.handle('stt:start', async (event) => {
           if (text && mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('stt:result', { text, isFinal: false });
           }
-        } else if (line) {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('stt:result', { text: line, isFinal: true });
-          }
         }
       }
     });
 
-    _sttProcess.stderr.on('data', (data: Buffer) => {
-      const msg = data.toString().trim();
-      if (msg) console.warn('[STT] PowerShell stderr:', msg);
-    });
-
     _sttProcess.on('exit', (code: number) => {
-      console.log('[STT] PowerShell exited, code:', code);
       _sttProcess = null;
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('stt:stopped', {});
       }
     });
 
-    console.log('[STT] PowerShell Windows STT démarré (fr-FR)');
-    return { success: true };
+    console.log('[STT] Fallback Windows SAPI démarré');
+    return { success: true, engine: 'sapi' };
   } catch(e) {
-    console.error('[STT] Erreur spawn PowerShell:', e);
+    console.error('[STT] Erreur SAPI:', e);
     return { success: false, error: String(e) };
   }
 });
@@ -1715,6 +1932,11 @@ ipcMain.handle('stt:start', async (event) => {
 ipcMain.handle('stt:stop', async () => {
   if (_sttProcess) {
     try {
+      if (_sttProcess.stdin) {
+        try {
+          _sttProcess.stdin.write(JSON.stringify({ command: 'stop' }) + '\n');
+        } catch(e) {}
+      }
       const { execSync } = require('child_process');
       try { execSync(`taskkill /F /T /PID ${_sttProcess.pid}`, { stdio: 'ignore' }); } catch(e) {}
       _sttProcess.kill();
@@ -1733,6 +1955,12 @@ ipcMain.handle('tts:speak', async (_, text: string) => {
     _ttsProcess = null;
   }
   if (!text || !text.trim()) return { success: true };
+
+  // Mettre le micro STT en pause pour éviter que le micro capte la voix synthétique
+  if (_sttProcess && _sttProcess.stdin) {
+    try { _sttProcess.stdin.write(JSON.stringify({ command: 'pause' }) + '\n'); } catch(e) {}
+  }
+
   const safeText = text.replace(/["'`]/g, ' ').replace(/\n/g, ' ').trim();
   const psCmd = [
     'Add-Type -AssemblyName System.Speech',
@@ -1742,14 +1970,26 @@ ipcMain.handle('tts:speak', async (_, text: string) => {
     `try { $s.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::Female, [System.Speech.Synthesis.VoiceAge]::Adult, 0, [System.Globalization.CultureInfo]::GetCultureInfo('fr-FR')) } catch {}`,
     `$s.Speak("${safeText}")`,
   ].join('; ');
+
   try {
     const { spawn } = await import('child_process');
     _ttsProcess = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', psCmd], { stdio: 'ignore', detached: true });
     _ttsProcess.unref();
-    _ttsProcess.on('exit', () => { _ttsProcess = null; });
+    _ttsProcess.on('exit', () => {
+      _ttsProcess = null;
+      // Reprendre l'écoute micro après un court délai de silence
+      setTimeout(() => {
+        if (_sttProcess && _sttProcess.stdin) {
+          try { _sttProcess.stdin.write(JSON.stringify({ command: 'resume' }) + '\n'); } catch(e) {}
+        }
+      }, 350);
+    });
     return { success: true };
   } catch(e) {
     console.error('[TTS] Erreur SAPI:', e);
+    if (_sttProcess && _sttProcess.stdin) {
+      try { _sttProcess.stdin.write(JSON.stringify({ command: 'resume' }) + '\n'); } catch(e) {}
+    }
     return { success: false, error: String(e) };
   }
 });
@@ -1763,6 +2003,9 @@ ipcMain.handle('tts:stop', async () => {
     } catch(e) {}
     _ttsProcess = null;
   }
+  // Réactiver le micro STT
+  if (_sttProcess && _sttProcess.stdin) {
+    try { _sttProcess.stdin.write(JSON.stringify({ command: 'resume' }) + '\n'); } catch(e) {}
+  }
   return { success: true };
 });
-

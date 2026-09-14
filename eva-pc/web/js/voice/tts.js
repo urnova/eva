@@ -279,6 +279,15 @@ function _onSpeakEnd() {
   if (window.setEvaStatusHeader) {
     try { window.setEvaStatusHeader(null); } catch(e) {}
   }
+  if (window._isJarvisActive && window.eva && window.eva.jarvis) {
+    // Mode Jarvis : temporisation de 3.5s après la fin de parole puis masquage
+    setTimeout(function() {
+      if (window._isJarvisActive) {
+        window.eva.jarvis.setState('hidden', '', false);
+        window._isJarvisActive = false;
+      }
+    }, 3500);
+  }
 }
 
 function _updateSkipBtn() {
@@ -297,7 +306,7 @@ window.EVATTS = {
    * Lecture simple d'un texte (nettoyé automatiquement)
    */
   speakText: function(text, config) {
-    if (_muted || !text) return;
+    if ((_muted && !window._isJarvisActive) || !text) return;
     var clean = _cleanForTts(text);
     if (!clean) return;
     _currentText = clean;
@@ -395,6 +404,8 @@ window.skipTTS = function() { window.EVATTS.stopTTS(); };
 
 /* Fermer la voix quand l'onglet perd le focus (évite les conflits) */
 document.addEventListener('visibilitychange', function() {
+  // Sur Electron PC, préserver la voix en arrière-plan pour le Mode Jarvis
+  if (window.eva) return;
   if (document.hidden && window.EVATTS) {
     try { window.EVATTS.stopTTS(); } catch(e) {}
   }

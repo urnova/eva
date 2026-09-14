@@ -20,6 +20,10 @@ function _buildSystemPrompt() {
     'Outils disponibles:\n' +
     '- app_resolve: Identifie si une application est installee sur Windows et trouve son chemin/AppID exact. Args: query (string - ex: "chrome", "edge", "excel", "discord", "notepad")\n' +
     '- app_launch: Lance une application resolue et verifie qu\'elle est bien active. Args: target (string - nom ou chemin resolu), args (string optionnel)\n' +
+    '- app_check: Verifie si une application est installee ou disponible sur Winget. Args: name (string)\n' +
+    '- app_install: Installe une application via Winget sur le PC. Args: name (string)\n' +
+    '- app_close: Ferme ou quitte une application. Args: name (string)\n' +
+    '- web_browse: Ouvre une URL ou lance une recherche dans le navigateur. Args: url (string optionnel), query (string optionnel)\n' +
     '- process_verify: Verifie l\'etat reel apres action (fichier existant/non vide, dossier avec elements, processus actif). Args: type ("file"|"folder"|"process"), target (string)\n' +
     '- folder_organize: Organise et deplace les fichiers d\'un dossier par date ou extension. Args: sourcePath (string), groupBy ("date_month"|"extension"), dryRun (bool=false)\n' +
     '- folder_create: Cree un dossier sur le disque. Args: path (string)\n' +

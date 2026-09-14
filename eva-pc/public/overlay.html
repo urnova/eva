@@ -154,11 +154,23 @@
     .state-remote .title { color: var(--orange); text-shadow: 0 0 10px rgba(249, 115, 22, 0.4); }
     .state-remote.pill { border-color: rgba(249, 115, 22, 0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(249, 115, 22, 0.1); }
 
-    /* Thinking State */
-    .state-thinking .core-orb { background: var(--gold); box-shadow: 0 0 12px var(--gold), 0 0 24px var(--gold); animation: corePulseFast 0.6s ease-in-out infinite; }
-    .state-thinking .ring { border-color: rgba(255, 215, 0, 0.5); }
-    .state-thinking .title { color: var(--gold); text-shadow: 0 0 10px rgba(255,215,0,0.3); }
-    .state-thinking.pill { border-color: rgba(255, 215, 0, 0.25); box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(255, 215, 0, 0.05); }
+    /* Listening State (Cyan Pulse) */
+    .state-listening .core-orb { background: var(--cyan); box-shadow: 0 0 14px var(--cyan), 0 0 28px var(--cyan); animation: corePulse 1.2s ease-in-out infinite; }
+    .state-listening .ring { border-color: rgba(0, 212, 255, 0.6); }
+    .state-listening .title { color: var(--cyan); text-shadow: 0 0 10px rgba(0,212,255,0.4); }
+    .state-listening.pill { border-color: rgba(0, 212, 255, 0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(0, 212, 255, 0.1); }
+
+    /* Thinking State (Gold Pulse) */
+    .state-thinking .core-orb { background: var(--gold); box-shadow: 0 0 14px var(--gold), 0 0 28px var(--gold); animation: corePulseFast 0.6s ease-in-out infinite; }
+    .state-thinking .ring { border-color: rgba(255, 215, 0, 0.6); }
+    .state-thinking .title { color: var(--gold); text-shadow: 0 0 10px rgba(255,215,0,0.4); }
+    .state-thinking.pill { border-color: rgba(255, 215, 0, 0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(255, 215, 0, 0.08); }
+
+    /* Speaking State (Violet Glow & Pulse) */
+    .state-speaking .core-orb { background: #a855f7; box-shadow: 0 0 14px #a855f7, 0 0 28px #9333ea; animation: corePulseFast 0.8s ease-in-out infinite; }
+    .state-speaking .ring { border-color: rgba(168, 85, 247, 0.6); }
+    .state-speaking .title { color: #c084fc; text-shadow: 0 0 10px rgba(168, 85, 247, 0.4); }
+    .state-speaking.pill { border-color: rgba(168, 85, 247, 0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(168, 85, 247, 0.1); }
 
     /* Animations */
     @keyframes corePulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.3); opacity: 1; } }
@@ -196,23 +208,25 @@
         window.eva.overlay.onSetState((state, text) => {
           pill.className = 'pill state-' + state;
           
-          if (state === 'cloudworks' || state === 'action') {
+          if (state === 'listening') {
+            titleText.textContent = 'EVA ÉCOUTE...';
+            subText.textContent = text || 'Parlez maintenant...';
+          } else if (state === 'thinking') {
+            titleText.textContent = 'EVA RÉFLÉCHIT...';
+            subText.textContent = text || 'Traitement cognitif en cours...';
+          } else if (state === 'speaking') {
+            titleText.textContent = 'EVA PARLE';
+            subText.textContent = text || 'Synthèse vocale en cours...';
+          } else if (state === 'cloudworks' || state === 'action') {
             titleText.textContent = 'CE PC — ACTIF';
             subText.textContent = text || 'Tâche locale en cours...';
             pill.className = 'pill state-remote';
           } else if (state === 'remote') {
             titleText.textContent = 'COMMANDE À DISTANCE';
-            subText.textContent = text || 'Exécution depuis un autre appareil...';
+            subText.textContent = text || 'Exécution distante...';
             pill.className = 'pill state-remote';
-          } else if (state === 'thinking') {
-            titleText.textContent = 'ANALYSE...';
-            subText.textContent = text || 'Traitement cognitif...';
-          } else if (state === 'speaking') {
-            titleText.textContent = 'E.V.A PARLE';
-            subText.textContent = text || 'Synthèse vocale en cours...';
-            pill.className = 'pill state-listening'; 
           } else {
-            titleText.textContent = 'E.V.A - EN ÉCOUTE';
+            titleText.textContent = 'EVA - EN ÉCOUTE';
             subText.textContent = text || 'Prête.';
           }
         });

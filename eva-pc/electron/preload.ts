@@ -187,6 +187,16 @@ const evaAPI = {
 
   // ── Overlay Agentique ──
   
+  // ── Mode Jarvis (Bulle Vocale en Arrière-Plan) ──
+  jarvis: {
+    setState: (state: string, text?: string, pauseMic?: boolean) =>
+      ipcRenderer.invoke('jarvis:state', { state, text, pauseMic }),
+    onVoiceCommand: (callback: (data: { phrase: string, command: string }) => void) => {
+      ipcRenderer.removeAllListeners('jarvis:voiceCommand');
+      ipcRenderer.on('jarvis:voiceCommand', (_: unknown, data: any) => callback(data));
+    }
+  },
+
   // ── TTS (Text-to-Speech — Windows SAPI) ──
   tts: {
     speak: (text: string) => ipcRenderer.invoke('tts:speak', text),

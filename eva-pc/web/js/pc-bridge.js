@@ -160,7 +160,30 @@
     });
   }
 
-  /* ── Wake Word depuis l'overlay (application en arrière-plan) ── */
+  /* ── Mode Jarvis en Arrière-Plan (Bulle Vocale + TTS forcé) ── */
+  if (window.eva && window.eva.jarvis && window.eva.jarvis.onVoiceCommand) {
+    window.eva.jarvis.onVoiceCommand(function(data) {
+      var cmd = (data && data.command) || (data && data.phrase) || '';
+      console.log('[PC Bridge] Commande vocale Jarvis reçue:', cmd);
+      if (!cmd || !cmd.trim()) return;
+      handleJarvisVoiceCommand(cmd.trim());
+    });
+  }
+
+  function handleJarvisVoiceCommand(query) {
+    if (!query || !query.trim()) return;
+    console.log('[Jarvis] Activation mode Jarvis en arrière-plan pour:', query);
+    window._isJarvisActive = true;
+
+    if (window.eva && window.eva.jarvis) {
+      window.eva.jarvis.setState('thinking', 'EVA réfléchit...', true);
+    }
+
+    _submitWakeWordCommand(query);
+  }
+  window.handleJarvisVoiceCommand = handleJarvisVoiceCommand;
+
+  /* ── Wake Word depuis l'overlay / Chat (application au premier plan) ── */
   // Canal principal : main.ts → chat via wakeword:command
   if (window.eva.onWakeWordCommand) {
     window.eva.onWakeWordCommand(function(text) {
@@ -190,7 +213,8 @@
     if (!text || !text.trim()) return;
     var t = text.trim();
     // Mettre le texte dans l'input du chat
-    var input = document.getElementById('userInput') ||
+    var input = document.getElementById('msgInput') ||
+                document.getElementById('userInput') ||
                 document.getElementById('messageInput') ||
                 document.querySelector('textarea.chat-textarea') ||
                 document.querySelector('.chat-input textarea');

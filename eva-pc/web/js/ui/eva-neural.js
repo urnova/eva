@@ -105,7 +105,7 @@ function draw(ts){
       _cx.beginPath();_cx.arc(n.x,n.y,n.r,0,6.283);_cx.fillStyle=gi;_cx.fill();
     }
   }
-  _raf=requestAnimationFrame(draw);
+  _raf=requestAnimationFrame(draw); if(document.hidden) return;
 }
 
 function setState(s){

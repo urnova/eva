@@ -245,7 +245,9 @@ async function executeEvaAction(action) {
             type: 'agentic_task',
             payload: {
               prompt: action.prompt || "Trouve un moyen de le faire.",
-              command: action.command || null
+              command: action.command || null,
+              tool: action.tool || null,
+              args: action.args || null
             },
             status: 'pending',
             createdAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()

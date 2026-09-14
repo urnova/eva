@@ -1,19 +1,20 @@
 {
   "name": "eva-assistant-pc",
-  "version": "5.5.0",
+  "version": "5.5.1",
   "description": "Assistant Virtuel IA E.V.A - Evolutionary Virtual Assistant by Astral Technologie",
   "author": "Astral Technologie",
   "main": "dist-electron/main.js",
   "homepage": "https://eva-assistant.app",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && xcopy /E /I /Y web\\js dist\\js && xcopy /E /I /Y web\\assets dist\\assets && electron-builder",
+    "build": "npm run compile && electron-builder",
     "build:portable": "tsc && vite build && electron-builder --win portable",
     "preview": "vite preview",
     "electron:dev": "vite",
     "electron:build": "vite build && electron-builder",
     "deploy": "node deploy.js",
-    "postinstall": "node scripts/download-llm.js && electron-builder install-app-deps"
+    "postinstall": "node scripts/download-llm.js && electron-builder install-app-deps",
+    "compile": "tsc && vite build && xcopy /E /I /Y web\\\\js dist\\\\js && xcopy /E /I /Y web\\\\assets dist\\\\assets && xcopy /E /I /Y scripts dist\\\\scripts"
   },
   "dependencies": {
     "auto-launch": "^5.0.6",
@@ -69,6 +70,7 @@
       "dist/**/*",
       "dist-electron/**/*",
       "public/**/*",
+      "scripts/**/*",
       "!public/eva-icon-gen.png",
       "!**/*.map",
       "!**/*.ts",
@@ -118,6 +120,13 @@
       {
         "from": "resources/",
         "to": "resources/",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "scripts/",
+        "to": "scripts/",
         "filter": [
           "**/*"
         ]

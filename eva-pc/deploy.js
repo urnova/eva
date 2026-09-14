@@ -11,12 +11,11 @@ process.env.TMP = tempDir;
 // Auto-increment version patch if not already set to target
 const packagePath = 'package.json';
 const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-if (pkg.version !== '5.5.0') {
-    const versionParts = pkg.version.split('.');
-    versionParts[2] = parseInt(versionParts[2], 10) + 1;
-    pkg.version = versionParts.join('.');
-    fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + '\n');
-}
+// Auto-increment version patch for every release
+const versionParts = pkg.version.split('.');
+versionParts[2] = parseInt(versionParts[2], 10) + 1;
+pkg.version = versionParts.join('.');
+fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + '\n');
 console.log("🚀 Version : " + pkg.version);
 
 // Le token est découpé en plusieurs variables pour tromper les bots d'analyse
@@ -29,7 +28,7 @@ const t6 = "oJ3Q2S2g";
 
 process.env.GH_TOKEN = t1 + t2 + t3 + t4 + t5 + t6;
 console.log("?? [1/2] Compilation du code source (Vite & TypeScript)...");
-const buildRes = spawnSync('F:\\donnee_app\\dev_tool\\node\\npm.cmd', ['run', 'build'], { stdio: 'inherit', shell: true });
+const buildRes = spawnSync('F:\\donnee_app\\dev_tool\\node\\npm.cmd', ['run', 'compile'], { stdio: 'inherit', shell: true });
 
 if (buildRes.status !== 0) {
     console.error("? Échec de la compilation.");
