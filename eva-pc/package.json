@@ -1,6 +1,6 @@
 {
   "name": "eva-assistant-pc",
-  "version": "5.5.4",
+  "version": "5.5.5",
   "description": "Assistant Virtuel IA E.V.A - Evolutionary Virtual Assistant by Astral Technologie",
   "author": "Astral Technologie",
   "main": "dist-electron/main.js",
@@ -14,7 +14,7 @@
     "electron:build": "vite build && electron-builder",
     "deploy": "node deploy.js",
     "postinstall": "node scripts/download-llm.js && electron-builder install-app-deps",
-    "compile": "tsc && vite build && xcopy /E /I /Y web\\\\js dist\\\\js && xcopy /E /I /Y web\\\\assets dist\\\\assets && xcopy /E /I /Y scripts dist\\\\scripts"
+    "compile": "tsc && vite build && xcopy /E /I /Y web\\\\js dist\\\\js && xcopy /E /I /Y web\\\\assets dist\\\\assets && xcopy /E /I /Y web\\\\models dist\\\\models && xcopy /E /I /Y scripts dist\\\\scripts"
   },
   "dependencies": {
     "auto-launch": "^5.0.6",

@@ -238,7 +238,8 @@ function createWindow() {
       nodeIntegration: false,
       webSecurity: false,
       allowRunningInsecureContent: true,
-      sandbox: false
+      sandbox: false,
+      backgroundThrottling: false
     },
     show: false
   })
@@ -323,7 +324,8 @@ function createOverlayWindow() {
       plugins: true,
       nodeIntegration: false,
       contextIsolation: true,
-      preload: join(__dirname, 'preload.js')
+      preload: join(__dirname, 'preload.js'),
+      backgroundThrottling: false
     }
   })
 
@@ -655,6 +657,7 @@ ipcMain.handle('window:close', () => {
   else { app.isQuitting = true; mainWindow?.close() }
 })
 ipcMain.handle('window:isMaximized', () => mainWindow?.isMaximized())
+ipcMain.handle('window:isVisible', () => !!(mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized()))
 
 // â”€â”€â”€ IPC Handlers â€” Overlay Agentique â”€â”€â”€
 ipcMain.handle('overlay:show', (_event, state) => {

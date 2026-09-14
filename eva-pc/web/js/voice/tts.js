@@ -279,14 +279,11 @@ function _onSpeakEnd() {
   if (window.setEvaStatusHeader) {
     try { window.setEvaStatusHeader(null); } catch(e) {}
   }
-  if (window._isJarvisActive && window.eva && window.eva.jarvis) {
-    // Mode Jarvis : temporisation de 3.5s après la fin de parole puis masquage
-    setTimeout(function() {
-      if (window._isJarvisActive) {
-        window.eva.jarvis.setState('hidden', '', false);
-        window._isJarvisActive = false;
-      }
-    }, 3500);
+  if (window._isJarvisActive && window.eva) {
+    // Mode Jarvis interactif : lancer la relance de suivi si non déjà en cours
+    if (!window._isJarvisInFollowUp && typeof window.handleJarvisFollowUp === 'function') {
+      window.handleJarvisFollowUp();
+    }
   }
 }
 

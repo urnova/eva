@@ -24,7 +24,8 @@ const evaAPI = {
     minimize: () => ipcRenderer.invoke('window:minimize'),
     maximize: () => ipcRenderer.invoke('window:maximize'),
     close: () => ipcRenderer.invoke('window:close'),
-    isMaximized: () => ipcRenderer.invoke('window:isMaximized')
+    isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+    isVisible: () => ipcRenderer.invoke('window:isVisible')
   },
 
   // ── electron-store (config locale) ──
@@ -176,6 +177,7 @@ const evaAPI = {
   },
 
   // ── Ouvrir URL dans le navigateur système ──
+  isWindowVisible: () => ipcRenderer.invoke('window:isVisible'),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
 
   // ── Échange du refresh token via main process (Node.js, sans restriction CORS) ──

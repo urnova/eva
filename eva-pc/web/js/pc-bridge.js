@@ -160,28 +160,165 @@
     });
   }
 
-  /* ── Mode Jarvis en Arrière-Plan (Bulle Vocale + TTS forcé) ── */
-  if (window.eva && window.eva.jarvis && window.eva.jarvis.onVoiceCommand) {
-    window.eva.jarvis.onVoiceCommand(function(data) {
-      var cmd = (data && data.command) || (data && data.phrase) || '';
-      console.log('[PC Bridge] Commande vocale Jarvis reçue:', cmd);
-      if (!cmd || !cmd.trim()) return;
-      handleJarvisVoiceCommand(cmd.trim());
-    });
+  /* ══════════════════════════════════════════════════════════
+     MODE JARVIS EN ARRIÈRE-PLAN (Bulle Vocale + TTS forcé + Boucle Conversationnelle)
+     ══════════════════════════════════════════════════════════ */
+  var FOLLOW_UP_PROMPTS = [
+    "C'est tout ce que je peux faire pour vous ?",
+    "Puis-je faire autre chose pour vous ?",
+    "Avez-vous besoin d'autre chose ?",
+    "Y a-t-il autre chose que je puisse faire pour vous ?"
+  ];
+
+  var FAREWELL_PROMPTS = [
+    "Très bien, je reste à votre disposition !",
+    "Parfait, je vous laisse !",
+    "À votre service, bonne journée !",
+    "Compris, à plus tard !"
+  ];
+
+  var CLOSING_REGEX = /\b(non|c'est bon|c'est tout|non merci|rien d'autre|ça ira|merci|au revoir|bonne journée|stop|ferme|quitter|rien)\b/i;
+
+  var _jarvisFollowUpTimer = null;
+
+  function handleJarvisWakeWord(phrase, command) {
+    console.log('[Jarvis] handleJarvisWakeWord déclenché:', { phrase: phrase, command: command });
+    window._isJarvisActive = true;
+    window._isJarvisInFollowUp = false;
+
+    if (window.eva && window.eva.overlay) {
+      window.eva.overlay.show();
+    }
+
+    if (command && command.trim().length > 1) {
+      if (window.eva && window.eva.overlay) {
+        window.eva.overlay.setState('thinking', command.trim());
+      }
+      _submitWakeWordCommand(command.trim());
+    } else {
+      if (window.eva && window.eva.overlay) {
+        window.eva.overlay.setState('listening', 'Je vous écoute...');
+      }
+      // Courte annonce d'écoute pour l'utilisateur
+      if (window.EVATTS && typeof window.EVATTS.speakText === 'function') {
+        window.EVATTS.speakText('Je vous écoute.', window.S ? window.S.config : {});
+      }
+    }
   }
+  window.handleJarvisWakeWord = handleJarvisWakeWord;
 
   function handleJarvisVoiceCommand(query) {
     if (!query || !query.trim()) return;
-    console.log('[Jarvis] Activation mode Jarvis en arrière-plan pour:', query);
-    window._isJarvisActive = true;
-
-    if (window.eva && window.eva.jarvis) {
-      window.eva.jarvis.setState('thinking', 'EVA réfléchit...', true);
-    }
-
-    _submitWakeWordCommand(query);
+    console.log('[Jarvis] Commande vocale reçue en arrière-plan:', query);
+    handleJarvisWakeWord(query, query);
   }
   window.handleJarvisVoiceCommand = handleJarvisVoiceCommand;
+
+  if (window.eva && window.eva.jarvis && window.eva.jarvis.onVoiceCommand) {
+    window.eva.jarvis.onVoiceCommand(function(data) {
+      var cmd = (data && data.command) || (data && data.phrase) || '';
+      if (cmd && cmd.trim()) handleJarvisVoiceCommand(cmd.trim());
+    });
+  }
+
+  // Écouter les étapes d'actions CloudWorks/QuickWorks pour mettre à jour l'overlay en temps réel
+  window.addEventListener('cw:step', function(e) {
+    if (window._isJarvisActive && window.eva && window.eva.overlay && e && e.detail && e.detail.step) {
+      window.eva.overlay.setState('cloudworks', e.detail.step);
+    }
+  });
+
+  // Appelé à la fin de la réponse vocale d'EVA en mode Jarvis
+  function handleJarvisFollowUp() {
+    if (!window._isJarvisActive) return;
+    if (window._isJarvisInFollowUp) return;
+    window._isJarvisInFollowUp = true;
+
+    // Choisir une question de relance aléatoire
+    var q = FOLLOW_UP_PROMPTS[Math.floor(Math.random() * FOLLOW_UP_PROMPTS.length)];
+    console.log('[Jarvis] Relance de suivi :', q);
+
+    if (window.eva && window.eva.overlay) {
+      window.eva.overlay.setState('speaking', q);
+    }
+
+    if (window.EVATTS && typeof window.EVATTS.speakText === 'function') {
+      window.EVATTS.speakText(q, window.S ? window.S.config : {});
+    }
+
+    var durationMs = Math.max(1600, q.length * 60);
+    setTimeout(function() {
+      if (!window._isJarvisActive) return;
+      startJarvisListeningWindow();
+    }, durationMs);
+  }
+  window.handleJarvisFollowUp = handleJarvisFollowUp;
+
+  // Fenêtre d'écoute interactive de 6.5 secondes pour la réponse utilisateur
+  function startJarvisListeningWindow() {
+    if (!window._isJarvisActive) return;
+    console.log('[Jarvis] Début écoute de réponse utilisateur (6.5s)...');
+
+    if (window.eva && window.eva.overlay) {
+      window.eva.overlay.setState('listening', 'Autre chose ? (Dites "Non" pour quitter)');
+    }
+
+    window._jarvisListener = function(text, isFinal) {
+      if (!text || !text.trim()) return false;
+      var clean = text.trim();
+      console.log('[Jarvis Listener]', clean, 'final:', isFinal);
+
+      // 1. Clôture de conversation
+      if (CLOSING_REGEX.test(clean)) {
+        if (_jarvisFollowUpTimer) { clearTimeout(_jarvisFollowUpTimer); _jarvisFollowUpTimer = null; }
+        window._jarvisListener = null;
+
+        var bye = FAREWELL_PROMPTS[Math.floor(Math.random() * FAREWELL_PROMPTS.length)];
+        if (window.eva && window.eva.overlay) {
+          window.eva.overlay.setState('speaking', bye);
+        }
+        if (window.EVATTS && typeof window.EVATTS.speakText === 'function') {
+          window.EVATTS.speakText(bye, window.S ? window.S.config : {});
+        }
+
+        setTimeout(function() {
+          if (window.eva && window.eva.overlay) window.eva.overlay.hide();
+          window._isJarvisActive = false;
+          window._isJarvisInFollowUp = false;
+        }, 2200);
+
+        return true;
+      }
+
+      // 2. Nouvelle commande utilisateur
+      if (isFinal && clean.length > 2) {
+        if (_jarvisFollowUpTimer) { clearTimeout(_jarvisFollowUpTimer); _jarvisFollowUpTimer = null; }
+        window._jarvisListener = null;
+        window._isJarvisInFollowUp = false;
+
+        console.log('[Jarvis] Nouvelle consigne reçue :', clean);
+        if (window.eva && window.eva.overlay) {
+          window.eva.overlay.setState('thinking', clean);
+        }
+        _submitWakeWordCommand(clean);
+        return true;
+      }
+
+      return false;
+    };
+
+    if (_jarvisFollowUpTimer) clearTimeout(_jarvisFollowUpTimer);
+    _jarvisFollowUpTimer = setTimeout(function() {
+      console.log('[Jarvis] Timeout écoute (aucun retour) -> fermeture overlay');
+      window._jarvisListener = null;
+      if (window._isJarvisActive && window.eva && window.eva.overlay) {
+        window.eva.overlay.hide();
+      }
+      window._isJarvisActive = false;
+      window._isJarvisInFollowUp = false;
+    }, 6500);
+  }
+  window.startJarvisListeningWindow = startJarvisListeningWindow;
 
   /* ── Wake Word depuis l'overlay / Chat (application au premier plan) ── */
   // Canal principal : main.ts → chat via wakeword:command

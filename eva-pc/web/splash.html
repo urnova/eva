@@ -9,6 +9,7 @@
   <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script defer src="/js/core/firebase-config.js"></script>
+  <script defer src="/js/lib/vosk.js"></script>
   <style>
     :root{
       --cyan:#00d4ff;--cyan-glow:rgba(0,212,255,0.28);
@@ -304,6 +305,18 @@
         });
       }
     }
+
+    // Préchargement immédiat du modèle Vosk en tâche de fond pendant le splash screen
+    window.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        if (typeof window.Vosk !== 'undefined' && window.Vosk.createModel) {
+          console.log('[Splash] Préchargement Vosk en tâche de fond...');
+          window.Vosk.createModel('/models/vosk-model-small-fr.tar.gz').catch(function(e) {
+            console.warn('[Splash] Préchargement Vosk info:', e);
+          });
+        }
+      }, 400);
+    });
   </script>
 </body>
 </html>

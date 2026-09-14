@@ -71,6 +71,11 @@ async function _initVoskModel() {
   }
 }
 
+// Auto-warm Vosk model immédiatement en tâche de fond
+setTimeout(function() {
+  _initVoskModel().catch(function() {});
+}, 300);
+
 async function _startVoskSTT(stream, onResult) {
   try {
     var model = await _initVoskModel();
@@ -294,7 +299,13 @@ window.EVASTS = {
   stopListening: stopListening,
   getIsListening: getIsListening,
   getCommitted: getCommitted,
-  requestMicPermission: requestMicPermission
+  requestMicPermission: requestMicPermission,
+  initVosk: _initVoskModel,
+  getModel: function() { return _voskModel; },
+  createRecognizer: async function(sr) {
+    var m = await _initVoskModel();
+    return m ? new m.KaldiRecognizer(sr || 16000) : null;
+  }
 };
 
 })();
