@@ -1885,7 +1885,7 @@ ipcMain.handle('stt:start', async () => {
     "Register-ObjectEvent -InputObject $r -EventName 'SpeechRecognized' -Action { param($s,$e); if ($e.Result -and $e.Result.Text) { [Console]::Out.WriteLine('FINAL:' + $e.Result.Text); [Console]::Out.Flush() } } | Out-Null",
     "Register-ObjectEvent -InputObject $r -EventName 'SpeechHypothesized' -Action { param($s,$e); if ($e.Result -and $e.Result.Text) { [Console]::Out.WriteLine('INTERIM:' + $e.Result.Text); [Console]::Out.Flush() } } | Out-Null",
     "$r.RecognizeAsync([System.Speech.Recognition.RecognizeMode]::Multiple)",
-    "while($true) { Start-Sleep -Milliseconds 250 }"
+    "while($true) { Wait-Event -Timeout 1 | Out-Null }"
   ];
   const psCmd = psLines.join('; ');
 

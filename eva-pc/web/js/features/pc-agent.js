@@ -420,67 +420,64 @@
       }
     }
 
-    // ── 0.1 INTERCEPTION D'INTENTION INTELLIGENTE (Web, App, Install, Close) ──
+    // ── 0.1 INTERCEPTION D'INTENTION INTELLIGENTE (App, Web, Install, Close) ──
     if (window.CWTools) {
       var pLower = userPrompt.toLowerCase();
 
-      // 1. Navigation Web explicite (URL présente, ou demande explicite de naviguer sur internet / faire une recherche Google)
-      var urlMatch = (userPrompt + ' ' + (directCommand || '')).match(/(https?:\/\/[^\s"'`]+|www\.[^\s"'`]+|[a-zA-Z0-9-]+\.(?:com|fr|org|net|io|dev)(?:\/[^\s"'`]*)?)/i);
-      var isExplicitWebSearch = /(?:cherche|recherche|trouve)\s+(?:sur\s+(?:internet|le\s+web|google|le\s+net)|dans\s+google)\s+(.+)/i.test(userPrompt);
-      var isExplicitWebBrowse = /(?:navigue|naviguer|va sur|consulte|consulter)\s+(?:sur\s+|dans\s+)?(?:le\s+site|la\s+page|le\s+web|internet|le\s+navigateur)\b/i.test(userPrompt);
+      // Détecter si l'utilisateur demande explicitement un navigateur précis
+      var wantsEdge = /(?:sur\s+edge|dans\s+edge|avec\s+edge|plus\s+edge|sur\s+microsoft\s+edge|l['’]application\s+edge|\bedge\b)/i.test(userPrompt);
+      var wantsChrome = /(?:sur\s+chrome|dans\s+chrome|avec\s+chrome|plus\s+chrome|\bchrome\b)/i.test(userPrompt);
+      var wantsFirefox = /(?:sur\s+firefox|dans\s+firefox|avec\s+firefox|plus\s+firefox|\bfirefox\b)/i.test(userPrompt);
+      var explicitBrowser = wantsEdge ? 'edge' : (wantsChrome ? 'chrome' : (wantsFirefox ? 'firefox' : ''));
 
-      if (urlMatch || isExplicitWebSearch || isExplicitWebBrowse) {
-        var targetUrl = urlMatch ? urlMatch[1] : '';
-        var searchQ = '';
+      // 1. Demande combinée : Application installée ET navigateur (ex: "sur l'application PC que j'ai installée, plus Edge")
+      var wantsInstalledAppAndBrowser = /(?:l['’]application\s+pc|l['’]app\s+pc|application\s+sur\s+mon\s+pc|app\s+installée|application\s+installée)/i.test(userPrompt) &&
+                                        /(?:plus\s+edge|et\s+sur\s+edge|et\s+edge|plus\s+le\s+navigateur|et\s+le\s+navigateur)/i.test(userPrompt);
+      if (wantsInstalledAppAndBrowser) {
+        var comboStep = 'Lancement de l\'application PC et ouverture dans Microsoft Edge...';
+        steps.push({ text: comboStep, ts: new Date().toISOString() });
+        await cmdRef.update({ step: comboStep, steps, updatedAt: new Date() });
+        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: comboStep } }));
 
-        if (!targetUrl) {
-          var m1 = userPrompt.match(/(?:cherche|recherche|trouve)\s+(.+?)\s+(?:sur\s+(?:internet|le\s+web|google|le\s+net)|dans\s+google)/i);
-          var m2 = userPrompt.match(/(?:cherche|recherche|trouve)\s+(?:sur\s+(?:internet|le\s+web|google|le\s+net)\s+)?([^.?!,;]+)/i);
-          if (m1 && m1[1]) searchQ = m1[1].trim();
-          else if (m2 && m2[1]) searchQ = m2[1].trim();
+        var appToLaunch = 'youtube music';
+        if (/spotify/i.test(userPrompt)) appToLaunch = 'spotify';
+        else if (/discord/i.test(userPrompt)) appToLaunch = 'discord';
 
-          if (searchQ) {
-            targetUrl = 'https://www.google.com/search?q=' + encodeURIComponent(searchQ);
-          } else {
-            targetUrl = 'https://www.google.com';
-          }
-        }
+        await window.CWTools.executeTool('app_launch', { target: appToLaunch });
+        await window.CWTools.executeTool('web_browse', { url: 'https://music.youtube.com', browser: 'edge' });
 
-        var stepWeb = searchQ ? ('Recherche de "' + searchQ + '" sur le Web...') : ('Ouverture de ' + targetUrl + ' dans le navigateur...');
-        steps.push({ text: stepWeb, ts: new Date().toISOString() });
-        await cmdRef.update({ step: stepWeb, steps, updatedAt: new Date() });
-        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepWeb } }));
-
-        try {
-          var webRes = await window.CWTools.executeTool('web_browse', { url: targetUrl, query: searchQ });
-          if (webRes && webRes.success) {
-            var webDone = (webRes.result && webRes.result.message) || ('Page web ouverte avec succès ✓');
-            steps.push({ text: webDone, ts: new Date().toISOString() });
-            await cmdRef.update({ status: 'done', step: webDone, steps, updatedAt: new Date() });
-            window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: webDone } }));
-            return { output: webDone, steps: steps };
-          }
-        } catch(eWeb) {
-          console.warn('[PC Agent] Échec navigation web:', eWeb);
-        }
+        var comboDone = 'Application ' + appToLaunch + ' lancée sur votre PC et page ouverte dans Microsoft Edge ✓';
+        steps.push({ text: comboDone, ts: new Date().toISOString() });
+        await cmdRef.update({ status: 'done', step: comboDone, steps, updatedAt: new Date() });
+        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: comboDone } }));
+        return { output: comboDone, steps: steps };
       }
 
-      // 2. Lancement d'application PC (Ouvre Discord, Lance YouTube Music, Démarre Spotify, Ouvre le navigateur...)
+      // 2. Lancement prioritaire d'application PC (Ouvre l'application Edge, Lance YouTube Music, Ouvre Discord, etc.)
       var isAppLaunch = /(?:ouvre|ouvrir|lance|lancer|démarre|demarre|mets|mettre)\s+(?:l['’]application\s+|l['’]app\s+|le\s+logiciel\s+)?([a-zA-Z0-9_\-\s.]+)/i.test(userPrompt) ||
+                        /(?:l['’]application\s+pc|l['’]app\s+pc|installée?\s+sur\s+mon\s+pc)/i.test(userPrompt) ||
                         /Start-Process\s+["']?([^"';\r\n\s]+)["']?/i.test(directCommand || '');
-      if (isAppLaunch) {
+
+      var hasExplicitAppKeyword = /(?:l['’]application|l['’]app|logiciel|sur\s+mon\s+pc|installée?\s+sur\s+mon\s+pc|youtube\s+music|yt\s+music|udemy\s+music|spotify|discord|vlc|steam|bloc-notes|calculatrice|terminal)/i.test(userPrompt);
+
+      if (isAppLaunch && (hasExplicitAppKeyword || !/(https?:\/\/|www\.)/i.test(userPrompt))) {
         var appMatch = userPrompt.match(/(?:ouvre|ouvrir|lance|lancer|démarre|demarre|mets|mettre)\s+(?:l['’]application\s+|l['’]app\s+|le\s+logiciel\s+)?([a-zA-Z0-9_\-\s.]+)/i);
         var spMatch = (directCommand || '').match(/Start-Process\s+["']?([^"';\r\n\s]+)["']?/i);
         var candidateApp = appMatch ? appMatch[1].trim() : (spMatch ? spMatch[1].trim() : '');
 
-        // Nettoyer les clauses secondaires ("j'ai installé l'application sur mon PC", "et lancer ma playlist...")
+        if (!candidateApp && /youtube\s*music|yt\s*music|udemy\s*music/i.test(userPrompt)) {
+          candidateApp = 'youtube music';
+        } else if (!candidateApp && /edge/i.test(userPrompt)) {
+          candidateApp = 'msedge';
+        }
+
+        // Nettoyer les clauses secondaires
         candidateApp = candidateApp.replace(/,\s*(?:j['’]ai\s+installé|c['’]est\s+installé|sur\s+mon\s+pc).*/gi, '');
         candidateApp = candidateApp.replace(/\s+(?:et\s+lance|et\s+lancer|et\s+joue|et\s+jouer|et\s+mets|et\s+mettre).*/gi, '');
         candidateApp = candidateApp.replace(/(?:s['’`]?il\s+te\s+pla\S*|s['’`]?il\s+vous\s+pla\S*|\bstp\b|\bsvp\b|\bmerci\b|\bmaintenant\b)/gi, '');
         candidateApp = candidateApp.replace(/\s+s['’`]?$/i, '');
         candidateApp = candidateApp.replace(/[!.,;?]+$/g, '').trim();
 
-        // Vérifier que ce n'est pas une URL
         var isUrl = /^(https?:\/\/|www\.)/i.test(candidateApp);
 
         if (candidateApp && !isUrl) {
@@ -501,6 +498,49 @@
           } catch(eLaunch) {
             console.warn('[PC Agent] Échec lancement direct app:', eLaunch);
           }
+        }
+      }
+
+      // 3. Navigation Web explicite (URL présente, ou demande explicite de naviguer sur internet / faire une recherche Google)
+      var urlMatch = (userPrompt + ' ' + (directCommand || '')).match(/(https?:\/\/[^\s"'`]+|www\.[^\s"'`]+|[a-zA-Z0-9-]+\.(?:com|fr|org|net|io|dev)(?:\/[^\s"'`]*)?)/i);
+      var isExplicitWebSearch = /(?:cherche|recherche|trouve)\s+(?:sur\s+(?:internet|le\s+web|google|le\s+net)|dans\s+google)\s+(.+)/i.test(userPrompt);
+      var isExplicitWebBrowse = /(?:navigue|naviguer|va sur|consulte|consulter)\s+(?:sur\s+|dans\s+)?(?:le\s+site|la\s+page|le\s+web|internet|le\s+navigateur)\b/i.test(userPrompt) ||
+                                (wantsEdge && /(?:ouvre|aller|lancer)/i.test(userPrompt));
+
+      if (urlMatch || isExplicitWebSearch || isExplicitWebBrowse) {
+        var targetUrl = urlMatch ? urlMatch[1] : '';
+        var searchQ = '';
+
+        if (!targetUrl) {
+          var m1 = userPrompt.match(/(?:cherche|recherche|trouve)\s+(.+?)\s+(?:sur\s+(?:internet|le\s+web|google|le\s+net)|dans\s+google)/i);
+          var m2 = userPrompt.match(/(?:cherche|recherche|trouve)\s+(?:sur\s+(?:internet|le\s+web|google|le\s+net)\s+)?([^.?!,;]+)/i);
+          if (m1 && m1[1]) searchQ = m1[1].trim();
+          else if (m2 && m2[1]) searchQ = m2[1].trim();
+
+          if (searchQ) {
+            targetUrl = 'https://www.google.com/search?q=' + encodeURIComponent(searchQ);
+          } else {
+            targetUrl = wantsEdge ? 'https://www.bing.com' : 'https://www.google.com';
+          }
+        }
+
+        var browserDisplay = explicitBrowser === 'edge' ? 'Microsoft Edge' : (explicitBrowser === 'chrome' ? 'Google Chrome' : (explicitBrowser === 'firefox' ? 'Firefox' : 'le navigateur'));
+        var stepWeb = searchQ ? ('Recherche de "' + searchQ + '" sur le Web (' + browserDisplay + ')...') : ('Ouverture de ' + targetUrl + ' dans ' + browserDisplay + '...');
+        steps.push({ text: stepWeb, ts: new Date().toISOString() });
+        await cmdRef.update({ step: stepWeb, steps, updatedAt: new Date() });
+        window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: stepWeb } }));
+
+        try {
+          var webRes = await window.CWTools.executeTool('web_browse', { url: targetUrl, query: searchQ, browser: explicitBrowser });
+          if (webRes && webRes.success) {
+            var webDone = (webRes.result && webRes.result.message) || ('Page web ouverte avec succès ✓');
+            steps.push({ text: webDone, ts: new Date().toISOString() });
+            await cmdRef.update({ status: 'done', step: webDone, steps, updatedAt: new Date() });
+            window.dispatchEvent(new CustomEvent('cw:step', { detail: { step: webDone } }));
+            return { output: webDone, steps: steps };
+          }
+        } catch(eWeb) {
+          console.warn('[PC Agent] Échec navigation web:', eWeb);
         }
       }
 

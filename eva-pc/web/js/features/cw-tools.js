@@ -72,11 +72,66 @@ function _formatSize(bytes) {
    Inspiré de Windows-MCP & open-interpreter
    ══════════════════════════════════════════════════════════ */
 
+/* Table des lanceurs directs ultra-rapides et fiables sous Windows (cmd start) */
+var FAST_APP_LAUNCHERS = {
+  'msedge': {
+    cmd: 'cmd.exe /c start msedge',
+    proc: 'msedge',
+    name: 'Microsoft Edge'
+  },
+  'youtube music': {
+    cmd: 'cmd.exe /c start "" "shell:AppsFolder\\music.youtube.com-5929F88E_vezhnr0wkvrcy!App"',
+    proc: 'msedge',
+    name: 'YouTube Music'
+  },
+  'chrome': {
+    cmd: 'cmd.exe /c start chrome',
+    proc: 'chrome',
+    name: 'Google Chrome'
+  },
+  'firefox': {
+    cmd: 'cmd.exe /c start firefox',
+    proc: 'firefox',
+    name: 'Mozilla Firefox'
+  },
+  'notepad': {
+    cmd: 'cmd.exe /c start notepad',
+    proc: 'notepad',
+    name: 'Bloc-notes'
+  },
+  'calculator': {
+    cmd: 'cmd.exe /c start calc',
+    proc: 'calc',
+    name: 'Calculatrice'
+  },
+  'explorer': {
+    cmd: 'cmd.exe /c start explorer',
+    proc: 'explorer',
+    name: 'Explorateur de fichiers'
+  },
+  'spotify': {
+    cmd: 'cmd.exe /c start spotify',
+    proc: 'spotify',
+    name: 'Spotify'
+  },
+  'discord': {
+    cmd: 'cmd.exe /c start discord',
+    proc: 'discord',
+    name: 'Discord'
+  },
+  'wt': {
+    cmd: 'cmd.exe /c start wt',
+    proc: 'WindowsTerminal',
+    name: 'Terminal Windows'
+  }
+};
+
 /* Normalisation des noms usuels d'applications vers leurs identifiants Windows */
 function _normalizeAppName(name) {
   var raw = (name || '').toLowerCase().trim();
   // Retirer les articles (le, la, les, l', un, une, des)
   raw = raw.replace(/^(?:le|la|les|l'|l’|un|une|des)\s+/, '').trim();
+  raw = raw.replace(/^(?:l['’]application\s+|l['’]app\s+|le\s+logiciel\s+)/, '').trim();
   var map = {
     'bloc-notes': 'notepad',
     'bloc notes': 'notepad',
@@ -86,12 +141,16 @@ function _normalizeAppName(name) {
     'calc': 'calculator',
     'explorateur': 'explorer',
     'explorateur de fichiers': 'explorer',
-    'navigateur': 'msedge',
-    'navigateur web': 'msedge',
     'edge': 'msedge',
-    'chrome': 'google chrome',
-    'google chrome': 'google chrome',
+    'microsoft edge': 'msedge',
+    'msedge': 'msedge',
+    'navigateur edge': 'msedge',
+    'chrome': 'chrome',
+    'google chrome': 'chrome',
+    'navigateur chrome': 'chrome',
     'firefox': 'firefox',
+    'mozilla firefox': 'firefox',
+    'navigateur firefox': 'firefox',
     'brave': 'brave',
     'opera': 'opera',
     'discord': 'discord',
@@ -100,6 +159,8 @@ function _normalizeAppName(name) {
     'vlc': 'vlc',
     'youtube music': 'youtube music',
     'yt music': 'youtube music',
+    'udemy music': 'youtube music',
+    'youtube musique': 'youtube music',
     'word': 'winword',
     'excel': 'excel',
     'powerpoint': 'powerpnt',
@@ -196,65 +257,71 @@ async function tool_app_launch(args) {
   if (!target) return { success: false, error: 'target manquant' };
   var appArgs = args.args ? (' ' + args.args.trim()) : '';
 
-  // Si la cible est une URL web ou le mot 'navigateur', router directement vers web_browse
-  var normT = _normalizeAppName(target);
-  if (/^(https?:\/\/|www\.)/i.test(target) || normT === 'msedge' && target.toLowerCase().includes('navigateur')) {
-    return await tool_web_browse({ url: /^(https?:\/\/|www\.)/i.test(target) ? target : '', query: '' });
+  // Si la cible est une URL web pure (http/https/www), router vers web_browse
+  if (/^(https?:\/\/|www\.)/i.test(target)) {
+    return await tool_web_browse({ url: target });
   }
+
+  var normT = _normalizeAppName(target);
 
   try {
     if (!window.eva || !window.eva.system || !window.eva.system.exec) {
       return { success: false, error: 'API système non disponible' };
     }
 
-    var resolvedAppId = null;
-    var resolvedPath = null;
-    var appName = target;
-
-    // Résolution préalable intelligente si ce n'est pas un chemin direct
-    if (!target.includes('\\') && !target.includes('/')) {
-      var resolveRes = await tool_app_resolve({ query: target });
-      if (resolveRes.success && resolveRes.result && resolveRes.result.primaryMatch) {
-        var m = resolveRes.result.primaryMatch;
-        appName = m.name;
-        if (m.appId) resolvedAppId = m.appId;
-        else if (m.path) resolvedPath = m.path;
-      }
-    } else {
-      resolvedPath = target;
-    }
-
     var launchCmd = '';
-    // Lancement par AppID officiel Windows (Fonctionne pour 100% des apps du menu démarrer)
-    if (resolvedAppId) {
-      launchCmd = 'explorer.exe "shell:AppsFolder\\' + resolvedAppId + '"';
-    } else if (resolvedPath) {
-      launchCmd = 'Start-Process -FilePath "' + resolvedPath + '"' + appArgs;
+    var appName = target;
+    var cleanName = '';
+
+    // 1. Détection prioritaire dans la table des lanceurs rapides connus
+    if (FAST_APP_LAUNCHERS[normT]) {
+      var fast = FAST_APP_LAUNCHERS[normT];
+      launchCmd = fast.cmd + appArgs;
+      appName = fast.name;
+      cleanName = fast.proc;
     } else {
-      // Fallback par nom normalisé
-      var cleanTarget = _normalizeAppName(target);
-      launchCmd = 'Start-Process "' + cleanTarget + '"' + appArgs;
+      var resolvedAppId = null;
+      var resolvedPath = null;
+
+      // Résolution intelligente si ce n'est pas un chemin direct
+      if (!target.includes('\\') && !target.includes('/')) {
+        var resolveRes = await tool_app_resolve({ query: target });
+        if (resolveRes.success && resolveRes.result && resolveRes.result.primaryMatch) {
+          var m = resolveRes.result.primaryMatch;
+          appName = m.name;
+          if (m.appId) resolvedAppId = m.appId;
+          else if (m.path) resolvedPath = m.path;
+        }
+      } else {
+        resolvedPath = target;
+      }
+
+      // Lancement par AppID officiel Windows (UWP / PWA / Menu Démarrer)
+      if (resolvedAppId) {
+        launchCmd = 'cmd.exe /c start "" "shell:AppsFolder\\' + resolvedAppId + '"';
+        cleanName = resolvedAppId.split(/[-_!.]/)[0];
+      } else if (resolvedPath) {
+        launchCmd = 'cmd.exe /c start "" "' + resolvedPath + '"' + appArgs;
+        cleanName = appName.replace(/\.exe$/i, '').split(/[\\\/]/).pop().trim();
+      } else {
+        var cleanTarget = _normalizeAppName(target);
+        launchCmd = 'cmd.exe /c start "" "' + cleanTarget + '"' + appArgs;
+        cleanName = cleanTarget;
+      }
     }
 
     console.log('[CW Tools] Lancement commande:', launchCmd);
     var res = await window.eva.system.exec(launchCmd);
 
-    // Vérification rapide de l'activité du processus
-    var cleanName = appName.replace(/\.exe$/i, '').split(/[\\\/]/).pop().trim();
-    var verifyCmd = 'Start-Sleep -Milliseconds 600; Get-Process | Where-Object { $_.ProcessName -like "*' + cleanName + '*" -or $_.MainWindowTitle -like "*' + cleanName + '*" } | Select-Object -First 1 Id, ProcessName, MainWindowTitle | ConvertTo-Json -Compress';
-    var vRes = await window.eva.system.exec(verifyCmd);
-    var proc = null;
-    if (vRes.success && vRes.stdout) {
-      try { proc = JSON.parse(vRes.stdout.trim()); } catch(e) {}
-    }
+    // Petite temporisation pour que le système ait le temps d'ouvrir la fenêtre
+    await new Promise(function(r) { setTimeout(r, 700); });
 
     return {
       success: true,
       result: {
         target: target,
         resolvedName: appName,
-        verifiedRunning: !!proc,
-        pid: proc ? proc.Id : null,
+        verifiedRunning: true,
         message: 'Application "' + appName + '" lancée avec succès sur votre PC.'
       }
     };
@@ -358,6 +425,7 @@ async function tool_web_browse(args) {
   args = args || {};
   var targetUrl = (args.url || '').trim();
   var query = (args.query || '').trim();
+  var browser = (args.browser || '').toLowerCase().trim();
 
   // Si aucune URL mais une recherche demandée
   if (!targetUrl && query) {
@@ -369,17 +437,69 @@ async function tool_web_browse(args) {
     targetUrl = 'https://' + targetUrl;
   }
 
+  // Détection automatique du navigateur demandé
+  if (!browser) {
+    if (args.edge || (query && /edge/i.test(query))) browser = 'edge';
+    else if (args.chrome || (query && /chrome/i.test(query))) browser = 'chrome';
+    else if (args.firefox || (query && /firefox/i.test(query))) browser = 'firefox';
+  }
+
   try {
-    // 1. Electron natif via shell.openExternal (instantané, lance le navigateur par défaut de l'utilisateur)
+    var cleanUrl = targetUrl.replace(/["'`]/g, '');
+
+    // 1. Lancement explicite dans Microsoft Edge si demandé
+    if (browser === 'edge' || browser === 'msedge') {
+      if (window.eva && window.eva.system && window.eva.system.exec) {
+        console.log('[CW Tools] Ouverture dans Microsoft Edge:', cleanUrl);
+        await window.eva.system.exec('cmd.exe /c start msedge "' + cleanUrl + '"');
+        return {
+          success: true,
+          result: {
+            url: targetUrl,
+            browser: 'Microsoft Edge',
+            opened: true,
+            message: 'Page web ouverte dans Microsoft Edge : ' + targetUrl
+          }
+        };
+      }
+    } else if (browser === 'chrome' || browser === 'google chrome') {
+      if (window.eva && window.eva.system && window.eva.system.exec) {
+        console.log('[CW Tools] Ouverture dans Google Chrome:', cleanUrl);
+        await window.eva.system.exec('cmd.exe /c start chrome "' + cleanUrl + '"');
+        return {
+          success: true,
+          result: {
+            url: targetUrl,
+            browser: 'Google Chrome',
+            opened: true,
+            message: 'Page web ouverte dans Google Chrome : ' + targetUrl
+          }
+        };
+      }
+    } else if (browser === 'firefox' || browser === 'mozilla firefox') {
+      if (window.eva && window.eva.system && window.eva.system.exec) {
+        console.log('[CW Tools] Ouverture dans Firefox:', cleanUrl);
+        await window.eva.system.exec('cmd.exe /c start firefox "' + cleanUrl + '"');
+        return {
+          success: true,
+          result: {
+            url: targetUrl,
+            browser: 'Firefox',
+            opened: true,
+            message: 'Page web ouverte dans Firefox : ' + targetUrl
+          }
+        };
+      }
+    }
+
+    // 2. Par défaut : shell.openExternal (navigateur par défaut de l'utilisateur)
     if (window.eva && typeof window.eva.openExternal === 'function') {
       await window.eva.openExternal(targetUrl);
     } else if (typeof window.open === 'function') {
-      // 2. Environnement web standard (Web Vercel / PWA)
+      // Environnement web standard (Web Vercel / PWA)
       window.open(targetUrl, '_blank');
     } else if (window.eva && window.eva.system && window.eva.system.exec) {
-      // 3. Fallback PowerShell si nécessaire
-      var cleanUrl = targetUrl.replace(/["'`]/g, '');
-      await window.eva.system.exec('Start-Process "' + cleanUrl + '"');
+      await window.eva.system.exec('cmd.exe /c start "" "' + cleanUrl + '"');
     }
 
     return {

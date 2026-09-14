@@ -219,10 +219,12 @@ function stop() {
   commandBuffer = '';
   if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
 
+  // Ne pas couper le moteur STT si l'utilisateur est lui-même en train d'enregistrer au micro
+  var isUserRecording = (window.EVASTS && typeof window.EVASTS.getIsListening === 'function' && window.EVASTS.getIsListening());
+
   if (_isElectron()) {
-    if (window.eva && window.eva.stt) {
-      window.eva.stt.stop();
-      window.eva.stt.offAll();
+    if (!isUserRecording && window.eva && window.eva.stt && typeof window.eva.stt.stop === 'function') {
+      try { window.eva.stt.stop(); } catch(e) {}
     }
   } else {
     if (recognition) {
