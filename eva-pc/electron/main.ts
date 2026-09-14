@@ -1974,27 +1974,25 @@ ipcMain.handle('tts:speak', async (_, text: string) => {
     `$s.Speak("${safeText}")`,
   ].join('; ');
 
-  try {
-    const { spawn } = await import('child_process');
-    _ttsProcess = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', psCmd], { stdio: 'ignore', detached: true });
-    _ttsProcess.unref();
-    _ttsProcess.on('exit', () => {
+  return new Promise(async (resolve) => {
+    try {
+      const { spawn } = await import('child_process');
+      _ttsProcess = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', psCmd], { stdio: 'ignore' });
+      _ttsProcess.on('exit', () => {
+        _ttsProcess = null;
+        resolve({ success: true });
+      });
+      _ttsProcess.on('error', (err: any) => {
+        console.error('[TTS] Erreur SAPI:', err);
+        _ttsProcess = null;
+        resolve({ success: false, error: String(err) });
+      });
+    } catch(e) {
+      console.error('[TTS] Erreur spawn SAPI:', e);
       _ttsProcess = null;
-      // Reprendre l'écoute micro après un court délai de silence
-      setTimeout(() => {
-        if (_sttProcess && _sttProcess.stdin) {
-          try { _sttProcess.stdin.write(JSON.stringify({ command: 'resume' }) + '\n'); } catch(e) {}
-        }
-      }, 350);
-    });
-    return { success: true };
-  } catch(e) {
-    console.error('[TTS] Erreur SAPI:', e);
-    if (_sttProcess && _sttProcess.stdin) {
-      try { _sttProcess.stdin.write(JSON.stringify({ command: 'resume' }) + '\n'); } catch(e) {}
+      resolve({ success: false, error: String(e) });
     }
-    return { success: false, error: String(e) };
-  }
+  });
 });
 
 ipcMain.handle('tts:stop', async () => {

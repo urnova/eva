@@ -32,12 +32,19 @@ function _getEngine(config) {
       speak: function(text, cfg, onStart, onEnd) {
         if (onStart) onStart();
         window.eva.tts.speak(text).then(function() {
-          var estimatedMs = Math.max(1000, text.length * 60);
-          setTimeout(function() { if (onEnd) onEnd(); }, estimatedMs);
-        }).catch(function() { if (onEnd) onEnd(); });
+          window._lastTtsEndTime = Date.now();
+          setTimeout(function() {
+            window._lastTtsEndTime = Date.now();
+            if (onEnd) onEnd();
+          }, 350);
+        }).catch(function() {
+          window._lastTtsEndTime = Date.now();
+          if (onEnd) onEnd();
+        });
       },
       stop: function() {
         window.eva.tts.stop();
+        window._lastTtsEndTime = Date.now();
       },
       isReady: function() { return true; }
     };
@@ -280,8 +287,8 @@ function _onSpeakEnd() {
     try { window.setEvaStatusHeader(null); } catch(e) {}
   }
   if (window._isJarvisActive && window.eva) {
-    // Mode Jarvis interactif : lancer la relance de suivi si non déjà en cours
-    if (!window._isJarvisInFollowUp && typeof window.handleJarvisFollowUp === 'function') {
+    // Mode Jarvis interactif : déclencher le suivi UNIQUEMENT après la réponse vocale de l'assistant
+    if (window._jarvisState === 'answering' && typeof window.handleJarvisFollowUp === 'function') {
       window.handleJarvisFollowUp();
     }
   }

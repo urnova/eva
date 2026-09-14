@@ -131,8 +131,11 @@ async function _dispatchCommand(cmd) {
 function _handleTranscript(text, isFinal) {
   if (!isActive || !text || !text.trim()) return;
 
-  // Anti-écho : ne pas écouter pendant qu'EVA parle
+  // Anti-écho : ne pas écouter pendant qu'EVA parle ni dans les 800ms suivant l'arrêt de parole
   if (window.EVATTS && typeof window.EVATTS.isSpeaking === 'function' && window.EVATTS.isSpeaking()) {
+    return;
+  }
+  if (window._lastTtsEndTime && (Date.now() - window._lastTtsEndTime < 800)) {
     return;
   }
   // Ne pas interférer avec l'enregistrement manuel au micro

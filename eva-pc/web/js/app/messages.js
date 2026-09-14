@@ -1047,6 +1047,7 @@ function streamEvaMsg(content) {
   if ((S.ttsOn || window._isJarvisActive) && window.EVATTS && plain && plain.trim().length > 0) {
     setEvaStatus('EVA PARLE...', 'speaking');
     if (window._isJarvisActive && window.eva && window.eva.jarvis) {
+      window._jarvisState = 'answering';
       var preview = plain.substring(0, 100) + (plain.length > 100 ? '...' : '');
       window.eva.jarvis.setState('speaking', preview, true);
     }
