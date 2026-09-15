@@ -24,63 +24,103 @@ var _currentText = '';
 var _skipTtsBtn  = null; /* bouton "couper la voix" dans le header */
 var _elevenlabsAudio = null; /* Audio en cours pour ElevenLabs */
 
-/* ── Appel le bon engine selon la config ── */
-function _getEngine(config) {
-  // Priorité maximale : TTS natif Windows SAPI via Electron (uniquement sur l'app PC)
-  if (window.eva && window.eva.tts) {
-    return {
-      speak: function(text, cfg, onStart, onEnd) {
-        if (onStart) onStart();
-        window.eva.tts.speak(text).then(function() {
-          window._lastTtsEndTime = Date.now();
-          setTimeout(function() {
-            window._lastTtsEndTime = Date.now();
-            if (onEnd) onEnd();
-          }, 350);
-        }).catch(function() {
-          window._lastTtsEndTime = Date.now();
-          if (onEnd) onEnd();
-        });
-      },
-      stop: function() {
-        window.eva.tts.stop();
+/* ── Helper de secours vocal (Web Speech ou SAPI) sans jamais bloquer le cycle ── */
+function _speakFallback(text, config, onStart, onEnd) {
+  if (onStart) onStart();
+  if (typeof speechSynthesis !== 'undefined') {
+    try {
+      var utt = new SpeechSynthesisUtterance(text);
+      utt.lang = 'fr-FR';
+      utt.rate = 0.95;
+      utt.onend = function() {
         window._lastTtsEndTime = Date.now();
-      },
-      isReady: function() { return true; }
-    };
+        if (onEnd) onEnd();
+      };
+      utt.onerror = function() {
+        window._lastTtsEndTime = Date.now();
+        if (onEnd) onEnd();
+      };
+      speechSynthesis.speak(utt);
+      return;
+    } catch(e) {}
   }
+  if (window.eva && window.eva.tts) {
+    window.eva.tts.speak(text).then(function() {
+      window._lastTtsEndTime = Date.now();
+      if (onEnd) onEnd();
+    }).catch(function() {
+      window._lastTtsEndTime = Date.now();
+      if (onEnd) onEnd();
+    });
+  } else {
+    window._lastTtsEndTime = Date.now();
+    if (onEnd) onEnd();
+  }
+}
 
-  var prov = (config && config.voiceProvider) || 'eva-custom';
+/* ── Appel le bon engine selon la config (Respect absolu du provider choisi) ── */
+function _getEngine(config) {
+  var prov = (config && config.voiceProvider) ||
+             (window.S && window.S.config && window.S.config.voiceProvider) ||
+             (typeof localStorage !== 'undefined' ? localStorage.getItem('eva_voice_provider') : null) ||
+             'elevenlabs';
+
   if (prov === 'eva-custom' || prov === 'piper-vits') {
     return window.EvaCustomTTS || null;
   }
-  if (prov === 'kokoro') {
+  if (prov === 'kokoro' || prov === 'eva') {
     return window.KokoroTTS || window.EvaCustomTTS || null;
   }
   if (prov === 'piper') {
     return window.PiperTTS || window.EvaCustomTTS || null;
   }
+  if (prov === 'sapi') {
+    if (window.eva && window.eva.tts) {
+      return {
+        speak: function(text, cfg, onStart, onEnd) {
+          if (onStart) onStart();
+          window.eva.tts.speak(text).then(function() {
+            window._lastTtsEndTime = Date.now();
+            if (onEnd) onEnd();
+          }).catch(function() {
+            window._lastTtsEndTime = Date.now();
+            if (onEnd) onEnd();
+          });
+        },
+        stop: function() {
+          window.eva.tts.stop();
+          window._lastTtsEndTime = Date.now();
+        },
+        isReady: function() { return true; }
+      };
+    }
+  }
   if (prov === 'elevenlabs') {
-    /* Engine ElevenLabs inline */
+    /* Engine ElevenLabs inline — Haute fidélité audio */
     return {
       speak: function(text, cfg, onStart, onEnd) {
-        var key     = cfg && cfg.elevenLabsApiKey;
-        var voiceId = (cfg && cfg.elevenLabsVoiceId) || '21m00Tcm4TlvDq8ikWAM'; /* Rachel par défaut */
+        var key = (cfg && cfg.elevenLabsApiKey) ||
+                  (window.S && window.S.config && window.S.config.elevenLabsApiKey) ||
+                  (typeof localStorage !== 'undefined' ? localStorage.getItem('eva_elevenlabs_key') : null);
+        var voiceId = (cfg && cfg.elevenLabsVoiceId) ||
+                      (window.S && window.S.config && window.S.config.elevenLabsVoiceId) ||
+                      (typeof localStorage !== 'undefined' ? localStorage.getItem('eva_elevenlabs_voice') : null) ||
+                      '21m00Tcm4TlvDq8ikWAM'; /* Rachel par défaut */
+
         if (!key) {
-          /* Pas de clé → fallback natif silencieux */
-          console.warn('[EVA TTS] ElevenLabs : clé API manquante, fallback navigateur.');
-          if (typeof speechSynthesis !== 'undefined') {
-            var utt = new SpeechSynthesisUtterance(text);
-            utt.lang = 'fr-FR'; utt.rate = 0.92;
-            utt.onend = function() { if (onEnd) onEnd(); };
-            speechSynthesis.speak(utt);
-          }
+          console.warn('[EVA TTS] ElevenLabs : clé API manquante, bascule sur synthèse de secours.');
+          _speakFallback(text, cfg, onStart, onEnd);
           return;
         }
+
         if (onStart) onStart();
-        fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId + '/stream', {
+
+        fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(voiceId) + '/stream', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'xi-api-key': key },
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': key
+          },
           body: JSON.stringify({
             text: text,
             model_id: 'eleven_multilingual_v2',
@@ -93,38 +133,50 @@ function _getEngine(config) {
           var url = URL.createObjectURL(blob);
           _elevenlabsAudio = new Audio(url);
           _elevenlabsAudio.onended = function() {
-            URL.revokeObjectURL(url);
+            try { URL.revokeObjectURL(url); } catch(e) {}
             _elevenlabsAudio = null;
+            window._lastTtsEndTime = Date.now();
             if (onEnd) onEnd();
           };
           _elevenlabsAudio.onerror = function() {
-            URL.revokeObjectURL(url);
+            try { URL.revokeObjectURL(url); } catch(e) {}
             _elevenlabsAudio = null;
+            window._lastTtsEndTime = Date.now();
             if (onEnd) onEnd();
           };
-          _elevenlabsAudio.play();
+          _elevenlabsAudio.play().catch(function(e) {
+            console.warn('[EVA TTS] Lecture audio ElevenLabs bloquée:', e);
+            _elevenlabsAudio = null;
+            window._lastTtsEndTime = Date.now();
+            if (onEnd) onEnd();
+          });
         }).catch(function(e) {
           console.error('[EVA TTS] ElevenLabs erreur:', e);
           _elevenlabsAudio = null;
-          if (onEnd) onEnd();
+          // Secours automatique pour ne jamais couper la parole ni bloquer le cycle
+          _speakFallback(text, cfg, null, onEnd);
         });
-      }
+      },
+      stop: function() {
+        if (_elevenlabsAudio) {
+          try { _elevenlabsAudio.pause(); } catch(e) {}
+          _elevenlabsAudio = null;
+        }
+        window._lastTtsEndTime = Date.now();
+      },
+      isReady: function() { return true; }
     };
   }
   if (prov === 'openai') {
     return {
       speak: function(text, cfg, onStart, onEnd) {
-        var key   = cfg && (cfg.openAITTSApiKey || cfg.openaiApiKey);
-        var voice = (cfg && cfg.openAITTSVoice) || 'nova'; /* nova = voix féminine douce */
+        var key = (cfg && (cfg.openAITTSApiKey || cfg.openaiApiKey)) ||
+                  (window.S && window.S.config && (window.S.config.openAITTSApiKey || window.S.config.openaiApiKey));
+        var voice = (cfg && cfg.openAITTSVoice) ||
+                    (window.S && window.S.config && window.S.config.openAITTSVoice) || 'nova';
         if (!key) {
-          /* Pas de clé → fallback natif */
           console.warn('[EVA TTS] OpenAI TTS : clé API manquante, fallback navigateur.');
-          if (typeof speechSynthesis !== 'undefined') {
-            var utt = new SpeechSynthesisUtterance(text);
-            utt.lang = 'fr-FR'; utt.rate = 0.92;
-            utt.onend = function() { if (onEnd) onEnd(); };
-            speechSynthesis.speak(utt);
-          }
+          _speakFallback(text, cfg, onStart, onEnd);
           return;
         }
         if (onStart) onStart();
@@ -138,15 +190,37 @@ function _getEngine(config) {
         }).then(function(blob) {
           var url = URL.createObjectURL(blob);
           window._openaiAudio = new Audio(url);
-          window._openaiAudio.onended = function() { URL.revokeObjectURL(url); window._openaiAudio = null; if (onEnd) onEnd(); };
-          window._openaiAudio.onerror = function() { URL.revokeObjectURL(url); window._openaiAudio = null; if (onEnd) onEnd(); };
-          window._openaiAudio.play();
+          window._openaiAudio.onended = function() {
+            try { URL.revokeObjectURL(url); } catch(e) {}
+            window._openaiAudio = null;
+            window._lastTtsEndTime = Date.now();
+            if (onEnd) onEnd();
+          };
+          window._openaiAudio.onerror = function() {
+            try { URL.revokeObjectURL(url); } catch(e) {}
+            window._openaiAudio = null;
+            window._lastTtsEndTime = Date.now();
+            if (onEnd) onEnd();
+          };
+          window._openaiAudio.play().catch(function() {
+            window._openaiAudio = null;
+            window._lastTtsEndTime = Date.now();
+            if (onEnd) onEnd();
+          });
         }).catch(function(e) {
           console.error('[EVA TTS] OpenAI TTS erreur:', e);
           window._openaiAudio = null;
-          if (onEnd) onEnd();
+          _speakFallback(text, cfg, null, onEnd);
         });
-      }
+      },
+      stop: function() {
+        if (window._openaiAudio) {
+          try { window._openaiAudio.pause(); } catch(e) {}
+          window._openaiAudio = null;
+        }
+        window._lastTtsEndTime = Date.now();
+      },
+      isReady: function() { return true; }
     };
   }
   /* 'native' / fallback */
@@ -396,6 +470,8 @@ window.EVATTS = {
    */
   isSpeaking: function() {
     if (_speaking) return true;
+    if (_elevenlabsAudio && !_elevenlabsAudio.paused) return true;
+    if (window._openaiAudio && !window._openaiAudio.paused) return true;
     if (window.EvaCustomTTS && typeof window.EvaCustomTTS.isPlaying === 'function') {
       try { if (window.EvaCustomTTS.isPlaying()) return true; } catch(e) {}
     }

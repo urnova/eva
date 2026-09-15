@@ -859,10 +859,11 @@ async function handleSend() {
     if (hasCW && (!cleanContent || cleanContent.trim().length < 5)) {
       cleanContent = "Je m'en occupe tout de suite ! Je lance l'exécution sur votre PC via CloudWorks.";
     }
-    if (cleanContent && cleanContent.trim()) {
-      streamEvaMsg(cleanContent);
+    if (!cleanContent || !cleanContent.trim()) {
+      cleanContent = (result.content && result.content.trim()) ? result.content.trim() : "C'est fait.";
     }
-    await saveConvMsg(text || '[Image]', cleanContent || result.content.slice(0, 200));
+    streamEvaMsg(cleanContent);
+    await saveConvMsg(text || '[Image]', cleanContent || (result.content && result.content.slice(0, 200)) || 'Réponse');
     
     /* ── Mise à jour des statistiques Firebase ── */
     if (window.updateUsageStats) {
@@ -976,6 +977,15 @@ async function handleSend() {
           _lastBubble.appendChild(_reportBtn);
         }
         toast('Erreur IA — vérifiez les paramètres', 'error');
+        if (window._isJarvisActive) {
+          var errVoice = "Désolée, une erreur est survenue lors de la communication avec le modèle d'intelligence artificielle.";
+          if (window.eva && window.eva.overlay) {
+            window.eva.overlay.setState('speaking', errVoice);
+          }
+          if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
+            window.EVATTS.speakTextStreaming(errVoice, window.S ? window.S.config : {});
+          }
+        }
       }
     }
     if (window.EvaCharacter) window.EvaCharacter.setIdle();
@@ -1124,13 +1134,23 @@ function streamEvaMsg(content) {
     if (S.ttsOn && window.EVATTS && (!plain || plain.trim().length === 0)) {
       window.EVATTS.stopTTS();
     }
-    if (window._isJarvisActive && window.eva && window.eva.jarvis) {
-      setTimeout(function() {
-        if (window._isJarvisActive) {
-          window.eva.jarvis.setState('hidden', '', false);
-          window._isJarvisActive = false;
-        }
-      }, 3500);
+    if (window._isJarvisActive) {
+      if (window.eva && window.eva.overlay) {
+        window.eva.overlay.setState('speaking', content ? content.substring(0, 100) : 'Réponse générée.');
+        setTimeout(function() {
+          if (window._isJarvisActive && window.eva && window.eva.overlay) {
+            window.eva.overlay.hide();
+            window._isJarvisActive = false;
+          }
+        }, 3500);
+      } else if (window.eva && window.eva.jarvis) {
+        setTimeout(function() {
+          if (window._isJarvisActive) {
+            window.eva.jarvis.setState('hidden', '', false);
+            window._isJarvisActive = false;
+          }
+        }, 3500);
+      }
     }
   }
 

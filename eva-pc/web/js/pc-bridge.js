@@ -185,7 +185,7 @@
 
   /* ── Gestion de la Session Vocale Dédiée sur Firebase ── */
   async function startJarvisConversation() {
-    if (_jarvisConvInitialized && window.S && window.S.convId) return window.S.convId;
+    if (window.S && window.S.convId) return window.S.convId;
     if (!window.S || !window.S.user || !window.db) return null;
 
     try {
@@ -198,7 +198,7 @@
       var convId = convRef.id;
 
       window.S.convId = convId;
-      window.S.messages = [];
+      if (!window.S.messages) window.S.messages = [];
       window.S.conv = {};
       _jarvisConvInitialized = true;
 
@@ -228,12 +228,14 @@
       if (expWrap) expWrap.style.display = '';
 
       var ml = document.getElementById('messagesList');
-      if (ml) ml.innerHTML = '';
       var welcome = document.getElementById('chatWelcome');
       if (welcome) welcome.style.display = 'none';
 
-      if (window.EVAChatHandler && typeof window.EVAChatHandler.clearContext === 'function') {
-        window.EVAChatHandler.clearContext();
+      if (!window.S.messages || window.S.messages.length === 0) {
+        if (ml && ml.children.length === 0) ml.innerHTML = '';
+        if (window.EVAChatHandler && typeof window.EVAChatHandler.clearContext === 'function') {
+          window.EVAChatHandler.clearContext();
+        }
       }
 
       console.log('[Jarvis Firebase] Nouvelle conversation vocale créée avec ID:', convId);
@@ -301,8 +303,10 @@
     if (_jarvisFollowUpSilence) { clearTimeout(_jarvisFollowUpSilence); _jarvisFollowUpSilence = null; }
     window._jarvisListener = null;
 
-    // Créer immédiatement la session vocale Firebase dédiée
-    startJarvisConversation();
+    // Créer la session vocale Firebase seulement si aucune conversation n'est active
+    if (!window.S || !window.S.convId) {
+      startJarvisConversation();
+    }
 
     var trimmedCmd = command ? command.trim() : '';
 

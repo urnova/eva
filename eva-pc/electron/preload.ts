@@ -29,7 +29,12 @@ const evaAPI = {
     isFocused: () => ipcRenderer.invoke('window:isFocused'),
     show: () => ipcRenderer.invoke('window:show'),
     restore: () => ipcRenderer.invoke('window:restore'),
-    focus: () => ipcRenderer.invoke('window:focus')
+    focus: () => ipcRenderer.invoke('window:focus'),
+    onVisibility: (callback: (visible: boolean) => void) => {
+      const listener = (_: unknown, v: boolean) => callback(v)
+      ipcRenderer.on('window:visibility', listener)
+      return () => ipcRenderer.removeListener('window:visibility', listener)
+    }
   },
 
   // ── electron-store (config locale) ──
@@ -182,6 +187,11 @@ const evaAPI = {
 
   // ── Ouvrir URL dans le navigateur système ──
   isWindowVisible: () => ipcRenderer.invoke('window:isVisible'),
+  onWindowVisibility: (callback: (visible: boolean) => void) => {
+    const listener = (_: unknown, v: boolean) => callback(v)
+    ipcRenderer.on('window:visibility', listener)
+    return () => ipcRenderer.removeListener('window:visibility', listener)
+  },
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
 
   // ── Échange du refresh token via main process (Node.js, sans restriction CORS) ──

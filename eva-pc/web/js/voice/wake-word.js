@@ -53,21 +53,49 @@ function isRunning() {
 /* ══════════════════════════════════════════════════════════
    VÉRIFICATION PREMIER PLAN VS ARRIÈRE-PLAN
    ══════════════════════════════════════════════════════════ */
-var _isForegroundCached = false;
+var _isWindowVisibleOnScreen = true; // Par défaut au chargement dans le chat, la fenêtre principale est affichée
+
 if (typeof window !== 'undefined') {
-  window.addEventListener('focus', function() { _isForegroundCached = true; });
-  window.addEventListener('blur', function() { _isForegroundCached = false; });
+  window.addEventListener('focus', function() { _isWindowVisibleOnScreen = true; });
 }
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', function() {
-    if (document.hidden) _isForegroundCached = false;
+    if (!document.hidden) _isWindowVisibleOnScreen = true;
   });
 }
 
+// Suivi direct et précis de la visibilité de la fenêtre Electron (non minimisée, non masquée)
+if (typeof window !== 'undefined' && window.eva) {
+  if (typeof window.eva.onWindowVisibility === 'function') {
+    window.eva.onWindowVisibility(function(visible) {
+      _isWindowVisibleOnScreen = !!visible;
+      console.log('[WakeWord] Visibilité fenêtre mise à jour via Electron :', _isWindowVisibleOnScreen);
+    });
+  } else if (window.eva.window && typeof window.eva.window.onVisibility === 'function') {
+    window.eva.window.onVisibility(function(visible) {
+      _isWindowVisibleOnScreen = !!visible;
+      console.log('[WakeWord] Visibilité fenêtre mise à jour via Electron window :', _isWindowVisibleOnScreen);
+    });
+  }
+
+  // Interrogation initiale
+  if (window.eva.window && typeof window.eva.window.isVisible === 'function') {
+    window.eva.window.isVisible().then(function(v) {
+      _isWindowVisibleOnScreen = !!v;
+    }).catch(function() {});
+  }
+}
+
 function _isBackgroundSync() {
+  // Sur l'application PC : on est en arrière-plan UNIQUEMENT si la fenêtre principale est masquée ou minimisée
+  if (typeof window !== 'undefined' && window.eva) {
+    if (typeof _isWindowVisibleOnScreen === 'boolean') {
+      return !_isWindowVisibleOnScreen;
+    }
+  }
+  // Sur navigateur standard : utiliser document.hidden
   if (typeof document !== 'undefined') {
-    if (document.hidden || !document.hasFocus()) return true;
-    if (_isForegroundCached === false) return true;
+    return document.hidden;
   }
   return false;
 }

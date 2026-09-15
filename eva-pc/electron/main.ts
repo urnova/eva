@@ -283,12 +283,24 @@ function createWindow() {
   mainWindow.on('resized', saveBounds)
   mainWindow.on('moved', saveBounds)
 
-  // ─── Minimize to tray ───
+  // ─── Visibilité temps réel (Premier plan vs Arrière-plan) ───
+  const notifyWindowVisibility = (visible: boolean) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window:visibility', visible)
+    }
+  }
+
+  // ─── Minimize to tray & Visibilité ───
   mainWindow.on('show', () => {
+    notifyWindowVisibility(true)
     if (!isDev) {
       _checkForUpdatesIfNeeded(false);
     }
   })
+  mainWindow.on('hide', () => notifyWindowVisibility(false))
+  mainWindow.on('minimize', () => notifyWindowVisibility(false))
+  mainWindow.on('restore', () => notifyWindowVisibility(true))
+  mainWindow.on('focus', () => notifyWindowVisibility(true))
   mainWindow.on('close', (event) => {
     if (store.get('minimizeToTray') && !app.isQuitting) {
       event.preventDefault()
