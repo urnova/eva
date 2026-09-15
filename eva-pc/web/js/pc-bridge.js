@@ -180,6 +180,7 @@
   var CLOSING_REGEX = /\b(non|c'est bon|c'est tout|non merci|rien d'autre|ça ira|merci|au revoir|bonne journée|stop|ferme|quitter|rien)\b/i;
 
   var _jarvisFollowUpTimer = null;
+  var _jarvisFollowUpSilence = null;
   var _jarvisConvInitialized = false;
 
   /* ── Gestion de la Session Vocale Dédiée sur Firebase ── */
@@ -417,17 +418,32 @@
       }
 
       // 2. Nouvelle commande utilisateur
-      if (isFinal && clean.length > 2) {
-        if (_jarvisFollowUpTimer) { clearTimeout(_jarvisFollowUpTimer); _jarvisFollowUpTimer = null; }
-        window._jarvisListener = null;
-        window._jarvisState = 'processing';
-
-        console.log('[Jarvis] Nouvelle consigne reçue :', clean);
-        updateJarvisConversationTitle(clean);
+      if (clean.length > 2) {
         if (window.eva && window.eva.overlay) {
-          window.eva.overlay.setState('thinking', clean);
+          window.eva.overlay.setState('listening', clean);
         }
-        _submitWakeWordCommand(clean);
+
+        var doDispatchFollowUp = function() {
+          if (_jarvisFollowUpTimer) { clearTimeout(_jarvisFollowUpTimer); _jarvisFollowUpTimer = null; }
+          if (_jarvisFollowUpSilence) { clearTimeout(_jarvisFollowUpSilence); _jarvisFollowUpSilence = null; }
+          window._jarvisListener = null;
+          window._jarvisState = 'processing';
+
+          console.log('[Jarvis Follow-up] Nouvelle consigne validée :', clean);
+          updateJarvisConversationTitle(clean);
+          if (window.eva && window.eva.overlay) {
+            window.eva.overlay.setState('thinking', clean);
+          }
+          _submitWakeWordCommand(clean);
+        };
+
+        if (isFinal) {
+          doDispatchFollowUp();
+          return true;
+        }
+
+        if (_jarvisFollowUpSilence) clearTimeout(_jarvisFollowUpSilence);
+        _jarvisFollowUpSilence = setTimeout(doDispatchFollowUp, 1100);
         return true;
       }
 
@@ -491,13 +507,17 @@
       input.value = t;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    // Soumettre après 300ms
+    // Soumettre après 250ms
     setTimeout(function() {
       var sendBtn = document.getElementById('sendBtn') ||
                    document.querySelector('[data-action="send"]') ||
                    document.querySelector('.send-btn button') ||
                    document.querySelector('button.btn-send');
-      if (sendBtn) {
+      if (sendBtn) sendBtn.disabled = false;
+
+      if (typeof window.handleSend === 'function') {
+        window.handleSend();
+      } else if (sendBtn) {
         sendBtn.click();
       } else if (window.sendMessage) {
         window.sendMessage(t);
@@ -507,7 +527,7 @@
         // Dernier recours : simuler Entrée dans l'input
         if (input) input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       }
-    }, 300);
+    }, 250);
   }
   window._submitWakeWordCommand = _submitWakeWordCommand;
 

@@ -16,6 +16,7 @@ var onCommandCallback = null;
 var onWakeCallback = null;
 var triggerTimer = null;
 var currentUtterance = '';
+var _silenceTimer = null;
 
 // Web Audio & Vosk
 var _audioStream = null;
@@ -174,6 +175,35 @@ function _handleTranscript(text, isFinal) {
     }
   }
 
+  function _dispatchFinalCommand(cmdText) {
+    if (!cmdText || !cmdText.trim()) return;
+    if (triggerTimer) { clearTimeout(triggerTimer); triggerTimer = null; }
+    if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
+    var finalCmd = cmdText.trim();
+    console.log('[WakeWord] Commande finalisée et validée :', finalCmd);
+    state = 'idle';
+    currentUtterance = '';
+    _dispatchCommand(finalCmd);
+  }
+
+  function _resetTriggerTimeout(ms) {
+    if (triggerTimer) clearTimeout(triggerTimer);
+    triggerTimer = setTimeout(function() {
+      if (state === 'triggered') {
+        console.log('[WakeWord] Timeout attente commande -> retour en veille');
+        state = 'idle';
+        currentUtterance = '';
+        if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
+        if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
+        _isBackground().then(function(isBg) {
+          if (isBg && window.eva && window.eva.overlay) {
+            window.eva.overlay.hide();
+          }
+        });
+      }
+    }, ms || 8000);
+  }
+
   var lower = text.toLowerCase().trim();
 
   if (state === 'idle') {
@@ -181,58 +211,87 @@ function _handleTranscript(text, isFinal) {
       console.log('[WakeWord] Mot-clé détecté dans :', lower);
       var cmd = extractCommand(lower);
 
-      if (cmd && cmd.length > 1) {
-        // Commande immédiate fournie dans la même phrase ("Eva lance edge")
-        _dispatchCommand(cmd);
-      } else {
-        // L'utilisateur a juste dit "Eva" -> on passe en attente de commande
-        state = 'triggered';
-        currentUtterance = '';
-        if (onWakeCallback) onWakeCallback();
+      state = 'triggered';
+      currentUtterance = (cmd && cmd.trim()) ? cmd.trim() : '';
+      if (onWakeCallback) onWakeCallback();
 
-        _isBackground().then(function(isBg) {
-          if (isBg) {
-            // Arrière-plan : afficher la bulle d'écoute immédiatement
+      _isBackground().then(function(isBg) {
+        if (isBg) {
+          if (currentUtterance) {
+            if (typeof window.handleJarvisWakeWord === 'function') {
+              window.handleJarvisWakeWord(text, null);
+            }
+            if (window.eva && window.eva.overlay) {
+              window.eva.overlay.setState('listening', currentUtterance);
+            }
+          } else {
             if (typeof window.handleJarvisWakeWord === 'function') {
               window.handleJarvisWakeWord(text, null);
             } else if (window.eva && window.eva.overlay) {
-              window.eva.overlay.setState('listening', 'Je vous écoute...');
+              window.eva.overlay.setState('listening', 'Je vous écoute... Posez votre question.');
               window.eva.overlay.show();
             }
-          } else {
-            // Premier plan : afficher l'indicateur dans la barre de titre
-            if (window.setEvaStatusHeader) window.setEvaStatusHeader('🎤 PARLEZ MAINTENANT...', 'listening');
           }
-        });
+        } else {
+          if (window.setEvaStatusHeader) {
+            window.setEvaStatusHeader('🎤 ' + (currentUtterance || 'PARLEZ MAINTENANT...'), 'listening');
+          }
+        }
+      });
 
-        // Timeout de sécurité : si rien n'est dit sous 6 secondes, retour en idle
-        if (triggerTimer) clearTimeout(triggerTimer);
-        triggerTimer = setTimeout(function() {
-          if (state === 'triggered') {
-            console.log('[WakeWord] Timeout attente commande -> retour en veille');
-            state = 'idle';
-            currentUtterance = '';
-            if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
-            _isBackground().then(function(isBg) {
-              if (isBg && window.eva && window.eva.overlay) {
-                window.eva.overlay.hide();
-              }
-            });
-          }
-        }, 6000);
+      // Si Vosk a déjà finalisé avec une consigne valide
+      if (isFinal && currentUtterance && currentUtterance.length > 1) {
+        _dispatchFinalCommand(currentUtterance);
+        return;
       }
+
+      // Si consigne déjà partiellement prononcée dans le premier flux
+      if (currentUtterance && currentUtterance.length > 1) {
+        if (_silenceTimer) clearTimeout(_silenceTimer);
+        _silenceTimer = setTimeout(function() {
+          if (state === 'triggered' && currentUtterance && currentUtterance.length > 1) {
+            _dispatchFinalCommand(currentUtterance);
+          }
+        }, 1100);
+      }
+
+      _resetTriggerTimeout(8000);
     }
   } else if (state === 'triggered') {
-    // Dans l'état triggered, toute parole suivante constitue la commande
+    // Dans l'état triggered, toute parole suivante constitue la consigne
     var candidateCmd = extractCommand(lower) || lower;
-    currentUtterance = candidateCmd;
+    candidateCmd = candidateCmd.trim();
 
-    if (isFinal && currentUtterance && currentUtterance.length > 1) {
-      if (triggerTimer) clearTimeout(triggerTimer);
-      var finalCmd = currentUtterance;
-      state = 'idle';
-      currentUtterance = '';
-      _dispatchCommand(finalCmd);
+    if (candidateCmd.length > 1) {
+      currentUtterance = candidateCmd;
+
+      // 1. Retour visuel temps réel sur la bulle
+      _isBackground().then(function(isBg) {
+        if (isBg && window.eva && window.eva.overlay) {
+          window.eva.overlay.setState('listening', currentUtterance);
+        } else if (window.setEvaStatusHeader) {
+          window.setEvaStatusHeader('🎤 ' + currentUtterance, 'listening');
+        }
+      });
+
+      // 2. Repousser le timeout d'inactivité global car l'utilisateur parle
+      _resetTriggerTimeout(8000);
+
+      // 3. Détection de fin de parole :
+      // A. Si Vosk donne isFinal -> dispatch immédiat
+      if (isFinal) {
+        _dispatchFinalCommand(currentUtterance);
+        return;
+      }
+
+      // B. VAD silence : 1.1s de silence après la parole -> validation automatique
+      if (_silenceTimer) clearTimeout(_silenceTimer);
+      _silenceTimer = setTimeout(function() {
+        if (state === 'triggered' && currentUtterance && currentUtterance.length > 1) {
+          console.log('[WakeWord] Silence détecté (1.1s) -> validation commande :', currentUtterance);
+          _dispatchFinalCommand(currentUtterance);
+        }
+      }, 1100);
     }
   }
 }

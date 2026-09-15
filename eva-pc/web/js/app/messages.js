@@ -486,6 +486,7 @@ window.speakMsg = speakMsg;
 /* ═══════════════════════════════════════════════════
    SEND MESSAGE
 ═══════════════════════════════════════════════════ */
+window.handleSend = function() { return handleSend(); };
 async function handleSend() {
   var input = document.getElementById('msgInput');
   var text = (input.value || '').trim();
