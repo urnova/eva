@@ -153,6 +153,27 @@ function _handleTranscript(text, isFinal) {
     }
   }
 
+  // Interruption vocale prioritaire d'une tâche CloudWorks en cours
+  if (window.S && window.S.cwRunning) {
+    var checkInterruption = text.toLowerCase().trim();
+    if (/\b(stop|annule|annuler|arrête|arrete|interromps|interrompre|annule tout)\b/i.test(checkInterruption)) {
+      console.log('[WakeWord] Interruption vocale CloudWorks détectée :', checkInterruption);
+      if (typeof window.cancelCurrentCloudWorksTask === 'function') {
+        window.cancelCurrentCloudWorksTask();
+      }
+      if (typeof window.stopGeneration === 'function') {
+        window.stopGeneration();
+      }
+      if (window.eva && window.eva.overlay) {
+        window.eva.overlay.setState('thinking', 'Tâche interrompue.');
+      }
+      if (window.EVATTS && typeof window.EVATTS.speakText === 'function') {
+        window.EVATTS.speakText("J'ai interrompu la tâche CloudWorks.", window.S ? window.S.config : {});
+      }
+      return;
+    }
+  }
+
   var lower = text.toLowerCase().trim();
 
   if (state === 'idle') {

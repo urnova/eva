@@ -291,6 +291,13 @@ window.setThinkingPhase = function(iconSvg, label, detail) {
   if (lb && label)   lb.textContent = label;
   if (dt !== null && detail !== undefined) dt.textContent = detail || '';
   if (label) _thinkHistory.push({ label: label, detail: detail || '', ts: Date.now() });
+
+  // Mode Jarvis : relayer la phase de réflexion à l'overlay en temps réel
+  if (window._isJarvisActive && window.eva && window.eva.overlay) {
+    var thoughtText = label || '';
+    if (detail && detail.trim()) thoughtText += ' : ' + detail.trim();
+    window.eva.overlay.setState('thinking', thoughtText);
+  }
 };
 
 /* Ajoute une étape à la boîte de réflexion du dernier message, même une fois terminé (utile pour les process en background comme la mémoire) */
@@ -1046,10 +1053,14 @@ function streamEvaMsg(content) {
   // TTS (Forcé en Mode Jarvis pour que l'utilisateur entende EVA en arrière-plan)
   if ((S.ttsOn || window._isJarvisActive) && window.EVATTS && plain && plain.trim().length > 0) {
     setEvaStatus('EVA PARLE...', 'speaking');
-    if (window._isJarvisActive && window.eva && window.eva.jarvis) {
+    if (window._isJarvisActive) {
       window._jarvisState = 'answering';
       var preview = plain.substring(0, 100) + (plain.length > 100 ? '...' : '');
-      window.eva.jarvis.setState('speaking', preview, true);
+      if (window.eva && window.eva.overlay) {
+        window.eva.overlay.setState('speaking', preview);
+      } else if (window.eva && window.eva.jarvis) {
+        window.eva.jarvis.setState('speaking', preview, true);
+      }
     }
     window.EVATTS.speakTextStreaming(plain, S.config);
   } else {

@@ -632,9 +632,16 @@ function _finalizeTracker(cmdId, result, status) {
   if (_activeTrackers[cmdId] && _activeTrackers[cmdId].unsub) _activeTrackers[cmdId].unsub();
   delete _activeTrackers[cmdId];
 
-  // Masquer la bulle overlay dès que la tâche est finalisée (succès, annulation ou erreur)
-  if (window.eva && window.eva.overlay && typeof window.eva.overlay.hide === 'function') {
-    try { window.eva.overlay.hide(); } catch(e) {}
+  // En Mode Jarvis : maintenir l'overlay ouvert pour qu'EVA annonce vocalement le compte-rendu
+  if (window._isJarvisActive) {
+    if (window.eva && window.eva.overlay && typeof window.eva.overlay.setState === 'function') {
+      window.eva.overlay.setState('thinking', 'Finalisation de la tâche...');
+    }
+  } else {
+    // Masquer la bulle overlay dès que la tâche est finalisée (en dehors du Mode Jarvis)
+    if (window.eva && window.eva.overlay && typeof window.eva.overlay.hide === 'function') {
+      try { window.eva.overlay.hide(); } catch(e) {}
+    }
   }
 
   // Laisser l'état bloqué (carré rouge) jusqu'à ce qu'EVA envoie le message de résumé
@@ -795,6 +802,13 @@ Consigne pour EVA : Rédige une réponse courte (2 à 3 phrases), naturelle, cha
     msg = "La tâche sur votre PC a bien été arrêtée. N'hésitez pas si vous souhaitez la relancer ou que je fasse autre chose !";
   } else {
     msg = `⚠️ Une difficulté est survenue lors de l'exécution sur votre PC :\n\n${summary || "Erreur inconnue."}\n\nSouhaitez-vous que je réessaie ?`;
+  }
+
+  if (window._isJarvisActive) {
+    window._jarvisState = 'answering';
+    if (window.eva && window.eva.overlay) {
+      window.eva.overlay.setState('speaking', msg.substring(0, 100));
+    }
   }
 
   if (typeof window.streamEvaMsg === 'function') window.streamEvaMsg(msg);

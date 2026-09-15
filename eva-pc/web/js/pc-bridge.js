@@ -180,10 +180,118 @@
   var CLOSING_REGEX = /\b(non|c'est bon|c'est tout|non merci|rien d'autre|ça ira|merci|au revoir|bonne journée|stop|ferme|quitter|rien)\b/i;
 
   var _jarvisFollowUpTimer = null;
+  var _jarvisConvInitialized = false;
+
+  /* ── Gestion de la Session Vocale Dédiée sur Firebase ── */
+  async function startJarvisConversation() {
+    if (_jarvisConvInitialized && window.S && window.S.convId) return window.S.convId;
+    if (!window.S || !window.S.user || !window.db) return null;
+
+    try {
+      var uid = window.S.user.uid;
+      var now = (typeof window.timestamp === 'function') ? window.timestamp() : new Date();
+      var timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      var title = '🎙️ Session Vocale — ' + timeStr;
+
+      var convRef = window.db.collection('users').doc(uid).collection('conversations').doc();
+      var convId = convRef.id;
+
+      window.S.convId = convId;
+      window.S.messages = [];
+      window.S.conv = {};
+      _jarvisConvInitialized = true;
+
+      var prov = (typeof window.getActiveProvider === 'function' ? window.getActiveProvider() : (window.S.config && window.S.config.aiProvider)) || 'eva';
+      var mdl = (typeof window.getActiveModel === 'function' ? window.getActiveModel() : (window.S.config && window.S.config.evaModel)) || '';
+
+      var data = {
+        title: title,
+        lastMessage: 'Session vocale démarrée...',
+        createdAt: now,
+        updatedAt: now,
+        aiProvider: prov,
+        aiModel: mdl,
+        isVoiceSession: true
+      };
+
+      await convRef.set(data);
+
+      if (!window.S.convs) window.S.convs = [];
+      window.S.convs.unshift(Object.assign({ id: convId }, data));
+      if (typeof window.renderConvs === 'function') window.renderConvs();
+
+      var hdr = document.getElementById('convTitleHeader');
+      if (hdr) hdr.textContent = title;
+
+      var expWrap = document.getElementById('hdrExportWrap');
+      if (expWrap) expWrap.style.display = '';
+
+      var ml = document.getElementById('messagesList');
+      if (ml) ml.innerHTML = '';
+      var welcome = document.getElementById('chatWelcome');
+      if (welcome) welcome.style.display = 'none';
+
+      if (window.EVAChatHandler && typeof window.EVAChatHandler.clearContext === 'function') {
+        window.EVAChatHandler.clearContext();
+      }
+
+      console.log('[Jarvis Firebase] Nouvelle conversation vocale créée avec ID:', convId);
+      return convId;
+    } catch(e) {
+      console.warn('[Jarvis Firebase] Erreur création conversation:', e);
+      return null;
+    }
+  }
+  window.startJarvisConversation = startJarvisConversation;
+
+  async function updateJarvisConversationTitle(cmdText) {
+    if (!window.S || !window.S.user || !window.S.convId || !window.db || !cmdText) return;
+    try {
+      var clean = cmdText.trim();
+      if (!clean) return;
+      var newTitle = '🎙️ ' + clean.charAt(0).toUpperCase() + clean.slice(1);
+      if (newTitle.length > 50) newTitle = newTitle.slice(0, 47) + '...';
+
+      var convRef = window.db.collection('users').doc(window.S.user.uid).collection('conversations').doc(window.S.convId);
+      await convRef.update({
+        title: newTitle,
+        updatedAt: (typeof window.timestamp === 'function') ? window.timestamp() : new Date()
+      });
+
+      var c = window.S.convs && window.S.convs.find(function(x){ return x.id === window.S.convId; });
+      if (c) c.title = newTitle;
+      var hdr = document.getElementById('convTitleHeader');
+      if (hdr && window.S.convId) hdr.textContent = newTitle;
+      if (typeof window.renderConvs === 'function') window.renderConvs();
+    } catch(e) {
+      console.warn('[Jarvis Firebase] Erreur renommage conversation:', e);
+    }
+  }
+  window.updateJarvisConversationTitle = updateJarvisConversationTitle;
+
+  async function closeJarvisConversation() {
+    if (window.S && window.S.user && window.S.convId && window.db) {
+      try {
+        var convRef = window.db.collection('users').doc(window.S.user.uid).collection('conversations').doc(window.S.convId);
+        await convRef.update({
+          updatedAt: (typeof window.timestamp === 'function') ? window.timestamp() : new Date()
+        });
+      } catch(e) {}
+    }
+    _jarvisConvInitialized = false;
+    window.S.convId = null;
+    window._isJarvisActive = false;
+    window._jarvisState = 'idle';
+    console.log('[Jarvis Firebase] Session vocale clôturée.');
+  }
+  window.closeJarvisConversation = closeJarvisConversation;
 
   function handleJarvisWakeWord(phrase, command) {
     console.log('[Jarvis] handleJarvisWakeWord déclenché:', { phrase: phrase, command: command });
     window._isJarvisActive = true;
+
+    // Créer immédiatement la session vocale Firebase dédiée
+    startJarvisConversation();
 
     if (window.eva && window.eva.overlay) {
       window.eva.overlay.show();
@@ -191,6 +299,7 @@
 
     if (command && command.trim().length > 1) {
       window._jarvisState = 'processing';
+      updateJarvisConversationTitle(command.trim());
       if (window.eva && window.eva.overlay) {
         window.eva.overlay.setState('thinking', command.trim());
       }
@@ -301,8 +410,7 @@
 
         setTimeout(function() {
           if (window.eva && window.eva.overlay) window.eva.overlay.hide();
-          window._isJarvisActive = false;
-          window._jarvisState = 'idle';
+          closeJarvisConversation();
         }, 2500);
 
         return true;
@@ -315,6 +423,7 @@
         window._jarvisState = 'processing';
 
         console.log('[Jarvis] Nouvelle consigne reçue :', clean);
+        updateJarvisConversationTitle(clean);
         if (window.eva && window.eva.overlay) {
           window.eva.overlay.setState('thinking', clean);
         }
@@ -332,8 +441,7 @@
       if (window._isJarvisActive && window.eva && window.eva.overlay) {
         window.eva.overlay.hide();
       }
-      window._isJarvisActive = false;
-      window._jarvisState = 'idle';
+      closeJarvisConversation();
     }, 7000);
   }
   window.startJarvisListeningWindow = startJarvisListeningWindow;
@@ -360,6 +468,9 @@
         if (typeof window.stopGeneration === 'function') {
           window.stopGeneration();
         }
+        if (window._isJarvisActive && typeof closeJarvisConversation === 'function') {
+          closeJarvisConversation();
+        }
       }
     });
   }
@@ -367,6 +478,9 @@
   function _submitWakeWordCommand(text) {
     if (!text || !text.trim()) return;
     var t = text.trim();
+    if (window._isJarvisActive && typeof updateJarvisConversationTitle === 'function') {
+      updateJarvisConversationTitle(t);
+    }
     // Mettre le texte dans l'input du chat
     var input = document.getElementById('msgInput') ||
                 document.getElementById('userInput') ||

@@ -148,6 +148,13 @@
     .btn-action svg { width: 14px; height: 14px; }
 
     /* Dynamic States */
+    /* CloudWorks State (Cyan + Orange Dual Energy) */
+    .state-cloudworks .core-orb { background: var(--orange); box-shadow: 0 0 14px var(--orange), 0 0 28px rgba(249, 115, 22, 0.8); animation: corePulseFast 0.8s ease-in-out infinite; }
+    .state-cloudworks .ring:nth-child(1) { border-color: rgba(0, 212, 255, 0.7); border-width: 1.5px; animation: ringSpin 2.5s linear infinite; }
+    .state-cloudworks .ring:nth-child(2) { border-color: rgba(249, 115, 22, 0.6); animation: ringSpin 3.5s linear infinite reverse; }
+    .state-cloudworks .title { color: var(--cyan); text-shadow: 0 0 10px rgba(0, 212, 255, 0.5); }
+    .state-cloudworks.pill { border-color: rgba(249, 115, 22, 0.5); box-shadow: 0 10px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(249, 115, 22, 0.15); }
+
     /* CloudWorks / Remote State (Orange) */
     .state-remote .core-orb { background: var(--orange); box-shadow: 0 0 12px var(--orange), 0 0 24px var(--orange); animation: corePulseFast 1s ease-in-out infinite; }
     .state-remote .ring { border-color: rgba(249, 115, 22, 0.5); }
@@ -210,17 +217,26 @@
           
           if (state === 'listening') {
             titleText.textContent = 'EVA ÉCOUTE...';
-            subText.textContent = text || 'Parlez maintenant...';
+            subText.textContent = text || 'Posez votre question...';
           } else if (state === 'thinking') {
-            titleText.textContent = 'EVA RÉFLÉCHIT...';
+            var rawText = (text || '').toLowerCase();
+            if (/recherche|search|web|google|bing/i.test(rawText)) {
+              titleText.textContent = 'EVA ANALYSE — RECHERCHE INTERNET';
+            } else if (/réflexion|think|raisonnement|cognit/i.test(rawText)) {
+              titleText.textContent = 'EVA ANALYSE — RÉFLEXION';
+            } else if (/outil|préparation|action|cloudworks|système/i.test(rawText)) {
+              titleText.textContent = 'EVA ANALYSE — PRÉPARATION DES OUTILS';
+            } else {
+              titleText.textContent = 'EVA ANALYSE...';
+            }
             subText.textContent = text || 'Traitement cognitif en cours...';
           } else if (state === 'speaking') {
             titleText.textContent = 'EVA PARLE';
             subText.textContent = text || 'Synthèse vocale en cours...';
           } else if (state === 'cloudworks' || state === 'action') {
-            titleText.textContent = 'CE PC — ACTIF';
-            subText.textContent = text || 'Tâche locale en cours...';
-            pill.className = 'pill state-remote';
+            titleText.textContent = 'EVA — CLOUDWORKS ACTIF';
+            subText.textContent = text || 'Action système en cours...';
+            pill.className = 'pill state-cloudworks';
           } else if (state === 'remote') {
             titleText.textContent = 'COMMANDE À DISTANCE';
             subText.textContent = text || 'Exécution distante...';
