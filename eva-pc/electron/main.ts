@@ -679,12 +679,14 @@ ipcMain.handle('window:focus', () => {
 })
 
 // â”€â”€â”€ IPC Handlers â€” Overlay Agentique â”€â”€â”€
-ipcMain.handle('overlay:show', (_event, state) => {
+ipcMain.handle('overlay:show', (_event, state?: string, text?: string) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    if (state) overlayWindow.webContents.send('overlay:setState', state)
+    if (state) overlayWindow.webContents.send('overlay:setState', state, text)
     overlayWindow.showInactive() // Affiche sans voler le focus
   }
 })
+
+ipcMain.handle('window:isFocused', () => !!(mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()))
 
 ipcMain.handle('overlay:hide', () => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {

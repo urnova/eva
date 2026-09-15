@@ -26,6 +26,7 @@ const evaAPI = {
     close: () => ipcRenderer.invoke('window:close'),
     isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
     isVisible: () => ipcRenderer.invoke('window:isVisible'),
+    isFocused: () => ipcRenderer.invoke('window:isFocused'),
     show: () => ipcRenderer.invoke('window:show'),
     restore: () => ipcRenderer.invoke('window:restore'),
     focus: () => ipcRenderer.invoke('window:focus')
@@ -217,7 +218,7 @@ const evaAPI = {
   llmStatus: () => ipcRenderer.invoke('llm:status'),
 
 overlay: {
-    show: (state?: string) => ipcRenderer.invoke('overlay:show', state),
+    show: (state?: string, text?: string) => ipcRenderer.invoke('overlay:show', state, text),
     hide: () => ipcRenderer.invoke('overlay:hide'),
     setState: (state: string, text?: string) => ipcRenderer.invoke('overlay:setState', state, text),
     sendAction: (action: string, data?: string) => ipcRenderer.send('overlay:action', action, data),

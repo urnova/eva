@@ -327,7 +327,7 @@
       window._jarvisState = 'processing';
       updateJarvisConversationTitle(trimmedCmd);
       if (window.eva && window.eva.overlay) {
-        window.eva.overlay.show('thinking');
+        window.eva.overlay.show('thinking', trimmedCmd);
         window.eva.overlay.setState('thinking', trimmedCmd);
       }
       _submitWakeWordCommand(trimmedCmd);
@@ -336,7 +336,7 @@
       // ZÉRO synthèse vocale ici pour éviter tout risque d'écho / auto-écoute !
       window._jarvisState = 'awaiting_command';
       if (window.eva && window.eva.overlay) {
-        window.eva.overlay.show('listening');
+        window.eva.overlay.show('listening', 'Je vous écoute... Posez votre question.');
         window.eva.overlay.setState('listening', 'Je vous écoute... Posez votre question.');
       }
     }
@@ -578,8 +578,11 @@
       input.value = t;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    // Soumettre après 250ms
+    // Soumettre après 150ms
     setTimeout(function() {
+      if (window.S && !window.S.cwRunning) {
+        window.S.busy = false;
+      }
       var sendBtn = document.getElementById('sendBtn') ||
                    document.querySelector('[data-action="send"]') ||
                    document.querySelector('.send-btn button') ||
@@ -598,7 +601,7 @@
         // Dernier recours : simuler Entrée dans l'input
         if (input) input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       }
-    }, 250);
+    }, 150);
   }
   window._submitWakeWordCommand = _submitWakeWordCommand;
 

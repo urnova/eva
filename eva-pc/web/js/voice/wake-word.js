@@ -53,22 +53,27 @@ function isRunning() {
 /* ══════════════════════════════════════════════════════════
    VÉRIFICATION PREMIER PLAN VS ARRIÈRE-PLAN
    ══════════════════════════════════════════════════════════ */
-async function _isBackground() {
-  if (window.eva) {
-    if (window.eva.window && typeof window.eva.window.isVisible === 'function') {
-      try {
-        var vis = await window.eva.window.isVisible();
-        return !vis;
-      } catch(e) {}
-    }
-    if (typeof window.eva.isWindowVisible === 'function') {
-      try {
-        var vis2 = await window.eva.isWindowVisible();
-        return !vis2;
-      } catch(e) {}
-    }
+var _isForegroundCached = false;
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', function() { _isForegroundCached = true; });
+  window.addEventListener('blur', function() { _isForegroundCached = false; });
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) _isForegroundCached = false;
+  });
+}
+
+function _isBackgroundSync() {
+  if (typeof document !== 'undefined') {
+    if (document.hidden || !document.hasFocus()) return true;
+    if (_isForegroundCached === false) return true;
   }
-  return document.hidden || !document.hasFocus();
+  return false;
+}
+
+async function _isBackground() {
+  return _isBackgroundSync();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -101,12 +106,12 @@ function extractCommand(transcript) {
 /* ══════════════════════════════════════════════════════════
    DISPATCH DE LA COMMANDE
    ══════════════════════════════════════════════════════════ */
-async function _dispatchCommand(cmd) {
+function _dispatchCommand(cmd) {
   if (!cmd || !cmd.trim()) return;
   var cleanCmd = cmd.trim();
   console.log('[WakeWord] Commande extraite :', cleanCmd);
 
-  var inBackground = await _isBackground();
+  var inBackground = _isBackgroundSync();
   if (inBackground) {
     // Mode Jarvis en arrière-plan : bulle overlay + exécution + TTS forcé
     if (typeof window.handleJarvisWakeWord === 'function') {
@@ -221,11 +226,9 @@ function _handleTranscript(text, isFinal) {
         currentUtterance = '';
         if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
         if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
-        _isBackground().then(function(isBg) {
-          if (isBg && window.eva && window.eva.overlay) {
-            window.eva.overlay.hide();
-          }
-        });
+        if (_isBackgroundSync() && window.eva && window.eva.overlay) {
+          window.eva.overlay.hide();
+        }
       }
     }, ms || 8000);
   }
@@ -248,27 +251,26 @@ function _handleTranscript(text, isFinal) {
       currentUtterance = (cmd && cmd.trim() && !_isOnlyWakeWord(cmd)) ? cmd.trim() : '';
       if (onWakeCallback) onWakeCallback();
 
-      _isBackground().then(function(isBg) {
-        if (isBg) {
-          if (currentUtterance) {
-            if (window.eva && window.eva.overlay) {
-              window.eva.overlay.setState('listening', currentUtterance);
-              window.eva.overlay.show();
-            }
-          } else {
-            if (typeof window.handleJarvisWakeWord === 'function') {
-              window.handleJarvisWakeWord(text, null);
-            } else if (window.eva && window.eva.overlay) {
-              window.eva.overlay.setState('listening', 'Je vous écoute... Posez votre question.');
-              window.eva.overlay.show();
-            }
+      var isBg = _isBackgroundSync();
+      if (isBg) {
+        if (currentUtterance) {
+          if (window.eva && window.eva.overlay) {
+            window.eva.overlay.setState('listening', currentUtterance);
+            window.eva.overlay.show('listening', currentUtterance);
           }
         } else {
-          if (window.setEvaStatusHeader) {
-            window.setEvaStatusHeader('🎤 ' + (currentUtterance || 'PARLEZ MAINTENANT...'), 'listening');
+          if (typeof window.handleJarvisWakeWord === 'function') {
+            window.handleJarvisWakeWord(text, null);
+          } else if (window.eva && window.eva.overlay) {
+            window.eva.overlay.setState('listening', 'Je vous écoute... Posez votre question.');
+            window.eva.overlay.show('listening', 'Je vous écoute... Posez votre question.');
           }
         }
-      });
+      } else {
+        if (window.setEvaStatusHeader) {
+          window.setEvaStatusHeader('🎤 ' + (currentUtterance || 'PARLEZ MAINTENANT...'), 'listening');
+        }
+      }
 
       // Si Vosk a déjà finalisé avec une consigne valide (autre que juste le wake-word)
       if (isFinal && currentUtterance && currentUtterance.length > 1 && !_isOnlyWakeWord(currentUtterance)) {
@@ -303,13 +305,12 @@ function _handleTranscript(text, isFinal) {
       currentUtterance = candidateCmd;
 
       // 1. Retour visuel temps réel sur la bulle
-      _isBackground().then(function(isBg) {
-        if (isBg && window.eva && window.eva.overlay) {
-          window.eva.overlay.setState('listening', currentUtterance);
-        } else if (window.setEvaStatusHeader) {
-          window.setEvaStatusHeader('🎤 ' + currentUtterance, 'listening');
-        }
-      });
+      var isBg = _isBackgroundSync();
+      if (isBg && window.eva && window.eva.overlay) {
+        window.eva.overlay.setState('listening', currentUtterance);
+      } else if (window.setEvaStatusHeader) {
+        window.setEvaStatusHeader('🎤 ' + currentUtterance, 'listening');
+      }
 
       // 2. Repousser le timeout d'inactivité global car l'utilisateur parle
       _resetTriggerTimeout(8000);
