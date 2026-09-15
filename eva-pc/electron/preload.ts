@@ -25,7 +25,10 @@ const evaAPI = {
     maximize: () => ipcRenderer.invoke('window:maximize'),
     close: () => ipcRenderer.invoke('window:close'),
     isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
-    isVisible: () => ipcRenderer.invoke('window:isVisible')
+    isVisible: () => ipcRenderer.invoke('window:isVisible'),
+    show: () => ipcRenderer.invoke('window:show'),
+    restore: () => ipcRenderer.invoke('window:restore'),
+    focus: () => ipcRenderer.invoke('window:focus')
   },
 
   // ── electron-store (config locale) ──

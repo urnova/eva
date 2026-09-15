@@ -876,6 +876,18 @@ async function handleSend() {
 
     /* ── Erreur Puter : session expirée ── */
     if (_errMsg === 'SESSION_PUTER_EXPIRED') {
+      if (window._isJarvisActive) {
+        var puterVoice = "Votre session Puter a expiré. J'ai ouvert l'application pour que vous puissiez vous reconnecter.";
+        if (window.eva && window.eva.overlay) {
+          window.eva.overlay.setState('speaking', puterVoice);
+        }
+        if (window.eva && window.eva.window && typeof window.eva.window.show === 'function') {
+          window.eva.window.show();
+        }
+        if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
+          window.EVATTS.speakTextStreaming(puterVoice, S.config);
+        }
+      }
       appendMsg('eva', '');
       var _bubbles2 = document.querySelectorAll('.message.eva .msg-bubble');
       var _lb2 = _bubbles2[_bubbles2.length - 1];
@@ -967,6 +979,13 @@ async function handleSend() {
       }
     }
     if (window.EvaCharacter) window.EvaCharacter.setIdle();
+    if (window.S) {
+      window.S.busy = false;
+      window.S.cwRunning = false;
+    }
+    if (typeof window.evaResetWakeWordState === 'function') {
+      window.evaResetWakeWordState();
+    }
   }
   } catch(err) {
     console.error("[handleSend] Exception inattendue:", err);
@@ -1077,6 +1096,11 @@ function streamEvaMsg(content) {
   scrollDown();
 
   var plain = extractTtsText(content);
+  if (window._lastHasFileAction && window._isJarvisActive) {
+    window._lastHasFileAction = false;
+    var fileNote = "J'ai ouvert l'application sur votre écran pour que vous puissiez visualiser et télécharger votre document.";
+    plain = plain ? (plain.trim() + " " + fileNote) : fileNote;
+  }
 
   // TTS (Forcé en Mode Jarvis pour que l'utilisateur entende EVA en arrière-plan)
   if ((S.ttsOn || window._isJarvisActive) && window.EVATTS && plain && plain.trim().length > 0) {

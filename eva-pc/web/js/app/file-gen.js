@@ -201,10 +201,14 @@ function parseEvaActions(content) {
     return clean.trim();
   }
 
-  /* ── Si des fichiers ont été générés, réduire le texte à 1 phrase courte ── */
+  /* ── Si des fichiers ont été générés, réduire le texte à 1 phrase courte et rouvrir la fenêtre ── */
   var FILE_TYPES = ['pdf', 'excel', 'pptx', 'txt', 'csv'];
   var hasFileAction = actions.some(function(a) { return a && FILE_TYPES.indexOf(a.type) !== -1; });
+  window._lastHasFileAction = hasFileAction;
   if (hasFileAction) {
+    if (window.eva && window.eva.window && typeof window.eva.window.show === 'function') {
+      window.eva.window.show();
+    }
     var trimmed = clean.trim();
     /* Chercher la première fin de phrase (. ! ?) */
     var stopIdx = trimmed.search(/[.!?](\s|$)/);
@@ -447,6 +451,9 @@ function _evaCardReady(bubble, fileExt, filename, blobUrl) {
   var listId2 = window._evaFileTarget || 'messagesList';
   var list = document.getElementById(listId2) || document.getElementById('messagesList');
   if (list) list.scrollTop = list.scrollHeight;
+  if (window._isJarvisActive && window.eva && window.eva.window && typeof window.eva.window.show === 'function') {
+    window.eva.window.show();
+  }
 }
 
 /* Détecte le style de PDF à partir du nom de fichier / title / hint EVA */

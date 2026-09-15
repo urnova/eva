@@ -10,13 +10,14 @@
 'use strict';
 
 var isActive = false;
-var state = 'idle'; // 'idle' | 'triggered'
+var state = 'idle'; // 'idle' | 'triggered' | 'busy'
 var wakeWords = ['eva', 'éva', 'hey eva', 'e.v.a', 'eh va', 'eva,', 'éva,'];
 var onCommandCallback = null;
 var onWakeCallback = null;
 var triggerTimer = null;
 var currentUtterance = '';
 var _silenceTimer = null;
+var _lastDispatchTime = 0;
 
 // Web Audio & Vosk
 var _audioStream = null;
@@ -154,23 +155,47 @@ function _handleTranscript(text, isFinal) {
     }
   }
 
-  // Interruption vocale prioritaire d'une tâche CloudWorks en cours
-  if (window.S && window.S.cwRunning) {
+  // Interruption vocale prioritaire d'une tâche CloudWorks ou génération en cours
+  var isJarvisWorking = window._isJarvisActive && (window._jarvisState === 'processing' || window._jarvisState === 'answering');
+  if ((window.S && (window.S.cwRunning || window.S.busy)) || isJarvisWorking) {
     var checkInterruption = text.toLowerCase().trim();
-    if (/\b(stop|annule|annuler|arrête|arrete|interromps|interrompre|annule tout)\b/i.test(checkInterruption)) {
-      console.log('[WakeWord] Interruption vocale CloudWorks détectée :', checkInterruption);
+    if (/\b(stop|annule|annuler|arrête|arrete|interromps|interrompre|chut|tais-toi|tais toi|annule tout)\b/i.test(checkInterruption)) {
+      console.log('[WakeWord] Interruption vocale détectée :', checkInterruption);
       if (typeof window.cancelCurrentCloudWorksTask === 'function') {
         window.cancelCurrentCloudWorksTask();
       }
       if (typeof window.stopGeneration === 'function') {
         window.stopGeneration();
       }
+      if (window.EVATTS && typeof window.EVATTS.stopTTS === 'function') {
+        window.EVATTS.stopTTS();
+      }
       if (window.eva && window.eva.overlay) {
         window.eva.overlay.setState('thinking', 'Tâche interrompue.');
       }
       if (window.EVATTS && typeof window.EVATTS.speakText === 'function') {
-        window.EVATTS.speakText("J'ai interrompu la tâche CloudWorks.", window.S ? window.S.config : {});
+        window.EVATTS.speakText("J'ai tout interrompu.", window.S ? window.S.config : {});
       }
+      state = 'idle';
+      currentUtterance = '';
+      setTimeout(function() {
+        if (window.eva && window.eva.overlay) window.eva.overlay.hide();
+        if (typeof window.closeJarvisConversation === 'function') window.closeJarvisConversation();
+      }, 1500);
+      return;
+    }
+    // Pendant que Jarvis traite ou qu'EVA parle, ignorer toute nouvelle entrée audio
+    if (isJarvisWorking) {
+      return;
+    }
+  }
+
+  // Si l'assistant est occupé par un dispatch récent, ignorer sauf timeout de sécurité 25s
+  if (state === 'busy') {
+    if (_lastDispatchTime && (Date.now() - _lastDispatchTime > 25000)) {
+      state = 'idle';
+      currentUtterance = '';
+    } else {
       return;
     }
   }
@@ -181,7 +206,8 @@ function _handleTranscript(text, isFinal) {
     if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
     var finalCmd = cmdText.trim();
     console.log('[WakeWord] Commande finalisée et validée :', finalCmd);
-    state = 'idle';
+    state = 'busy';
+    _lastDispatchTime = Date.now();
     currentUtterance = '';
     _dispatchCommand(finalCmd);
   }
@@ -225,9 +251,6 @@ function _handleTranscript(text, isFinal) {
       _isBackground().then(function(isBg) {
         if (isBg) {
           if (currentUtterance) {
-            if (typeof window.handleJarvisWakeWord === 'function') {
-              window.handleJarvisWakeWord(text, null);
-            }
             if (window.eva && window.eva.overlay) {
               window.eva.overlay.setState('listening', currentUtterance);
               window.eva.overlay.show();
@@ -476,12 +499,21 @@ function stop() {
   console.log('[WakeWord] Veille vocale arrêtée.');
 }
 
+window.evaResetWakeWordState = function() {
+  state = 'idle';
+  currentUtterance = '';
+  _lastDispatchTime = 0;
+  if (triggerTimer) { clearTimeout(triggerTimer); triggerTimer = null; }
+  if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
+};
+
 window.EVAWakeWord = {
   init: init,
   start: start,
   stop: stop,
   isRunning: isRunning,
-  isSupported: isSupported
+  isSupported: isSupported,
+  resetState: window.evaResetWakeWordState
 };
 
 })();

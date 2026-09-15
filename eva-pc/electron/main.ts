@@ -658,11 +658,30 @@ ipcMain.handle('window:close', () => {
 })
 ipcMain.handle('window:isMaximized', () => mainWindow?.isMaximized())
 ipcMain.handle('window:isVisible', () => !!(mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized()))
+ipcMain.handle('window:show', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  }
+})
+ipcMain.handle('window:restore', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  }
+})
+ipcMain.handle('window:focus', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.focus()
+  }
+})
 
 // â”€â”€â”€ IPC Handlers â€” Overlay Agentique â”€â”€â”€
 ipcMain.handle('overlay:show', (_event, state) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.webContents.send('overlay:setState', state || 'listening')
+    if (state) overlayWindow.webContents.send('overlay:setState', state)
     overlayWindow.showInactive() // Affiche sans voler le focus
   }
 })

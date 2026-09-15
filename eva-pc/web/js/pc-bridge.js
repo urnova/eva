@@ -287,6 +287,7 @@
     window.S.convId = null;
     window._isJarvisActive = false;
     window._jarvisState = 'idle';
+    if (typeof window.evaResetWakeWordState === 'function') window.evaResetWakeWordState();
     console.log('[Jarvis Firebase] Session vocale clôturée.');
   }
   window.closeJarvisConversation = closeJarvisConversation;
@@ -303,22 +304,39 @@
     // Créer immédiatement la session vocale Firebase dédiée
     startJarvisConversation();
 
-    if (window.eva && window.eva.overlay) {
-      window.eva.overlay.show();
+    var trimmedCmd = command ? command.trim() : '';
+
+    // Intention vocale directe : ouvrir/afficher l'application
+    if (trimmedCmd && /\b(ouvre|ouvrir|affiche|montre|bascule|mets)\s+(l'application|l'appli|l'interface|eva|la fen[eê]tre)\b/i.test(trimmedCmd)) {
+      if (window.eva && window.eva.window && typeof window.eva.window.show === 'function') {
+        window.eva.window.show();
+      }
+      var appOpenMsg = "J'ai ouvert l'application EVA sur votre écran.";
+      window._jarvisState = 'answering';
+      if (window.eva && window.eva.overlay) {
+        window.eva.overlay.show('speaking');
+        window.eva.overlay.setState('speaking', appOpenMsg);
+      }
+      if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
+        window.EVATTS.speakTextStreaming(appOpenMsg, window.S ? window.S.config : {});
+      }
+      return;
     }
 
-    if (command && command.trim().length > 1) {
+    if (trimmedCmd.length > 1) {
       window._jarvisState = 'processing';
-      updateJarvisConversationTitle(command.trim());
+      updateJarvisConversationTitle(trimmedCmd);
       if (window.eva && window.eva.overlay) {
-        window.eva.overlay.setState('thinking', command.trim());
+        window.eva.overlay.show('thinking');
+        window.eva.overlay.setState('thinking', trimmedCmd);
       }
-      _submitWakeWordCommand(command.trim());
+      _submitWakeWordCommand(trimmedCmd);
     } else {
       // L'utilisateur a dit "Eva" seul : affichage visuel en écoute pure
       // ZÉRO synthèse vocale ici pour éviter tout risque d'écho / auto-écoute !
       window._jarvisState = 'awaiting_command';
       if (window.eva && window.eva.overlay) {
+        window.eva.overlay.show('listening');
         window.eva.overlay.setState('listening', 'Je vous écoute... Posez votre question.');
       }
     }
@@ -343,6 +361,44 @@
   window.addEventListener('cw:step', function(e) {
     if (window._isJarvisActive && window.eva && window.eva.overlay && e && e.detail && e.detail.step) {
       window.eva.overlay.setState('cloudworks', e.detail.step);
+    }
+  });
+
+  // Écouter la fin d'une tâche CloudWorks pour vocaliser le compte-rendu et relancer le cycle vocal
+  window.addEventListener('cw:task-done', function(e) {
+    console.log('[Jarvis CloudWorks] cw:task-done reçu :', e && e.detail);
+    var detail = (e && e.detail) || {};
+    var status = detail.status;
+    var result = detail.result;
+
+    if (window.S) {
+      window.S.cwRunning = false;
+      window.S.busy = false;
+    }
+
+    if (window._isJarvisActive) {
+      var outputText = '';
+      if (result && typeof result === 'object') {
+        outputText = result.output || result.summary || (result.error ? ('Erreur : ' + result.error) : '');
+      } else if (typeof result === 'string') {
+        outputText = result;
+      }
+
+      var vocalReport = '';
+      if (status === 'done' || status === 'completed') {
+        vocalReport = outputText ? outputText : "C'est fait, j'ai terminé l'action demandée sur votre ordinateur.";
+      } else {
+        vocalReport = outputText ? ("Une difficulté est survenue : " + outputText) : "Je n'ai pas pu terminer l'action demandée.";
+      }
+
+      window._jarvisState = 'answering';
+      if (window.eva && window.eva.overlay) {
+        window.eva.overlay.setState('speaking', vocalReport);
+      }
+
+      if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
+        window.EVATTS.speakTextStreaming(vocalReport, window.S ? window.S.config : {});
+      }
     }
   });
 
@@ -383,6 +439,7 @@
   function startJarvisListeningWindow() {
     if (!window._isJarvisActive) return;
     window._jarvisState = 'awaiting_followup';
+    if (typeof window.evaResetWakeWordState === 'function') window.evaResetWakeWordState();
     console.log('[Jarvis] Début fenêtre écoute réponse utilisateur (7s)...');
 
     if (window.eva && window.eva.overlay) {
