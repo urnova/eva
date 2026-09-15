@@ -271,6 +271,10 @@
   window.updateJarvisConversationTitle = updateJarvisConversationTitle;
 
   async function closeJarvisConversation() {
+    if (_jarvisFollowUpTimer) { clearTimeout(_jarvisFollowUpTimer); _jarvisFollowUpTimer = null; }
+    if (_jarvisFollowUpSilence) { clearTimeout(_jarvisFollowUpSilence); _jarvisFollowUpSilence = null; }
+    window._jarvisListener = null;
+
     if (window.S && window.S.user && window.S.convId && window.db) {
       try {
         var convRef = window.db.collection('users').doc(window.S.user.uid).collection('conversations').doc(window.S.convId);
@@ -290,6 +294,11 @@
   function handleJarvisWakeWord(phrase, command) {
     console.log('[Jarvis] handleJarvisWakeWord déclenché:', { phrase: phrase, command: command });
     window._isJarvisActive = true;
+
+    // Toujours nettoyer les anciens timers et le listener interactif précédent
+    if (_jarvisFollowUpTimer) { clearTimeout(_jarvisFollowUpTimer); _jarvisFollowUpTimer = null; }
+    if (_jarvisFollowUpSilence) { clearTimeout(_jarvisFollowUpSilence); _jarvisFollowUpSilence = null; }
+    window._jarvisListener = null;
 
     // Créer immédiatement la session vocale Firebase dédiée
     startJarvisConversation();
@@ -496,6 +505,11 @@
     var t = text.trim();
     if (window._isJarvisActive && typeof updateJarvisConversationTitle === 'function') {
       updateJarvisConversationTitle(t);
+    }
+    // Sécurité absolue : débloquer S.busy si aucune tâche CloudWorks n'est active
+    if (window.S && window.S.busy && !window.S.cwRunning) {
+      console.warn('[PC Bridge] S.busy était actif sans tâche en cours, réinitialisation forcée pour la commande vocale');
+      window.S.busy = false;
     }
     // Mettre le texte dans l'input du chat
     var input = document.getElementById('msgInput') ||

@@ -317,10 +317,12 @@
       detail: { cmdId, status, result: resultData, type: data.type }
     }));
 
-    // Cacher l'overlay après 2 secondes
-    setTimeout(() => {
-      if (window.eva && window.eva.overlay) window.eva.overlay.hide();
-    }, 2000);
+    // Cacher l'overlay après 2 secondes (UNIQUEMENT si hors Mode Jarvis)
+    if (!window._isJarvisActive) {
+      setTimeout(() => {
+        if (!window._isJarvisActive && window.eva && window.eva.overlay) window.eva.overlay.hide();
+      }, 2000);
+    }
   }
 
   async function _updateStep(cmdRef, step) {

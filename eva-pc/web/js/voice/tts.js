@@ -287,6 +287,12 @@ function _onSpeakEnd() {
     try { window.setEvaStatusHeader(null); } catch(e) {}
   }
   if (window._isJarvisActive && window.eva) {
+    // Si une tâche CloudWorks est en cours d'exécution sur le PC, NE PAS lancer le follow-up maintenant !
+    // Le follow-up sera déclenché après le compte-rendu vocal final de CloudWorks.
+    if (window.S && window.S.cwRunning) {
+      console.log('[Jarvis TTS] Tâche CloudWorks en cours sur le PC, report de la relance');
+      return;
+    }
     // Mode Jarvis interactif : déclencher le suivi UNIQUEMENT après la réponse vocale de l'assistant
     if (window._jarvisState === 'answering' && typeof window.handleJarvisFollowUp === 'function') {
       window.handleJarvisFollowUp();
@@ -359,6 +365,10 @@ window.EVATTS = {
   stopTTS: function() {
     _speaking = false;
     _updateSkipBtn();
+    /* Stopper la voix native Windows SAPI si active */
+    if (window.eva && window.eva.tts && typeof window.eva.tts.stop === 'function') {
+      try { window.eva.tts.stop(); } catch(e) {}
+    }
     /* Stopper tous les engines chargés */
     if (window.EvaCustomTTS && typeof window.EvaCustomTTS.stop === 'function') {
       try { window.EvaCustomTTS.stop(); } catch(e) {}

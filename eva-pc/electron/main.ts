@@ -1952,11 +1952,19 @@ ipcMain.handle('stt:stop', async () => {
 // ─── IPC Handlers — TTS (Text-to-Speech via Windows SAPI) ───
 let _ttsProcess: any = null;
 
-ipcMain.handle('tts:speak', async (_, text: string) => {
-  if (_ttsProcess) {
-    try { _ttsProcess.kill(); } catch(e) {}
+async function _killTtsProcess() {
+  if (_ttsProcess && _ttsProcess.pid) {
+    try {
+      const { execSync } = await import('child_process');
+      try { execSync(`taskkill /F /T /PID ${_ttsProcess.pid}`, { stdio: 'ignore' }); } catch(e) {}
+      _ttsProcess.kill();
+    } catch(e) {}
     _ttsProcess = null;
   }
+}
+
+ipcMain.handle('tts:speak', async (_, text: string) => {
+  await _killTtsProcess();
   if (!text || !text.trim()) return { success: true };
 
   // Mettre le micro STT en pause pour éviter que le micro capte la voix synthétique
@@ -1964,49 +1972,76 @@ ipcMain.handle('tts:speak', async (_, text: string) => {
     try { _sttProcess.stdin.write(JSON.stringify({ command: 'pause' }) + '\n'); } catch(e) {}
   }
 
-  const safeText = text.replace(/["'`]/g, ' ').replace(/\n/g, ' ').trim();
-  const psCmd = [
+  // Nettoyage préalable pour éliminer les artefacts techniques et les chemins de fichiers bruts
+  const plainText = text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/\[ACTION:[\s\S]*?\]/g, '')
+    .replace(/[a-zA-Z]:\\[^\s"'`]+/g, 'fichier local')
+    .replace(/[*#_`~>]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!plainText) return { success: true };
+
+  // Encodage Base64 UTF-8 du texte pour éliminer TOUT problème d'échappement PowerShell
+  const b64Text = Buffer.from(plainText, 'utf8').toString('base64');
+  const psScript = [
     'Add-Type -AssemblyName System.Speech',
     '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer',
     '$s.Rate = 0',
     '$s.Volume = 100',
-    `try { $s.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::Female, [System.Speech.Synthesis.VoiceAge]::Adult, 0, [System.Globalization.CultureInfo]::GetCultureInfo('fr-FR')) } catch {}`,
-    `$s.Speak("${safeText}")`,
-  ].join('; ');
+    'try { $s.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::Female, [System.Speech.Synthesis.VoiceAge]::Adult, 0, [System.Globalization.CultureInfo]::GetCultureInfo("fr-FR")) } catch {}',
+    `$bytes = [System.Convert]::FromBase64String('${b64Text}')`,
+    '$text = [System.Text.Encoding]::UTF8.GetString($bytes)',
+    '$s.Speak($text)'
+  ].join(';\r\n');
+
+  // Encodage UTF-16LE Base64 pour le script PowerShell entier (-EncodedCommand)
+  const encodedScript = Buffer.from(psScript, 'utf16le').toString('base64');
 
   return new Promise(async (resolve) => {
+    let resolved = false;
+    const finish = (result: { success: boolean; error?: string }) => {
+      if (resolved) return;
+      resolved = true;
+      _ttsProcess = null;
+      resolve(result);
+    };
+
+    // Timeout de sécurité dynamique : 120ms par caractère + 5s de marge
+    const safetyTimeoutMs = Math.max(8000, plainText.length * 120 + 5000);
+    const timeoutId = setTimeout(() => {
+      console.warn(`[TTS] Timeout de sécurité SAPI dépassé (${safetyTimeoutMs}ms)`);
+      _killTtsProcess();
+      finish({ success: true });
+    }, safetyTimeoutMs);
+
     try {
       const { spawn } = await import('child_process');
-      _ttsProcess = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-Command', psCmd], { stdio: 'ignore' });
+      _ttsProcess = spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NoProfile', '-EncodedCommand', encodedScript], { stdio: 'ignore' });
       _ttsProcess.on('exit', () => {
-        _ttsProcess = null;
-        resolve({ success: true });
+        clearTimeout(timeoutId);
+        finish({ success: true });
       });
       _ttsProcess.on('error', (err: any) => {
+        clearTimeout(timeoutId);
         console.error('[TTS] Erreur SAPI:', err);
-        _ttsProcess = null;
-        resolve({ success: false, error: String(err) });
+        finish({ success: false, error: String(err) });
       });
     } catch(e) {
+      clearTimeout(timeoutId);
       console.error('[TTS] Erreur spawn SAPI:', e);
-      _ttsProcess = null;
-      resolve({ success: false, error: String(e) });
+      finish({ success: false, error: String(e) });
     }
   });
 });
 
 ipcMain.handle('tts:stop', async () => {
-  if (_ttsProcess) {
-    try {
-      const { execSync } = await import('child_process') as any;
-      try { execSync(`taskkill /F /T /PID ${_ttsProcess.pid}`, { stdio: 'ignore' }); } catch(e) {}
-      _ttsProcess.kill();
-    } catch(e) {}
-    _ttsProcess = null;
-  }
+  await _killTtsProcess();
   // Réactiver le micro STT
   if (_sttProcess && _sttProcess.stdin) {
     try { _sttProcess.stdin.write(JSON.stringify({ command: 'resume' }) + '\n'); } catch(e) {}
   }
   return { success: true };
 });
+

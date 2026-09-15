@@ -206,13 +206,20 @@ function _handleTranscript(text, isFinal) {
 
   var lower = text.toLowerCase().trim();
 
+  // Vérifier si le segment ne contient STRICTEMENT rien d'autre qu'un wake-word (ex: "éva", "eva")
+  function _isOnlyWakeWord(str) {
+    if (!str) return true;
+    var s = str.toLowerCase().trim().replace(/^[\s,\.!?]+|[\s,\.!?]+$/g, '');
+    return wakeWords.some(function(w) { return s === w; });
+  }
+
   if (state === 'idle') {
     if (hasWakeWord(lower)) {
       console.log('[WakeWord] Mot-clé détecté dans :', lower);
       var cmd = extractCommand(lower);
 
       state = 'triggered';
-      currentUtterance = (cmd && cmd.trim()) ? cmd.trim() : '';
+      currentUtterance = (cmd && cmd.trim() && !_isOnlyWakeWord(cmd)) ? cmd.trim() : '';
       if (onWakeCallback) onWakeCallback();
 
       _isBackground().then(function(isBg) {
@@ -223,6 +230,7 @@ function _handleTranscript(text, isFinal) {
             }
             if (window.eva && window.eva.overlay) {
               window.eva.overlay.setState('listening', currentUtterance);
+              window.eva.overlay.show();
             }
           } else {
             if (typeof window.handleJarvisWakeWord === 'function') {
@@ -239,17 +247,17 @@ function _handleTranscript(text, isFinal) {
         }
       });
 
-      // Si Vosk a déjà finalisé avec une consigne valide
-      if (isFinal && currentUtterance && currentUtterance.length > 1) {
+      // Si Vosk a déjà finalisé avec une consigne valide (autre que juste le wake-word)
+      if (isFinal && currentUtterance && currentUtterance.length > 1 && !_isOnlyWakeWord(currentUtterance)) {
         _dispatchFinalCommand(currentUtterance);
         return;
       }
 
       // Si consigne déjà partiellement prononcée dans le premier flux
-      if (currentUtterance && currentUtterance.length > 1) {
+      if (currentUtterance && currentUtterance.length > 1 && !_isOnlyWakeWord(currentUtterance)) {
         if (_silenceTimer) clearTimeout(_silenceTimer);
         _silenceTimer = setTimeout(function() {
-          if (state === 'triggered' && currentUtterance && currentUtterance.length > 1) {
+          if (state === 'triggered' && currentUtterance && currentUtterance.length > 1 && !_isOnlyWakeWord(currentUtterance)) {
             _dispatchFinalCommand(currentUtterance);
           }
         }, 1100);
@@ -261,6 +269,12 @@ function _handleTranscript(text, isFinal) {
     // Dans l'état triggered, toute parole suivante constitue la consigne
     var candidateCmd = extractCommand(lower) || lower;
     candidateCmd = candidateCmd.trim();
+
+    // Si le résultat est uniquement le mot-clé ("éva"), ignorer et rester en écoute
+    if (_isOnlyWakeWord(candidateCmd)) {
+      _resetTriggerTimeout(8000);
+      return;
+    }
 
     if (candidateCmd.length > 1) {
       currentUtterance = candidateCmd;
@@ -287,7 +301,7 @@ function _handleTranscript(text, isFinal) {
       // B. VAD silence : 1.1s de silence après la parole -> validation automatique
       if (_silenceTimer) clearTimeout(_silenceTimer);
       _silenceTimer = setTimeout(function() {
-        if (state === 'triggered' && currentUtterance && currentUtterance.length > 1) {
+        if (state === 'triggered' && currentUtterance && currentUtterance.length > 1 && !_isOnlyWakeWord(currentUtterance)) {
           console.log('[WakeWord] Silence détecté (1.1s) -> validation commande :', currentUtterance);
           _dispatchFinalCommand(currentUtterance);
         }

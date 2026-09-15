@@ -488,6 +488,7 @@ window.speakMsg = speakMsg;
 ═══════════════════════════════════════════════════ */
 window.handleSend = function() { return handleSend(); };
 async function handleSend() {
+  try {
   var input = document.getElementById('msgInput');
   var text = (input.value || '').trim();
   var img = S.image || (S.images && S.images[0]) || null;
@@ -942,6 +943,15 @@ async function handleSend() {
         _netBanner.style.display = 'flex';
       } else {
         var _errText = "Désolée, une erreur est survenue : " + (typeof _errMsg === 'string' ? _errMsg : "Erreur inconnue");
+        if (window._isJarvisActive) {
+          var voiceErr = "Désolée, je n'ai pas pu obtenir de réponse. Souhaitez-vous que je réessaie ?";
+          if (window.eva && window.eva.overlay) {
+            window.eva.overlay.setState('speaking', voiceErr);
+          }
+          if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
+            window.EVATTS.speakTextStreaming(voiceErr, S.config);
+          }
+        }
         appendMsg('eva', _errText);
         console.error("Erreur IA détaillée :", _errMsg);
         var _bubbles = document.querySelectorAll('.message.eva .msg-bubble');
@@ -957,6 +967,23 @@ async function handleSend() {
       }
     }
     if (window.EvaCharacter) window.EvaCharacter.setIdle();
+  }
+  } catch(err) {
+    console.error("[handleSend] Exception inattendue:", err);
+    if (typeof hideTyping === "function") hideTyping();
+    if (window.S) {
+      window.S.busy = false;
+      window.S.cwRunning = false;
+    }
+    if (window._isJarvisActive) {
+      var catchVoice = "Une difficulté technique est survenue. Pouvez-vous répéter votre question ?";
+      if (window.eva && window.eva.overlay) {
+        window.eva.overlay.setState("speaking", catchVoice);
+      }
+      if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === "function") {
+        window.EVATTS.speakTextStreaming(catchVoice, window.S ? window.S.config : {});
+      }
+    }
   }
 }
 
