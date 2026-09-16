@@ -176,15 +176,20 @@ function skipTTS() {
 window.skipTTS = skipTTS;
 
 function sendVoiceCommand(cmd) {
-  if (S.busy) return;
+  if (!cmd || !cmd.trim()) return;
+  var clean = cmd.trim();
+  if (window.S && !window.S.cwRunning) {
+    window.S.busy = false;
+  }
   var input = document.getElementById('msgInput');
   if (input) {
-    input.value = cmd;
+    input.value = clean;
     var sendBtn = document.getElementById('sendBtn');
     if (sendBtn) sendBtn.disabled = false;
   }
-  handleSend();
+  handleSend(clean);
 }
+window.sendVoiceCommand = sendVoiceCommand;
 
 var _SVG_THINK_BRAIN = '<svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>';
 var _SVG_THINK_SEARCH = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
@@ -499,13 +504,24 @@ async function handleSend(customText) {
     }
     return;
   }
+  var isVoiceCall = (typeof customText === 'string' && customText.trim().length > 0);
+  if (isVoiceCall || (window.S && !window.S.cwRunning)) {
+    S.busy = false;
+  }
   if (S.busy) {
-    if (window._isJarvisActive && !S.cwRunning) {
-      console.warn('[handleSend] S.busy actif en mode Jarvis sans tâche CW, déblocage');
+    if (!S.cwRunning) {
+      console.warn('[handleSend] S.busy actif sans tâche CW, déblocage automatique');
       S.busy = false;
     } else {
       toast('Eva réfléchit...','info');
       return;
+    }
+  }
+  if (!window.EVAChatHandler) {
+    if (window.EVAProviders && typeof window.EVAProviders.createProvider === 'function') {
+      try {
+        if (typeof initChatSession === 'function') initChatSession();
+      } catch(e) {}
     }
   }
   if (!window.EVAChatHandler) {
@@ -1142,7 +1158,8 @@ function streamEvaMsg(content) {
   }
 
   // TTS (Forcé en Mode Jarvis pour que l'utilisateur entende EVA en arrière-plan)
-  if ((S.ttsOn || window._isJarvisActive) && window.EVATTS && plain && plain.trim().length > 0) {
+  var isSystemAbortMsg = content && content.includes('Génération interrompue');
+  if (!isSystemAbortMsg && (S.ttsOn || window._isJarvisActive) && window.EVATTS && plain && plain.trim().length > 0) {
     setEvaStatus('EVA PARLE...', 'speaking');
     if (window._isJarvisActive) {
       window._jarvisState = 'answering';

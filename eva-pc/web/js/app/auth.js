@@ -99,9 +99,16 @@ function initAuth() {
       window.EVAWakeWord.init({
         wakeWords: ['eva', 'éva', 'hey eva', 'e.v.a'],
         onCommand: function(cmd) {
-          if (S.busy) return;
+          if (!cmd || !cmd.trim()) return;
+          var clean = cmd.trim();
+          if (window.S && window.S.cwRunning) return;
+          if (window.S) window.S.busy = false;
           if (window.EVASTS && window.EVASTS.getIsListening()) return;
-          sendVoiceCommand(cmd);
+          if (typeof window.sendVoiceCommand === 'function') {
+            window.sendVoiceCommand(clean);
+          } else if (typeof sendVoiceCommand === 'function') {
+            sendVoiceCommand(clean);
+          }
           setTimeout(function() {
             if (S.wakeWordOn && window.EVAWakeWord && !S.busy) window.EVAWakeWord.start();
           }, 5000);

@@ -92,14 +92,8 @@ if (typeof window !== 'undefined' && window.eva) {
 function _isBackgroundSync() {
   // 1. Si le document web est ouvert et visible à l'écran, la fenêtre est au premier plan
   if (typeof document !== 'undefined' && !document.hidden && document.visibilityState === 'visible') {
-    if (typeof _isWindowVisibleOnScreen === 'boolean' && !_isWindowVisibleOnScreen) {
-      if (document.hasFocus && document.hasFocus()) {
-        _isWindowVisibleOnScreen = true;
-        return false;
-      }
-    } else {
-      return false;
-    }
+    _isWindowVisibleOnScreen = true;
+    return false;
   }
   // 2. Sur l'application PC : on est en arrière-plan UNIQUEMENT si la fenêtre principale est masquée ou minimisée
   if (typeof window !== 'undefined' && window.eva) {
@@ -109,7 +103,7 @@ function _isBackgroundSync() {
   }
   // 3. Sur navigateur standard : utiliser document.hidden
   if (typeof document !== 'undefined') {
-    return !!document.hidden;
+    return !!document.hidden || document.visibilityState === 'hidden';
   }
   return false;
 }
@@ -166,10 +160,10 @@ function _dispatchCommand(cmd) {
   } else {
     // Premier plan : affichage et envoi direct dans le chat
     if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
-    if (onCommandCallback) {
-      onCommandCallback(cleanCmd);
-    } else if (typeof window.sendVoiceCommand === 'function') {
+    if (typeof window.sendVoiceCommand === 'function') {
       window.sendVoiceCommand(cleanCmd);
+    } else if (onCommandCallback) {
+      onCommandCallback(cleanCmd);
     }
   }
 }
@@ -223,8 +217,12 @@ function _handleTranscript(text, isFinal) {
       if (window.eva && window.eva.overlay) {
         window.eva.overlay.setState('thinking', 'Tâche interrompue.');
       }
-      if (window.EVATTS && typeof window.EVATTS.speakText === 'function') {
-        window.EVATTS.speakText("J'ai tout interrompu.", window.S ? window.S.config : {});
+      var now = Date.now();
+      if (!window._lastInterruptionSpokenTime || (now - window._lastInterruptionSpokenTime > 4000)) {
+        window._lastInterruptionSpokenTime = now;
+        if (window.EVATTS && typeof window.EVATTS.speakText === 'function') {
+          window.EVATTS.speakText("J'ai tout interrompu.", window.S ? window.S.config : {});
+        }
       }
       state = 'idle';
       currentUtterance = '';

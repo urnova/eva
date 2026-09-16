@@ -620,8 +620,7 @@
       updateJarvisConversationTitle(t);
     }
     // Sécurité absolue : débloquer S.busy si aucune tâche CloudWorks n'est active
-    if (window.S && window.S.busy && !window.S.cwRunning) {
-      console.warn('[PC Bridge] S.busy était actif sans tâche en cours, réinitialisation forcée pour la commande vocale');
+    if (window.S && !window.S.cwRunning) {
       window.S.busy = false;
     }
     // Mettre le texte dans l'input du chat
@@ -634,30 +633,26 @@
       input.value = t;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    // Soumettre après 150ms
-    setTimeout(function() {
-      if (window.S && !window.S.cwRunning) {
-        window.S.busy = false;
-      }
-      var sendBtn = document.getElementById('sendBtn') ||
-                   document.querySelector('[data-action="send"]') ||
-                   document.querySelector('.send-btn button') ||
-                   document.querySelector('button.btn-send');
-      if (sendBtn) sendBtn.disabled = false;
+    var sendBtn = document.getElementById('sendBtn') ||
+                 document.querySelector('[data-action="send"]') ||
+                 document.querySelector('.send-btn button') ||
+                 document.querySelector('button.btn-send');
+    if (sendBtn) sendBtn.disabled = false;
 
-      if (typeof window.handleSend === 'function') {
-        window.handleSend(t);
-      } else if (sendBtn) {
-        sendBtn.click();
-      } else if (window.sendMessage) {
-        window.sendMessage(t);
-      } else if (window.handleUserMessage) {
-        window.handleUserMessage(t);
-      } else {
-        // Dernier recours : simuler Entrée dans l'input
-        if (input) input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-      }
-    }, 150);
+    // Soumission immédiate sans délai
+    if (typeof window.sendVoiceCommand === 'function') {
+      window.sendVoiceCommand(t);
+    } else if (typeof window.handleSend === 'function') {
+      window.handleSend(t);
+    } else if (sendBtn) {
+      sendBtn.click();
+    } else if (window.sendMessage) {
+      window.sendMessage(t);
+    } else if (window.handleUserMessage) {
+      window.handleUserMessage(t);
+    } else {
+      if (input) input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    }
   }
   window._submitWakeWordCommand = _submitWakeWordCommand;
 
