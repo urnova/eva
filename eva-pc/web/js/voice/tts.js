@@ -24,9 +24,42 @@ var _currentText = '';
 var _skipTtsBtn  = null; /* bouton "couper la voix" dans le header */
 var _elevenlabsAudio = null; /* Audio en cours pour ElevenLabs */
 
-/* ── Helper de secours vocal (Web Speech ou SAPI) sans jamais bloquer le cycle ── */
+/* ── Helper de secours vocal gratuit (EvaCustomTTS / Web Speech / SAPI) sans jamais bloquer le cycle ── */
+var _lastTtsWarningTime = 0;
+function _notifyTtsFallback(toastMsg, vocalNotice, originalText, cfg, onStart, onEnd) {
+  if (window.toast) {
+    try { window.toast(toastMsg, 'warning'); } catch(_) {}
+  }
+  var now = Date.now();
+  var textToSpeak = originalText;
+  // Ne vocaliser l'avertissement qu'une fois toutes les 5 minutes pour ne pas saturer l'écoute
+  if (now - _lastTtsWarningTime > 5 * 60 * 1000) {
+    _lastTtsWarningTime = now;
+    textToSpeak = vocalNotice ? (vocalNotice + ' ' + originalText) : originalText;
+  }
+  _speakFallback(textToSpeak, cfg, onStart, onEnd);
+}
+
 function _speakFallback(text, config, onStart, onEnd) {
   if (onStart) onStart();
+
+  // 1. Tenter le moteur neuronal gratuit Piper VITS (EvaCustomTTS)
+  if (window.EvaCustomTTS && typeof window.EvaCustomTTS.speak === 'function') {
+    try {
+      window.EvaCustomTTS.speak(text, config,
+        function() { if (onStart) onStart(); },
+        function() {
+          window._lastTtsEndTime = Date.now();
+          if (onEnd) onEnd();
+        }
+      );
+      return;
+    } catch(e) {
+      console.warn('[EVA TTS] Échec EvaCustomTTS fallback:', e);
+    }
+  }
+
+  // 2. Tenter Web Speech API standard
   if (typeof speechSynthesis !== 'undefined') {
     try {
       var utt = new SpeechSynthesisUtterance(text);
@@ -44,6 +77,8 @@ function _speakFallback(text, config, onStart, onEnd) {
       return;
     } catch(e) {}
   }
+
+  // 3. Tenter SAPI Windows si disponible sur PC
   if (window.eva && window.eva.tts) {
     window.eva.tts.speak(text).then(function() {
       window._lastTtsEndTime = Date.now();
@@ -108,8 +143,12 @@ function _getEngine(config) {
                       '21m00Tcm4TlvDq8ikWAM'; /* Rachel par défaut */
 
         if (!key) {
-          console.warn('[EVA TTS] ElevenLabs : clé API manquante, bascule sur synthèse de secours.');
-          _speakFallback(text, cfg, onStart, onEnd);
+          console.warn('[EVA TTS] ElevenLabs : clé API manquante, bascule sur synthèse gratuite.');
+          _notifyTtsFallback(
+            "Clé ElevenLabs manquante — Voix gratuite active",
+            "La clé ElevenLabs n'est pas configurée. Je bascule sur la voix gratuite.",
+            text, cfg, onStart, onEnd
+          );
           return;
         }
 
@@ -127,6 +166,12 @@ function _getEngine(config) {
             voice_settings: { stability: 0.45, similarity_boost: 0.80 }
           })
         }).then(function(r) {
+          if (r.status === 429) {
+            throw new Error('QUOTA_EXCEEDED');
+          }
+          if (r.status === 401 || r.status === 403) {
+            throw new Error('INVALID_KEY');
+          }
           if (!r.ok) throw new Error('ElevenLabs HTTP ' + r.status);
           return r.blob();
         }).then(function(blob) {
@@ -153,8 +198,26 @@ function _getEngine(config) {
         }).catch(function(e) {
           console.error('[EVA TTS] ElevenLabs erreur:', e);
           _elevenlabsAudio = null;
-          // Secours automatique pour ne jamais couper la parole ni bloquer le cycle
-          _speakFallback(text, cfg, null, onEnd);
+          var msg = (e && e.message) ? e.message : String(e);
+          if (msg.includes('QUOTA_EXCEEDED') || msg.includes('429') || msg.includes('quota') || msg.includes('credit')) {
+            _notifyTtsFallback(
+              "Quota vocal ElevenLabs atteint",
+              "Votre quota ElevenLabs est épuisé. Je bascule sur la voix gratuite.",
+              text, cfg, null, onEnd
+            );
+          } else if (msg.includes('INVALID_KEY') || msg.includes('401') || msg.includes('403')) {
+            _notifyTtsFallback(
+              "Clé ElevenLabs invalide",
+              "Votre clé ElevenLabs est invalide. Je bascule sur la voix gratuite.",
+              text, cfg, null, onEnd
+            );
+          } else {
+            _notifyTtsFallback(
+              "ElevenLabs indisponible — Voix gratuite active",
+              "Le service ElevenLabs est indisponible. Je bascule sur la voix gratuite.",
+              text, cfg, null, onEnd
+            );
+          }
         });
       },
       stop: function() {
@@ -175,8 +238,12 @@ function _getEngine(config) {
         var voice = (cfg && cfg.openAITTSVoice) ||
                     (window.S && window.S.config && window.S.config.openAITTSVoice) || 'nova';
         if (!key) {
-          console.warn('[EVA TTS] OpenAI TTS : clé API manquante, fallback navigateur.');
-          _speakFallback(text, cfg, onStart, onEnd);
+          console.warn('[EVA TTS] OpenAI TTS : clé API manquante, fallback gratuit.');
+          _notifyTtsFallback(
+            "Clé OpenAI TTS manquante",
+            "La clé OpenAI n'est pas configurée. Je bascule sur la voix gratuite.",
+            text, cfg, onStart, onEnd
+          );
           return;
         }
         if (onStart) onStart();
@@ -185,6 +252,8 @@ function _getEngine(config) {
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
           body: JSON.stringify({ model: 'tts-1', input: text, voice: voice, response_format: 'mp3' })
         }).then(function(r) {
+          if (r.status === 429) throw new Error('QUOTA_EXCEEDED');
+          if (r.status === 401 || r.status === 403) throw new Error('INVALID_KEY');
           if (!r.ok) throw new Error('OpenAI TTS HTTP ' + r.status);
           return r.blob();
         }).then(function(blob) {
@@ -210,7 +279,20 @@ function _getEngine(config) {
         }).catch(function(e) {
           console.error('[EVA TTS] OpenAI TTS erreur:', e);
           window._openaiAudio = null;
-          _speakFallback(text, cfg, null, onEnd);
+          var msg = (e && e.message) ? e.message : String(e);
+          if (msg.includes('QUOTA_EXCEEDED') || msg.includes('429') || msg.includes('quota')) {
+            _notifyTtsFallback(
+              "Quota vocal OpenAI atteint",
+              "Votre quota OpenAI est épuisé. Je bascule sur la voix gratuite.",
+              text, cfg, null, onEnd
+            );
+          } else {
+            _notifyTtsFallback(
+              "OpenAI TTS indisponible",
+              "Le service OpenAI TTS est indisponible. Je bascule sur la voix gratuite.",
+              text, cfg, null, onEnd
+            );
+          }
         });
       },
       stop: function() {

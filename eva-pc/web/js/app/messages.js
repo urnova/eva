@@ -486,16 +486,37 @@ window.speakMsg = speakMsg;
 /* ═══════════════════════════════════════════════════
    SEND MESSAGE
 ═══════════════════════════════════════════════════ */
-window.handleSend = function() { return handleSend(); };
-async function handleSend() {
+window.handleSend = function(customText) { return handleSend(customText); };
+async function handleSend(customText) {
   try {
   var input = document.getElementById('msgInput');
-  var text = (input.value || '').trim();
+  var text = (typeof customText === 'string' && customText.trim()) ? customText.trim() : ((input && input.value) || '').trim();
   var img = S.image || (S.images && S.images[0]) || null;
   var docPending = S.document || (S.documents && S.documents[0]) || null;
-  if (!text && !img && !docPending) return;
-  if (S.busy) { toast('Eva réfléchit...','info'); return; }
-  if (!window.EVAChatHandler) { toast('Système non initialisé','error'); return; }
+  if (!text && !img && !docPending) {
+    if (window._isJarvisActive && window.eva && window.eva.overlay) {
+      window.eva.overlay.setState('listening', 'Je vous écoute... Posez votre question.');
+    }
+    return;
+  }
+  if (S.busy) {
+    if (window._isJarvisActive && !S.cwRunning) {
+      console.warn('[handleSend] S.busy actif en mode Jarvis sans tâche CW, déblocage');
+      S.busy = false;
+    } else {
+      toast('Eva réfléchit...','info');
+      return;
+    }
+  }
+  if (!window.EVAChatHandler) {
+    toast('Système non initialisé','error');
+    if (window._isJarvisActive) {
+      var notInitMsg = "Le système d'intelligence artificielle est en cours d'initialisation. Veuillez patienter.";
+      if (window.eva && window.eva.overlay) window.eva.overlay.setState('speaking', notInitMsg);
+      if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') window.EVATTS.speakTextStreaming(notInitMsg, S.config);
+    }
+    return;
+  }
     if (S.documents && S.documents.some(function(d) { return d._loading; })) { toast('Lecture du document en cours...','warning'); return; }
 
   /* Arrêter le micro s'il est actif — l'utilisateur envoie manuellement */
@@ -809,7 +830,15 @@ async function handleSend() {
   var origSys = window.EVA_SYSTEM_PROMPT;
   window.EVA_SYSTEM_PROMPT = sysPrompt;
 
-  var result = await window.EVAChatHandler.sendMessage(msgContent, { tone: S.tone });
+  // Timeout de 20s sur l'appel IA pour éviter tout blocage indéfini
+  var aiPromise = window.EVAChatHandler.sendMessage(msgContent, { tone: S.tone });
+  var timeoutPromise = new Promise(function(_, reject) {
+    setTimeout(function() { reject(new Error("Le modèle d'intelligence artificielle met trop de temps à répondre.")); }, 20000);
+  });
+  var result = await Promise.race([aiPromise, timeoutPromise]).catch(function(err) {
+    console.error('[handleSend] Erreur ou timeout sendMessage:', err);
+    return { success: false, error: (err && err.message) ? err.message : String(err) };
+  });
 
   window.EVA_SYSTEM_PROMPT = origSys;
 

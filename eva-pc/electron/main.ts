@@ -301,6 +301,8 @@ function createWindow() {
   mainWindow.on('minimize', () => notifyWindowVisibility(false))
   mainWindow.on('restore', () => notifyWindowVisibility(true))
   mainWindow.on('focus', () => notifyWindowVisibility(true))
+  mainWindow.on('maximize', () => notifyWindowVisibility(true))
+  mainWindow.on('unmaximize', () => notifyWindowVisibility(true))
   mainWindow.on('close', (event) => {
     if (store.get('minimizeToTray') && !app.isQuitting) {
       event.preventDefault()

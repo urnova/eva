@@ -272,7 +272,44 @@
   }
   window.updateJarvisConversationTitle = updateJarvisConversationTitle;
 
+  var _jarvisThinkingWatchdog = null;
+  function _startJarvisThinkingWatchdog() {
+    if (_jarvisThinkingWatchdog) {
+      clearTimeout(_jarvisThinkingWatchdog);
+      _jarvisThinkingWatchdog = null;
+    }
+    _jarvisThinkingWatchdog = setTimeout(function() {
+      if (window._isJarvisActive && (window._jarvisState === 'processing' || window._jarvisState === 'thinking')) {
+        console.warn('[Jarvis Watchdog] Délai de réflexion de 15s dépassé — déblocage automatique');
+        if (window.S) {
+          window.S.busy = false;
+          window.S.cwRunning = false;
+        }
+        var timeoutMsg = "Le modèle met trop de temps à répondre. Veuillez réessayer votre question.";
+        window._jarvisState = 'answering';
+        if (window.eva && window.eva.overlay) {
+          window.eva.overlay.setState('speaking', timeoutMsg);
+        }
+        if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
+          window.EVATTS.speakTextStreaming(timeoutMsg, window.S ? window.S.config : {});
+        } else {
+          setTimeout(function() {
+            if (window.eva && window.eva.overlay) window.eva.overlay.hide();
+          }, 4000);
+        }
+      }
+    }, 15000);
+  }
+
+  function _clearJarvisThinkingWatchdog() {
+    if (_jarvisThinkingWatchdog) {
+      clearTimeout(_jarvisThinkingWatchdog);
+      _jarvisThinkingWatchdog = null;
+    }
+  }
+
   async function closeJarvisConversation() {
+    _clearJarvisThinkingWatchdog();
     if (_jarvisFollowUpTimer) { clearTimeout(_jarvisFollowUpTimer); _jarvisFollowUpTimer = null; }
     if (_jarvisFollowUpSilence) { clearTimeout(_jarvisFollowUpSilence); _jarvisFollowUpSilence = null; }
     window._jarvisListener = null;
@@ -299,6 +336,7 @@
     window._isJarvisActive = true;
 
     // Toujours nettoyer les anciens timers et le listener interactif précédent
+    _clearJarvisThinkingWatchdog();
     if (_jarvisFollowUpTimer) { clearTimeout(_jarvisFollowUpTimer); _jarvisFollowUpTimer = null; }
     if (_jarvisFollowUpSilence) { clearTimeout(_jarvisFollowUpSilence); _jarvisFollowUpSilence = null; }
     window._jarvisListener = null;
@@ -334,6 +372,7 @@
         window.eva.overlay.show('thinking', trimmedCmd);
         window.eva.overlay.setState('thinking', trimmedCmd);
       }
+      _startJarvisThinkingWatchdog();
       _submitWakeWordCommand(trimmedCmd);
     } else {
       // L'utilisateur a dit "Eva" seul : affichage visuel en écoute pure
@@ -370,6 +409,7 @@
 
   // Écouter la fin d'une tâche CloudWorks pour vocaliser le compte-rendu et relancer le cycle vocal
   window.addEventListener('cw:task-done', function(e) {
+    _clearJarvisThinkingWatchdog();
     console.log('[Jarvis CloudWorks] cw:task-done reçu :', e && e.detail);
     var detail = (e && e.detail) || {};
     var status = detail.status;
@@ -391,6 +431,10 @@
       var vocalReport = '';
       if (status === 'done' || status === 'completed') {
         vocalReport = outputText ? outputText : "C'est fait, j'ai terminé l'action demandée sur votre ordinateur.";
+      } else if (status === 'cancelled' || status === 'aborted') {
+        // Tâche annulée par l'utilisateur : ne PAS vocaliser de compte-rendu en double !
+        console.log('[Jarvis CloudWorks] Tâche annulée par l\'utilisateur, compte-rendu vocal ignoré.');
+        return;
       } else {
         vocalReport = outputText ? ("Une difficulté est survenue : " + outputText) : "Je n'ai pas pu terminer l'action demandée.";
       }
@@ -408,6 +452,7 @@
 
   // Appelé à la fin de la réponse vocale d'EVA en mode Jarvis
   function handleJarvisFollowUp() {
+    _clearJarvisThinkingWatchdog();
     if (!window._isJarvisActive) return;
     window._jarvisState = 'followup_prompt';
 
@@ -548,11 +593,18 @@
         _submitWakeWordCommand(data);
       } else if (action === 'cancel') {
         console.log('[PC Bridge] Action Annuler reçue depuis l\'overlay');
+        _clearJarvisThinkingWatchdog();
+        if (window._isVoiceInterrupting) return;
+        window._isVoiceInterrupting = true;
+        setTimeout(function() { window._isVoiceInterrupting = false; }, 3000);
         if (typeof window.cancelCurrentCloudWorksTask === 'function') {
           window.cancelCurrentCloudWorksTask();
         }
         if (typeof window.stopGeneration === 'function') {
           window.stopGeneration();
+        }
+        if (window.EVATTS && typeof window.EVATTS.stopTTS === 'function') {
+          window.EVATTS.stopTTS();
         }
         if (window._isJarvisActive && typeof closeJarvisConversation === 'function') {
           closeJarvisConversation();
@@ -594,7 +646,7 @@
       if (sendBtn) sendBtn.disabled = false;
 
       if (typeof window.handleSend === 'function') {
-        window.handleSend();
+        window.handleSend(t);
       } else if (sendBtn) {
         sendBtn.click();
       } else if (window.sendMessage) {

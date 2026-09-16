@@ -62,6 +62,9 @@ if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', function() {
     if (!document.hidden) _isWindowVisibleOnScreen = true;
   });
+  document.addEventListener('mousemove', function() { _isWindowVisibleOnScreen = true; });
+  document.addEventListener('click', function() { _isWindowVisibleOnScreen = true; });
+  document.addEventListener('keydown', function() { _isWindowVisibleOnScreen = true; });
 }
 
 // Suivi direct et précis de la visibilité de la fenêtre Electron (non minimisée, non masquée)
@@ -87,15 +90,26 @@ if (typeof window !== 'undefined' && window.eva) {
 }
 
 function _isBackgroundSync() {
-  // Sur l'application PC : on est en arrière-plan UNIQUEMENT si la fenêtre principale est masquée ou minimisée
+  // 1. Si le document web est ouvert et visible à l'écran, la fenêtre est au premier plan
+  if (typeof document !== 'undefined' && !document.hidden && document.visibilityState === 'visible') {
+    if (typeof _isWindowVisibleOnScreen === 'boolean' && !_isWindowVisibleOnScreen) {
+      if (document.hasFocus && document.hasFocus()) {
+        _isWindowVisibleOnScreen = true;
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+  // 2. Sur l'application PC : on est en arrière-plan UNIQUEMENT si la fenêtre principale est masquée ou minimisée
   if (typeof window !== 'undefined' && window.eva) {
     if (typeof _isWindowVisibleOnScreen === 'boolean') {
       return !_isWindowVisibleOnScreen;
     }
   }
-  // Sur navigateur standard : utiliser document.hidden
+  // 3. Sur navigateur standard : utiliser document.hidden
   if (typeof document !== 'undefined') {
-    return document.hidden;
+    return !!document.hidden;
   }
   return false;
 }
@@ -193,6 +207,9 @@ function _handleTranscript(text, isFinal) {
   if ((window.S && (window.S.cwRunning || window.S.busy)) || isJarvisWorking) {
     var checkInterruption = text.toLowerCase().trim();
     if (/\b(stop|annule|annuler|arrête|arrete|interromps|interrompre|chut|tais-toi|tais toi|annule tout)\b/i.test(checkInterruption)) {
+      if (window._isVoiceInterrupting) return;
+      window._isVoiceInterrupting = true;
+      setTimeout(function() { window._isVoiceInterrupting = false; }, 3000);
       console.log('[WakeWord] Interruption vocale détectée :', checkInterruption);
       if (typeof window.cancelCurrentCloudWorksTask === 'function') {
         window.cancelCurrentCloudWorksTask();
