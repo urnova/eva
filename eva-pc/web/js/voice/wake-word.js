@@ -238,25 +238,16 @@ function _handleTranscript(text, isFinal) {
     }
   }
 
-  // Si l'assistant est occupé par un dispatch récent, ignorer sauf timeout de sécurité 25s
-  if (state === 'busy') {
-    if (_lastDispatchTime && (Date.now() - _lastDispatchTime > 25000)) {
-      state = 'idle';
-      currentUtterance = '';
-    } else {
-      return;
-    }
-  }
-
   function _dispatchFinalCommand(cmdText) {
     if (!cmdText || !cmdText.trim()) return;
     if (triggerTimer) { clearTimeout(triggerTimer); triggerTimer = null; }
     if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
     var finalCmd = cmdText.trim();
     console.log('[WakeWord] Commande finalisée et validée :', finalCmd);
-    state = 'busy';
+    state = 'idle';
     _lastDispatchTime = Date.now();
     currentUtterance = '';
+    if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
     _dispatchCommand(finalCmd);
   }
 
@@ -416,6 +407,9 @@ async function _startVoskRecognizer() {
     _scriptNode = _audioCtx.createScriptProcessor(4096, 1, 1);
     _scriptNode.onaudioprocess = function(ev) {
       if (!isActive || !_recognizer) return;
+      if (_audioCtx && _audioCtx.state === 'suspended') {
+        try { _audioCtx.resume(); } catch(e) {}
+      }
       if (window.EVATTS && typeof window.EVATTS.isSpeaking === 'function' && window.EVATTS.isSpeaking()) return;
       try {
         _recognizer.acceptWaveform(ev.inputBuffer);
@@ -494,6 +488,9 @@ async function start() {
   isActive = true;
   state = 'idle';
   currentUtterance = '';
+  if (_audioCtx && _audioCtx.state === 'suspended') {
+    try { await _audioCtx.resume(); } catch(e) {}
+  }
 
   try {
     var voskOk = await _startVoskRecognizer();

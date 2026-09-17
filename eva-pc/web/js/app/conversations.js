@@ -119,6 +119,8 @@ function renderConvs(filter) {
 function filterConvs(q) { renderConvs(q); }
 
 async function newConv() {
+  if (window.S) { window.S.busy = false; window.S.cwRunning = false; }
+  if (typeof window.evaResetWakeWordState === 'function') window.evaResetWakeWordState();
   S.convId = null; S.messages = []; S.conv = {};
   if (window.EVAChatHandler) window.EVAChatHandler.clearContext();
   document.getElementById('messagesList').innerHTML = '';
@@ -132,6 +134,8 @@ async function newConv() {
 }
 
 async function loadConv(id) {
+  if (window.S) { window.S.busy = false; window.S.cwRunning = false; }
+  if (typeof window.evaResetWakeWordState === 'function') window.evaResetWakeWordState();
   S.convId = id;
   var expWrap = document.getElementById('hdrExportWrap');
   if (expWrap) expWrap.style.display = id ? '' : 'none';

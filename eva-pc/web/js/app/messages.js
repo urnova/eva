@@ -178,8 +178,10 @@ window.skipTTS = skipTTS;
 function sendVoiceCommand(cmd) {
   if (!cmd || !cmd.trim()) return;
   var clean = cmd.trim();
-  if (window.S && !window.S.cwRunning) {
+  console.log('[sendVoiceCommand] Exécution commande vocale :', clean);
+  if (window.S) {
     window.S.busy = false;
+    window.S.cwRunning = false;
   }
   var input = document.getElementById('msgInput');
   if (input) {
@@ -504,19 +506,49 @@ async function handleSend(customText) {
     }
     return;
   }
-  var isVoiceCall = (typeof customText === 'string' && customText.trim().length > 0);
-  if (isVoiceCall || (window.S && !window.S.cwRunning)) {
-    S.busy = false;
+  // Déblocage immédiat de tout verrou résiduel pour la nouvelle commande
+  if (window.S) {
+    window.S.busy = false;
+    window.S.cwRunning = false;
   }
-  if (S.busy) {
-    if (!S.cwRunning) {
-      console.warn('[handleSend] S.busy actif sans tâche CW, déblocage automatique');
-      S.busy = false;
-    } else {
-      toast('Eva réfléchit...','info');
-      return;
-    }
+
+  /* Arrêter le micro s'il est actif — l'utilisateur envoie manuellement */
+  if (window.EVASTS && window.EVASTS.getIsListening()) {
+    window.EVASTS.stopListening();
+    var micBtn = document.getElementById('micBtn');
+    if (micBtn) micBtn.classList.remove('recording');
+    if (window.EvaCharacter) window.EvaCharacter.setIdle();
+    setEvaStatusHeader(null);
+    if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 800);
   }
+
+  var doc = S.document || (S.documents && S.documents[0]) || null;
+  var allImages = (S.images && S.images.length) ? S.images : (S.image ? [S.image] : []);
+  var allDocs   = (S.documents && S.documents.length) ? S.documents : (S.document ? [S.document] : []);
+
+  // Nettoyer immédiatement le champ pour qu'aucun texte ne reste coincé dans l'UI
+  if (input) {
+    input.value = '';
+    input.style.height = 'auto';
+  }
+  var sendBtn = document.getElementById('sendBtn');
+  if (sendBtn) sendBtn.disabled = true;
+  var imgBar = document.getElementById('imagePreviewBar');
+  if (imgBar) imgBar.style.display = 'none';
+  var docBar = document.getElementById('docPreviewBar');
+  if (docBar) docBar.style.display = 'none';
+  S.image = null; S.images = [];
+  S.document = null; S.documents = [];
+
+  var displayText = text || (allImages.length > 1 ? '📷 ' + allImages.length + ' photos jointes' : allImages.length === 1 ? '📷 Photo jointe' : allDocs.length > 1 ? '' : allDocs.length === 1 ? '' : '');
+  appendMsg('user', displayText, allImages, allDocs);
+  showTyping(text); /* Passe le message pour l'analyse contextuelle des pensées */
+  window.setThinkingPhase(_SVG_THINK_BRAIN, 'Réfléchis...', 'Je lis votre message...');
+
+  if (typeof window.evaResetWakeWordState === 'function') {
+    window.evaResetWakeWordState();
+  }
+
   if (!window.EVAChatHandler) {
     if (window.EVAProviders && typeof window.EVAProviders.createProvider === 'function') {
       try {
@@ -533,32 +565,7 @@ async function handleSend(customText) {
     }
     return;
   }
-    if (S.documents && S.documents.some(function(d) { return d._loading; })) { toast('Lecture du document en cours...','warning'); return; }
-
-  /* Arrêter le micro s'il est actif — l'utilisateur envoie manuellement */
-  if (window.EVASTS && window.EVASTS.getIsListening()) {
-    window.EVASTS.stopListening();
-    var micBtn = document.getElementById('micBtn');
-    if (micBtn) micBtn.classList.remove('recording');
-    if (window.EvaCharacter) window.EvaCharacter.setIdle();
-    setEvaStatusHeader(null);
-    if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 800);
-  }
-
-  var doc = S.document || (S.documents && S.documents[0]) || null;
-  var allImages = (S.images && S.images.length) ? S.images : (S.image ? [S.image] : []);
-  var allDocs   = (S.documents && S.documents.length) ? S.documents : (S.document ? [S.document] : []);
-  input.value = ''; input.style.height = 'auto';
-  document.getElementById('sendBtn').disabled = true;
-  document.getElementById('imagePreviewBar').style.display = 'none';
-  document.getElementById('docPreviewBar').style.display = 'none';
-  S.image = null; S.images = [];
-  S.document = null; S.documents = [];
-
-  var displayText = text || (allImages.length > 1 ? '📷 ' + allImages.length + ' photos jointes' : allImages.length === 1 ? '📷 Photo jointe' : allDocs.length > 1 ? '' : allDocs.length === 1 ? '' : '');
-  appendMsg('user', displayText, allImages, allDocs);
-  showTyping(text); /* Passe le message pour l'analyse contextuelle des pensées */
-  window.setThinkingPhase(_SVG_THINK_BRAIN, 'Réfléchis...', 'Je lis votre message...');
+  if (S.documents && S.documents.some(function(d) { return d._loading; })) { toast('Lecture du document en cours...','warning'); return; }
 
   var toneInstruction = '';
   var _hasActiveTone = TONES[S.tone] && S.tone !== 'normal';

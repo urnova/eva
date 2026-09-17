@@ -619,39 +619,25 @@
     if (window._isJarvisActive && typeof updateJarvisConversationTitle === 'function') {
       updateJarvisConversationTitle(t);
     }
-    // Sécurité absolue : débloquer S.busy si aucune tâche CloudWorks n'est active
-    if (window.S && !window.S.cwRunning) {
+    if (window.S) {
       window.S.busy = false;
+      window.S.cwRunning = false;
     }
-    // Mettre le texte dans l'input du chat
-    var input = document.getElementById('msgInput') ||
-                document.getElementById('userInput') ||
-                document.getElementById('messageInput') ||
-                document.querySelector('textarea.chat-textarea') ||
-                document.querySelector('.chat-input textarea');
-    if (input) {
-      input.value = t;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    var sendBtn = document.getElementById('sendBtn') ||
-                 document.querySelector('[data-action="send"]') ||
-                 document.querySelector('.send-btn button') ||
-                 document.querySelector('button.btn-send');
-    if (sendBtn) sendBtn.disabled = false;
-
-    // Soumission immédiate sans délai
     if (typeof window.sendVoiceCommand === 'function') {
       window.sendVoiceCommand(t);
     } else if (typeof window.handleSend === 'function') {
       window.handleSend(t);
-    } else if (sendBtn) {
-      sendBtn.click();
-    } else if (window.sendMessage) {
-      window.sendMessage(t);
-    } else if (window.handleUserMessage) {
-      window.handleUserMessage(t);
     } else {
-      if (input) input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      var input = document.getElementById('msgInput');
+      if (input) {
+        input.value = t;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      var sendBtn = document.getElementById('sendBtn');
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.click();
+      }
     }
   }
   window._submitWakeWordCommand = _submitWakeWordCommand;

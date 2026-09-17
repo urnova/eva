@@ -442,6 +442,10 @@ function _onSpeakEnd() {
   if (window.setEvaStatusHeader) {
     try { window.setEvaStatusHeader(null); } catch(e) {}
   }
+  window._lastTtsEndTime = Date.now();
+  if (typeof window.evaResetWakeWordState === 'function') {
+    window.evaResetWakeWordState();
+  }
   if (window._isJarvisActive && window.eva) {
     // Si une tâche CloudWorks est en cours d'exécution sur le PC, NE PAS lancer le follow-up maintenant !
     // Le follow-up sera déclenché après le compte-rendu vocal final de CloudWorks.
@@ -543,6 +547,10 @@ window.EVATTS = {
     }
     if (typeof speechSynthesis !== 'undefined') {
       try { speechSynthesis.cancel(); } catch(e) {}
+    }
+    window._lastTtsEndTime = Date.now();
+    if (typeof window.evaResetWakeWordState === 'function') {
+      window.evaResetWakeWordState();
     }
   },
 

@@ -97,21 +97,23 @@ function initAuth() {
     // Init wake word (stays off until user activates)
     if (window.EVAWakeWord) {
       window.EVAWakeWord.init({
-        wakeWords: ['eva', 'éva', 'hey eva', 'e.v.a'],
+        wakeWords: ['eva', 'éva', 'hey eva', 'e.v.a', 'eh va', 'eva,', 'éva,'],
         onCommand: function(cmd) {
           if (!cmd || !cmd.trim()) return;
           var clean = cmd.trim();
-          if (window.S && window.S.cwRunning) return;
-          if (window.S) window.S.busy = false;
+          if (window.S) {
+            window.S.busy = false;
+            window.S.cwRunning = false;
+          }
           if (window.EVASTS && window.EVASTS.getIsListening()) return;
           if (typeof window.sendVoiceCommand === 'function') {
             window.sendVoiceCommand(clean);
           } else if (typeof sendVoiceCommand === 'function') {
             sendVoiceCommand(clean);
           }
-          setTimeout(function() {
-            if (S.wakeWordOn && window.EVAWakeWord && !S.busy) window.EVAWakeWord.start();
-          }, 5000);
+          if (typeof window.evaResetWakeWordState === 'function') {
+            window.evaResetWakeWordState();
+          }
         }
       });
     }
