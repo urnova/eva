@@ -166,6 +166,14 @@ async function loadProfile(uid) {
         if (window.updateProviderBadge) window.updateProviderBadge();
         var wwBtn = document.getElementById('wakeWordBtn');
         if (wwBtn) wwBtn.classList.toggle('active', S.wakeWordOn);
+        /* Appliquer l'etat reel de la wake word APRES chargement Firestore (source de verite) */
+        if (window.EVAWakeWord) {
+          if (S.wakeWordOn && !S.busy) {
+            window.EVAWakeWord.start();
+          } else {
+            window.EVAWakeWord.stop();
+          }
+        }
         /* Re-apply panel pref now that Firebase config is loaded */
         if (typeof applyEvaPanelPreference === 'function') applyEvaPanelPreference();
         /* Persist merged config back to localStorage as cache */

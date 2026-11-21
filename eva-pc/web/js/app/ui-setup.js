@@ -40,12 +40,9 @@ function setupUI() {
     toast(S.ttsOn ? '🔊 Voix activée' : '🔇 Voix désactivée');
   });
 
-  // WAKE WORD — état chargé depuis localStorage
+  // WAKE WORD -- demarrage auto delegue a loadProfile (apres Firestore)
   var wakeWordBtn = document.getElementById('wakeWordBtn');
   wakeWordBtn.classList.toggle('active', S.wakeWordOn);
-  if (S.wakeWordOn && window.EVAWakeWord) {
-    setTimeout(function(){ window.EVAWakeWord.start(); }, 1000);
-  }
   wakeWordBtn.addEventListener('click', function() {
     S.wakeWordOn = !S.wakeWordOn;
     S.config.wakeWordOn = S.wakeWordOn;
