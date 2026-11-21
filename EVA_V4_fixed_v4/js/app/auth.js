@@ -78,8 +78,10 @@ function initAuth() {
       window.EVAWakeWord.init({
         wakeWords: ['eva', 'éva', 'hey eva', 'e.v.a'],
         onCommand: function(cmd) {
-          if (S.busy) return;
-          if (window.EVASTS && window.EVASTS.getIsListening()) return;
+          // La wake word force l'envoi : on arrête le micro s'il est actif
+          if (window.EVASTS && window.EVASTS.getIsListening()) {
+            window.EVASTS.stopListening();
+          }
           sendVoiceCommand(cmd);
           setTimeout(function() {
             if (S.wakeWordOn && window.EVAWakeWord && !S.busy) window.EVAWakeWord.start();
@@ -138,6 +140,13 @@ async function loadProfile(uid) {
       if (S.profile.preferences) {
         /* Firebase gagne sur le cache localStorage — sync multi-appareils */
         S.config = Object.assign({}, S.config, S.profile.preferences);
+      // Migration automatique : openai-large est devenu payant sur Pollinations (nov 2026)
+      if (S.config && S.config.pollinationsModel === 'openai-large') {
+        S.config.pollinationsModel = 'openai-fast';
+        try { localStorage.setItem('eva_config', JSON.stringify(S.config)); } catch(e){}
+      }
+      // Fin migration
+
         /* Migration : si l'ancien provider par défaut 'native' est stocké, passer à 'eva-custom' */
         if (!S.config.voiceProvider || S.config.voiceProvider === 'native') {
           S.config.voiceProvider = 'eva-custom';
@@ -221,7 +230,7 @@ async function createProfile(user) {
     email: user.email, displayName: name,
     photoURL: user.photoURL || null,
     createdAt: window.timestamp(), role: 'user', onboardingCompleted: false,
-    preferences: { aiProvider: 'pollinations', pollinationsModel: 'openai-large', voiceProvider: 'eva-custom', voiceLang: 'fr-FR' }
+    preferences: { aiProvider: 'pollinations', pollinationsModel: 'openai-fast', voiceProvider: 'eva-custom', voiceLang: 'fr-FR' }
   };
   try {
     await db.collection('users').doc(user.uid).set(p);

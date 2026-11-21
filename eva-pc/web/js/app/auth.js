@@ -95,26 +95,10 @@ function initAuth() {
     loadConvs();
     setTimeout(function(){ initFCM(); }, 3000);
     // Init wake word (stays off until user activates)
+    // wake-word.js PC gere le dispatch en premier plan via window.sendVoiceCommand
     if (window.EVAWakeWord) {
       window.EVAWakeWord.init({
-        wakeWords: ['eva', 'éva', 'hey eva', 'e.v.a', 'eh va', 'eva,', 'éva,'],
-        onCommand: function(cmd) {
-          if (!cmd || !cmd.trim()) return;
-          var clean = cmd.trim();
-          if (window.S) {
-            window.S.busy = false;
-            window.S.cwRunning = false;
-          }
-          if (window.EVASTS && window.EVASTS.getIsListening()) return;
-          if (typeof window.sendVoiceCommand === 'function') {
-            window.sendVoiceCommand(clean);
-          } else if (typeof sendVoiceCommand === 'function') {
-            sendVoiceCommand(clean);
-          }
-          if (typeof window.evaResetWakeWordState === 'function') {
-            window.evaResetWakeWordState();
-          }
-        }
+        wakeWords: ['eva', 'u00e9va', 'hey eva', 'e.v.a', 'eh va', 'eva,', 'u00e9va,']
       });
     }
   });
@@ -163,6 +147,12 @@ async function loadProfile(uid) {
       if (S.profile.preferences) {
         /* Firebase gagne sur le cache localStorage — sync multi-appareils */
         S.config = Object.assign({}, S.config, S.profile.preferences);
+        // Migration automatique : openai-large est devenu payant sur Pollinations (nov 2026)
+        if (S.config && S.config.pollinationsModel === 'openai-large') {
+          S.config.pollinationsModel = 'openai-fast';
+          try { localStorage.setItem('eva_config', JSON.stringify(S.config)); } catch(e){}
+        }
+
         /* Migration : si l'ancien provider par défaut 'native' est stocké, passer à 'eva-custom' */
         if (!S.config.voiceProvider || S.config.voiceProvider === 'native') {
           S.config.voiceProvider = 'eva-custom';
@@ -245,7 +235,7 @@ async function createProfile(user) {
     email: user.email, displayName: name,
     photoURL: user.photoURL || null,
     createdAt: window.timestamp(), role: 'user', onboardingCompleted: false,
-    preferences: { aiProvider: 'pollinations', pollinationsModel: 'openai-large', voiceProvider: 'eva-custom', voiceLang: 'fr-FR' }
+    preferences: { aiProvider: 'pollinations', pollinationsModel: 'openai-fast', voiceProvider: 'eva-custom', voiceLang: 'fr-FR' }
   };
   try {
     await db.collection('users').doc(user.uid).set(p);

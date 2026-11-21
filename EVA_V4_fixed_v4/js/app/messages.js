@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════
    MESSAGES
 ═══════════════════════════════════════════════════ */
 var _renderedMsgOffset = 0;
@@ -176,14 +176,27 @@ function skipTTS() {
 window.skipTTS = skipTTS;
 
 function sendVoiceCommand(cmd) {
-  if (S.busy) return;
+  // La wake word force l'envoi : on annule le watchdog et on debloque busy si besoin
+  if (window._busyWatchdog) { clearTimeout(window._busyWatchdog); window._busyWatchdog = null; }
+  if (S.busy) {
+    // Si busy depuis plus de 10s, on debloque (cas provider en timeout)
+    var now = Date.now();
+    var busySince = window._busySince || 0;
+    if (busySince && (now - busySince) > 10000) {
+      S.busy = false;
+      S.cwRunning = false;
+      if (typeof hideTyping === 'function') hideTyping();
+    } else {
+      return; // Toujours occupee et recemment : ignorer
+    }
+  }
   var input = document.getElementById('msgInput');
   if (input) {
     input.value = cmd;
     var sendBtn = document.getElementById('sendBtn');
     if (sendBtn) sendBtn.disabled = false;
   }
-  handleSend();
+  handleSend(cmd);
 }
 
 var _SVG_THINK_BRAIN = '<svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>';
@@ -235,6 +248,18 @@ window.setRealThinking = function(rawThinking) {
 
 function showTyping(userMsg) {
   S.busy = true;
+  window._busySince = Date.now();
+  // Watchdog : deblocage automatique si le provider ne repond pas apres 90s
+  if (window._busyWatchdog) clearTimeout(window._busyWatchdog);
+  window._busyWatchdog = setTimeout(function() {
+    if (S.busy) {
+      S.busy = false;
+      S.cwRunning = false;
+      window._busySince = 0;
+      if (typeof hideTyping === 'function') hideTyping();
+      if (typeof toast === 'function') toast('Délai dépassé — Eva est prête.', 'warning');
+    }
+  }, 90000);
   _generationAborted = false;
   _thinkHistory = [];
   _lastUserMsg = userMsg || '';
@@ -479,12 +504,14 @@ window.speakMsg = speakMsg;
 /* ═══════════════════════════════════════════════════
    SEND MESSAGE
 ═══════════════════════════════════════════════════ */
-async function handleSend() {
+async function handleSend(customText) {
   var input = document.getElementById('msgInput');
-  var text = (input.value || '').trim();
+  var text = (typeof customText === 'string' && customText.trim()) ? customText.trim() : ((input && input.value) || '').trim();
   var img = S.image || (S.images && S.images[0]) || null;
   var docPending = S.document || (S.documents && S.documents[0]) || null;
   if (!text && !img && !docPending) return;
+  // Vider l'input immédiatement pour éviter qu'il reste bloqué visuellement
+  if (input) { input.value = ''; input.style.height = 'auto'; }
   if (S.busy) { toast('Eva réfléchit...','info'); return; }
   if (!window.EVAChatHandler) { toast('Système non initialisé','error'); return; }
     if (S.documents && S.documents.some(function(d) { return d._loading; })) { toast('Lecture du document en cours...','warning'); return; }

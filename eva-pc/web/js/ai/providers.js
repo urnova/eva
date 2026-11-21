@@ -587,7 +587,7 @@ class PollinationsProvider {
 
   async sendMessage(messages, systemPrompt) {
     if (systemPrompt === undefined) systemPrompt = window.EVA_SYSTEM_PROMPT || 'Tu es Eva, une assistante IA bienveillante.';
-    const model = this.config.pollinationsModel || 'openai';
+    const model = this.config.pollinationsModel || 'openai-fast';
     const allMessages = [{ role: 'system', content: systemPrompt }, ...messages];
 
     /* Modèles de raisonnement (exposent leurs vraies pensées) */
@@ -662,7 +662,7 @@ class PollinationsProvider {
 
     /* ── Fallback Puter si Pollinations entièrement indisponible ── */
     if (!response) {
-      if (window.puter && this.config.puterUsername) {
+      if (window.puter) { // Fallback Puter actif m�me sans compte li�
         console.warn('[EVA Pollinations] Tous les endpoints en échec — fallback Puter AI...');
         if (window.toast) window.toast('Pollinations indisponible — bascule sur Puter AI', 'warning');
         try {

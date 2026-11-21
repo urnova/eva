@@ -242,6 +242,18 @@ window.setRealThinking = function(rawThinking) {
 
 function showTyping(userMsg) {
   S.busy = true;
+  window._busySince = Date.now();
+  // Watchdog : deblocage si le provider ne repond pas apres 90s
+  if (window._busyWatchdog) clearTimeout(window._busyWatchdog);
+  window._busyWatchdog = setTimeout(function() {
+    if (S.busy) {
+      S.busy = false;
+      S.cwRunning = false;
+      window._busySince = 0;
+      if (typeof hideTyping === 'function') hideTyping();
+      if (typeof toast === 'function') toast('Délai dépassé — Eva est prête.', 'warning');
+    }
+  }, 90000);
   _generationAborted = false;
   _thinkHistory = [];
   _lastUserMsg = userMsg || '';

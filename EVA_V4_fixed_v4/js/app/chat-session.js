@@ -1,4 +1,4 @@
-/* ═══ CHAT SESSION ═══ */
+﻿/* ═══ CHAT SESSION ═══ */
 function initChatSession() {
   var prov = S.config.aiProvider || 'puter';
   if (window.EVAChatHandler) {
