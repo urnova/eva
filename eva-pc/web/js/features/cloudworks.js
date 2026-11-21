@@ -524,7 +524,8 @@ window._cwRunAgenticTask = async function() {
     }
   } catch(e) {}
 
-  var agent = new window.CWAgent(window.S.user.uid, {
+  var taskId = 'task-' + Date.now();
+  var agent = new window.CWAgent(window.S.user.uid, taskId, {
     approvalMode: approvalMode,
     autonomousMode: autonomousMode
   });
@@ -532,9 +533,26 @@ window._cwRunAgenticTask = async function() {
 
   var header = statusEl.querySelector('.cw-task-header');
 
-  var result = await agent.run(prompt, stepsEl, function(text, cls) {
-    if (header) header.textContent = text;
-  });
+  function _emit(text, status, isThought) {
+    if (isThought) {
+      var th = document.createElement('div');
+      th.className = 'cw-task-step thought';
+      th.style.cssText = 'color:#88889a;font-style:italic;font-size:0.85em;padding:3px 0 3px 18px;border-left:2px solid rgba(0,212,255,0.2);margin:2px 0;';
+      th.textContent = '(?) ' + text;
+      if (stepsEl) stepsEl.appendChild(th);
+    } else {
+      var it = document.createElement('div');
+      it.className = 'cw-task-step ' + (status || 'running');
+      var ic = status === 'done' ? 'V' : status === 'error' ? 'X' : '>';
+      it.style.cssText = 'padding:3px 0;font-size:0.9em;border-bottom:1px solid rgba(255,255,255,0.04);';
+      it.textContent = ic + ' ' + text;
+      if (stepsEl) stepsEl.appendChild(it);
+      if (header) header.textContent = text;
+    }
+    var ca = document.getElementById('messagesArea') || document.getElementById('chatMessages');
+    if (ca) ca.scrollTop = ca.scrollHeight;
+  }
+  var result = await agent.run(prompt, _emit, statusEl);
 
   if (result.success) {
     if (header) header.textContent = 'Tâche terminée';

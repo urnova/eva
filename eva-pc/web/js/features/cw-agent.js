@@ -1,56 +1,100 @@
 /* =============================================================
-   CW-AGENT.JS - Orchestrateur agentique CloudWorks Phase 1
-   Boucle: LLM -> parse tool_call -> validate -> execute -> LLM
+   CW-AGENT.JS - Agent ReAct CloudWorks (PC Electron)
+   Cycle : Penser -> Agir -> Observer -> Penser -> ...
+   Le LLM raisonne a voix haute avant chaque action.
    ============================================================= */
 
 (function() {
 'use strict';
 
-var MAX_TURNS = 8;        // Nombre max d'allers-retours LLM
-var APPROVAL_TIMEOUT = 30000;  // 30s pour valider une action
-var _activeAgent = null;  // Instance active (une seule tache a la fois)
+var MAX_TURNS = 12;
+var APPROVAL_TIMEOUT = 30000;
+var _activeAgent = null;
 
-/* Systeme prompt court pour le LLM */
-/* Systeme prompt court pour le LLM */
+/* ================================================================
+   SYSTEM PROMPT - Coeur du raisonnement ReAct
+   ================================================================ */
 function _buildSystemPrompt() {
   return (
-    'Tu es EVA CloudWorks, agent autonome sur le PC Windows de l\'utilisateur.\n' +
-    'Tu peux appeler des outils en repondant EXACTEMENT avec:\n' +
-    '<tool_call>{"name": "nom_outil", "args": {...}}</tool_call>\n' +
-    'Outils disponibles:\n' +
-    '- app_resolve: Identifie si une application est installee sur Windows et trouve son chemin/AppID exact. Args: query (string - ex: "chrome", "edge", "excel", "discord", "notepad")\n' +
-    '- app_launch: Lance une application resolue et verifie qu\'elle est bien active. Args: target (string - nom ou chemin resolu), args (string optionnel)\n' +
-    '- app_check: Verifie si une application est installee ou disponible sur Winget. Args: name (string)\n' +
-    '- app_install: Installe une application via Winget sur le PC. Args: name (string)\n' +
-    '- app_close: Ferme ou quitte une application. Args: name (string)\n' +
-    '- web_browse: Ouvre une URL ou lance une recherche dans le navigateur. Args: url (string optionnel), query (string optionnel)\n' +
-    '- process_verify: Verifie l\'etat reel apres action (fichier existant/non vide, dossier avec elements, processus actif). Args: type ("file"|"folder"|"process"), target (string)\n' +
-    '- folder_organize: Organise et deplace les fichiers d\'un dossier par date ou extension. Args: sourcePath (string), groupBy ("date_month"|"extension"), dryRun (bool=false)\n' +
-    '- folder_create: Cree un dossier sur le disque. Args: path (string)\n' +
-    '- pdf_create: Cree un vrai document PDF imprime et stylise. Args: path (string), title (string), content (string avec titres et explications detaillees)\n' +
-    '- excel_create: Cree un fichier Excel .xlsx. Args: path (string), headers (array), rows (array)\n' +
-    '- file_create: Cree un fichier texte (txt, md, py, js, csv...). Args: path (string), content (string)\n' +
-    '- document_create: Cree un document formate (pdf, xlsx, markdown, html, txt, csv). Args: format, filename, content, destination\n' +
-    '- file_list: Liste les fichiers d\'un repertoire. Args: path (string)\n' +
-    '- file_read: Lit un fichier texte. Args: path (string)\n' +
-    '- file_search: Recherche des fichiers par nom. Args: query (string), path (string)\n' +
-    '- web_search: Recherche sur Internet. Args: query (string)\n' +
-    '- web_fetch: Recupere le texte d\'une URL. Args: url (string)\n' +
-    '- system_status: Infos CPU et RAM. Args: aucun\n' +
-    '- screenshot_take: Capture d\'ecran. Args: aucun\n' +
-    'REGLES AGENTIQUES CRITIQUES:\n' +
-    '1. PERCEVOIR AVANT D\'AGIR : Ne devine JAMAIS un chemin ou une application. Utilise app_resolve avant app_launch, et file_list avant de manipuler des fichiers.\n' +
-    '2. TRI DE FICHIERS ET DOSSIERS : Pour classer ou trier des captures d\'ecran ou des fichiers, utilise DIRECTEMENT folder_organize avec le dossier source (ex: sourcePath: "$env:USERPROFILE\\\\Pictures\\\\Screenshots", groupBy: "date_month").\n' +
-    '3. CREATION DE PDF ET DOCUMENTS : Utilise TOUJOURS pdf_create avec un contenu textuel riche, complet, detaille avec de vrais paragraphes explicatifs (jamais de document vide).\n' +
-    '4. VERIFICATION IMMEDIATE : L\'environnement effectue une verification post-action sur le disque. Si une action echoue ou produit un fichier vide, corrige-la immediatement.\n' +
-    '5. Appelle UN SEUL outil a la fois.\n' +
-    '6. Ne revele JAMAIS de cles API, tokens ou mots de passe.\n' +
-    '7. Reponds en francais, sois concis et precis.\n' +
-    '8. Quand la tache est terminee et validee, ecris [TACHE_TERMINEE] a la fin.'
+    'Tu es EVA CloudWorks, un agent autonome qui a un acces complet au PC Windows de l\'utilisateur.\n' +
+    'Tu fonctionnes en mode ReAct : avant chaque action, tu reflechis a voix haute.\n\n' +
+    '=== TON CYCLE DE RAISONNEMENT ===\n' +
+    'Pour CHAQUE etape, tu dois :\n' +
+    '1. Ecrire ta pensee entre balises <thought>...</thought>\n' +
+    '   Dans ta pensee : decompose la demande, explique CE QUE TU COMPRENDS, ce que tu vas faire et POURQUOI.\n' +
+    '2. Ensuite, si une action est necessaire, appele UN outil avec <tool_call>{...}</tool_call>\n' +
+    '3. Tu recevras le resultat. Relis-le dans ta pensee, et decide de la suite.\n' +
+    '4. Quand la tache est completement terminee, ecris [TACHE_TERMINEE] suivi d\'un bref recapitulatif.\n\n' +
+    '=== COMMENT RAISONNER (exemples) ===\n' +
+    '\n' +
+    'Exemple 1 - "Lance YouTube"\n' +
+    '<thought>YouTube est un site web. Je dois l\'ouvrir dans le navigateur. ' +
+    'J\'utilise web_browse qui ouvre automatiquement dans le navigateur par defaut.</thought>\n' +
+    '<tool_call>{"name": "web_browse", "args": {"url": "https://www.youtube.com"}}</tool_call>\n' +
+    '\n' +
+    'Exemple 2 - "Lance YouTube sur Firefox"\n' +
+    '<thought>L\'utilisateur veut YouTube sur Firefox specifiquement. Je dois d\'abord verifier que Firefox est installe.</thought>\n' +
+    '<tool_call>{"name": "app_resolve", "args": {"query": "firefox"}}</tool_call>\n' +
+    '(apres resultat) <thought>Firefox est a C:\\Program Files\\Mozilla Firefox\\firefox.exe. Je lance avec l\'URL en argument.</thought>\n' +
+    '<tool_call>{"name": "app_launch", "args": {"target": "C:\\\\Program Files\\\\Mozilla Firefox\\\\firefox.exe", "args": "https://www.youtube.com"}}</tool_call>\n' +
+    '\n' +
+    'Exemple 3 - "Lance Discord"\n' +
+    '<thought>Discord est une application installee. J\'utilise app_launch directement avec le nom court "Discord".</thought>\n' +
+    '<tool_call>{"name": "app_launch", "args": {"target": "Discord"}}</tool_call>\n' +
+    '\n' +
+    'Exemple 4 - "Installe VLC"\n' +
+    '<thought>L\'utilisateur veut installer VLC. Je verifie d\'abord s\'il est deja installe.</thought>\n' +
+    '<tool_call>{"name": "app_check", "args": {"name": "VLC"}}}\n' +
+    '(apres resultat) <thought>VLC n\'est pas installe. Je le telecharge et l\'installe via Winget.</thought>\n' +
+    '<tool_call>{"name": "app_install", "args": {"name": "VLC"}}</tool_call>\n' +
+    '\n' +
+    'Exemple 5 - "Ouvre mon dossier Documents et dis-moi ce qu\'il y a"\n' +
+    '<thought>L\'utilisateur veut voir son dossier Documents. Je liste son contenu avec file_list.</thought>\n' +
+    '<tool_call>{"name": "file_list", "args": {"path": "$env:USERPROFILE\\\\Documents"}}</tool_call>\n' +
+    '\n' +
+    '=== REGLES DE BON SENS ===\n' +
+    '- YouTube, Netflix, Twitch, Gmail, ChatGPT, GitHub = SITES WEB -> utilise web_browse avec l\'URL\n' +
+    '- Discord, Steam, Spotify, Chrome, Firefox, VSCode = APPS INSTALLEES -> utilise app_launch avec le nom court\n' +
+    '- Pour app_resolve, utilise TOUJOURS un nom court : "discord" et non "Lance Discord sur mon PC"\n' +
+    '- Si une action echoue, analyse l\'erreur dans ta pensee et essaie une approche alternative\n' +
+    '- Ne repete jamais la meme action qui a echoue sans changer les parametres\n' +
+    '- Reponds en francais, sois concis dans tes recapitulatifs\n' +
+    '- Ne revele jamais de cles API, tokens ou donnees sensibles\n' +
+    '\n' +
+    '=== OUTILS DISPONIBLES ===\n' +
+    'web_browse(url?: string, query?: string) - Ouvre une URL dans le navigateur par defaut, ou effectue une recherche\n' +
+    'app_launch(target: string, args?: string) - Lance une app installee par nom court. target = nom app (ex: "Discord") ou chemin exe\n' +
+    'app_resolve(query: string) - Trouve le chemin/AppID exact d\'une app installee. query = nom court (ex: "firefox")\n' +
+    'app_check(name: string) - Verifie si une app est installee. Retourne si disponible via Winget aussi\n' +
+    'app_install(name: string) - Installe une app via Winget (ex: "VLC", "Discord", "Chrome")\n' +
+    'app_close(name: string) - Ferme une application en cours\n' +
+    'file_list(path: string, depth?: number) - Liste les fichiers d\'un dossier\n' +
+    'file_read(path: string) - Lit le contenu d\'un fichier texte\n' +
+    'file_search(query: string, path?: string) - Recherche des fichiers par nom\n' +
+    'file_create(path: string, content: string, append?: bool) - Cree ou modifie un fichier (txt, md, py, js, csv...)\n' +
+    'folder_create(path: string) - Cree un dossier\n' +
+    'folder_organize(sourcePath: string, groupBy: "date_month"|"extension", dryRun?: bool) - Organise un dossier\n' +
+    'pdf_create(path: string, title: string, content: string) - Cree un PDF\n' +
+    'excel_create(path: string, sheetName: string, headers: array, rows: array) - Cree un fichier Excel\n' +
+    'document_create(format: string, filename: string, content: string, destination: string) - Cree un document\n' +
+    'web_search(query: string, max_results?: number) - Recherche sur Internet\n' +
+    'web_fetch(url: string) - Recupere le contenu d\'une page web\n' +
+    'system_status() - Infos CPU, RAM, systeme\n' +
+    'screenshot_take() - Prend une capture d\'ecran\n' +
+    'process_verify(type: "file"|"folder"|"process", target: string) - Verifie qu\'un fichier/dossier/processus existe\n' +
+    'command_run(command: string) - Execute une commande PowerShell (outil avance, utiliser avec discernement)\n'
   );
 }
 
-/* Parse un tool_call dans la reponse LLM */
+/* ================================================================
+   PARSEURS
+   ================================================================ */
+function _parseThought(text) {
+  if (!text) return null;
+  var match = text.match(/<thought>([\s\S]*?)<\/thought>/i);
+  return match ? match[1].trim() : null;
+}
+
 function _parseToolCall(text) {
   if (!text) return null;
   var match = text.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
@@ -64,279 +108,279 @@ function _parseToolCall(text) {
   }
 }
 
-/* Retire le bloc tool_call du texte */
-function _stripToolCall(text) {
-  return text.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '').trim();
+function _stripTags(text) {
+  return text
+    .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+    .replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '')
+    .trim();
 }
 
-/* Demande la validation a l'utilisateur - retourne 'accepted' | 'refused' | 'timeout' */
+/* ================================================================
+   LOGGING FIRESTORE
+   ================================================================ */
+async function _logAction(uid, taskId, toolName, toolArgs, result, decision) {
+  if (!window.db || !uid || !taskId) return;
+  try {
+    await window.db.collection('users').doc(uid)
+      .collection('cw_logs').doc(taskId)
+      .collection('actions').add({
+        tool: toolName,
+        args: toolArgs,
+        success: result.success,
+        error: result.error || null,
+        decision: decision,
+        timestamp: window.timestamp ? window.timestamp() : new Date()
+      });
+  } catch(e) {}
+}
+
+/* ================================================================
+   VALIDATION UTILISATEUR
+   ================================================================ */
 async function _requestApproval(toolName, args, stepEl) {
   return new Promise(function(resolve) {
     if (!stepEl) { resolve('refused'); return; }
-
-    // Construire la carte de validation
     var argsPreview = JSON.stringify(args, null, 2).substring(0, 300);
-    var riskLabel = { file_create: 'ECRITURE', document_create: 'CREATION', file_search: 'LECTURE ETENDUE', web_fetch: 'RESEAU', data_analyze: 'ANALYSE' }[toolName] || 'ACTION';
+    var card = stepEl.closest('.cw-tracker-card');
+    if (!card) { resolve('refused'); return; }
 
-    var card = document.createElement('div');
-    card.className = 'cw-approval-card';
-    card.innerHTML =
-      '<div class="cw-approval-header">' +
-        '<span class="cw-approval-risk cw-risk-' + riskLabel.toLowerCase() + '">' + riskLabel + '</span>' +
-        '<span class="cw-approval-tool">' + toolName + '</span>' +
-      '</div>' +
-      '<pre class="cw-approval-args">' + _escHtml(argsPreview) + '</pre>' +
-      '<div class="cw-approval-timer" id="cwApprovalTimer">30s</div>' +
-      '<div class="cw-approval-actions">' +
-        '<button class="cw-btn cw-btn-danger cw-btn-sm" id="cwApprovalRefuse">Refuser</button>' +
-        '<button class="cw-btn cw-btn-primary cw-btn-sm" id="cwApprovalAccept">Accepter</button>' +
-      '</div>';
+    card.classList.add('pending_approval');
+    var badge = card.querySelector('.cw-tracker-badge');
+    if (badge) { badge.textContent = 'En attente'; badge.className = 'cw-tracker-badge pending'; }
 
-    stepEl.appendChild(card);
+    var approvalHtml = (
+      '<div class="cw-approval-block" style="margin:10px 0; padding:12px; background:rgba(255,136,0,0.08); border:1px solid rgba(255,136,0,0.3); border-radius:10px;">' +
+      '<div style="font-size:0.72em; color:#ff9900; font-weight:700; margin-bottom:6px;">Action requise : ' + toolName + '</div>' +
+      '<pre style="font-size:0.65em; color:rgba(255,230,200,0.7); background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; overflow:auto; max-height:120px;">' + argsPreview + '</pre>' +
+      '<div style="display:flex; gap:8px; margin-top:10px;">' +
+      '<button class="cw-approval-btn accept" style="flex:1;padding:7px;background:linear-gradient(135deg,#ff8800,#dd6600);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:0.72em;font-weight:600;">Autoriser</button>' +
+      '<button class="cw-approval-btn reject" style="flex:1;padding:7px;background:rgba(255,77,109,0.1);color:#ff4d6d;border:1px solid rgba(255,77,109,0.25);border-radius:8px;cursor:pointer;font-size:0.72em;font-weight:600;">Refuser</button>' +
+      '</div></div>'
+    );
 
-    var timerEl = card.querySelector('#cwApprovalTimer');
-    var remaining = 30;
-    var timer = setInterval(function() {
-      remaining--;
-      if (timerEl) timerEl.textContent = remaining + 's';
-      if (remaining <= 0) {
-        clearInterval(timer);
-        card.style.opacity = '0.5';
-        resolve('timeout');
-      }
-    }, 1000);
+    var approvalEl = document.createElement('div');
+    approvalEl.innerHTML = approvalHtml;
+    var stepsContainer = card.querySelector('.cw-tracker-steps') || card;
+    stepsContainer.appendChild(approvalEl.firstElementChild);
 
-    card.querySelector('#cwApprovalAccept').addEventListener('click', function() {
-      clearInterval(timer);
-      card.style.opacity = '0.5';
-      resolve('accepted');
-    });
-    card.querySelector('#cwApprovalRefuse').addEventListener('click', function() {
-      clearInterval(timer);
-      card.style.opacity = '0.5';
-      resolve('refused');
-    });
+    var timer = setTimeout(function() { cleanup(); resolve('timeout'); }, APPROVAL_TIMEOUT);
+
+    function cleanup() {
+      clearTimeout(timer);
+      var block = stepsContainer.querySelector('.cw-approval-block');
+      if (block) block.remove();
+      card.classList.remove('pending_approval');
+    }
+
+    stepsContainer.querySelector('.cw-approval-btn.accept').addEventListener('click', function() { cleanup(); resolve('accepted'); });
+    stepsContainer.querySelector('.cw-approval-btn.reject').addEventListener('click', function() { cleanup(); resolve('refused'); });
   });
 }
 
-function _escHtml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-/* Appel LLM via IPC */
+/* ================================================================
+   APPEL LLM
+   ================================================================ */
 async function _callLLM(messages) {
-  if (!window.eva || !window.eva.system || !window.eva.system.llmChat) {
-    throw new Error('API LLM non disponible');
+  // Provider principal : Pollinations (compatible OpenAI API, gratuit)
+  var body = {
+    model: (window.S && window.S.pollinationsModel) || 'openai-fast',
+    messages: messages,
+    max_tokens: 1200,
+    temperature: 0.3
+  };
+  var resp = await fetch('https://text.pollinations.ai/openai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(35000)
+  });
+  if (!resp.ok) {
+    // Fallback Puter si disponible
+    if (window.puter && window.puter.ai && window.puter.ai.chat) {
+      var fullPrompt = messages.map(function(m) {
+        return (m.role === 'system' ? '[SYSTEME] ' : m.role === 'user' ? 'USER: ' : 'ASSISTANT: ') + m.content;
+      }).join('\n\n');
+      var puterRes = await window.puter.ai.chat(fullPrompt);
+      return typeof puterRes === 'string' ? puterRes : (puterRes && puterRes.message && puterRes.message.content && puterRes.message.content[0] && puterRes.message.content[0].text) || '';
+    }
+    throw new Error('LLM HTTP ' + resp.status);
   }
-  var result = await window.eva.system.llmChat(messages);
-  if (!result || !result.choices || !result.choices[0]) {
-    throw new Error('Reponse LLM invalide');
-  }
-  return result.choices[0].message.content;
+  var data = await resp.json();
+  var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  if (!content) throw new Error('Reponse LLM vide');
+  return content;
 }
 
-/* Log une action dans Firestore action_log */
-async function _logAction(uid, taskId, toolName, args, resultObj, decision) {
+/* ================================================================
+   CLASSE AGENT REACT
+   ================================================================ */
+function CWAgent(uid, taskId, options) {
+  this.uid = uid;
+  this._taskId = taskId;
+  this.autonomousMode = options && options.autonomousMode;
+  this.approvalMode   = options && options.approvalMode;
+  this._stopRequested = false;
+}
+
+CWAgent.prototype.stop = function() {
+  this._stopRequested = true;
+};
+
+CWAgent.prototype.run = async function(userPrompt, emitFn, stepEl) {
+  _activeAgent = this;
+
+  function _emit(text, status, isThought) {
+    if (typeof emitFn === 'function') emitFn(text, status, isThought);
+  }
+
   try {
-    if (!window.db || !uid) return;
-    await window.db
-      .collection('cloudworks').doc(uid)
-      .collection('action_log').add({
-        ts: firebase.firestore.FieldValue.serverTimestamp(),
-        taskId: taskId,
-        tool: toolName,
-        args: args,
-        result: resultObj && resultObj.success !== undefined ? { success: resultObj.success } : {},
-        status: resultObj && resultObj.success ? 'success' : 'error',
-        user_decision: decision || null
-      });
-  } catch(e) { /* non-bloquant */ }
-}
-
-/* Classe principale */
-class CWAgent {
-  constructor(uid, options) {
-    this.uid = uid;
-    this.options = options || {};
-    this.approvalMode = options.approvalMode !== false;  // true par defaut
-    this.autonomousMode = options.autonomousMode === true;  // false par defaut
-    this._stopRequested = false;
-    this._taskId = 'cw_' + Date.now();
-  }
-
-  stop() {
-    this._stopRequested = true;
-  }
-
-  /* Lance une tache agentique et remplit le DOM stepEl */
-  async run(prompt, stepEl, onStep) {
-    _activeAgent = this;
-    this._stopRequested = false;
-
-    var _emit = function(text, cls) {
-      if (onStep) onStep(text, cls || 'running');
-      if (!stepEl) return;
-      var d = document.createElement('div');
-      d.className = 'cw-task-step ' + (cls || 'running');
-      d.textContent = text;
-      stepEl.appendChild(d);
-      stepEl.scrollTop = stepEl.scrollHeight;
-      while (stepEl.children.length > 30) stepEl.removeChild(stepEl.firstChild);
-    };
-
     var messages = [
       { role: 'system', content: _buildSystemPrompt() },
-      { role: 'user', content: prompt }
+      { role: 'user',   content: userPrompt }
     ];
 
-    _emit('Connexion au LLM local...', 'running');
-
-    var turns = 0;
     var lastResponse = '';
+    var turns = 0;
 
-    try {
-      while (turns < MAX_TURNS && !this._stopRequested) {
-        turns++;
-        _emit('Reflexion EVA (tour ' + turns + ')...', 'running');
+    while (turns < MAX_TURNS && !this._stopRequested) {
+      turns++;
 
-        var response;
-        try {
-          response = await _callLLM(messages);
-        } catch(e) {
-          _emit('Erreur LLM: ' + e.message, 'error');
-          return { success: false, error: e.message };
+      _emit('Reflexion...', 'running');
+      var response = '';
+      try {
+        response = await _callLLM(messages);
+      } catch(e) {
+        _emit('Erreur LLM: ' + e.message, 'error');
+        return { success: false, error: e.message };
+      }
+
+      lastResponse = response;
+
+      // Afficher la pensee de l'agent
+      var thought = _parseThought(response);
+      if (thought) {
+        _emit(thought, 'thought', true);
+      }
+
+      // Chercher un appel d'outil
+      var toolCall = _parseToolCall(response);
+      var visibleText = _stripTags(response);
+
+      if (!toolCall) {
+        if (visibleText) _emit(visibleText, 'done');
+        if (response.includes('[TACHE_TERMINEE]')) {
+          return { success: true, response: visibleText };
         }
+        messages.push({ role: 'assistant', content: response });
+        messages.push({ role: 'user', content: 'Continue. Si la tache est terminee, ecris [TACHE_TERMINEE] suivi d\'un bref recapitulatif.' });
+        continue;
+      }
 
-        lastResponse = response;
-        var toolCall = _parseToolCall(response);
-        var textPart = _stripToolCall(response);
+      var toolName = toolCall.name;
+      var toolArgs = toolCall.args;
 
-        // Afficher la partie texte si presente
-        if (textPart) {
-          _emit('EVA: ' + textPart.substring(0, 200), 'info');
-        }
+      if (!window.CWTools || !window.CWTools.executeTool) {
+        _emit('CWTools non disponible.', 'error');
+        return { success: false, error: 'CWTools non disponible' };
+      }
 
-        // Tache terminee
-        if (!toolCall || response.includes('[TACHE_TERMINEE]')) {
-          _emit('Tache terminee.', 'done');
-          break;
-        }
+      if (!window.CWTools.TOOL_CLASSIFICATION[toolName]) {
+        messages.push({ role: 'assistant', content: response });
+        messages.push({ role: 'user', content: 'ERREUR: outil "' + toolName + '" inconnu. Utilise uniquement les outils listes dans ton prompt systeme.' });
+        continue;
+      }
 
-        var toolName = toolCall.name;
-        var toolArgs = toolCall.args;
-
-        // Verifier que l'outil existe
-        if (!window.CWTools || !window.CWTools.TOOL_CLASSIFICATION[toolName]) {
-          _emit('Outil inconnu: ' + toolName, 'error');
+      // Validation si necessaire
+      var classification = window.CWTools.TOOL_CLASSIFICATION[toolName];
+      var decision = 'auto';
+      if (classification === 'SENSITIVE' && !this.autonomousMode && this.approvalMode) {
+        _emit('Action sensible : ' + toolName, 'pending');
+        decision = await _requestApproval(toolName, toolArgs, stepEl);
+        if (decision !== 'accepted') {
+          _emit('Action refusee.', 'error');
           messages.push({ role: 'assistant', content: response });
-          messages.push({ role: 'user', content: 'ERREUR: Outil "' + toolName + '" inconnu. Utilise uniquement les outils listes.' });
+          messages.push({ role: 'user', content: 'L\'utilisateur a refuse l\'action "' + toolName + '". Propose une alternative.' });
+          await _logAction(this.uid, this._taskId, toolName, toolArgs, { success: false }, decision);
           continue;
         }
-
-        var classification = window.CWTools.TOOL_CLASSIFICATION[toolName];
-        var decision = 'auto';
-
-        // Gestion de la validation
-        if (classification === 'SENSITIVE' && !this.autonomousMode) {
-          if (this.approvalMode) {
-            _emit('Validation requise: ' + toolName, 'pending');
-            decision = await _requestApproval(toolName, toolArgs, stepEl);
-            if (decision !== 'accepted') {
-              _emit('Action refusee: ' + toolName, 'error');
-              messages.push({ role: 'assistant', content: response });
-              messages.push({ role: 'user', content: 'L\'utilisateur a refuse l\'action "' + toolName + '". Propose une alternative ou termine la tache.' });
-              await _logAction(this.uid, this._taskId, toolName, toolArgs, { success: false }, decision);
-              continue;
-            }
-          }
-        }
-
-        // Executer l'outil
-        _emit('Execution: ' + toolName + '...', 'running');
-        var toolResult;
-        try {
-          toolResult = await window.CWTools.executeTool(toolName, toolArgs);
-        } catch(e) {
-          toolResult = { success: false, error: e.message };
-        }
-
-        await _logAction(this.uid, this._taskId, toolName, toolArgs, toolResult, decision);
-
-        // Verification automatique post-action
-        var verifyNote = '';
-        if (toolResult.success) {
-          if (toolName === 'file_create' || toolName === 'pdf_create' || toolName === 'excel_create' || toolName === 'document_create') {
-            var targetPath = toolArgs.path || (toolArgs.destination ? (toolArgs.destination + '\\' + (toolArgs.filename || 'doc')) : null);
-            if (targetPath) {
-              try {
-                var vCheck = await window.CWTools.executeTool('process_verify', { type: 'file', target: targetPath });
-                if (vCheck && vCheck.result) {
-                  if (!vCheck.result.exists || vCheck.result.isEmpty) {
-                    toolResult.success = false;
-                    toolResult.error = vCheck.result.message || 'Le fichier n\'existe pas ou est vide (0 octet).';
-                  } else {
-                    verifyNote = ' (Vérifié sur disque: ' + (vCheck.result.size || 0) + ' octets)';
-                  }
-                }
-              } catch(ve) {}
-            }
-          } else if (toolName === 'folder_create') {
-            if (toolArgs.path) {
-              try {
-                var vCheck = await window.CWTools.executeTool('process_verify', { type: 'folder', target: toolArgs.path });
-                if (vCheck && vCheck.result && !vCheck.result.exists) {
-                  toolResult.success = false;
-                  toolResult.error = 'Le dossier n\'a pas pu être créé sur le disque.';
-                } else if (vCheck && vCheck.result) {
-                  verifyNote = ' (Vérifié sur disque: dossier créé)';
-                }
-              } catch(ve) {}
-            }
-          }
-        }
-
-        if (toolResult.success) {
-          var summary = toolResult.result && toolResult.result.summary ? toolResult.result.summary : (toolResult.result ? JSON.stringify(toolResult.result).substring(0, 200) : 'OK');
-          _emit('Resultat ' + toolName + ': ' + summary.substring(0, 150) + verifyNote, 'done');
-          var resultStr = JSON.stringify(toolResult.result, null, 2).substring(0, 2000);
-          messages.push({ role: 'assistant', content: response });
-          messages.push({ role: 'user', content: 'RESULTAT de ' + toolName + ':\n' + resultStr + (verifyNote ? '\n' + verifyNote : '') + '\n\nContinue la tache.' });
-        } else {
-          _emit('Echec ' + toolName + ': ' + (toolResult.error || 'Inconnu'), 'error');
-          messages.push({ role: 'assistant', content: response });
-          messages.push({ role: 'user', content: 'ERREUR de ' + toolName + ': ' + (toolResult.error || 'Inconnu') + '. Corrige le chemin ou les parametres et continue.' });
-        }
-
-        if (this._stopRequested) break;
       }
 
-      if (this._stopRequested) {
-        _emit('Tache interrompue par l\'utilisateur.', 'error');
-        return { success: false, error: 'Interrompu', response: lastResponse };
+      // Execution
+      _emit('Execution : ' + toolName + ' ...', 'running');
+      var toolResult;
+      try {
+        toolResult = await window.CWTools.executeTool(toolName, toolArgs);
+      } catch(e) {
+        toolResult = { success: false, error: e.message };
       }
 
-      if (turns >= MAX_TURNS) {
-        _emit('Nombre maximum de tours atteint.', 'error');
+      await _logAction(this.uid, this._taskId, toolName, toolArgs, toolResult, decision);
+
+      // Verification post-action fichiers
+      if (toolResult.success && (toolName === 'file_create' || toolName === 'pdf_create' || toolName === 'excel_create' || toolName === 'document_create')) {
+        var targetPath = toolArgs.path || (toolArgs.destination ? (toolArgs.destination + '\\' + (toolArgs.filename || 'doc')) : null);
+        if (targetPath) {
+          try {
+            var vCheck = await window.CWTools.executeTool('process_verify', { type: 'file', target: targetPath });
+            if (vCheck && vCheck.result && (!vCheck.result.exists || vCheck.result.isEmpty)) {
+              toolResult.success = false;
+              toolResult.error = 'Le fichier cree est vide ou n\'existe pas.';
+            }
+          } catch(ve) {}
+        }
       }
 
-      return { success: true, response: lastResponse };
+      if (toolResult.success) {
+        var resultSummary = (toolResult.result && toolResult.result.summary)
+          ? toolResult.result.summary
+          : JSON.stringify(toolResult.result || {}).substring(0, 500);
+        _emit('[' + toolName + '] OK : ' + resultSummary.substring(0, 200), 'done');
+        messages.push({ role: 'assistant', content: response });
+        messages.push({
+          role: 'user',
+          content: 'RESULTAT de ' + toolName + ':\n' + JSON.stringify(toolResult.result, null, 2).substring(0, 2000) + '\n\nReflechis au resultat dans <thought> et continue. Ecris [TACHE_TERMINEE] quand tout est fait.'
+        });
+      } else {
+        var errMsg = toolResult.error || 'Erreur inconnue';
+        _emit('[' + toolName + '] ECHEC : ' + errMsg, 'error');
+        messages.push({ role: 'assistant', content: response });
+        messages.push({
+          role: 'user',
+          content: 'ECHEC de ' + toolName + ': ' + errMsg + '\n\nAnalyse dans <thought> et essaie une approche differente.'
+        });
+      }
 
-    } catch(e) {
-      _emit('Erreur critique: ' + e.message, 'error');
-      return { success: false, error: e.message };
-    } finally {
-      _activeAgent = null;
+      if (this._stopRequested) break;
     }
-  }
-}
 
-/* Stopper l'agent actif */
+    if (this._stopRequested) {
+      _emit('Tache interrompue.', 'error');
+      return { success: false, error: 'Interrompu', response: lastResponse };
+    }
+    if (turns >= MAX_TURNS) {
+      _emit('Nombre maximum de tours atteint (' + MAX_TURNS + ').', 'error');
+    }
+
+    return { success: true, response: lastResponse };
+
+  } catch(e) {
+    if (typeof emitFn === 'function') emitFn('Erreur critique: ' + e.message, 'error');
+    return { success: false, error: e.message };
+  } finally {
+    _activeAgent = null;
+  }
+};
+
+/* ================================================================
+   API PUBLIQUE
+   ================================================================ */
 function stopActiveAgent() {
   if (_activeAgent) _activeAgent.stop();
 }
 
-/* Export global */
 window.CWAgent = CWAgent;
 window.CWAgentStop = stopActiveAgent;
+
+console.log('[CW Agent] ReAct v2 charge - Pensee + Action + Observation');
 
 })();
