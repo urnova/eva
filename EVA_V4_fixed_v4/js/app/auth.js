@@ -144,6 +144,14 @@ async function loadProfile(uid) {
       if (S.config && S.config.pollinationsModel === 'openai-large') {
         S.config.pollinationsModel = 'openai-fast';
         try { localStorage.setItem('eva_config', JSON.stringify(S.config)); } catch(e){}
+        // Persister aussi dans Firestore pour sync multi-appareils
+        try {
+          if (typeof db !== 'undefined' && S.user) {
+            db.collection('users').doc(S.user.uid).set(
+              { preferences: { pollinationsModel: 'openai-fast' } }, { merge: true }
+            ).catch(function(){});
+          }
+        } catch(e){}
       }
       // Fin migration
 
