@@ -499,9 +499,27 @@ window._cwRunAgenticTask = async function() {
   var prompt = promptEl.value.trim();
   if (!prompt) return;
 
+  // FIX v5.6.16 : CloudWorks = LLM local obligatoire — pas de fallback cloud
   if (!window.CWAgent || !window.CWTools) {
     if (window.toast) window.toast('Module CWAgent non chargé. Rechargez l\'application.', 'error');
     return;
+  }
+
+  // Vérifier que le modèle LLM est téléchargé
+  if (window.eva && window.eva.system && window.eva.system.llmCheck) {
+    try {
+      var llmChk = await window.eva.system.llmCheck();
+      if (!llmChk || !llmChk.exists) {
+        if (window.toast) window.toast(
+          '⚠️ Modèle LLM non téléchargé. CloudWorks nécessite le LLM local pour fonctionner. Téléchargez-le ci-dessus.',
+          'warning'
+        );
+        // Scroll vers le bouton de téléchargement
+        var dlBtn = document.getElementById('cwDownloadLLMBtn');
+        if (dlBtn) dlBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    } catch(chkErr) {}
   }
 
   statusEl.style.display = 'block';

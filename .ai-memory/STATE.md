@@ -1,7 +1,15 @@
 ﻿# STATE — EVA — 23 Nov 2026 (mise à jour 22h38)
 
 ## Statut actuel
-**D1 en cours** — Patches v5.6.14 appliqués, build en cours
+**D1 en cours** — v5.6.15 ✅ PUBLIÉE sur GitHub Releases
+
+## Bugs D1 corrigés dans v5.6.15 (commit 8a89e86)
+
+| Bug | Cause | Fix |
+|---|---|---|
+| sendBtn toujours disabled PC | `disabled` dans le HTML, jamais retiré si input ne reçoit pas d'événement | Retiré du HTML + `sendBtn.disabled = false` forcé dans `setupUI()` |
+| LLM local jamais utilisé (Puter cramé) | `_callLLM` essayait EVAChatHandler (Puter) EN PREMIER | Ordre inversé : LLM local → Pollinations → Puter en dernier |
+| Modèle LLM effacé à chaque MàJ | NSIS `customUninstall` faisait `RMDir /r userData/models` | `customUninstall` ne supprime plus rien — modèle permanent |
 
 ## Cause racine des bugs D1 (TROUVÉE)
 
