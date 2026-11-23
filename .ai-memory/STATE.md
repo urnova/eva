@@ -1,7 +1,18 @@
-﻿# STATE — EVA — 23 Nov 2026 (mise à jour 22h38)
+﻿# STATE — EVA — 23 Nov 2026 (mise à jour 23h20)
 
 ## Statut actuel
-**D1 en cours** — v5.6.15 ✅ PUBLIÉE sur GitHub Releases
+**D1 en cours** — v5.6.16 ✅ PUBLIÉE sur GitHub Releases (commit a879eb4)
+
+### Bugs D1 corrigés dans v5.6.16
+| Bug | Cause | Fix |
+|---|---|---|
+| CloudWorks utilise Puter/Pollinations au lieu du LLM | `_callLLM` tentait EVAChatHandler/Pollinations/Puter en fallback | LLM local UNIQUEMENT — zero fallback cloud |
+| Erreur masquée "AUCUN LLM DISPONIBLE" | La chaîne de fallbacks masquait l'erreur réelle du LLM | Erreurs typées lisibles (LLM_NOT_AVAILABLE, LLM_START_TIMEOUT, LLM_ERROR) |
+| Exécution CloudWorks sans LLM | `_cwRunAgenticTask` ne vérifiait pas la présence du LLM | Guard obligatoire — scroll vers téléchargement si absent |
+
+### Problème résiduel identifié (non corrigé)
+- `window.eva.system.llmChat()` plante même quand le moteur affiche "opérationnel" → à investiguer après install v5.6.16
+- LLM affiche "Non téléchargé" alors que le fichier 1.8 GB est présent → bug de détection dans `llmCheck()` ou `main.ts`
 
 ## Bugs D1 corrigés dans v5.6.15 (commit 8a89e86)
 

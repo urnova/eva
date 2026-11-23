@@ -414,8 +414,14 @@ async function _callLLM(messages) {
     temperature: 0.3
   });
 
-  if (result && result.content) return result.content;
+  // Le handler llm:chat retourne { choices: [{ message: { role, content } }] }
+  if (result && result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content) {
+    return result.choices[0].message.content;
+  }
+  // Fallback: string directe
   if (typeof result === 'string' && result.trim()) return result;
+  // Fallback: result.content (ancien format)
+  if (result && result.content && typeof result.content === 'string' && result.content.trim()) return result.content;
   throw new Error('LLM_EMPTY: Le LLM local a renvoyé une réponse vide.');
 }
 

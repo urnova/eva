@@ -491,6 +491,7 @@ function retryMsg(idxOrStr) {
   renderMsgs();
   setTimeout(function() { handleSend(); }, 100);
 }
+window.handleSend = handleSend;
 window.retryMsg = retryMsg;
 
 function speakMsg(btn) {
@@ -504,7 +505,6 @@ window.speakMsg = speakMsg;
 /* ═══════════════════════════════════════════════════
    SEND MESSAGE
 ═══════════════════════════════════════════════════ */
-window.handleSend = function(customText) { return handleSend(customText); };
 async function handleSend(customText) {
   try {
   var input = document.getElementById('msgInput');
