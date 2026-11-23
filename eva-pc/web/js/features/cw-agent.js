@@ -358,16 +358,71 @@ CWAgent.prototype.run = async function(userPrompt, emitFn, stepEl) {
    APPEL LLM - Utilise le provider actif d'EVA
    ================================================================ */
 async function _callLLM(messages) {
-  // Essai avec EVAChatHandler (provider principal d'EVA)
+  /* FIX v5.6.15 : LLM LOCAL EN PREMIER — ne jamais bruler le quota Puter pour les taches libres */
+
+  // === PRIORITE 1 : LLM local via IPC Electron (node-llama-cpp) ===
+  if (window.eva && window.eva.system && typeof window.eva.system.llmChat === 'function') {
+    try {
+      var llmStatus = await window.eva.system.llmStatus();
+      if (llmStatus && llmStatus.running) {
+        console.log('[CWAgent] Utilisation du LLM local (node-llama-cpp)');
+        var localRes = await window.eva.system.llmChat(messages, {
+          max_tokens: 1200,
+          temperature: 0.3
+        });
+        if (localRes && localRes.content) return localRes.content;
+        if (typeof localRes === 'string' && localRes.trim()) return localRes;
+      } else {
+        console.warn('[CWAgent] LLM local non démarré — tentative de démarrage...');
+        try {
+          await window.eva.system.llmStart();
+          // Attendre 3s que le moteur soit prêt
+          await new Promise(function(r){ setTimeout(r, 3000); });
+          var localRes2 = await window.eva.system.llmChat(messages, { max_tokens: 1200, temperature: 0.3 });
+          if (localRes2 && localRes2.content) return localRes2.content;
+          if (typeof localRes2 === 'string' && localRes2.trim()) return localRes2;
+        } catch(startErr) {
+          console.warn('[CWAgent] Démarrage LLM local échoué:', startErr.message);
+        }
+      }
+    } catch(localErr) {
+      console.warn('[CWAgent] LLM local erreur:', localErr.message, '— fallback Pollinations');
+    }
+  }
+
+  // === PRIORITE 2 : Pollinations (quota gratuit, pas Puter) ===
+  console.log('[CWAgent] Fallback Pollinations (LLM local indisponible)');
+  try {
+    var body = {
+      model: 'openai-fast',
+      messages: messages,
+      max_tokens: 1000,
+      temperature: 0.3
+    };
+    var resp = await fetch('https://text.pollinations.ai/openai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000)
+    });
+    if (resp.ok) {
+      var data = await resp.json();
+      var polContent = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (polContent) return polContent;
+    }
+  } catch(polErr) {
+    console.warn('[CWAgent] Pollinations erreur:', polErr.message);
+  }
+
+  // === PRIORITE 3 : EVAChatHandler (Puter) — dernier recours ===
+  console.warn('[CWAgent] Fallback EVAChatHandler (Puter) — dernier recours');
   if (window.EVAChatHandler && typeof window.EVAChatHandler.sendMessage === 'function') {
-    // Convertir l'historique en un seul prompt contextualisé
     var contextPrompt = messages.slice(1).map(function(m) {
       if (m.role === 'system') return '';
       if (m.role === 'user') return 'USER: ' + m.content;
       if (m.role === 'assistant') return 'ASSISTANT: ' + m.content;
       return m.content;
     }).filter(Boolean).join('\n\n');
-
     var sysPrompt = messages[0] && messages[0].role === 'system' ? messages[0].content : _buildSystemPrompt();
     var origSys = window.EVA_SYSTEM_PROMPT;
     window.EVA_SYSTEM_PROMPT = sysPrompt;
@@ -379,24 +434,7 @@ async function _callLLM(messages) {
     }
   }
 
-  // Fallback direct sur Pollinations
-  var body = {
-    model: 'openai-fast',
-    messages: messages,
-    max_tokens: 1000,
-    temperature: 0.3
-  };
-  var resp = await fetch('https://text.pollinations.ai/openai', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(30000)
-  });
-  if (!resp.ok) throw new Error('LLM HTTP ' + resp.status);
-  var data = await resp.json();
-  var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-  if (!content) throw new Error('Reponse LLM vide');
-  return content;
+  throw new Error('Aucun LLM disponible (local, Pollinations et EVAChatHandler ont échoué)');
 }
 
 /* ================================================================

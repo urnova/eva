@@ -45,13 +45,11 @@
 
 !macro customUninstall
   ; ═══════════════════════════════════════════════════════
-  ; Nettoyage du modèle LLM stocké dans AppData à la désinstallation
-  ; Le modèle est dans %APPDATA%\eva-assistant-pc\models\
+  ; FIX v5.6.15 : NE PAS supprimer userData/models
+  ; Le modele LLM (2 Go) persiste apres desinstallation ET mises a jour.
+  ; L'utilisateur peut le supprimer manuellement si besoin.
   ; ═══════════════════════════════════════════════════════
-  ReadEnvStr $R1 APPDATA
-  ; IfFileExists est la syntaxe NSIS native correcte (pas ${If} ${DirExists})
-  IfFileExists "$R1\eva-assistant-pc\models\*.*" 0 +2
-    RMDir /r "$R1\eva-assistant-pc\models"
+  ; (aucune suppression -- le modele est conserve intentionnellement)
 !macroend
 
 !macro customInstall

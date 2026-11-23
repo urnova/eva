@@ -11,6 +11,7 @@ function setupUI() {
 
   // Send
   document.getElementById('sendBtn').addEventListener('click', handleSend);
+  document.getElementById('sendBtn').disabled = false; /* FIX v5.6.15 : toujours actif */
   document.getElementById('msgInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   });

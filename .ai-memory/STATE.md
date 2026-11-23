@@ -84,12 +84,11 @@ eva-pc/patches/check_chathtml.py        ← vérification scripts chat.html
 ```
 
 ## Prochaine étape
-- Build v5.6.14 : `node deploy.js` depuis eva-pc/
-- Push web pour Vercel : `git add -A && git commit && git push`
-- Validation par l'utilisateur
-- Après validation D1 → démarrer D2
+- Validation v5.6.14 par l'utilisateur (GitHub Releases)
+- Si OK → démarrer D2
+- Si bug persistant → audit approfondi du LLM status (modèle qui se perd)
 
 ## Commits récents
 - `daa2bb0` : v5.6.9 fix LLM userData path
 - `4540061` : fix(D1) sendBtn + executeEvaAction async + PWA detection (triple async introduit ici)
-- v5.6.14 : **FIX triple async + sendBtn + PWA via system.exec** (en cours de build)
+- `604d303` : **v5.6.14 FIX triple async + sendBtn + PWA via system.exec** ✅ PUBLIÉ
