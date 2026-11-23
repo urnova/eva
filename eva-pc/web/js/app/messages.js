@@ -360,16 +360,15 @@ function hideTyping() {
   if (window.EvaCharacter && typeof window.EvaCharacter.setIdle === 'function') {
     try { window.EvaCharacter.setIdle(); } catch(_) {}
   }
-  /* Ne restaurer le bouton Envoyer QUE si aucune tâche CloudWorks n'est en cours */
-  if (!S.cwRunning) {
-    var sendBtn = document.getElementById('sendBtn');
-    var stopBtn = document.getElementById('stopBtn');
-    if (sendBtn && stopBtn) {
-      stopBtn.style.display = 'none';
-      sendBtn.style.display = 'inline-flex';
-      var input = document.getElementById('msgInput');
-      sendBtn.disabled = !(input && input.value.trim()) && (!S.images || !S.images.length) && (!S.documents || !S.documents.length);
-    }
+  /* FIX v5.6.11 : sendBtn restaure TOUJOURS meme si cwRunning=true */
+  S.busy = false;
+  var sendBtn = document.getElementById('sendBtn');
+  var stopBtn = document.getElementById('stopBtn');
+  if (sendBtn && stopBtn) {
+    stopBtn.style.display = 'none';
+    sendBtn.style.display = 'inline-flex';
+    var input = document.getElementById('msgInput');
+    sendBtn.disabled = !(input && input.value.trim()) && (!S.images || !S.images.length) && (!S.documents || !S.documents.length);
   }
 }
 

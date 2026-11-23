@@ -264,6 +264,23 @@ async function tool_app_launch(args) {
 
   var normT = _normalizeAppName(target);
 
+  // FIX v5.6.11 : vérifier si une PWA Chrome/Edge est installée avant d'ouvrir le navigateur
+  if (window.eva && window.eva.ipc && typeof window.eva.ipc.invoke === 'function') {
+    try {
+      var pwaResult = await window.eva.ipc.invoke('pwa:detect', { name: target, url: '' });
+      if (pwaResult && pwaResult.found && pwaResult.execPath) {
+        console.log('[CW Tools] PWA trouvée pour', target, ':', pwaResult.execPath);
+        await window.eva.ipc.invoke('shell:open', { path: pwaResult.execPath });
+        return {
+          success: true,
+          result: { app: target, method: 'pwa', message: 'PWA lancée : ' + target }
+        };
+      }
+    } catch(pwaErr) {
+      console.warn('[CW Tools] PWA detect erreur:', pwaErr);
+    }
+  }
+
   try {
     if (!window.eva || !window.eva.system || !window.eva.system.exec) {
       return { success: false, error: 'API système non disponible' };
@@ -442,6 +459,19 @@ async function tool_web_browse(args) {
     if (args.edge || (query && /edge/i.test(query))) browser = 'edge';
     else if (args.chrome || (query && /chrome/i.test(query))) browser = 'chrome';
     else if (args.firefox || (query && /firefox/i.test(query))) browser = 'firefox';
+  }
+
+  // FIX v5.6.11 : si une PWA est installée pour ce domaine, la préférer au navigateur
+  if (args.preferPWA !== false && window.eva && window.eva.ipc && typeof window.eva.ipc.invoke === 'function') {
+    try {
+      var domain = targetUrl.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
+      var pwaCheck = await window.eva.ipc.invoke('pwa:detect', { name: domain, url: targetUrl });
+      if (pwaCheck && pwaCheck.found && pwaCheck.execPath) {
+        console.log('[CW Tools] PWA web trouvée pour', domain);
+        await window.eva.ipc.invoke('shell:open', { path: pwaCheck.execPath });
+        return { success: true, result: { url: targetUrl, method: 'pwa', message: 'PWA lancée pour ' + domain } };
+      }
+    } catch(_pwaE) {}
   }
 
   try {

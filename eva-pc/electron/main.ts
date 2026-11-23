@@ -2105,5 +2105,58 @@ ipcMain.handle('tts:stop', async () => {
     try { _sttProcess.stdin.write(JSON.stringify({ command: 'resume' }) + '\n'); } catch(e) {}
   }
   return { success: true };
+}
+
+// ─── PWA Detection (FIX v5.6.11) ────────────────────────────────────────────
+ipcMain.handle('pwa:detect', async (_e: any, args: any) => {
+  const name: string = (args && args.name) ? args.name.toLowerCase() : '';
+  const url: string  = (args && args.url)  ? args.url  : '';
+  try {
+    const { execSync } = require('child_process');
+    // Chercher les PWA Chrome/Edge dans le registre Windows
+    // Chrome stocke les PWA sous HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall
+    // Edge aussi. On cherche par nom ou domaine.
+    const regOutput = execSync(
+      'reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /s /f "' +
+      (name || 'App') + '" 2>nul',
+      { encoding: 'utf-8', timeout: 3000 }
+    );
+    if (regOutput && regOutput.trim()) {
+      // Extraire le DisplayName et le chemin d'exécution
+      const lines = regOutput.split('\n');
+      let execPath: string | null = null;
+      for (const line of lines) {
+        if (line.trim().startsWith('DisplayIcon') || line.trim().startsWith('DisplayName')) {
+          const parts = line.split('REG_SZ');
+          if (parts[1]) {
+            const val = parts[1].trim();
+            if (val.endsWith('.exe') || val.includes('.exe,')) {
+              execPath = val.split(',')[0].trim();
+              break;
+            }
+          }
+        }
+      }
+      return { found: true, execPath };
+    }
+    return { found: false, execPath: null };
+  } catch (err: any) {
+    // Pas de PWA trouvée ou reg indisponible
+    return { found: false, execPath: null };
+  }
 });
+
+// ─── shell:open (FIX v5.6.11) ────────────────────────────────────────────────
+ipcMain.handle('shell:open', async (_e: any, args: any) => {
+  const { shell } = require('electron');
+  const path: string = args && args.path ? args.path : '';
+  if (!path) return { success: false };
+  try {
+    await shell.openPath(path);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});
+);
 
