@@ -1363,24 +1363,30 @@ async function startLLM(): Promise<boolean> {
   if (llamaModel && llamaContext) return true;
 
   try {
+    // userData survit aux mises à jour (contrairement à resourcesPath qui peut être en lecture seule)
+    const userDataModels = path.join(app.getPath('userData'), 'models');
     const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
 
-    // Chemin principal : resources/models/ (chemin NSIS via $INSTDIR\resources\models)
+    // Ordre de recherche: userData/models (téléchargé par l'utilisateur) → resources/models → resources/llm (legacy)
+    const userDataModelFile = path.join(userDataModels, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
     const modelFile = path.join(resourcesPath, 'models', 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
-    // Fallback legacy : resources/llm/ (anciennes versions)
     const legacyModelFile = path.join(resourcesPath, 'llm', 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
 
     let resolvedModelFile = '';
-    if (fs.existsSync(modelFile) && fs.statSync(modelFile).size > 0) {
+    if (fs.existsSync(userDataModelFile) && fs.statSync(userDataModelFile).size > 100_000_000) {
+      resolvedModelFile = userDataModelFile;
+      console.log('[LLM] Modèle trouvé dans userData/models:', resolvedModelFile);
+    } else if (fs.existsSync(modelFile) && fs.statSync(modelFile).size > 100_000_000) {
       resolvedModelFile = modelFile;
       console.log('[LLM] Modèle trouvé dans resources/models:', resolvedModelFile);
-    } else if (fs.existsSync(legacyModelFile) && fs.statSync(legacyModelFile).size > 0) {
+    } else if (fs.existsSync(legacyModelFile) && fs.statSync(legacyModelFile).size > 100_000_000) {
       resolvedModelFile = legacyModelFile;
       console.log('[LLM] Modèle trouvé dans resources/llm (legacy):', resolvedModelFile);
     } else {
-      console.error('[LLM] Modèle introuvable dans:');
-      console.error('  -', modelFile);
-      console.error('  -', legacyModelFile);
+      console.error('[LLM] Modèle introuvable. Chemins vérifiés:');
+      console.error('  -', userDataModelFile, '→', fs.existsSync(userDataModelFile) ? fs.statSync(userDataModelFile).size + ' octets' : 'absent');
+      console.error('  -', modelFile, '→', fs.existsSync(modelFile) ? fs.statSync(modelFile).size + ' octets' : 'absent');
+      console.error('  -', legacyModelFile, '→', fs.existsSync(legacyModelFile) ? fs.statSync(legacyModelFile).size + ' octets' : 'absent');
       return false;
     }
 
@@ -1604,11 +1610,13 @@ ipcMain.handle('llm:status', async () => {
 });
 
 ipcMain.handle('llm:check', async () => {
+  const userDataModelFile = path.join(app.getPath('userData'), 'models', 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
   const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
   const modelFile = path.join(resourcesPath, 'models', 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
   const legacyModelFile = path.join(resourcesPath, 'llm', 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');
-  const exists = (fs.existsSync(modelFile) && fs.statSync(modelFile).size > 0) ||
-                 (fs.existsSync(legacyModelFile) && fs.statSync(legacyModelFile).size > 0);
+  const exists = (fs.existsSync(userDataModelFile) && fs.statSync(userDataModelFile).size > 100_000_000) ||
+                 (fs.existsSync(modelFile) && fs.statSync(modelFile).size > 100_000_000) ||
+                 (fs.existsSync(legacyModelFile) && fs.statSync(legacyModelFile).size > 100_000_000);
   return { exists };
 });
 
@@ -1640,8 +1648,8 @@ ipcMain.handle('llm:cancel-download', async () => {
 });
 
 ipcMain.handle('llm:download', async (event) => {
-  const resourcesPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '../');
-  const llmDir = path.join(resourcesPath, 'models');
+  // Télécharger dans userData (toujours accessible en écriture, survit aux mises à jour)
+  const llmDir = path.join(app.getPath('userData'), 'models');
   if (!fs.existsSync(llmDir)) fs.mkdirSync(llmDir, { recursive: true });
 
   const modelFile = path.join(llmDir, 'EVA-PC-Agentic-3B-Q4_K_M-v5.gguf');

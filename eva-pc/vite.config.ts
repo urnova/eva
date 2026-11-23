@@ -70,6 +70,11 @@ export default defineConfig({
         splash: resolve(__dirname, 'web/splash.html'),
         onboarding: resolve(__dirname, 'web/onboarding.html'),
         overlay: resolve(__dirname, 'web/overlay.html')
+      },
+      onwarn(warning, warn) {
+        // Ignorer les warnings sur les scripts sans type="module" (EVA utilise des scripts legacy)
+        if (warning.code === 'PLUGIN_WARNING' && warning.message?.includes("can't be bundled without type=\"module\"")) return
+        warn(warning)
       }
     }
   },
