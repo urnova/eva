@@ -406,7 +406,102 @@ function stopActiveAgent() {
   if (_activeAgent) _activeAgent.stop();
 }
 
+/* ================================================================
+   INTEGRATION CWEngine v5.6
+   Lance une tâche avec suivi des 10 états + sync Firestore + UI modale.
+   ================================================================ */
+async function runWithEngine(uid, prompt, options) {
+  options = options || {};
+  var deviceId = options.deviceId || 'web';
+  var container = options.container || null; // élément DOM pour la carte
+
+  // 1. Créer la tâche dans CWEngine
+  if (!window.CWEngine) {
+    console.warn('[CWAgent] CWEngine non disponible, fallback legacy');
+    var agent = new CWAgent(uid, 'legacy_' + Date.now(), options);
+    return agent.run(prompt, options.emitFn, options.stepEl);
+  }
+
+  var task = window.CWEngine.createTask({ prompt: prompt, uid: uid, deviceId: deviceId });
+
+  // 2. Créer la carte UI
+  var card = null;
+  if (window.CWModal && container) {
+    card = window.CWModal.createTrackerCard(task);
+    container.insertBefore(card, container.firstChild);
+
+    // Bouton annuler
+    var cancelBtn = card.querySelector('.cw-cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function() {
+        window.CWEngine.cancelTask(task.id);
+        if (window.CWFirestore) {
+          window.CWFirestore.updateCommandState(uid, task.id, 'cancelled');
+        }
+      });
+    }
+  }
+
+  // 3. Push Firestore
+  if (window.CWFirestore) {
+    window.CWFirestore.pushCommand(uid, task).catch(function(e) {
+      console.warn('[CWAgent] pushCommand err:', e);
+    });
+  }
+
+  // 4. Émettre vers l'UI
+  function _emit(text, status, isThought) {
+    if (card) {
+      if (isThought && window.CWModal) {
+        window.CWModal.appendThought(card, text);
+      }
+    }
+    if (typeof options.emitFn === 'function') options.emitFn(text, status, isThought);
+  }
+
+  // 5. Lancer l'agent ReAct
+  task.setState(window.CW_STATES.RUNNING);
+  if (window.CWModal) window.CWModal.updateCard(card, task);
+  if (window.CWFirestore) window.CWFirestore.updateCommandState(uid, task.id, 'running');
+
+  var agent = new CWAgent(uid, task.id, options);
+
+  // Écouter les états
+  task.on('stateChange', function(data) {
+    if (window.CWModal) window.CWModal.updateCard(card, task);
+    if (window.CWFirestore) {
+      window.CWFirestore.updateCommandState(uid, task.id, data.state, data.meta);
+    }
+  });
+
+  var result;
+  try {
+    task.setState(window.CW_STATES.EXECUTING);
+    result = await agent.run(prompt, _emit, options.stepEl);
+  } catch(e) {
+    result = { success: false, error: e.message };
+  }
+
+  // 6. Finaliser l'état
+  if (task.state !== window.CW_STATES.CANCELLED && task.state !== window.CW_STATES.EXPIRED) {
+    var finalState = result.success ? window.CW_STATES.SUCCEEDED : window.CW_STATES.FAILED;
+    task.setState(finalState);
+    if (window.CWModal) {
+      window.CWModal.showResult(card, finalState, result.error || null);
+    }
+    if (window.CWFirestore) {
+      window.CWFirestore.updateCommandState(uid, task.id, finalState, {
+        completed_at: Date.now(),
+        error: result.error || null
+      });
+    }
+  }
+
+  return result;
+}
+
 window.CWAgent = CWAgent;
 window.CWAgentStop = stopActiveAgent;
+window.CWAgentRun = runWithEngine;
 
 })();

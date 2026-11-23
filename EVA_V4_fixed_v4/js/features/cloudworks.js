@@ -586,8 +586,17 @@ window._cwToggleDevices = function() {
    APPAREILS CONNECTÉS
 ══════════════════════════════════════════ */
 function _loadDevices(uid) {
+  // FIX v5.6: attendre que l'auth soit confirmée avant d'écouter les devices
   if (!window.db) return;
+  if (!uid) return;
   if (_cwDevicesUnsub) { _cwDevicesUnsub(); _cwDevicesUnsub = null; }
+
+  // Démarrer le heartbeat via CWFirestore si disponible
+  if (window.CWFirestore) {
+    var deviceId = window.S && window.S.deviceId ? window.S.deviceId : ('web_' + navigator.userAgent.substring(0, 8).replace(/\W/g,''));
+    var deviceName = (navigator.platform || 'Web') + ' — EVA';
+    window.CWFirestore.startDeviceHeartbeat(uid, deviceId, deviceName);
+  }
   var container = document.getElementById('cwDeviceListInner');
 
   try {

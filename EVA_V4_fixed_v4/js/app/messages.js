@@ -743,7 +743,7 @@ async function handleSend(customText) {
     : null;
   var targetDeviceId = (targetPC && (targetPC.deviceId || targetPC.id)) || savedDevId || 'PC-principal';
 
-  var cwRegex = /(crée|cree|créer|creer|créez|ecris|écris|écrire|supprime|supprimer|efface|ouvre|ouvrir|lance|lancer|déplace|deplace|copie|copier|mets|mettre|génère|genere|générer|generer|télécharge|telecharge|cherche|recherche)\b[\s\S]*?(fichier|dossier|bureau|desktop|document|documents|edge|chrome|navigateur|pc|windows|powershell|pdf|script|application)/i;
+  var cwRegex = /\[CloudWorks\]/i; // FIX v5.6
 
   var isConfirmation = /^(go|vas-y|vas y|lance|lancer|fais-le|fais le|fait le|faisle|c'est bon|c est bon|ok|oui|d'accord|on y va|valide|valider|exécute|execute)\b/i.test(text.trim()) ||
     /^(go|vas-y|vas y|lance|fais-le|fais le|c'est bon|ok|oui|d'accord|on y va)\s*[!.]*$/i.test(text.trim());
@@ -756,7 +756,7 @@ async function handleSend(customText) {
     !!window._lastCWPlanPrompt
   );
 
-  var isCWPCTask = /\[CloudWorks\]/i.test(text) || cwRegex.test(text) || (isConfirmation && prevWasCWPlan);
+  var isCWPCTask = /\[CloudWorks\]/i.test(text) || (isConfirmation && prevWasCWPlan); // FIX v5.6
 
   if (cwRegex.test(text) || /\[CloudWorks\]/i.test(text)) {
     window._lastCWPlanPrompt = text;
@@ -851,6 +851,15 @@ async function handleSend(customText) {
 
   if (hasCW) {
     S.cwRunning = true;
+  // FIX v5.6: Safety timer
+  if (S.cwRunning) {
+    setTimeout(function() {
+      if (S.cwRunning) {
+        S.cwRunning = false;
+        console.warn('[EVA-CW] Safety timer: cwRunning reset apres 60s');
+      }
+    }, 60000);
+  }
     S.busy = true;
   }
   hideTyping();
