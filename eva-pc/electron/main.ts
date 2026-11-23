@@ -429,7 +429,7 @@ function _rebuildTrayMenu() {
     { type: 'separator' },
     {
       label: '✖ Quitter E.V.A',
-      click: () => { app.isQuitting = true; app.quit() }
+      click: () => { forceQuit = true; app.isQuitting = true; app.quit() }
     }
   ])
 
@@ -616,23 +616,38 @@ function toggleWindow() {
 
 let forceQuit = false;
 
+// ─── FIX v5.6.2 : Quit immédiat pour l'installateur ───────────────────
+// L'installateur NSIS peut envoyer un signal de quit via IPC ou via taskkill.
+// On raccourcit le délai et on s'assure que app.quit() est toujours appelé.
 app.on('before-quit', (e) => {
-  logMain('[EVA Main] app before-quit fired');
+  logMain('[EVA Main] app before-quit fired, forceQuit:', forceQuit);
   if (!forceQuit && mainWindow && !mainWindow.isDestroyed()) {
     e.preventDefault();
     mainWindow.webContents.send('app:request-quit');
-    
-    // Timeout de sǸcuritǸ si le renderer ne rǸpond pas
+    // Réduction du délai : 1s au lieu de 3s (l'installateur n'attend pas)
     setTimeout(() => {
       forceQuit = true;
       app.quit();
-    }, 3000);
+    }, 1000);
   }
 });
 
 ipcMain.on('app:quit-ready', () => {
+  logMain('[EVA Main] app:quit-ready received');
   forceQuit = true;
   app.quit();
+});
+
+// Handler dédié pour l'installateur / mise à jour forcée
+ipcMain.handle('app:force-quit', () => {
+  logMain('[EVA Main] app:force-quit requested');
+  forceQuit = true;
+  // Fermer toutes les fenêtres, tray compris
+  if (tray) { tray.destroy(); tray = null; }
+  if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.destroy();
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy();
+  setTimeout(() => app.quit(), 100);
+  return true;
 });
 
 app.on('will-quit', () => {
@@ -649,10 +664,14 @@ app.on('will-quit', () => {
 })
 
 app.on('window-all-closed', () => {
-  logMain('[EVA Main] window-all-closed fired, minimizeToTray:', store.get('minimizeToTray'));
+  logMain('[EVA Main] window-all-closed fired, minimizeToTray:', store.get('minimizeToTray'), 'forceQuit:', forceQuit);
   if (process.platform !== 'darwin') {
-    // Ne pas quitter si minimizeToTray
-    if (!store.get('minimizeToTray')) app.quit()
+    // FIX v5.6.2 : si forceQuit est true (installateur / quit explicite), toujours quitter
+    if (forceQuit || !store.get('minimizeToTray')) {
+      if (tray) { try { tray.destroy(); } catch(e) {} tray = null; }
+      app.quit();
+    }
+    // Sinon : app reste dans le tray (comportement normal)
   }
 })
 

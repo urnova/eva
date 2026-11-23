@@ -1,12 +1,30 @@
 process.env.PATH = "F:\\donnee_app\\dev_tool\\node;" + process.env.PATH;
 const { spawnSync } = require('child_process');
 const fs = require('fs');
+const path = require('path');
 
 // Utiliser le disque F: pour TEMP car C: est sature (0.2 GB libre vs 368 GB sur F:)
 const tempDir = "F:\\temp";
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 process.env.TEMP = tempDir;
 process.env.TMP = tempDir;
+
+// ─── Nettoyage automatique des anciens installateurs ───────────────────────
+// Sans ce nettoyage, les .exe s'accumulent (77 Go !) et font crasher 7zip.
+const releaseDir = path.join(__dirname, 'release');
+if (fs.existsSync(releaseDir)) {
+  const oldFiles = fs.readdirSync(releaseDir).filter(f =>
+    (f.endsWith('.exe') || f.endsWith('.7z') || f.endsWith('.blockmap')) &&
+    !f.includes('latest')
+  );
+  if (oldFiles.length > 0) {
+    console.log(`🧹 Nettoyage de ${oldFiles.length} ancien(s) fichier(s) dans release/...`);
+    oldFiles.forEach(f => {
+      try { fs.unlinkSync(path.join(releaseDir, f)); } catch(e) {}
+    });
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────
 
 // Auto-increment version patch if not already set to target
 const packagePath = 'package.json';
