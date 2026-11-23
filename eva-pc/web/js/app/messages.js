@@ -368,7 +368,7 @@ function hideTyping() {
     stopBtn.style.display = 'none';
     sendBtn.style.display = 'inline-flex';
     var input = document.getElementById('msgInput');
-    sendBtn.disabled = !(input && input.value.trim()) && (!S.images || !S.images.length) && (!S.documents || !S.documents.length);
+    sendBtn.disabled = false; /* FIX v5.6.14 : toujours enable sendBtn apres reponse */
   }
 }
 

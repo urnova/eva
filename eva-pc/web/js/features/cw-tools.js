@@ -265,16 +265,35 @@ async function tool_app_launch(args) {
   var normT = _normalizeAppName(target);
 
   // FIX v5.6.11 : vérifier si une PWA Chrome/Edge est installée avant d'ouvrir le navigateur
-  if (window.eva && window.eva.ipc && typeof window.eva.ipc.invoke === 'function') {
+  if (window.eva && window.eva.system && typeof window.eva.system.exec === 'function') {
     try {
-      var pwaResult = await window.eva.ipc.invoke('pwa:detect', { name: target, url: '' });
-      if (pwaResult && pwaResult.found && pwaResult.execPath) {
-        console.log('[CW Tools] PWA trouvée pour', target, ':', pwaResult.execPath);
-        await window.eva.ipc.invoke('shell:open', { path: pwaResult.execPath });
-        return {
-          success: true,
-          result: { app: target, method: 'pwa', message: 'PWA lancée : ' + target }
-        };
+      /* FIX v5.6.14 : PWA detect via reg query (window.eva.ipc n'existe pas) */
+      var cleanTarget = (target || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      var regResult = await window.eva.system.exec(
+        'reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths" /f "' + target + '" /k 2>nul & ' +
+        'reg query "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths" /f "' + target + '" /k 2>nul'
+      );
+      /* Chercher aussi dans les PWA Chrome/Edge */
+      var pwaRegResult = await window.eva.system.exec(
+        'reg query "HKCU\\Software\\Google\\Chrome\\PreferredApps" 2>nul & ' +
+        'reg query "HKCU\\Software\\Microsoft\\Edge\\PreferredApps" 2>nul'
+      );
+      /* Chercher le raccourci PWA dans le menu Démarrer */
+      var pwaShortcut = await window.eva.system.exec(
+        'dir /b /s "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs" 2>nul | findstr /i "' + target + '"'
+      );
+      var pwaOutput = (pwaShortcut && pwaShortcut.stdout) ? pwaShortcut.stdout.trim() : '';
+      if (pwaOutput) {
+        var lines = pwaOutput.split('\n').filter(function(l){ return l.trim().endsWith('.lnk'); });
+        if (lines.length > 0) {
+          var lnkPath = lines[0].trim();
+          console.log('[CW Tools] PWA shortcut trouvé:', lnkPath);
+          await window.eva.system.exec('start "" "' + lnkPath + '"');
+          return {
+            success: true,
+            result: { app: target, method: 'pwa_shortcut', message: 'Application PWA lancée : ' + target }
+          };
+        }
       }
     } catch(pwaErr) {
       console.warn('[CW Tools] PWA detect erreur:', pwaErr);
@@ -461,15 +480,23 @@ async function tool_web_browse(args) {
     else if (args.firefox || (query && /firefox/i.test(query))) browser = 'firefox';
   }
 
-  // FIX v5.6.11 : si une PWA est installée pour ce domaine, la préférer au navigateur
-  if (args.preferPWA !== false && window.eva && window.eva.ipc && typeof window.eva.ipc.invoke === 'function') {
+  // FIX v5.6.14 : PWA detect via reg query (window.eva.ipc n'existe pas dans le preload)
+  if (args.preferPWA !== false && window.eva && window.eva.system && typeof window.eva.system.exec === 'function') {
     try {
       var domain = targetUrl.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
-      var pwaCheck = await window.eva.ipc.invoke('pwa:detect', { name: domain, url: targetUrl });
-      if (pwaCheck && pwaCheck.found && pwaCheck.execPath) {
-        console.log('[CW Tools] PWA web trouvée pour', domain);
-        await window.eva.ipc.invoke('shell:open', { path: pwaCheck.execPath });
-        return { success: true, result: { url: targetUrl, method: 'pwa', message: 'PWA lancée pour ' + domain } };
+      /* Chercher le raccourci PWA dans le menu Démarrer */
+      var pwaShortcut = await window.eva.system.exec(
+        'dir /b /s "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs" 2>nul | findstr /i "' + domain + '"'
+      );
+      var pwaOutput = (pwaShortcut && pwaShortcut.stdout) ? pwaShortcut.stdout.trim() : '';
+      if (pwaOutput) {
+        var lines = pwaOutput.split('\n').filter(function(l){ return l.trim().endsWith('.lnk'); });
+        if (lines.length > 0) {
+          var lnkPath = lines[0].trim();
+          console.log('[CW Tools] PWA web shortcut trouvé:', lnkPath);
+          await window.eva.system.exec('start "" "' + lnkPath + '"');
+          return { success: true, result: { url: targetUrl, method: 'pwa_shortcut', message: 'Application PWA lancée pour ' + domain } };
+        }
       }
     } catch(_pwaE) {}
   }

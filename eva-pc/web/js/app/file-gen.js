@@ -225,7 +225,7 @@ function parseEvaActions(content) {
   return clean.trim();
 }
 
-async async async function executeEvaAction(action) {
+async function executeEvaAction(action) {
   if (!action || !action.type || !S.user) return;
   var uid = S.user.uid;
   try {

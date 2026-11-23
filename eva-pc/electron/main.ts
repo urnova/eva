@@ -2105,7 +2105,7 @@ ipcMain.handle('tts:stop', async () => {
     try { _sttProcess.stdin.write(JSON.stringify({ command: 'resume' }) + '\n'); } catch(e) {}
   }
   return { success: true };
-}
+});
 
 // ─── PWA Detection (FIX v5.6.11) ────────────────────────────────────────────
 ipcMain.handle('pwa:detect', async (_e: any, args: any) => {
@@ -2158,5 +2158,4 @@ ipcMain.handle('shell:open', async (_e: any, args: any) => {
     return { success: false, error: err.message };
   }
 });
-);
 

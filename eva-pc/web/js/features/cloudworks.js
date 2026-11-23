@@ -1,4 +1,4 @@
-/* EVA PC — CLOUDWORKS.JS — Version EXCLUSIVE Application Desktop */
+﻿/* EVA PC — CLOUDWORKS.JS — Version EXCLUSIVE Application Desktop */
 /* Ce fichier est EXCLUSIF à l'application PC — ne PAS copier sur le site web */
 (function() {
 'use strict';
@@ -538,12 +538,12 @@ window._cwRunAgenticTask = async function() {
       var th = document.createElement('div');
       th.className = 'cw-task-step thought';
       th.style.cssText = 'color:#88889a;font-style:italic;font-size:0.85em;padding:3px 0 3px 18px;border-left:2px solid rgba(0,212,255,0.2);margin:2px 0;';
-      th.textContent = '(?) ' + text;
+      th.textContent = '\u{1F4AD} ' + text;
       if (stepsEl) stepsEl.appendChild(th);
     } else {
       var it = document.createElement('div');
       it.className = 'cw-task-step ' + (status || 'running');
-      var ic = status === 'done' ? 'V' : status === 'error' ? 'X' : '>';
+      var ic = status === 'done' ? '\u2713' : status === 'error' ? '\u2717' : '\u25B8';
       it.style.cssText = 'padding:3px 0;font-size:0.9em;border-bottom:1px solid rgba(255,255,255,0.04);';
       it.textContent = ic + ' ' + text;
       if (stepsEl) stepsEl.appendChild(it);
@@ -586,8 +586,17 @@ window._cwToggleDevices = function() {
    APPAREILS CONNECTÉS
 ══════════════════════════════════════════ */
 function _loadDevices(uid) {
+  // FIX v5.6: attendre que l'auth soit confirmée avant d'écouter les devices
   if (!window.db) return;
+  if (!uid) return;
   if (_cwDevicesUnsub) { _cwDevicesUnsub(); _cwDevicesUnsub = null; }
+
+  // Démarrer le heartbeat via CWFirestore si disponible
+  if (window.CWFirestore) {
+    var deviceId = window.S && window.S.deviceId ? window.S.deviceId : ('web_' + navigator.userAgent.substring(0, 8).replace(/\W/g,''));
+    var deviceName = (navigator.platform || 'Web') + ' — EVA';
+    window.CWFirestore.startDeviceHeartbeat(uid, deviceId, deviceName);
+  }
   var container = document.getElementById('cwDeviceListInner');
 
   try {
