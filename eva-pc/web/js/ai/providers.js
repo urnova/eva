@@ -188,22 +188,7 @@ class QwenProvider {
         const msg = error.message || '';
         const msgLow = msg.toLowerCase();
 
-        // FIX v5.6.21: Fallback automatique et transparent sur Pollinations si Puter n'a plus de crédits
-        if (msgLow.includes('quota') || msgLow.includes('limit') || msgLow.includes('rate') || msgLow.includes('credit') || msgLow.includes('balance') || msgLow.includes('billing')) {
-          console.warn('[Puter] Crédits épuisés, bascule automatique sur Pollinations gratuit...');
-          try {
-            var polProv = new PollinationsProvider(this.config);
-            await polProv.init();
-            var polRes = await polProv.sendMessage(messages, systemPrompt);
-            if (polRes && polRes.success) return polRes;
-          } catch(polErr) {
-            console.error('[Puter Fallback] Échec Pollinations:', polErr);
-          }
-          return {
-            success: false,
-            error: 'Crédits Puter épuisés. Basculez sur Pollinations (gratuit) dans Paramètres → IA.'
-          };
-        }
+        
 
         // Non authentifié ou session expirée
         if (msgLow.includes('auth') || msgLow.includes('login') || msgLow.includes('sign') ||

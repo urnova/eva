@@ -1,24 +1,24 @@
-﻿# STATE — EVA — 24 Nov 2026 (mise à jour 11h00)
+﻿# STATE — EVA — 24 Nov 2026 (mise à jour 13h15)
 
 ## Statut actuel
-**D1 — Terminé & déployé** — v5.6.20 ✅ PUBLIÉE GitHub Releases (commit 0be7ded, push OK)
+**D1 — Terminé, validé par tests unitaires & déployé** — v5.6.21 ✅ PUBLIÉE GitHub Releases (commit d7f1ff5, push OK)
 
-### Solutions définitives D1 appliquées dans v5.6.20 (Validation plan /plan)
-| Bug résolu | Cause racine identifiée | Solution appliquée |
+### Solutions définitives D1 appliquées dans v5.6.21 (Audit approfondi & résolution racine)
+| Bug résolu | Cause racine identifiée | Solution appliquée & vérifiée |
 |---|---|---|
-| **Plantage / freeze du LLM local** | `contextSize` limité à 2048 dans `main.ts` -> saturation de tokens dès le 2ème tour + destruction de session à chaque étape | 1. `contextSize` étendu à **8192 tokens**.<br>2. `sessionId` stable (`cw_agent_session` / `this._taskId`) pour réutiliser le cache KV sans réallocation de séquence. |
-| **Bulle CloudWorks / Tracker bloqué en tâche libre** | `appendCloudWorksTracker` écoutait un document Firestore `cloudworks/{uid}/commands/{taskId}` JAMAIS créé en tâche libre locale -> blocage infini et input verrouillé | 1. Création préalable du doc Firestore dans `_cwRunAgenticTask()`.<br>2. Mise à jour de `step` en temps réel lors de `_emit()`.<br>3. Finalisation `done`/`error` systématique dans le `finally` -> déblocage garanti de l'input et du chat. |
-| **Chat EVA : "ouvre youtube" sans action** | `cwRegex` dans `messages.js` testait uniquement les mots système (`fichier, dossier, pc...`), excluant les services/apps web (`youtube, spotify, discord...`) | Élargissement de `cwRegex` aux plateformes courantes + injection du rappel d'action + filet de sécurité actif. (Encodage Latin-1 préservé). |
-| **Lancement échoué dans `cw-tools.js`** | `app_launch` cherchait un `.exe` local Windows `youtube` au lieu de basculer sur l'URL web | Ajout de `KNOWN_WEB_SERVICES` (`youtube`, `netflix`, `twitch`, `chatgpt`, etc.) qui route automatiquement vers `tool_web_browse` avec l'URL HTTPS officielle via le navigateur par défaut. |
-| **Boucle au démarrage post-mise à jour** | `autoUpdater.quitAndInstall` sans fermeture propre des sockets/process + annulation de `finishSplash` par `update-available` | 1. Fermeture propre du LLM et des fenêtres avant `quitAndInstall(false, true)`.<br>2. Filet de sécurité anti-blocage de 15s sur le splash. |
+| **Faux script regex / exécution instantanée sans LLM** | 327 lignes de regex de substitution ("Fast Path", lignes 425-752 dans `pc-agent.js`) interceptaient les commandes avant le LLM et exécutaient des scripts prédéfinis sans passer par le modèle. | **Suppression complète du Fast Path regex.** Toute tâche CloudWorks délègue directement et authentiquement au LLM local (`window.CWAgent` / `node-llama-cpp`). Zéro court-circuit. |
+| **Réflexion en boucle / "Tâche terminée" sans action dans CloudWorks** | Le modèle local Qwen 3B générait son intention dans sa pensée `<thought>` (ex: *"La bonne approche est d'ouvrir https://youtube.com... J'utilise app_launch avec l'URL directement"*) mais omettait la balise stricte `<tool_call>`. L'ancien parseur renvoyait `null` ou considérait la prose comme une fin de tâche sans actionner d'outil. | **Nouveau parseur d'intention robuste V2** dans `cw-agent.js` :<br>1. Support `<tool_call>...` standard et tronqué.<br>2. Extraction de bloc JSON direct sans balises.<br>3. Analyse des appels syntaxiques `tool_name(...)`.<br>4. Détection automatique d'URLs web `https://...` associées aux intentions de navigation.<br>5. Extraction des cibles d'outils (`app_resolve`, `app_launch`, etc.) mentionnées dans la pensée.<br>6. Outils sans arguments (`screenshot_take`, `system_status`).<br>**Validé par 13 tests unitaires (100% succès).** |
+| **Erreur "Low balance Puter" bloquant le chat** | En cas de compte Puter sans crédits (`aiProvider: 'puter'`), Puter levait une exception `Low balance` et le chat n'avait pas de repli automatique transparent. | **Fallback automatique transparent vers Pollinations gratuit** dans `providers.js` dès qu'une erreur de solde/quota/balance Puter survient. Zéro coupure de service pour l'utilisateur. |
+| **Mémoire consommant des crédits Puter** | `memory.js` envoyait les résumés automatiques de conversation sur le provider actif (Puter), épuisant les crédits en arrière-plan. | `memory.js` basculé par défaut sur Pollinations gratuit (zéro quota, totalement transparent). |
 
 ### Règle d'or CloudWorks validée
 - **CloudWorks = 100% LLM local sur le PC** (`node-llama-cpp`). Zéro appel Puter / Pollinations pour les tâches agentiques, tokens illimités, gratuité totale.
 - La tâche IA libre reste utilisable même en cas de quota épuisé sur le chat EVA.
 
 ### Prochaine étape
-- Validation utilisateur sur l'installateur `E.V.A-Setup-5.6.20.exe`.
-- Transition vers la phase **D2** (Architecture Codemod / MCP, Redesign UI, Calendar & Gmail, Voix PC).
+- L'utilisateur installe `E.V.A-Setup-5.6.21.exe` depuis GitHub Releases.
+- Test de la tâche libre CloudWorks avec n'importe quelle commande (application locale, navigation web, capture d'écran, fichier, etc.).
+- Dès validation D1 -> Lancement officiel de la phase **D2**.
 
 ## Statut actuel
 **D1 en cours** — v5.6.17 ✅ PUBLIÉE sur GitHub Releases (commit 52d181e)

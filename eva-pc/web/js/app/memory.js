@@ -82,21 +82,6 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
         }
       } catch(e) { console.warn('[Mémoire] OpenAI extraction failed:', e); }
     }
-    /* FIX v5.6.21: Pollinations gratuit en priorite pour la memoire (zero credit consomme) */
-    if (!newMemoryText) {
-      try {
-        var polUrl = 'https://text.pollinations.ai/' + encodeURIComponent(extractPrompt) + '?model=openai-fast&json=true';
-        var polResp = await fetch(polUrl);
-        if (polResp.ok) {
-          var polTxt = await polResp.text();
-          if (polTxt && polTxt.includes('{')) {
-            newMemoryText = polTxt.trim();
-            usedProvider = 'Pollinations (Gratuit)';
-          }
-        }
-      } catch(pe) { console.warn('[Memoire] Pollinations fallback:', pe); }
-    }
-
     /* Tentative 2 (fallback) : Puter AI si pas deja resolu */
     if (!newMemoryText && window.puter && S.config && S.config.puterUsername) {
       try {
