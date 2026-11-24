@@ -1,30 +1,24 @@
-﻿# STATE — EVA — 24 Nov 2026 (mise à jour 10h07)
+﻿# STATE — EVA — 24 Nov 2026 (mise à jour 11h00)
 
 ## Statut actuel
-**D1 — validation en attente** — v5.6.19 ✅ PUBLIÉE GitHub Releases (commit b5a4475, push OK)
+**D1 — Terminé & déployé** — v5.6.20 ✅ PUBLIÉE GitHub Releases (commit 0be7ded, push OK)
 
-### Bugs D1 corrigés dans v5.6.19 (4 bugs racine découverts + corrigés)
-| Bug | Cause racine | Fix |
+### Solutions définitives D1 appliquées dans v5.6.20 (Validation plan /plan)
+| Bug résolu | Cause racine identifiée | Solution appliquée |
 |---|---|---|
-| B2-R1 — LLM retourne succès sans exécuter outil | Régression v5.6.18 : `return { success: !!(visibleText||response) }` même sans tool_call | Nudge LLM jusqu'à 3x si pas de texte visible ni tool_call |
-| B2-R2 — `<think>` pas reconnu | Modèle GGUF génère `<think>...</think>`, code cherchait `<thought>` | `_parseThought/_stripTags` supportent les deux (`thought\|think`) |
-| B2-R3 — `<tool_call>` tronqué | `max_tokens: 256` par défaut dans `main.ts` (trop court) | `main.ts` accepte snake_case `max_tokens` ET camelCase `maxTokens`, défaut 1024 |
-| B2-R4 — snake_case ignoré | `cw-agent.js` passait `max_tokens` mais `main.ts` lisait `maxTokens` → 256 tokens → token tronqué | Passe maintenant les deux + `stopTriggers: []` (évite arrêt sur `[CMD]`) |
+| **Plantage / freeze du LLM local** | `contextSize` limité à 2048 dans `main.ts` -> saturation de tokens dès le 2ème tour + destruction de session à chaque étape | 1. `contextSize` étendu à **8192 tokens**.<br>2. `sessionId` stable (`cw_agent_session` / `this._taskId`) pour réutiliser le cache KV sans réallocation de séquence. |
+| **Bulle CloudWorks / Tracker bloqué en tâche libre** | `appendCloudWorksTracker` écoutait un document Firestore `cloudworks/{uid}/commands/{taskId}` JAMAIS créé en tâche libre locale -> blocage infini et input verrouillé | 1. Création préalable du doc Firestore dans `_cwRunAgenticTask()`.<br>2. Mise à jour de `step` en temps réel lors de `_emit()`.<br>3. Finalisation `done`/`error` systématique dans le `finally` -> déblocage garanti de l'input et du chat. |
+| **Chat EVA : "ouvre youtube" sans action** | `cwRegex` dans `messages.js` testait uniquement les mots système (`fichier, dossier, pc...`), excluant les services/apps web (`youtube, spotify, discord...`) | Élargissement de `cwRegex` aux plateformes courantes + injection du rappel d'action + filet de sécurité actif. (Encodage Latin-1 préservé). |
+| **Lancement échoué dans `cw-tools.js`** | `app_launch` cherchait un `.exe` local Windows `youtube` au lieu de basculer sur l'URL web | Ajout de `KNOWN_WEB_SERVICES` (`youtube`, `netflix`, `twitch`, `chatgpt`, etc.) qui route automatiquement vers `tool_web_browse` avec l'URL HTTPS officielle via le navigateur par défaut. |
+| **Boucle au démarrage post-mise à jour** | `autoUpdater.quitAndInstall` sans fermeture propre des sockets/process + annulation de `finishSplash` par `update-available` | 1. Fermeture propre du LLM et des fenêtres avant `quitAndInstall(false, true)`.<br>2. Filet de sécurité anti-blocage de 15s sur le splash. |
 
-### Bugs D1 corrigés dans v5.6.18
-| Bug | Cause racine | Fix |
-|---|---|---|
-| B1 — Boucle démarrage post-update | NSIS runAfterFinish + quitAndInstall(false,true) → double instance | quitAndInstall(true, false) |
-| B3 — Pas de bulle en tâche libre | _cwRunAgenticTask ne crée pas appendCloudWorksTracker | 2 lignes ajoutées dans cloudworks.js |
-| B5 — UI bloquée après erreur LLM | Pas de cleanup après catch dans _cwRunAgenticTask | Bloc finally ajouté |
-| B6 — Mémoire Évolutive → Puter épuisé | memory.js utilisait Puter en priorité 1 | EVAChatHandler (Pollinations) en priorité 1 |
+### Règle d'or CloudWorks validée
+- **CloudWorks = 100% LLM local sur le PC** (`node-llama-cpp`). Zéro appel Puter / Pollinations pour les tâches agentiques, tokens illimités, gratuité totale.
+- La tâche IA libre reste utilisable même en cas de quota épuisé sur le chat EVA.
 
-### Question en suspens (B4)
-- B4 : Option B par défaut (heuristiques conservées pour chat CloudWorks rapide)
-- À revalider si l'utilisateur veut Option A (tout via LLM)
-
-### Prochaine validation attendue
-- Installer v5.6.19 → tester tâche libre "ouvre youtube" → vérifier que l'outil app_launch s'exécute
+### Prochaine étape
+- Validation utilisateur sur l'installateur `E.V.A-Setup-5.6.20.exe`.
+- Transition vers la phase **D2** (Architecture Codemod / MCP, Redesign UI, Calendar & Gmail, Voix PC).
 
 ## Statut actuel
 **D1 en cours** — v5.6.17 ✅ PUBLIÉE sur GitHub Releases (commit 52d181e)

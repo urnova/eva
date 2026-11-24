@@ -188,11 +188,20 @@ class QwenProvider {
         const msg = error.message || '';
         const msgLow = msg.toLowerCase();
 
-        // Quota Puter dépassé
-        if (msgLow.includes('quota') || msgLow.includes('limit') || msgLow.includes('rate')) {
+        // FIX v5.6.21: Fallback automatique et transparent sur Pollinations si Puter n'a plus de crédits
+        if (msgLow.includes('quota') || msgLow.includes('limit') || msgLow.includes('rate') || msgLow.includes('credit') || msgLow.includes('balance') || msgLow.includes('billing')) {
+          console.warn('[Puter] Crédits épuisés, bascule automatique sur Pollinations gratuit...');
+          try {
+            var polProv = new PollinationsProvider(this.config);
+            await polProv.init();
+            var polRes = await polProv.sendMessage(messages, systemPrompt);
+            if (polRes && polRes.success) return polRes;
+          } catch(polErr) {
+            console.error('[Puter Fallback] Échec Pollinations:', polErr);
+          }
           return {
             success: false,
-            error: 'Quota Puter atteint pour aujourd\'hui. Revenez demain ou changez de provider dans les Paramètres.'
+            error: 'Crédits Puter épuisés. Basculez sur Pollinations (gratuit) dans Paramètres → IA.'
           };
         }
 
@@ -662,7 +671,7 @@ class PollinationsProvider {
 
     /* ── Fallback Puter si Pollinations entièrement indisponible ── */
     if (!response) {
-      if (window.puter) { // Fallback Puter actif m�me sans compte li�
+      if (window.puter) { // Fallback Puter actif mme sans compte li
         console.warn('[EVA Pollinations] Tous les endpoints en échec — fallback Puter AI...');
         if (window.toast) window.toast('Pollinations indisponible — bascule sur Puter AI', 'warning');
         try {
