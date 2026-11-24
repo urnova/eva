@@ -63,18 +63,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     var newMemoryText = null;
     var usedProvider = 'Aucun';
 
-    /* Tentative 1 : Puter AI */
-    if (window.puter && S.config && S.config.puterUsername) {
-      try {
-        var puterResp = await puter.ai.chat(extractPrompt, { model: 'gpt-4o-mini', response_format: { type: 'json_object' }, max_tokens: 4000 });
-        var puterContent = typeof puterResp === 'string' ? puterResp
-          : (puterResp && puterResp.message && puterResp.message.content) || (puterResp && puterResp.content) || '';
-        newMemoryText = puterContent.trim();
-        usedProvider = 'Puter';
-      } catch(e) { console.warn('[Mémoire] Puter extraction failed:', e); }
-    }
-
-    /* Tentative 2 : OpenAI si clé dispo */
+    /* FIX v5.6.18 (B6) - Tentative 1 (priorit�) : OpenAI si clé dispo */
     if (!newMemoryText && S.config && S.config.openaiApiKey) {
       try {
         var oaiResp = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -93,6 +82,18 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
         }
       } catch(e) { console.warn('[Mémoire] OpenAI extraction failed:', e); }
     }
+    /* FIX v5.6.18 (B6) - Tentative 2 (fallback) : Puter AI */
+    if (window.puter && S.config && S.config.puterUsername) {
+      try {
+        var puterResp = await puter.ai.chat(extractPrompt, { model: 'gpt-4o-mini', response_format: { type: 'json_object' }, max_tokens: 4000 });
+        var puterContent = typeof puterResp === 'string' ? puterResp
+          : (puterResp && puterResp.message && puterResp.message.content) || (puterResp && puterResp.content) || '';
+        newMemoryText = puterContent.trim();
+        usedProvider = 'Puter';
+      } catch(e) { console.warn('[Mémoire] Puter extraction failed:', e); }
+    }
+
+    
 
     /* Tentative 3 : Provider actif — fallback universel */
     if (!newMemoryText && window.EVAChatHandler) {

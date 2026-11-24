@@ -1,18 +1,22 @@
-﻿# STATE — EVA — 23 Nov 2026 (mise à jour 23h20)
+﻿# STATE — EVA — 23 Nov 2026 (mise à jour 23h34)
 
 ## Statut actuel
-**D1 en cours** — v5.6.16 ✅ PUBLIÉE sur GitHub Releases (commit a879eb4)
+**D1 en cours** — v5.6.17 ✅ PUBLIÉE sur GitHub Releases (commit 52d181e)
 
-### Bugs D1 corrigés dans v5.6.16
-| Bug | Cause | Fix |
+### Bugs D1 corrigés dans v5.6.17 (identifiés via console DevTools)
+| Bug | Cause racine | Fix |
 |---|---|---|
-| CloudWorks utilise Puter/Pollinations au lieu du LLM | `_callLLM` tentait EVAChatHandler/Pollinations/Puter en fallback | LLM local UNIQUEMENT — zero fallback cloud |
-| Erreur masquée "AUCUN LLM DISPONIBLE" | La chaîne de fallbacks masquait l'erreur réelle du LLM | Erreurs typées lisibles (LLM_NOT_AVAILABLE, LLM_START_TIMEOUT, LLM_ERROR) |
-| Exécution CloudWorks sans LLM | `_cwRunAgenticTask` ne vérifiait pas la présence du LLM | Guard obligatoire — scroll vers téléchargement si absent |
+| Impossible d'écrire dans le chat | `window.handleSend = function(x){return handleSend(x);}` → récursion infinie → stack overflow | Supprimé le wrapper — `window.handleSend = handleSend;` après définition |
+| LLM_EMPTY dans CloudWorks | `cw-agent.js` cherchait `result.content` mais `llm:chat` retourne `result.choices[0].message.content` | Lecture correcte du format OpenAI-like retourné par main.ts |
 
-### Problème résiduel identifié (non corrigé)
-- `window.eva.system.llmChat()` plante même quand le moteur affiche "opérationnel" → à investiguer après install v5.6.16
-- LLM affiche "Non téléchargé" alors que le fichier 1.8 GB est présent → bug de détection dans `llmCheck()` ou `main.ts`
+### Bugs D1 corrigés dans v5.6.16 (commit a879eb4)
+| Bug | Fix |
+|---|---|
+| CloudWorks utilise Puter/Pollinations | LLM local UNIQUEMENT — zero fallback cloud |
+| Erreur masquée "AUCUN LLM DISPONIBLE" | Erreurs typées lisibles (LLM_NOT_AVAILABLE, LLM_START_TIMEOUT, LLM_ERROR) |
+
+### Prochaine validation attendue
+- Installer v5.6.17 → tester chat EVA + tâche libre CloudWorks "ouvre youtube"
 
 ## Bugs D1 corrigés dans v5.6.15 (commit 8a89e86)
 

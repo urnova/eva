@@ -547,7 +547,7 @@ app.whenReady().then(async () => {
       mainWindow.webContents.send('updater:downloaded', info);
     }
     setTimeout(() => {
-      autoUpdater.quitAndInstall(false, true);
+      autoUpdater.quitAndInstall(true, false); // FIX v5.6.18: silent=true + forceRunAfter=false → NSIS seul gère le redémarrage
     }, 2000);
   });
 
@@ -1316,7 +1316,7 @@ ipcMain.handle('updater:start-download', () => {
 })
 ipcMain.handle('updater:quit-and-install', () => {
   if (!isDev) {
-    autoUpdater.quitAndInstall(false, true);
+    autoUpdater.quitAndInstall(true, false); // FIX v5.6.18: silent=true + forceRunAfter=false → NSIS seul gère le redémarrage
   }
 })
 autoUpdater.on('download-progress', (progressObj) => {

@@ -264,10 +264,9 @@ CWAgent.prototype.run = async function(userPrompt, emitFn, stepEl) {
           return { success: true, response: visibleText };
         }
 
-        // L'agent parle mais n'agit pas et ne termine pas -> on le relance
-        messages.push({ role: 'assistant', content: response });
-        messages.push({ role: 'user', content: 'Continue. Si la tache est terminee, ecris [TACHE_TERMINEE].' });
-        continue;
+        // FIX v5.6.18: Reponse prose sans outil = tache terminee
+        // Evite la boucle infinie et LLM_EMPTY au 2eme tour
+        return { success: !!(visibleText || response), response: visibleText || response };
       }
 
       var toolName = toolCall.name;
@@ -410,7 +409,7 @@ async function _callLLM(messages) {
   // Appel LLM local
   console.log('[CWAgent] Appel LLM local (node-llama-cpp)');
   var result = await window.eva.system.llmChat(messages, {
-    max_tokens: 1200,
+    max_tokens: 2048, // FIX v5.6.18: était 1200, trop court pour historique multi-tours
     temperature: 0.3
   });
 

@@ -549,6 +549,11 @@ window._cwRunAgenticTask = async function() {
   });
   window._activeAgent = agent;
 
+  // FIX v5.6.18 (B3): Afficher la bulle CloudWorks dans le chat
+  if (window.appendCloudWorksTracker) {
+    window.appendCloudWorksTracker(taskId, prompt);
+  }
+
   var header = statusEl.querySelector('.cw-task-header');
 
   function _emit(text, status, isThought) {
@@ -570,14 +575,27 @@ window._cwRunAgenticTask = async function() {
     var ca = document.getElementById('messagesArea') || document.getElementById('chatMessages');
     if (ca) ca.scrollTop = ca.scrollHeight;
   }
-  var result = await agent.run(prompt, _emit, statusEl);
+  var result;
+  try {
+    result = await agent.run(prompt, _emit, statusEl);
+  } finally {
+    // FIX v5.6.18 (B5): Nettoyage UI systematique apres fin ou erreur LLM
+    var _stopBtn = statusEl ? statusEl.querySelector(".cw-btn-danger") : null;
+    if (_stopBtn) _stopBtn.style.display = "none";
+    if (!result || !result.success) {
+      if (statusEl && (statusEl.className || "").includes("running")) {
+        statusEl.className = (statusEl.className || "").replace("running", "").trim();
+      }
+    }
+    window._activeAgent = null;
+  }
 
-  if (result.success) {
+  if (result && result.success) {
     if (header) header.textContent = 'Tâche terminée';
     statusEl.className = 'cw-agentic-status done';
     promptEl.value = '';
     _addActivity('Tâche IA: ' + prompt.substring(0, 50), 'done');
-  } else {
+  } else if (result) {
     if (header) header.textContent = 'Erreur: ' + (result.error || 'Inconnue');
     statusEl.className = 'cw-agentic-status error';
     _addActivity('Tâche IA erreur: ' + prompt.substring(0, 30), 'error');
