@@ -520,9 +520,16 @@ app.whenReady().then(async () => {
     clearTimeout(updateSafetyTimeout);
     console.log('[AutoUpdater] Mise à jour disponible:', info);
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('splash:status', 'Mise à jour trouvée. Téléchargement...');
+      mainWindow.webContents.send('splash:status', 'Mise à jour trouvée.');
       mainWindow.webContents.send('updater:available', info);
     }
+    // FIX v5.6.20: Filet de securite anti-boucle de demarrage (si non telecharge dans les 15s, on lance l'app)
+    setTimeout(() => {
+      if (!updateHandled) {
+        console.log('[EVA] Splash fallback après update-available — démarrage app');
+        finishSplash(0);
+      }
+    }, 15000);
   });
   
   autoUpdater.on('update-not-available', (_info) => {
@@ -547,8 +554,10 @@ app.whenReady().then(async () => {
       mainWindow.webContents.send('updater:downloaded', info);
     }
     setTimeout(() => {
-      autoUpdater.quitAndInstall(true, false); // FIX v5.6.18: silent=true + forceRunAfter=false → NSIS seul gère le redémarrage
-    }, 2000);
+      stopLLM();
+      try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy(); } catch(_) {}
+      autoUpdater.quitAndInstall(false, true); // FIX v5.6.20: non-silent (interface visible sans blocage UAC) + forceRunAfter
+    }, 1500);
   });
 
   const shouldAutoLaunch = store.get('autoLaunch');
@@ -1316,7 +1325,9 @@ ipcMain.handle('updater:start-download', () => {
 })
 ipcMain.handle('updater:quit-and-install', () => {
   if (!isDev) {
-    autoUpdater.quitAndInstall(true, false); // FIX v5.6.18: silent=true + forceRunAfter=false → NSIS seul gère le redémarrage
+    stopLLM();
+    try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy(); } catch(_) {}
+    autoUpdater.quitAndInstall(false, true);
   }
 })
 autoUpdater.on('download-progress', (progressObj) => {
@@ -1405,9 +1416,9 @@ async function startLLM(): Promise<boolean> {
     const cpuCount = os.cpus().length;
     // Sur CPU, limiter les threads (min 2, max 6) pour équilibrer vitesse et fluidité du système
     const optimalThreads = Math.min(6, Math.max(2, Math.floor(cpuCount / 2)));
-    console.log(`[LLM] Création du contexte (contextSize: 2048, threads: ${optimalThreads})...`);
+    console.log(`[LLM] Création du contexte (contextSize: 8192, threads: ${optimalThreads})...`);
     llamaContext = await llamaModel.createContext({
-      contextSize: 2048,
+      contextSize: 8192, // FIX v5.6.20: 8192 au lieu de 2048 pour eviter tout crash par saturation de tokens
       threads: optimalThreads
     });
     
@@ -1485,7 +1496,8 @@ ipcMain.handle('llm:chat', async (event, messages, options?: { maxTokens?: numbe
     throw new Error("MODEL_MISSING");
   }
 
-  const targetSessionId = options?.sessionId || null;
+  // FIX v5.6.20: Session ID persistant par defaut pour eviter fuite memoire et reallocations de sequence
+  const targetSessionId = options?.sessionId || 'cw_active_session';
   let session: any = null;
 
   try {

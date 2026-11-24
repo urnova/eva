@@ -262,7 +262,29 @@ async function tool_app_launch(args) {
     return await tool_web_browse({ url: target });
   }
 
+  // FIX v5.6.20: Services web majeurs sans scheme -> router directement vers l'URL officielle
+  var KNOWN_WEB_SERVICES = {
+    'youtube': 'https://www.youtube.com',
+    'yt': 'https://www.youtube.com',
+    'netflix': 'https://www.netflix.com',
+    'twitch': 'https://www.twitch.tv',
+    'chatgpt': 'https://chatgpt.com',
+    'openai': 'https://chatgpt.com',
+    'github': 'https://github.com',
+    'gmail': 'https://mail.google.com',
+    'google': 'https://www.google.com',
+    'reddit': 'https://www.reddit.com',
+    'twitter': 'https://x.com',
+    'x': 'https://x.com',
+    'deezer': 'https://www.deezer.com',
+    'amazon': 'https://www.amazon.fr'
+  };
+
   var normT = _normalizeAppName(target);
+  if (KNOWN_WEB_SERVICES[normT]) {
+    console.log('[CW Tools] Cible reconnue comme service web :', normT, '->', KNOWN_WEB_SERVICES[normT]);
+    return await tool_web_browse({ url: KNOWN_WEB_SERVICES[normT] });
+  }
 
   // FIX v5.6.11 : vérifier si une PWA Chrome/Edge est installée avant d'ouvrir le navigateur
   if (window.eva && window.eva.system && typeof window.eva.system.exec === 'function') {

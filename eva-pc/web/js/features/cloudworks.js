@@ -543,13 +543,34 @@ window._cwRunAgenticTask = async function() {
   } catch(e) {}
 
   var taskId = 'task-' + Date.now();
-  var agent = new window.CWAgent(window.S.user.uid, taskId, {
+  var uid = window.S.user.uid;
+  var cmdRef = null;
+
+  // FIX v5.6.20: Creer le document Firestore pour le tracker CloudWorks avant appendCloudWorksTracker
+  if (window.db && uid) {
+    try {
+      cmdRef = window.db.collection('cloudworks').doc(uid).collection('commands').doc(taskId);
+      await cmdRef.set({
+        id: taskId,
+        type: 'agentic_task',
+        status: 'running',
+        step: 'Démarrage du LLM local...',
+        payload: { prompt: prompt },
+        createdAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date(),
+        updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+      });
+    } catch(cmdErr) {
+      console.warn('[CloudWorks] Erreur creation doc commande Firestore:', cmdErr);
+    }
+  }
+
+  var agent = new window.CWAgent(uid, taskId, {
     approvalMode: approvalMode,
     autonomousMode: autonomousMode
   });
   window._activeAgent = agent;
 
-  // FIX v5.6.18 (B3): Afficher la bulle CloudWorks dans le chat
+  // FIX v5.6.20: Afficher la bulle CloudWorks connectee au document Firestore cree
   if (window.appendCloudWorksTracker) {
     window.appendCloudWorksTracker(taskId, prompt);
   }
@@ -572,6 +593,15 @@ window._cwRunAgenticTask = async function() {
       if (stepsEl) stepsEl.appendChild(it);
       if (header) header.textContent = text;
     }
+
+    // Mettre a jour le tracker Firestore en temps reel
+    if (cmdRef && !isThought) {
+      cmdRef.update({
+        step: text,
+        updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+      }).catch(function(){});
+    }
+
     var ca = document.getElementById('messagesArea') || document.getElementById('chatMessages');
     if (ca) ca.scrollTop = ca.scrollHeight;
   }
@@ -579,6 +609,18 @@ window._cwRunAgenticTask = async function() {
   try {
     result = await agent.run(prompt, _emit, statusEl);
   } finally {
+    // FIX v5.6.20: Finalisation du document Firestore pour debloquer le tracker et le chat
+    if (cmdRef) {
+      var finalStatus = (result && result.success) ? 'done' : 'error';
+      var finalStep = (result && result.success) ? 'Tâche terminée ✓' : ('Erreur: ' + ((result && result.error) || 'Inconnue'));
+      cmdRef.update({
+        status: finalStatus,
+        step: finalStep,
+        result: result || { success: false },
+        updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
+      }).catch(function(){});
+    }
+
     // FIX v5.6.18 (B5): Nettoyage UI systematique apres fin ou erreur LLM
     var _stopBtn = statusEl ? statusEl.querySelector(".cw-btn-danger") : null;
     if (_stopBtn) _stopBtn.style.display = "none";

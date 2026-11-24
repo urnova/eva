@@ -781,7 +781,7 @@ async function handleSend(customText) {
     : null;
   var targetDeviceId = (targetPC && (targetPC.deviceId || targetPC.id)) || savedDevId || 'PC-principal';
 
-  var cwRegex = /(crée|cree|créer|creer|créez|ecris|écris|écrire|supprime|supprimer|efface|ouvre|ouvrir|lance|lancer|déplace|deplace|copie|copier|mets|mettre|génère|genere|générer|generer|télécharge|telecharge|cherche|recherche)\b[\s\S]*?(fichier|dossier|bureau|desktop|document|documents|edge|chrome|navigateur|pc|windows|powershell|pdf|script|application)/i;
+  var cwRegex = /(crÃ©e|cree|crÃ©er|creer|crÃ©ez|ecris|Ã©cris|Ã©crire|supprime|supprimer|efface|ouvre|ouvrir|lance|lancer|dÃ©place|deplace|copie|copier|mets|mettre|gÃ©nÃ¨re|genere|gÃ©nÃ©rer|generer|tÃ©lÃ©charge|telecharge|cherche|recherche)\b[\s\S]*?(fichier|dossier|bureau|desktop|document|documents|edge|chrome|navigateur|pc|windows|powershell|pdf|script|application|youtube|yt|spotify|discord|vlc|steam|netflix|twitch|calc|calculatrice|notepad|bloc-notes|cmd)/i;
 
   var isConfirmation = /^(go|vas-y|vas y|lance|lancer|fais-le|fais le|fait le|faisle|c'est bon|c est bon|ok|oui|d'accord|on y va|valide|valider|exécute|execute)\b/i.test(text.trim()) ||
     /^(go|vas-y|vas y|lance|fais-le|fais le|c'est bon|ok|oui|d'accord|on y va)\s*[!.]*$/i.test(text.trim());

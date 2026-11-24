@@ -436,6 +436,7 @@ async function _callLLM(messages) {
     max_tokens: 2048,     // FIX v5.6.19: snake_case pour compatibilite
     maxTokens: 2048,      // FIX v5.6.19: camelCase lu par main.ts handler
     temperature: 0.3,
+    sessionId: (this && this._taskId) ? this._taskId : 'cw_agent_session', // FIX v5.6.20: sessionId stable pour cache KV
     stopTriggers: []      // FIX v5.6.19: desactiver les stop triggers [CMD]/[REPORT] du pc-agent (CWAgent utilise <tool_call>)
   });
 

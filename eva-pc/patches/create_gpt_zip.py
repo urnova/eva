@@ -36,6 +36,11 @@ FILES = [
     ('eva-pc/web/js/app/ui-setup.js',       'web/js/app/ui-setup.js'),
     # HTML principal
     ('eva-pc/web/chat.html',                'web/chat.html'),
+    # AI & Core
+    ('eva-pc/web/js/ai/chat-handler.js',    'web/js/ai/chat-handler.js'),
+    ('eva-pc/web/js/ai/providers.js',       'web/js/ai/providers.js'),
+    ('eva-pc/web/js/core/firebase-config.js','web/js/core/firebase-config.js'),
+    ('eva-pc/web/js/pc-bridge.js',          'web/js/pc-bridge.js'),
 ]
 
 # ─── Prompt GPT ──────────────────────────────────────────────────────────────
