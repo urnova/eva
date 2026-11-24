@@ -754,14 +754,14 @@
     });
     document.addEventListener('eva:authReady', function() {
       injectPCSettingsTab();
-      initCloudWorksNode();
+      /* CW_UNIFIED_V2 */ // old second command consumer disabled
     });
   } else {
     hidePCUnnecessaryElements();
     injectPCBadge();
     document.addEventListener('eva:authReady', function() {
       injectPCSettingsTab();
-      initCloudWorksNode();
+      /* CW_UNIFIED_V2 */ // old second command consumer disabled
     });
   }
 

@@ -226,6 +226,14 @@ function parseEvaActions(content) {
 }
 
 async function executeEvaAction(action) {
+  /* CW_UNIFIED_V2 */
+  if (action && action.type === 'agentic_task') {
+    if (!window.CWBus) throw new Error('CW_BUS_REQUIRED');
+    var taskId = await window.CWBus.submit('agentic_task', { prompt: action.prompt || '' }, { deviceId: action.deviceId });
+    window.appendCloudWorksTracker(taskId, action.prompt || 'Tache PC');
+    return;
+  }
+
   if (!action || !action.type || !S.user) return;
   var uid = S.user.uid;
   try {

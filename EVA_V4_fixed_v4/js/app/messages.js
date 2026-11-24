@@ -506,6 +506,9 @@ window.speakMsg = speakMsg;
 async function handleSend(customText) {
   var input = document.getElementById('msgInput');
   var text = (typeof customText === 'string' && customText.trim()) ? customText.trim() : ((input && input.value) || '').trim();
+  /* CW_UNIFIED_V2 */
+  if (window.CWChat && await window.CWChat.route(text)) return;
+  text = text.replace(/^\/chat\s+/i, '');
   var img = S.image || (S.images && S.images[0]) || null;
   var docPending = S.document || (S.documents && S.documents[0]) || null;
   if (!text && !img && !docPending) return;

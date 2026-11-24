@@ -109,6 +109,9 @@ const evaAPI = {
 
   // ── CloudWorks ──
   cloudworks: {
+    status: () => ipcRenderer.invoke('cw:status'),
+    executeTool: (name: string, args: unknown, context: { taskId: string }) => ipcRenderer.invoke('cw:execute', name, args, context),
+    cancel: (taskId: string) => ipcRenderer.invoke('cw:cancel', taskId),
     enable: () => ipcRenderer.invoke('cloudworks:enable'),
     disable: () => ipcRenderer.invoke('cloudworks:disable')
   },

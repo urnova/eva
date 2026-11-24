@@ -1,3 +1,4 @@
+import { installCWRuntime } from './cw-runtime'
 import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut , Notification } from 'electron'
 // Optimisations GPU : Accélération matérielle activée, zéro-copy et GPU rasterization
 app.commandLine.appendSwitch('enable-gpu-rasterization');
@@ -65,7 +66,11 @@ function startLocalServer(): Promise<number> {
       else if (urlPath === '/chat') urlPath = '/chat.html';
       else if (urlPath === '/') urlPath = '/splash.html';
 
-      let filePath = join(__dirname, '../dist', urlPath);
+      let decodedPath: string;
+      try { decodedPath = decodeURIComponent(urlPath); } catch (_) { res.writeHead(400); res.end(); return; }
+      const webRoot = path.resolve(__dirname, '../dist');
+      let filePath = path.resolve(webRoot, '.' + decodedPath);
+      if (!filePath.startsWith(webRoot + path.sep)) { res.writeHead(403); res.end(); return; }
       
       fs.stat(filePath, (err, stat) => {
         if (err || !stat.isFile()) {
@@ -81,7 +86,7 @@ function startLocalServer(): Promise<number> {
           } else {
             res.writeHead(200, {
               'Content-Type': contentType,
-              'Access-Control-Allow-Origin': '*',
+              'X-Content-Type-Options': 'nosniff',
               'Cache-Control': 'no-cache'
             });
             res.end(content);
@@ -801,7 +806,12 @@ ipcMain.on('overlay:action', (_event, action, data) => {
 })
 
 // â”€â”€â”€ IPC Handler â€” Ouvrir URL dans le navigateur système â”€â”€â”€
-ipcMain.handle('shell:openExternal', (_event, url: string) => shell.openExternal(url))
+ipcMain.handle('shell:openExternal', (event, value: string) => {
+  assertCWLocalSender(event);
+  const url = new URL(value);
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error('URL_DENIED');
+  return shell.openExternal(url.href);
+})
 
 // â”€â”€â”€ IPC Handler â€” Ã‰change du refresh token via Firebase REST API (depuis Node.js = pas de restriction origin) â”€â”€â”€
 ipcMain.handle('auth:exchangeToken', async (_event, refreshToken: string, apiKey: string) => {
@@ -1370,7 +1380,17 @@ let llamaModel: any = null;
 let llamaContext: any = null;
 let llmTimeout: NodeJS.Timeout | null = null;
 
+let _cwStartPromise: Promise<boolean> | null = null;
+let _cwLlmBusy = false;
+let _cwStopRequested = false;
+let _cwPromptTask: string | null = null;
 async function startLLM(): Promise<boolean> {
+  if (_cwStartPromise) return _cwStartPromise;
+  _cwStartPromise = _startLLMInternal();
+  try { return await _cwStartPromise; }
+  finally { _cwStartPromise = null; }
+}
+async function _startLLMInternal(): Promise<boolean> {
   if (llamaModel && llamaContext) return true;
 
   try {
@@ -1427,6 +1447,8 @@ async function startLLM(): Promise<boolean> {
     return true;
   } catch (err: any) {
     console.error('[LLM] Erreur lors du chargement:', err);
+    try { await llamaContext?.dispose(); } catch (_) {}
+    try { await llamaModel?.dispose(); } catch (_) {}
     llamaModel = null;
     llamaContext = null;
     return false;
@@ -1443,6 +1465,9 @@ function disposeActiveSession() {
     try { activeAbortController.abort(); } catch(e) {}
     activeAbortController = null;
   }
+  if (activeChatSession) {
+    try { activeChatSession.dispose({ disposeSequence: false }); } catch (_) {}
+  }
   if (activeSequence) {
     try { activeSequence.dispose(); } catch(e) {}
     activeSequence = null;
@@ -1452,6 +1477,12 @@ function disposeActiveSession() {
 }
 
 function stopLLM() {
+  if (_cwStartPromise || _cwLlmBusy) {
+    _cwStopRequested = true;
+    activeAbortController?.abort();
+    if (_cwStartPromise && !_cwLlmBusy) _cwStartPromise.finally(() => { if (!_cwLlmBusy) { _cwStopRequested=false; stopLLM(); } });
+    return;
+  }
   disposeActiveSession();
   if (llamaContext) {
     console.log('[LLM] Arrêt et libération de la RAM...');
@@ -1483,110 +1514,74 @@ function _notifyLLMReady() {
   _rebuildTrayMenu();
 }
 
-ipcMain.handle('llm:chat', async (event, messages, options?: { maxTokens?: number; stopTriggers?: string[]; temperature?: number; sessionId?: string }) => {
-  resetLLMTimer();
-
-  const wasRunning = !!llamaContext;
-  if (!wasRunning && mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('overlay:show', 'thinking');
-  }
-
-  const started = await startLLM();
-  if (!started) {
-    throw new Error("MODEL_MISSING");
-  }
-
-  // FIX v5.6.20: Session ID persistant par defaut pour eviter fuite memoire et reallocations de sequence
-  const targetSessionId = options?.sessionId || 'cw_active_session';
-  let session: any = null;
-
+function assertCWLocalSender(event: any) {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !event.senderFrame ||
+      event.senderFrame !== event.sender.mainFrame) throw new Error('IPC_SENDER_DENIED');
+  const url = new URL(event.senderFrame.url);
+  const local = url.origin === 'http://127.0.0.1:' + localServerPort ||
+    (isDev && url.origin === 'http://localhost:5173');
+  const localFile = url.protocol === 'file:' &&
+    path.resolve(fileURLToPath(url)).startsWith(path.resolve(__dirname, '../dist') + path.sep);
+  if (!local && !localFile) throw new Error('IPC_ORIGIN_DENIED');
+}
+installCWRuntime({ ipcMain, dialog, shell, BrowserWindow, store,
+  mainWindow: () => mainWindow,
+  assertSender: assertCWLocalSender,
+  abortLLM: (id: string) => { if (_cwPromptTask === id) activeAbortController?.abort(); }
+});
+ipcMain.handle('llm:chat', async (event, messages: any[], options: any = {}) => {
+  assertCWLocalSender(event);
+  if (_cwLlmBusy) throw new Error('LLM_BUSY');
+  if (!Array.isArray(messages) || !messages.length || messages.length > 40 ||
+      messages.some(m => !['system', 'user', 'assistant'].includes(m.role) || typeof m.content !== 'string') ||
+      JSON.stringify(messages).length > 64000) throw new Error('INVALID_MESSAGES');
+  if (messages[messages.length-1].role !== 'user') throw new Error('LAST_MESSAGE_MUST_BE_USER');
+  if (options.jsonSchema && JSON.stringify(options.jsonSchema).length > 45000) throw new Error('SCHEMA_TOO_LARGE');
+  _cwLlmBusy = true;
+  _cwPromptTask = String(options.sessionId || 'local-chat');
+  const controller = new AbortController();
+  let timedOut = false;
+  let timer: NodeJS.Timeout | null = null;
   try {
-    const { LlamaChatSession } = await getLlamaCpp();
-
-    let promptMsg = "";
-    const lastMsg = messages[messages.length - 1];
-    if (lastMsg && lastMsg.role === 'user') {
-      promptMsg = lastMsg.content;
-    } else {
-      promptMsg = messages.map((m: any) => m.content).join("\n");
-    }
-
-    // Réutiliser la session et son cache KV si on continue la même tâche
-    if (targetSessionId && activeSessionId === targetSessionId && activeChatSession) {
-      session = activeChatSession;
-    } else {
-      disposeActiveSession();
-      activeSequence = llamaContext.getSequence();
-      session = new LlamaChatSession({
-        contextSequence: activeSequence
-      });
-
-      const history: any[] = [];
-      for (let i = 0; i < messages.length - 1; i++) {
-        const m = messages[i];
-        if (m.role === 'system') history.push({ type: 'system', text: m.content });
-        else if (m.role === 'user') history.push({ type: 'user', text: m.content });
-        else if (m.role === 'assistant') history.push({ type: 'model', response: [m.content] });
-      }
-
-      session.setChatHistory(history);
-
-      if (targetSessionId) {
-        activeSessionId = targetSessionId;
-        activeChatSession = session;
-      }
-    }
-    
-    // FIX v5.6.19: Accepter maxTokens (camelCase) ET max_tokens (snake_case) — cw-agent passe snake_case
-    const maxToks = (options && typeof (options as any).max_tokens === 'number')
-      ? (options as any).max_tokens
-      : (options && typeof options.maxTokens === 'number') ? options.maxTokens : 1024;
-    const temp = (options && typeof options.temperature === 'number') ? options.temperature : 0.1;
-    const stopTriggers = (options && Array.isArray(options.stopTriggers))
-      ? options.stopTriggers
-      : ['[/CMD]', '[/REPORT]', '[/CONFIRM]'];
-
-    activeAbortController = new AbortController();
-
-    let responseText = "";
-    try {
-      responseText = await session.prompt(promptMsg, {
-        maxTokens: maxToks,
-        temperature: temp,
-        customStopTriggers: stopTriggers,
-        signal: activeAbortController.signal,
-        stopOnAbortSignal: true,
-        budgets: {
-          thoughtTokens: 0
-        }
-      });
-    } catch (err: any) {
-      if (activeAbortController?.signal?.aborted || err?.name === 'AbortError') {
-        console.log('[LLM] Prompt interrompu par AbortController');
-        disposeActiveSession();
-        return { choices: [{ message: { role: 'assistant', content: '' } }], aborted: true };
-      }
-      throw err;
-    } finally {
-      activeAbortController = null;
-    }
-    
-    // Si pas de session persistante, libérer la séquence
-    if (!targetSessionId) {
-      disposeActiveSession();
-    }
-    
-    return {
-      choices: [{ message: { role: 'assistant', content: responseText } }]
-    };
-  } catch (err: any) {
+    if (llmTimeout) { clearTimeout(llmTimeout); llmTimeout = null; }
     disposeActiveSession();
-    console.error('[LLM API] Erreur:', err?.message || err);
-    throw new Error(err?.message || String(err));
+    activeAbortController = controller;
+    timer = setTimeout(() => { timedOut = true; controller.abort(); },
+      Math.max(1000, Math.min(180000, Number(options.timeoutMs) || 120000)));
+    if (!await startLLM()) throw new Error('MODEL_MISSING_OR_START_FAILED');
+    if (controller.signal.aborted || _cwStopRequested) throw new Error('CANCELLED');
+    const { LlamaChatSession } = await getLlamaCpp();
+    activeSequence = llamaContext.getSequence();
+    activeChatSession = new LlamaChatSession({ contextSequence: activeSequence });
+    const history = messages.slice(0,-1).map((m: any) => m.role === 'assistant'
+      ? { type: 'model', response: [m.content] } : { type: m.role, text: m.content });
+    activeChatSession.setChatHistory(history);
+    // Rebuild from caller history on every call: no cross-task cache contamination.
+    const grammar = options.jsonSchema
+      ? await llamaInstance.createGrammarForJsonSchema(options.jsonSchema) : undefined;
+    const response = await activeChatSession.prompt(messages[messages.length-1].content, {
+      grammar,
+      maxTokens: Math.max(64, Math.min(4096, Number(options.maxTokens || options.max_tokens) || 1024)),
+      temperature: Math.max(0, Math.min(1, Number(options.temperature) || 0)),
+      customStopTriggers: Array.isArray(options.stopTriggers) ? options.stopTriggers : [],
+      signal: controller.signal, stopOnAbortSignal: true,
+      budgets: { thoughtTokens: 0 }
+    });
+    if (timedOut) throw new Error('LLM_TIMEOUT');
+    if (controller.signal.aborted) return { aborted: true, choices: [] };
+    return { choices: [{ message: { role: 'assistant', content: response } }] };
+  } finally {
+    if (timer) clearTimeout(timer);
+    _cwPromptTask = null;
+    _cwLlmBusy = false;
+    disposeActiveSession();
+    if (_cwStopRequested) { _cwStopRequested = false; stopLLM(); }
+    resetLLMTimer();
   }
 });
 
-ipcMain.handle('llm:abort', async () => {
+ipcMain.handle('llm:abort', async (event) => {
+  assertCWLocalSender(event);
   console.log('[LLM] llm:abort appelé');
   if (activeAbortController) {
     try { activeAbortController.abort(); } catch(e) {}
@@ -1605,7 +1600,9 @@ ipcMain.handle('llm:abort', async () => {
   return { success: true };
 });
 
-ipcMain.handle('llm:reset-session', async () => {
+ipcMain.handle('llm:reset-session', async (event) => {
+  assertCWLocalSender(event);
+  if (_cwLlmBusy) { activeAbortController?.abort(); return { success: false, error: 'LLM_BUSY_ABORT_REQUESTED' }; }
   disposeActiveSession();
   return { success: true };
 });
