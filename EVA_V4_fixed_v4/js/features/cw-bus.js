@@ -8,14 +8,22 @@ async function target(explicit){
  if(w.eva&&w._cwDeviceId)return w._cwDeviceId;
  const saved=localStorage.getItem('cw_target_device');
  const snap=await w.db.collection('cloudworks').doc(uid()).collection('devices').get();
- const online=snap.docs.filter(d=>{const x=d.data(),t=x.lastSeen?.toMillis?.()||0;return x.online&&Date.now()-t<90000;});
+ const now = Date.now();
+ const online=snap.docs.map(d=>({id:d.id, ...d.data()})).filter(x=>{
+   const t = x.lastSeen?.toMillis?.() || x.lastSeen?.toDate?.()?.getTime() || (x.lastSeen instanceof Date ? x.lastSeen.getTime() : (typeof x.lastSeen === 'number' ? x.lastSeen : 0));
+   return x.online && (t === 0 || (now - t) < 300000);
+ });
  if(saved&&online.some(d=>d.id===saved))return saved;
- if(online.length===1)return online[0].id;
- throw Error(online.length?'SELECT_DEVICE: selectionne le PC cible avec CWBus.selectDevice(id)':'NO_PC_ONLINE');
+ if(online.length>=1){
+   const win=online.find(d=>d.platform==='win32'||d.deviceType==='windows')||online[0];
+   return win.id;
+ }
+ throw Error('NO_PC_ONLINE: Aucun PC connecte a CloudWorks');
 }
 async function submit(type,payload={},options={}){
- const deviceId=await target(options.deviceId),ref=commands().doc();
- await ref.set({schemaVersion:2,id:ref.id,deviceId,type,payload,status:'pending',state:'queued',step:'En attente du PC',createdAt:w.timestamp?w.timestamp():new Date(),updatedAt:w.timestamp?w.timestamp():new Date(),expiresAt:new Date(Date.now()+300000),steps:[],source:w.eva?'desktop':'web'});
+ const deviceId=await target(options.deviceId);
+ const ref=commands().doc();
+ await ref.set({schemaVersion:2,id:ref.id,deviceId,type,payload,status:'pending',state:'queued',step:'En attente du PC',createdAt:w.timestamp?w.timestamp():new Date(),updatedAt:w.timestamp?w.timestamp():new Date(),expiresAt:new Date(Date.now()+300000),steps:[],source:w.eva?'desktop':'web'}, {merge:true});
  return ref.id;
 }
 function watch(id,fn,error){return commands().doc(id).onSnapshot(s=>{if(s.exists)fn({id:s.id,...s.data()});},error);}

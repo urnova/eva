@@ -21,16 +21,30 @@ async function consume(uid,id,epoch){
  let agent=null,result=null,unsubCancel=()=>{};const steps=[];let expired=false;
  current={id,r,stop:()=>{if(agent)agent.stop();else w.eva.cloudworks.cancel(id).catch(console.warn);}};
  const deadline=setTimeout(()=>{expired=true;current?.id===id&&current.stop();},300000);
+ 
+ let prompt=data.payload?.prompt||data.action||'';
+ // Afficher la bulle overlay flottante en haut de l'ecran Windows des que CloudWorks s'active
+ try {
+  if (w.eva?.overlay?.show) {
+    w.eva.overlay.show('cloudworks', prompt || 'Tache CloudWorks');
+    w.eva.overlay.setState('cloudworks', 'Prise en charge par le PC...');
+  }
+ } catch(_) {}
+
  const progress=async(text,status)=>{
   steps.push({text:String(text).slice(0,600),ts:new Date().toISOString(),state:status==='error'?'error':'running'});
   const ok=await ownedUpdate(r,{step:String(text).slice(0,600),steps:steps.slice(-40),state:status==='executing'?'executing':'running'});
   if(!ok)throw Error('OWNERSHIP_LOST_OR_CANCELLED');
   emit('cw:step',{cmdId:id,step:text});
+  try {
+    if (w.eva?.overlay?.setState) {
+      w.eva.overlay.setState('cloudworks', String(text).slice(0, 80));
+    }
+  } catch(_) {}
  };
  try{
   const config=await w.eva.cloudworks.status();if(!config.enabled)throw Error('CLOUDWORKS_DISABLED');
   unsubCancel=r.onSnapshot(s=>{if(s.exists&&s.data().status==='cancelled')current?.id===id&&current.stop();});
-  let prompt=data.payload?.prompt||data.action||'';
   if(data.payload?.command||data.payload?.tool||data.payload?.name)throw Error('LEGACY_DIRECT_EXECUTION_DISABLED: renvoyer la demande en langage naturel');
   if(data.type==='chat_request'){
    const schema={type:'object',properties:{route:{enum:['action','conversation','clarify']}}};
@@ -60,10 +74,15 @@ async function consume(uid,id,epoch){
   if(expired&&result)result={...result,success:false,error:'TASK_DEADLINE_EXCEEDED; verifier les effets deja realises',indeterminate:true};
   if(result){
    const status=result.cancelled?'cancelled':result.success===true?'done':'error';
-   // Avoid large/sensitive result uploads: no file contents, screenshots or model observations.
    const safe={success:result.success===true,output:result.output||result.response||null,error:result.error||null,partial:!!result.partial,indeterminate:!!result.indeterminate};
    const persisted=await ownedUpdate(r,{status,state:result.indeterminate?'indeterminate':result.partial?'partial':status==='done'?'succeeded':status==='cancelled'?'cancelled':'failed',step:safe.output||safe.error||status,result:safe,steps:steps.slice(-40),completedAt:ts()}).catch(e=>{console.error('[CW] Final write failed',id,e);return false;});
    emit('cw:task-done',{cmdId:id,status:persisted?status:'error',result:persisted?safe:{success:false,error:'FINAL_STATE_NOT_PERSISTED; verifier avant toute nouvelle execution'},type:data.type});
+   try {
+     if (w.eva?.overlay?.setState) {
+       w.eva.overlay.setState('cloudworks', safe.output || safe.error || 'Termine');
+       setTimeout(() => { if (w.eva?.overlay?.hide) w.eva.overlay.hide(); }, 4000);
+     }
+   } catch(_) {}
   }
   current=null;
  }
@@ -80,7 +99,7 @@ async function setup(uid){
   const status=await w.eva.cloudworks.status(),chk=await w.eva.system.llmCheck();
   const stale=await w.db.collection('cloudworks').doc(uid).collection('commands').where('deviceId','==',deviceId).get();
   for(const d of stale.docs){const x=d.data(),started=x.startedAt?.toMillis?.()||0;if(x.status==='running'&&started&&Date.now()-started>360000){await w.db.runTransaction(async tx=>{const now=await tx.get(d.ref);if(now.exists&&now.data().status==='running'&&now.data().owner===x.owner)tx.update(d.ref,{status:'error',state:'indeterminate',step:'Execution abandonnee ou interrompue; verifier avant de relancer',result:{success:false,indeterminate:true,error:'STALE_EXECUTION'},updatedAt:ts()});});}}
-  await device.set({deviceId,deviceName:status.hostname,deviceType:'windows',online:status.enabled,llmModelInstalled:!!chk.exists,lastSeen:ts(),updatedAt:ts(),workerVersion:2},{merge:true});
+  await device.set({deviceId,deviceName:status.hostname,deviceType:'windows',platform:'win32',online:status.enabled,llmModelInstalled:!!chk.exists,lastSeen:ts(),updatedAt:ts(),workerVersion:2},{merge:true});
  };
  await beat();if(epoch!==generation)return;
  heartbeat=setInterval(()=>beat().catch(console.error),30000);

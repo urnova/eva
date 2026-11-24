@@ -495,155 +495,78 @@ window._cwQuickCmd = async function(type) {
 window._cwRunAgenticTask = async function() {
   var promptEl = document.getElementById('cwAgenticPrompt');
   var statusEl = document.getElementById('cwAgenticStatus');
-  if (!promptEl || !window.S || !window.S.user) return;
+  if (!promptEl || !statusEl) return;
   var prompt = promptEl.value.trim();
   if (!prompt) return;
 
-  // FIX v5.6.16 : CloudWorks = LLM local obligatoire — pas de fallback cloud
-  if (!window.CWAgent || !window.CWTools) {
-    if (window.toast) window.toast('Module CWAgent non chargé. Rechargez l\'application.', 'error');
-    return;
-  }
-
-  // Vérifier que le modèle LLM est téléchargé
-  if (window.eva && window.eva.system && window.eva.system.llmCheck) {
-    try {
-      var llmChk = await window.eva.system.llmCheck();
-      if (!llmChk || !llmChk.exists) {
-        if (window.toast) window.toast(
-          '⚠️ Modèle LLM non téléchargé. CloudWorks nécessite le LLM local pour fonctionner. Téléchargez-le ci-dessus.',
-          'warning'
-        );
-        // Scroll vers le bouton de téléchargement
-        var dlBtn = document.getElementById('cwDownloadLLMBtn');
-        if (dlBtn) dlBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
-      }
-    } catch(chkErr) {}
-  }
-
   statusEl.style.display = 'block';
   statusEl.className = 'cw-agentic-status running';
-  statusEl.innerHTML =
-    '<div class="cw-task-header">Envoi au LLM local...</div>' +
-    '<div class="cw-task-steps" id="cwTaskSteps"></div>' +
+  statusEl.innerHTML = 
+    '<div class="cw-task-header" style="font-weight:600;margin-bottom:6px;color:#00d4ff;">Démarrage du LLM local...</div>' +
+    '<div id="cwTaskSteps"></div>' +
     '<button class="cw-btn cw-btn-danger cw-btn-sm" style="margin-top:8px;" onclick="window._cwStopAgent()">Arrêter</button>';
 
   var stepsEl = document.getElementById('cwTaskSteps');
-
-  var approvalMode = true;
-  var autonomousMode = false;
-  try {
-    var settingsDoc = await window.db.collection('users').doc(window.S.user.uid).get();
-    var settingsData = settingsDoc.data();
-    if (settingsData && settingsData.cloudworks) {
-      if (settingsData.cloudworks.approvalMode !== undefined) approvalMode = settingsData.cloudworks.approvalMode;
-      if (settingsData.cloudworks.autonomousMode !== undefined) autonomousMode = settingsData.cloudworks.autonomousMode;
-    }
-  } catch(e) {}
-
-  var taskId = 'task-' + Date.now();
-  var uid = window.S.user.uid;
-  var cmdRef = null;
-
-  // FIX v5.6.20: Creer le document Firestore pour le tracker CloudWorks avant appendCloudWorksTracker
-  if (window.db && uid) {
-    try {
-      cmdRef = window.db.collection('cloudworks').doc(uid).collection('commands').doc(taskId);
-      await cmdRef.set({
-        id: taskId,
-        type: 'agentic_task',
-        status: 'running',
-        step: 'Démarrage du LLM local...',
-        payload: { prompt: prompt },
-        createdAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date(),
-        updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
-      });
-    } catch(cmdErr) {
-      console.warn('[CloudWorks] Erreur creation doc commande Firestore:', cmdErr);
-    }
-  }
-
-  var agent = new window.CWAgent(uid, taskId, {
-    approvalMode: approvalMode,
-    autonomousMode: autonomousMode
-  });
-  window._activeAgent = agent;
-
-  // FIX v5.6.20: Afficher la bulle CloudWorks connectee au document Firestore cree
-  if (window.appendCloudWorksTracker) {
-    window.appendCloudWorksTracker(taskId, prompt);
-  }
-
   var header = statusEl.querySelector('.cw-task-header');
 
-  function _emit(text, status, isThought) {
-    if (isThought) {
-      var th = document.createElement('div');
-      th.className = 'cw-task-step thought';
-      th.style.cssText = 'color:#88889a;font-style:italic;font-size:0.85em;padding:3px 0 3px 18px;border-left:2px solid rgba(0,212,255,0.2);margin:2px 0;';
-      th.textContent = '\u{1F4AD} ' + text;
-      if (stepsEl) stepsEl.appendChild(th);
-    } else {
-      var it = document.createElement('div');
-      it.className = 'cw-task-step ' + (status || 'running');
-      var ic = status === 'done' ? '\u2713' : status === 'error' ? '\u2717' : '\u25B8';
-      it.style.cssText = 'padding:3px 0;font-size:0.9em;border-bottom:1px solid rgba(255,255,255,0.04);';
-      it.textContent = ic + ' ' + text;
-      if (stepsEl) stepsEl.appendChild(it);
-      if (header) header.textContent = text;
-    }
-
-    // Mettre a jour le tracker Firestore en temps reel
-    if (cmdRef && !isThought) {
-      cmdRef.update({
-        step: text,
-        updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
-      }).catch(function(){});
-    }
-
-    var ca = document.getElementById('messagesArea') || document.getElementById('chatMessages');
-    if (ca) ca.scrollTop = ca.scrollHeight;
+  // Activer immédiatement la bulle overlay flottante en haut de l'écran Windows
+  if (window.eva && window.eva.overlay) {
+    try {
+      window.eva.overlay.show('cloudworks', prompt);
+      window.eva.overlay.setState('cloudworks', 'Démarrage du LLM local...');
+    } catch(_) {}
   }
-  var result;
-  try {
-    result = await agent.run(prompt, _emit, statusEl);
-  } finally {
-    // FIX v5.6.20: Finalisation du document Firestore pour debloquer le tracker et le chat
-    if (cmdRef) {
-      var finalStatus = (result && result.success) ? 'done' : 'error';
-      var finalStep = (result && result.success) ? 'Tâche terminée ✓' : ('Erreur: ' + ((result && result.error) || 'Inconnue'));
-      cmdRef.update({
-        status: finalStatus,
-        step: finalStep,
-        result: result || { success: false },
-        updatedAt: typeof window.timestamp === 'function' ? window.timestamp() : new Date()
-      }).catch(function(){});
-    }
 
-    // FIX v5.6.18 (B5): Nettoyage UI systematique apres fin ou erreur LLM
-    var _stopBtn = statusEl ? statusEl.querySelector(".cw-btn-danger") : null;
-    if (_stopBtn) _stopBtn.style.display = "none";
-    if (!result || !result.success) {
-      if (statusEl && (statusEl.className || "").includes("running")) {
-        statusEl.className = (statusEl.className || "").replace("running", "").trim();
+  try {
+    if (!window.CWBus) throw new Error('CW_BUS_REQUIRED');
+    var taskId = await window.CWBus.submit('agentic_task', { prompt: prompt });
+    window._activeTaskId = taskId;
+
+    function _onStep(text, status) {
+      if (header) header.textContent = text;
+      if (stepsEl) {
+        var it = document.createElement('div');
+        it.className = 'cw-task-step ' + (status || 'running');
+        it.style.cssText = 'padding:3px 0;font-size:0.9em;color:#c0c0d4;';
+        it.textContent = '▸ ' + text;
+        stepsEl.appendChild(it);
+      }
+      if (window.eva && window.eva.overlay && window.eva.overlay.setState) {
+        window.eva.overlay.setState('cloudworks', String(text).slice(0, 80));
       }
     }
-    window._activeAgent = null;
-  }
 
-  if (result && result.success) {
-    if (header) header.textContent = 'Tâche terminée';
-    statusEl.className = 'cw-agentic-status done';
-    promptEl.value = '';
-    _addActivity('Tâche IA: ' + prompt.substring(0, 50), 'done');
-  } else if (result) {
-    if (header) header.textContent = 'Erreur: ' + (result.error || 'Inconnue');
+    var result = await window.CWBus.wait(taskId, _onStep);
+
+    if (result && result.success) {
+      if (header) header.textContent = 'Tâche terminée ✓';
+      statusEl.className = 'cw-agentic-status done';
+      promptEl.value = '';
+      _addActivity('Tâche IA: ' + prompt.substring(0, 50), 'done');
+    } else {
+      var err = (result && (result.error || result.output)) || 'Erreur inconnue';
+      if (header) header.textContent = 'Échec : ' + err;
+      statusEl.className = 'cw-agentic-status error';
+      _addActivity('Tâche IA erreur: ' + prompt.substring(0, 30), 'error');
+    }
+  } catch(e) {
+    if (header) header.textContent = 'Erreur : ' + e.message;
     statusEl.className = 'cw-agentic-status error';
-    _addActivity('Tâche IA erreur: ' + prompt.substring(0, 30), 'error');
+  } finally {
+    var _stopBtn = statusEl.querySelector(".cw-btn-danger");
+    if (_stopBtn) _stopBtn.style.display = "none";
+    window._activeTaskId = null;
+    if (window.eva && window.eva.overlay && window.eva.overlay.hide) {
+      setTimeout(function(){ window.eva.overlay.hide(); }, 3500);
+    }
   }
+};
 
-  window._activeAgent = null;
+window._cwStopAgent = function() {
+  if (window._activeTaskId && window.CWBus) {
+    window.CWBus.cancel(window._activeTaskId);
+  }
+  if (window.CWAgentStop) window.CWAgentStop();
 };
 
 window._cwStopAgent = function() {

@@ -29,7 +29,11 @@ const specs={
  command_run:S('Executer PowerShell explicite seulement apres validation PC.',{command:str},true,true)
 };
 const classification=Object.fromEntries(Object.entries(specs).map(([n,s])=>[n,s.sensitive?'SENSITIVE':'SAFE']));
-function schema(){return {oneOf:[...Object.entries(specs).map(([name,s])=>({type:'object',properties:{kind:{enum:['tool']},name:{enum:[name]},args:{type:'object',properties:s.properties}}})),...['done','clarify','fail'].map(kind=>({type:'object',properties:{kind:{enum:[kind]},message:str}}))]};}
+function schema(allowDone=true){
+ const toolSchemas=Object.entries(specs).map(([name,s])=>({type:'object',properties:{kind:{enum:['tool']},name:{enum:[name]},args:{type:'object',properties:s.properties}},required:['kind','name','args']}));
+ const endings=(allowDone?['done','clarify','fail']:['clarify','fail']).map(kind=>({type:'object',properties:{kind:{enum:[kind]},message:str},required:['kind','message']}));
+ return {oneOf:[...toolSchemas,...endings]};
+}
 function matchesType(t,v){return t.oneOf?t.oneOf.some(x=>matchesType(x,v)):t.enum?t.enum.includes(v):t.type==='null'?v===null:typeof v===t.type&&(t.type!=='number'||Number.isFinite(v));}
 function validate(name,args){
  const s=specs[name]; if(!s||!args||Array.isArray(args)||typeof args!=='object')throw Error('INVALID_TOOL');
