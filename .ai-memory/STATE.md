@@ -1,24 +1,19 @@
-﻿# STATE — EVA — 24 Nov 2026 (mise à jour 13h15)
+﻿# STATE — EVA — 24 Nov 2026 (mise à jour 13h46)
 
 ## Statut actuel
-**D1 — Terminé, validé par tests unitaires & déployé** — v5.6.21 ✅ PUBLIÉE GitHub Releases (commit d7f1ff5, push OK)
+**D1 — Terminé, validé & déployé** — v5.6.22 ✅ PUBLIÉE GitHub Releases (commit 71164d2, push OK)
 
-### Solutions définitives D1 appliquées dans v5.6.21 (Audit approfondi & résolution racine)
-| Bug résolu | Cause racine identifiée | Solution appliquée & vérifiée |
+### Solutions définitives D1 appliquées dans v5.6.22
+| Point | Cause racine | Solution appliquée & vérifiée |
 |---|---|---|
-| **Faux script regex / exécution instantanée sans LLM** | 327 lignes de regex de substitution ("Fast Path", lignes 425-752 dans `pc-agent.js`) interceptaient les commandes avant le LLM et exécutaient des scripts prédéfinis sans passer par le modèle. | **Suppression complète du Fast Path regex.** Toute tâche CloudWorks délègue directement et authentiquement au LLM local (`window.CWAgent` / `node-llama-cpp`). Zéro court-circuit. |
-| **Réflexion en boucle / "Tâche terminée" sans action dans CloudWorks** | Le modèle local Qwen 3B générait son intention dans sa pensée `<thought>` (ex: *"La bonne approche est d'ouvrir https://youtube.com... J'utilise app_launch avec l'URL directement"*) mais omettait la balise stricte `<tool_call>`. L'ancien parseur renvoyait `null` ou considérait la prose comme une fin de tâche sans actionner d'outil. | **Nouveau parseur d'intention robuste V2** dans `cw-agent.js` :<br>1. Support `<tool_call>...` standard et tronqué.<br>2. Extraction de bloc JSON direct sans balises.<br>3. Analyse des appels syntaxiques `tool_name(...)`.<br>4. Détection automatique d'URLs web `https://...` associées aux intentions de navigation.<br>5. Extraction des cibles d'outils (`app_resolve`, `app_launch`, etc.) mentionnées dans la pensée.<br>6. Outils sans arguments (`screenshot_take`, `system_status`).<br>**Validé par 13 tests unitaires (100% succès).** |
-| **Erreur "Low balance Puter" bloquant le chat** | En cas de compte Puter sans crédits (`aiProvider: 'puter'`), Puter levait une exception `Low balance` et le chat n'avait pas de repli automatique transparent. | **Fallback automatique transparent vers Pollinations gratuit** dans `providers.js` dès qu'une erreur de solde/quota/balance Puter survient. Zéro coupure de service pour l'utilisateur. |
-| **Mémoire consommant des crédits Puter** | `memory.js` envoyait les résumés automatiques de conversation sur le provider actif (Puter), épuisant les crédits en arrière-plan. | `memory.js` basculé par défaut sur Pollinations gratuit (zéro quota, totalement transparent). |
-
-### Règle d'or CloudWorks validée
-- **CloudWorks = 100% LLM local sur le PC** (`node-llama-cpp`). Zéro appel Puter / Pollinations pour les tâches agentiques, tokens illimités, gratuité totale.
-- La tâche IA libre reste utilisable même en cas de quota épuisé sur le chat EVA.
+| **Zéro fallback Pollinations** | L'utilisateur refuse tout repli silencieux vers Pollinations si Puter est épuisé. | **Suppression complète du fallback automatique dans `providers.js` et `memory.js`.** Aucune substitution de provider non désirée. |
+| **Faux script regex éradiqué** | Présence de 327 lignes de regex ("Fast Path") dans `pc-agent.js` court-circuitant le LLM. | **Suppression totale.** 100% des tâches CloudWorks passent authentiquement par le LLM local (`window.CWAgent`). |
+| **Parseur d'intention robuste V2** | Le modèle Qwen 3B local formulait son action dans sa pensée mais omettait `<tool_call>`. | Extraction intelligente d'intentions dans `cw-agent.js` (**13/13 tests unitaires validés**). |
 
 ### Prochaine étape
-- L'utilisateur installe `E.V.A-Setup-5.6.21.exe` depuis GitHub Releases.
-- Test de la tâche libre CloudWorks avec n'importe quelle commande (application locale, navigation web, capture d'écran, fichier, etc.).
-- Dès validation D1 -> Lancement officiel de la phase **D2**.
+- Installation de `E.V.A-Setup-5.6.22.exe`.
+- Test utilisateur sur CloudWorks Tâche IA libre avec n'importe quelle commande.
+- Validation finale D1 -> Lancement D2.
 
 ## Statut actuel
 **D1 en cours** — v5.6.17 ✅ PUBLIÉE sur GitHub Releases (commit 52d181e)
