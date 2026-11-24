@@ -1,13 +1,20 @@
-﻿# STATE — EVA — 24 Nov 2026 (mise à jour 08h49)
+﻿# STATE — EVA — 24 Nov 2026 (mise à jour 10h07)
 
 ## Statut actuel
-**D1 — validation en attente** — v5.6.18 ✅ PUBLIÉE GitHub Releases (commit 9d0e97a, push OK)
+**D1 — validation en attente** — v5.6.19 ✅ PUBLIÉE GitHub Releases (commit b5a4475, push OK)
 
-### Bugs D1 corrigés dans v5.6.18 (plan approuvé + exécuté)
+### Bugs D1 corrigés dans v5.6.19 (4 bugs racine découverts + corrigés)
+| Bug | Cause racine | Fix |
+|---|---|---|
+| B2-R1 — LLM retourne succès sans exécuter outil | Régression v5.6.18 : `return { success: !!(visibleText||response) }` même sans tool_call | Nudge LLM jusqu'à 3x si pas de texte visible ni tool_call |
+| B2-R2 — `<think>` pas reconnu | Modèle GGUF génère `<think>...</think>`, code cherchait `<thought>` | `_parseThought/_stripTags` supportent les deux (`thought\|think`) |
+| B2-R3 — `<tool_call>` tronqué | `max_tokens: 256` par défaut dans `main.ts` (trop court) | `main.ts` accepte snake_case `max_tokens` ET camelCase `maxTokens`, défaut 1024 |
+| B2-R4 — snake_case ignoré | `cw-agent.js` passait `max_tokens` mais `main.ts` lisait `maxTokens` → 256 tokens → token tronqué | Passe maintenant les deux + `stopTriggers: []` (évite arrêt sur `[CMD]`) |
+
+### Bugs D1 corrigés dans v5.6.18
 | Bug | Cause racine | Fix |
 |---|---|---|
 | B1 — Boucle démarrage post-update | NSIS runAfterFinish + quitAndInstall(false,true) → double instance | quitAndInstall(true, false) |
-| B2 — LLM_EMPTY au 2ème tour | max_tokens=1200 trop court + modèle écrit action en prose sans tool_call | max_tokens=2048 + terminaison immédiate si réponse prose |
 | B3 — Pas de bulle en tâche libre | _cwRunAgenticTask ne crée pas appendCloudWorksTracker | 2 lignes ajoutées dans cloudworks.js |
 | B5 — UI bloquée après erreur LLM | Pas de cleanup après catch dans _cwRunAgenticTask | Bloc finally ajouté |
 | B6 — Mémoire Évolutive → Puter épuisé | memory.js utilisait Puter en priorité 1 | EVAChatHandler (Pollinations) en priorité 1 |
@@ -17,7 +24,7 @@
 - À revalider si l'utilisateur veut Option A (tout via LLM)
 
 ### Prochaine validation attendue
-- Installer v5.6.18 → checklist T1-T6 du plan
+- Installer v5.6.19 → tester tâche libre "ouvre youtube" → vérifier que l'outil app_launch s'exécute
 
 ## Statut actuel
 **D1 en cours** — v5.6.17 ✅ PUBLIÉE sur GitHub Releases (commit 52d181e)
