@@ -88,16 +88,22 @@ function _buildSystemPrompt() {
    ================================================================ */
 function _parseThought(text) {
   if (!text) return null;
-  var match = text.match(/<thought>([\s\S]*?)<\/thought>/i);
+  // FIX v5.6.19: Supporte <thought>...</thought> ET <think>...</think> (variante du modele GGUF)
+  var match = text.match(/<(?:thought|think)>([\s\S]*?)<\/(?:thought|think)>/i);
   return match ? match[1].trim() : null;
 }
 
 function _parseToolCall(text) {
   if (!text) return null;
-  var match = text.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
+  // FIX v5.6.19: Tolere aussi <tool_call> sans balise fermante (token tronque par max_tokens)
+  var match = text.match(/<tool_call>([\s\S]*?)(?:<\/tool_call>|$)/);
   if (!match) return null;
+  var raw = match[1].trim();
+  // Nettoyer les traces de </think> ou texte apres le JSON
+  var jsonEnd = raw.lastIndexOf('}');
+  if (jsonEnd >= 0) raw = raw.substring(0, jsonEnd + 1);
   try {
-    var parsed = JSON.parse(match[1].trim());
+    var parsed = JSON.parse(raw);
     if (!parsed.name) return null;
     return { name: parsed.name, args: parsed.args || {} };
   } catch(e) {
@@ -106,9 +112,10 @@ function _parseToolCall(text) {
 }
 
 function _stripTags(text) {
+  // FIX v5.6.19: Supporte <think> en plus de <thought>
   return text
-    .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
-    .replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '')
+    .replace(/<(?:thought|think)>[\s\S]*?<\/(?:thought|think)>/gi, '')
+    .replace(/<tool_call>[\s\S]*?(?:<\/tool_call>|$)/g, '')
     .trim();
 }
 
@@ -255,18 +262,35 @@ CWAgent.prototype.run = async function(userPrompt, emitFn, stepEl) {
 
       // Pas d'outil -> l'agent a fini ou attend une reponse
       if (!toolCall) {
-        if (visibleText) {
-          _emit(visibleText, 'done');
+        // Detection de fin de tache (avec ou sans texte visible)
+        if (response.includes('[TACHE_TERMINEE]')) {
+          if (visibleText) _emit(visibleText, 'done');
+          return { success: true, response: visibleText || response };
         }
 
-        // Detection de fin de tache
-        if (response.includes('[TACHE_TERMINEE]')) {
+        // FIX v5.6.19: Si texte visible (hors balises thought/tool_call) -> tache terminee par reponse prose
+        if (visibleText && visibleText.trim()) {
+          _emit(visibleText, 'done');
           return { success: true, response: visibleText };
         }
 
-        // FIX v5.6.18: Reponse prose sans outil = tache terminee
-        // Evite la boucle infinie et LLM_EMPTY au 2eme tour
-        return { success: !!(visibleText || response), response: visibleText || response };
+        // FIX v5.6.19: Si seulement <thought> (pas de texte visible, pas de tool_call)
+        // -> Le LLM a reflechi mais n'a pas agi. On le pousse a emettre un tool_call.
+        // On evite la boucle infinie en comptant les nudges consecutifs.
+        var nudgeKey = '__nudgeCount';
+        messages[nudgeKey] = (messages[nudgeKey] || 0) + 1;
+        if (messages[nudgeKey] >= 3) {
+          // Apres 3 nudges sans action -> on abandonne proprement
+          _emit('Le LLM n\'a pas pu determiner une action. Essayez de reformuler.', 'error');
+          return { success: false, error: 'LLM_NO_ACTION: Aucun outil emis apres ' + messages[nudgeKey] + ' tentatives.' };
+        }
+        // Pousser le LLM a agir
+        messages.push({ role: 'assistant', content: response });
+        messages.push({
+          role: 'user',
+          content: 'Tu as bien reflechi. Maintenant passe a l\'action en utilisant un outil. Format obligatoire :\n<tool_call>{"name": "NOM_OUTIL", "args": {...}}</tool_call>'
+        });
+        continue;
       }
 
       var toolName = toolCall.name;
@@ -409,8 +433,10 @@ async function _callLLM(messages) {
   // Appel LLM local
   console.log('[CWAgent] Appel LLM local (node-llama-cpp)');
   var result = await window.eva.system.llmChat(messages, {
-    max_tokens: 2048, // FIX v5.6.18: était 1200, trop court pour historique multi-tours
-    temperature: 0.3
+    max_tokens: 2048,     // FIX v5.6.19: snake_case pour compatibilite
+    maxTokens: 2048,      // FIX v5.6.19: camelCase lu par main.ts handler
+    temperature: 0.3,
+    stopTriggers: []      // FIX v5.6.19: desactiver les stop triggers [CMD]/[REPORT] du pc-agent (CWAgent utilise <tool_call>)
   });
 
   // Le handler llm:chat retourne { choices: [{ message: { role, content } }] }

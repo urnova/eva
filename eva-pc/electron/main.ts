@@ -1525,7 +1525,10 @@ ipcMain.handle('llm:chat', async (event, messages, options?: { maxTokens?: numbe
       }
     }
     
-    const maxToks = (options && typeof options.maxTokens === 'number') ? options.maxTokens : 256;
+    // FIX v5.6.19: Accepter maxTokens (camelCase) ET max_tokens (snake_case) — cw-agent passe snake_case
+    const maxToks = (options && typeof (options as any).max_tokens === 'number')
+      ? (options as any).max_tokens
+      : (options && typeof options.maxTokens === 'number') ? options.maxTokens : 1024;
     const temp = (options && typeof options.temperature === 'number') ? options.temperature : 0.1;
     const stopTriggers = (options && Array.isArray(options.stopTriggers))
       ? options.stopTriggers

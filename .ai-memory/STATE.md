@@ -1,4 +1,23 @@
-﻿# STATE — EVA — 23 Nov 2026 (mise à jour 23h34)
+﻿# STATE — EVA — 24 Nov 2026 (mise à jour 08h49)
+
+## Statut actuel
+**D1 — validation en attente** — v5.6.18 ✅ PUBLIÉE GitHub Releases (commit 9d0e97a, push OK)
+
+### Bugs D1 corrigés dans v5.6.18 (plan approuvé + exécuté)
+| Bug | Cause racine | Fix |
+|---|---|---|
+| B1 — Boucle démarrage post-update | NSIS runAfterFinish + quitAndInstall(false,true) → double instance | quitAndInstall(true, false) |
+| B2 — LLM_EMPTY au 2ème tour | max_tokens=1200 trop court + modèle écrit action en prose sans tool_call | max_tokens=2048 + terminaison immédiate si réponse prose |
+| B3 — Pas de bulle en tâche libre | _cwRunAgenticTask ne crée pas appendCloudWorksTracker | 2 lignes ajoutées dans cloudworks.js |
+| B5 — UI bloquée après erreur LLM | Pas de cleanup après catch dans _cwRunAgenticTask | Bloc finally ajouté |
+| B6 — Mémoire Évolutive → Puter épuisé | memory.js utilisait Puter en priorité 1 | EVAChatHandler (Pollinations) en priorité 1 |
+
+### Question en suspens (B4)
+- B4 : Option B par défaut (heuristiques conservées pour chat CloudWorks rapide)
+- À revalider si l'utilisateur veut Option A (tout via LLM)
+
+### Prochaine validation attendue
+- Installer v5.6.18 → checklist T1-T6 du plan
 
 ## Statut actuel
 **D1 en cours** — v5.6.17 ✅ PUBLIÉE sur GitHub Releases (commit 52d181e)
