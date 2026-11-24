@@ -1,19 +1,26 @@
-﻿# STATE — EVA — 24 Nov 2026 (mise à jour 13h46)
+﻿# STATE — EVA — 24 Nov 2026 (mise à jour 16h05)
 
 ## Statut actuel
-**D1 — Terminé, validé & déployé** — v5.6.22 ✅ PUBLIÉE GitHub Releases (commit 71164d2, push OK)
+**D1 — Refonte Candidate Intégrée & Déployée** — v5.6.23 ✅ PUBLIÉE GitHub Releases (commit b1f2a75, push OK)
 
-### Solutions définitives D1 appliquées dans v5.6.22
-| Point | Cause racine | Solution appliquée & vérifiée |
-|---|---|---|
-| **Zéro fallback Pollinations** | L'utilisateur refuse tout repli silencieux vers Pollinations si Puter est épuisé. | **Suppression complète du fallback automatique dans `providers.js` et `memory.js`.** Aucune substitution de provider non désirée. |
-| **Faux script regex éradiqué** | Présence de 327 lignes de regex ("Fast Path") dans `pc-agent.js` court-circuitant le LLM. | **Suppression totale.** 100% des tâches CloudWorks passent authentiquement par le LLM local (`window.CWAgent`). |
-| **Parseur d'intention robuste V2** | Le modèle Qwen 3B local formulait son action dans sa pensée mais omettait `<tool_call>`. | Extraction intelligente d'intentions dans `cw-agent.js` (**13/13 tests unitaires validés**). |
+### Refonte candidate GPT 6.2 SOL appliquée (Protocole 2)
+1. **Consommateur Firestore Unique** :
+   - Désactivation du deuxième écouteur concurrent dans `pc-bridge.js`. Seul `pc-agent.js` consomme et met à jour les commandes avec transition transactionnelle `pending` -> `running`.
+2. **Bus Unifié (`cw-bus.js` & `cw-chat.js`)** :
+   - Parcours unifié : Chat Web, Chat PC et Tâche libre passent tous par le bus commun qui produit une enveloppe canonique (`schemaVersion: 2`).
+   - Routage automatique des commandes PC avant le provider conversationnel + commandes `/pc` et `/chat` disponibles.
+3. **Moteur d'exécution privilégié (`cw-runtime.ts` & `main.ts`)** :
+   - Validation de l'expéditeur, contrôle des permissions sensibles et exécution des outils système directement dans le processus principal Electron via `eva.cloudworks.executeTool`.
+4. **Indépendance totale vis-à-vis de Puter** :
+   - Le tracker CloudWorks (`cw-modal.js`) s'appuie désormais directement sur le résultat local de l'outil exécuté, sans aucun appel cloud à Puter pour rédiger le récapitulatif.
+5. **Nettoyage massif du codebase** :
+   - 27 fichiers mis à jour, 6 643 lignes de code redondant ou conflictuel éradiquées.
+   - Compilation TypeScript validée (0 erreur) et Vite build validé.
 
 ### Prochaine étape
-- Installation de `E.V.A-Setup-5.6.22.exe`.
-- Test utilisateur sur CloudWorks Tâche IA libre avec n'importe quelle commande.
-- Validation finale D1 -> Lancement D2.
+- Test utilisateur sous Windows avec l'installateur **`E.V.A-Setup-5.6.23.exe`**.
+- Vérification du comportement réel avec le modèle local 3B sur le chat et la tâche libre.
+- Passage officiel à la phase **D2**.
 
 ## Statut actuel
 **D1 en cours** — v5.6.17 ✅ PUBLIÉE sur GitHub Releases (commit 52d181e)
