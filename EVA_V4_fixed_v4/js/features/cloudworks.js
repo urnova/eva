@@ -615,12 +615,21 @@ function _loadDevices(uid) {
 
         snap.forEach(function(doc) {
           var d = doc.data();
-          var isOnline = !!d.online;
+          var toMs = function(v) {
+            if (!v) return 0;
+            if (typeof v.toMillis === 'function') return v.toMillis();
+            if (typeof v.toDate === 'function') return v.toDate().getTime();
+            if (v instanceof Date) return v.getTime();
+            if (typeof v === 'number') return v;
+            return 0;
+          };
+          var seenMs = toMs(d.lastSeen) || toMs(d.updatedAt);
+          var isOnline = !!d.online && seenMs > 0 && (Date.now() - seenMs) < 120000;
           if (isOnline) online++; else offline++;
 
           var deviceName = d.deviceName || d.name || doc.id;
           var os = d.os || d.deviceType || 'Windows';
-          var lastSeen = d.updatedAt ? (d.updatedAt.toDate ? d.updatedAt.toDate().toLocaleString('fr-FR') : new Date(d.updatedAt).toLocaleString('fr-FR')) : 'Inconnu';
+          var lastSeen = seenMs ? new Date(seenMs).toLocaleString('fr-FR') : 'Inconnu';
           var statusCls = isOnline ? 'online' : 'offline';
           var statusDot = isOnline ? '● En ligne' : '○ Hors ligne';
 

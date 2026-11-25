@@ -113,7 +113,13 @@ const evaAPI = {
     executeTool: (name: string, args: unknown, context: { taskId: string }) => ipcRenderer.invoke('cw:execute', name, args, context),
     cancel: (taskId: string) => ipcRenderer.invoke('cw:cancel', taskId),
     enable: () => ipcRenderer.invoke('cloudworks:enable'),
-    disable: () => ipcRenderer.invoke('cloudworks:disable')
+    disable: () => ipcRenderer.invoke('cloudworks:disable'),
+    setAutonomous: (enabled: boolean) => ipcRenderer.invoke('cloudworks:setAutonomous', enabled),
+    onApprovalPending: (callback: (data: { taskId: string, tool: string, args: any }) => void) => {
+      const listener = (_: unknown, data: any) => callback(data)
+      ipcRenderer.on('cw:approval-pending', listener)
+      return () => ipcRenderer.removeListener('cw:approval-pending', listener)
+    }
   },
 
 

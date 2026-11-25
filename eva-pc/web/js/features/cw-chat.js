@@ -12,15 +12,18 @@ async function route(text){
  if(w.S.image||w.S.images?.length||w.S.document||w.S.documents?.length)return false;
  if(routing){w.toast?.('Routage deja en cours','info');return true;}
  const forced=/^\/pc\s/i.test(text),prompt=forced?text.replace(/^\/pc\s/i,''):text;
+ if(!forced&&w.eva?.cloudworks?.status){
+  try{const st=await w.eva.cloudworks.status();if(!st?.enabled)return false;}catch(_){return false;}
+ }
  let deviceId;
- try{deviceId=await w.CWBus.target();}catch(e){if(!forced&&!w.eva)return false;w.toast?.(e.message,'error');return true;}
+ try{deviceId=await w.CWBus.target();}catch(e){if(!forced)return false;w.toast?.(e.message,'error');return true;}
  routing=true;
  const send=document.getElementById('sendBtn');if(send)send.disabled=true;
  w.setEvaStatusHeader?.('Routage local CloudWorks','thinking');
  try{
   const id=await w.CWBus.submit(forced?'agentic_task':'chat_request',{prompt},{deviceId});
   const result=forced?{handled:true,id}:await w.CWBus.wait(id,null,true);
-  if(!result.handled)return false;
+  if(!result.handled||(!forced&&result.error==='CLOUDWORKS_DISABLED'))return false;
   const input=document.getElementById('msgInput');if(input)input.value='';
   if(typeof w.appendMsg==='function')w.appendMsg('user',text);
   await saveUser(text);
@@ -29,12 +32,29 @@ async function route(text){
  finally{routing=false;if(send)send.disabled=false;w.setEvaStatusHeader?.(null);}
 }
 w.CWChat={route};
-// Replace only the PC task entry point. Keep the existing model-download panel.
-w._cwRunAgenticTask=async()=>{
- const p=document.getElementById('cwAgenticPrompt'),status=document.getElementById('cwAgenticStatus');if(!p?.value.trim())return;
- try{const id=await w.CWBus.submit('agentic_task',{prompt:p.value.trim()});if(status){status.replaceChildren();status.style.display='block';}w.appendCloudWorksTracker(id,p.value,status);}
- catch(e){if(status){status.style.display='block';status.textContent=e.message;}}
-};
-w._cwStopAgent=()=>{for(const id of Object.keys(w._cwActiveTrackers||{}))w.CWBus.cancel(id).catch(console.error);};
-w._cwQuickCmd=async type=>{try{const id=await w.CWBus.submit(type,{});w.appendCloudWorksTracker(id,type);}catch(e){w.toast?.(e.message,'error');}};
+// Fallback only when desktop cloudworks.js did not already install these handlers.
+if(!w._cwRunAgenticTask){
+ w._cwRunAgenticTask=async()=>{
+  const p=document.getElementById('cwAgenticPrompt'),status=document.getElementById('cwAgenticStatus');if(!p?.value.trim())return;
+  try{
+   const id=await w.CWBus.submit('agentic_task',{prompt:p.value.trim()});
+   if(status){status.replaceChildren();status.className='';status.style.cssText='display:block;margin-top:12px;';}
+   w.appendCloudWorksTracker(id,p.value,status);
+   const r=await w.CWBus.wait(id);if(r?.success)p.value='';
+  }catch(e){if(status){status.style.display='block';status.textContent=e.message;}}
+ };
+}
+if(!w._cwStopAgent){
+ w._cwStopAgent=()=>{for(const id of Object.keys(w._cwActiveTrackers||{}))w.CWBus.cancel(id).catch(console.error);};
+}
+if(!w._cwQuickCmd){
+ w._cwQuickCmd=async type=>{
+  const status=document.getElementById('cwAgenticStatus');
+  try{
+   const id=await w.CWBus.submit(type,{});
+   if(status){status.replaceChildren();status.className='';status.style.cssText='display:block;margin-top:12px;';}
+   w.appendCloudWorksTracker(id,type,status||undefined);
+  }catch(e){w.toast?.(e.message,'error');}
+ };
+}
 })(window);

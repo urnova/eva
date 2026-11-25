@@ -458,37 +458,30 @@ window._cwRestartLLM = async function() {
    COMMANDES RAPIDES & TASKEUR IA
 ══════════════════════════════════════════ */
 window._cwQuickCmd = async function(type) {
-  if (!window.pcAgent || !window.S || !window.S.user) return;
+  if (!window.CWBus || !window.S || !window.S.user) return;
   var statusEl = document.getElementById('cwAgenticStatus');
-  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '⟳ ' + type + ' en cours...'; statusEl.className = 'cw-agentic-status running'; }
-
+  var labels = { screenshot: "Capture d'écran", sysinfo: 'Infos système', open_explorer: 'Ouvrir Explorateur' };
+  var label = labels[type] || type;
+  if (window.eva && window.eva.overlay) {
+    try { window.eva.overlay.show('cloudworks', label); } catch(_) {}
+  }
   try {
-    var cmdId = await window.pcAgent.sendCommand(type, {}, window.S.user.uid);
-    if (type === 'open_explorer') {
-      if (window.eva && window.eva.system) {
-        await window.eva.system.exec('explorer.exe');
-        if (statusEl) { statusEl.textContent = '✓ Explorateur ouvert'; statusEl.className = 'cw-agentic-status done'; }
-      }
-      return;
+    var cmdId = await window.CWBus.submit(type, {});
+    if (statusEl) {
+      statusEl.replaceChildren();
+      statusEl.className = '';
+      statusEl.style.cssText = 'display:block;margin-top:12px;';
+      window.appendCloudWorksTracker(cmdId, label, statusEl);
     }
-
-    var tries = 0;
-    var pollRes = setInterval(async function() {
-      tries++;
-      if (tries > 30) { clearInterval(pollRes); return; }
-      var doc = await window.db.collection('cloudworks').doc(window.S.user.uid).collection('commands').doc(cmdId).get();
-      var d = doc.data();
-      if (d && (d.status === 'done' || d.status === 'error')) {
-        clearInterval(pollRes);
-        if (statusEl) {
-          statusEl.textContent = d.status === 'done' ? '✓ Commande terminée' : '✗ Erreur: ' + (d.result?.error || '');
-          statusEl.className = 'cw-agentic-status ' + d.status;
-        }
-        _updateLLMStatus();
-      }
-    }, 1000);
+    var res = await window.CWBus.wait(cmdId);
+    _addActivity(label + (res && res.success ? ' ✓' : ' ✗'), res && res.success ? 'done' : 'error');
+    _updateLLMStatus();
   } catch(e) {
-    if (statusEl) { statusEl.textContent = '✗ Erreur: ' + e.message; statusEl.className = 'cw-agentic-status error'; }
+    if (statusEl) {
+      statusEl.className = 'cw-agentic-status error';
+      statusEl.style.display = 'block';
+      statusEl.textContent = '✗ Erreur : ' + e.message;
+    }
   }
 };
 
@@ -499,21 +492,10 @@ window._cwRunAgenticTask = async function() {
   var prompt = promptEl.value.trim();
   if (!prompt) return;
 
-  statusEl.style.display = 'block';
-  statusEl.className = 'cw-agentic-status running';
-  statusEl.innerHTML = 
-    '<div class="cw-task-header" style="font-weight:600;margin-bottom:6px;color:#00d4ff;">Démarrage du LLM local...</div>' +
-    '<div id="cwTaskSteps"></div>' +
-    '<button class="cw-btn cw-btn-danger cw-btn-sm" style="margin-top:8px;" onclick="window._cwStopAgent()">Arrêter</button>';
-
-  var stepsEl = document.getElementById('cwTaskSteps');
-  var header = statusEl.querySelector('.cw-task-header');
-
   // Activer immédiatement la bulle overlay flottante en haut de l'écran Windows
   if (window.eva && window.eva.overlay) {
     try {
       window.eva.overlay.show('cloudworks', prompt);
-      window.eva.overlay.setState('cloudworks', 'Démarrage du LLM local...');
     } catch(_) {}
   }
 
@@ -522,56 +504,39 @@ window._cwRunAgenticTask = async function() {
     var taskId = await window.CWBus.submit('agentic_task', { prompt: prompt });
     window._activeTaskId = taskId;
 
-    function _onStep(text, status) {
-      if (header) header.textContent = text;
-      if (stepsEl) {
-        var it = document.createElement('div');
-        it.className = 'cw-task-step ' + (status || 'running');
-        it.style.cssText = 'padding:3px 0;font-size:0.9em;color:#c0c0d4;';
-        it.textContent = '▸ ' + text;
-        stepsEl.appendChild(it);
-      }
-      if (window.eva && window.eva.overlay && window.eva.overlay.setState) {
-        window.eva.overlay.setState('cloudworks', String(text).slice(0, 80));
-      }
-    }
+    statusEl.replaceChildren();
+    statusEl.className = '';
+    statusEl.style.cssText = 'display:block;margin-top:12px;';
+    window.appendCloudWorksTracker(taskId, prompt, statusEl);
 
-    var result = await window.CWBus.wait(taskId, _onStep);
-
+    var result = await window.CWBus.wait(taskId);
     if (result && result.success) {
-      if (header) header.textContent = 'Tâche terminée ✓';
-      statusEl.className = 'cw-agentic-status done';
       promptEl.value = '';
-      _addActivity('Tâche IA: ' + prompt.substring(0, 50), 'done');
+      _addActivity('Tâche IA : ' + prompt.substring(0, 50), 'done');
     } else {
-      var err = (result && (result.error || result.output)) || 'Erreur inconnue';
-      if (header) header.textContent = 'Échec : ' + err;
-      statusEl.className = 'cw-agentic-status error';
-      _addActivity('Tâche IA erreur: ' + prompt.substring(0, 30), 'error');
+      _addActivity('Tâche IA erreur : ' + prompt.substring(0, 30), 'error');
     }
   } catch(e) {
-    if (header) header.textContent = 'Erreur : ' + e.message;
     statusEl.className = 'cw-agentic-status error';
+    statusEl.style.display = 'block';
+    statusEl.textContent = 'Erreur : ' + e.message;
   } finally {
-    var _stopBtn = statusEl.querySelector(".cw-btn-danger");
-    if (_stopBtn) _stopBtn.style.display = "none";
     window._activeTaskId = null;
-    if (window.eva && window.eva.overlay && window.eva.overlay.hide) {
-      setTimeout(function(){ window.eva.overlay.hide(); }, 3500);
-    }
   }
 };
 
 window._cwStopAgent = function() {
   if (window._activeTaskId && window.CWBus) {
-    window.CWBus.cancel(window._activeTaskId);
+    try { window.CWBus.cancel(window._activeTaskId); } catch(_) {}
   }
-  if (window.CWAgentStop) window.CWAgentStop();
-};
-
-window._cwStopAgent = function() {
-  if (window._activeAgent) window._activeAgent.stop();
-  if (window.CWAgentStop) window.CWAgentStop();
+  for (var id in (window._cwActiveTrackers || {})) {
+    if (Object.prototype.hasOwnProperty.call(window._cwActiveTrackers, id)) {
+      try { window.CWBus.cancel(id); } catch(_) {}
+    }
+  }
+  if (window.CWAgentStop) {
+    try { window.CWAgentStop(); } catch(_) {}
+  }
 };
 
 window._cwToggleDevices = function() {
@@ -616,12 +581,22 @@ function _loadDevices(uid) {
 
         snap.forEach(function(doc) {
           var d = doc.data();
-          var isOnline = !!d.online;
+          var toMs = function(v) {
+            if (!v) return 0;
+            if (typeof v.toMillis === 'function') return v.toMillis();
+            if (typeof v.toDate === 'function') return v.toDate().getTime();
+            if (v instanceof Date) return v.getTime();
+            if (typeof v === 'number') return v;
+            return 0;
+          };
+          var seenMs = toMs(d.lastSeen) || toMs(d.updatedAt);
+          var isOnline = !!d.online && seenMs > 0 && (Date.now() - seenMs) < 120000;
           if (isOnline) online++; else offline++;
 
-          var deviceName = d.deviceName || d.name || doc.id;
+          var isCurrent = window._cwDeviceId && doc.id === window._cwDeviceId;
+          var deviceName = (d.deviceName || d.name || doc.id) + (isCurrent ? ' (Ce PC)' : '');
           var os = d.os || d.deviceType || 'Windows';
-          var lastSeen = d.updatedAt ? (d.updatedAt.toDate ? d.updatedAt.toDate().toLocaleString('fr-FR') : new Date(d.updatedAt).toLocaleString('fr-FR')) : 'Inconnu';
+          var lastSeen = seenMs ? new Date(seenMs).toLocaleString('fr-FR') : 'Inconnu';
           var statusCls = isOnline ? 'online' : 'offline';
           var statusDot = isOnline ? '● En ligne' : '○ Hors ligne';
 

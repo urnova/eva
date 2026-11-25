@@ -1,12 +1,57 @@
 /* Sole desktop command consumer. No legacy PowerShell fallback. */
 (function(w){'use strict';
 if(!w.eva?.cloudworks||w.__cwWorker)return;w.__cwWorker=true;
-let unsubscribe=null,heartbeat=null,current=null,generation=0,user=null,queue=Promise.resolve();
+let unsubscribe=null,heartbeat=null,current=null,generation=0,user=null,queue=Promise.resolve(),overlayHideTimer=null;
 const scheduled=new Set(),owner=crypto.randomUUID();
 const ts=()=>w.timestamp?w.timestamp():new Date();
 const emit=(name,detail)=>w.dispatchEvent(new CustomEvent(name,{detail}));
 function ref(uid,id){return w.db.collection('cloudworks').doc(uid).collection('commands').doc(id);}
+function showOverlay(state,text){
+ try{clearTimeout(overlayHideTimer);overlayHideTimer=null;if(w.eva?.overlay?.show)w.eva.overlay.show(state,String(text||'').slice(0,120));}catch(_){}
+}
+function updateOverlay(state,text){
+ try{if(w.eva?.overlay?.setState)w.eva.overlay.setState(state,String(text||'').slice(0,120));}catch(_){}
+}
+function hideOverlaySoon(state,text){
+ try{
+  updateOverlay(state,text);
+  clearTimeout(overlayHideTimer);
+  overlayHideTimer=setTimeout(()=>{try{if(w.eva?.overlay?.hide)w.eva.overlay.hide();}catch(_){}},3500);
+ }catch(_){}
+}
+if(w.eva.cloudworks.onApprovalPending){
+ w.eva.cloudworks.onApprovalPending(data=>{
+  if(current&&data&&data.taskId===current.id){
+   updateOverlay('approval','Autorisation requise : '+(data.tool||'action'));
+   current.onApproval?.(data.tool||'action');
+  }
+ });
+}
 async function ownedUpdate(r,patch){return w.db.runTransaction(async tx=>{const s=await tx.get(r);if(!s.exists||s.data().owner!==owner||w.CWBus.terminal(s.data()))return false;tx.update(r,{...patch,updatedAt:ts()});return true;});}
+async function routeMessage(id,prompt){
+ const schema={type:'object',properties:{route:{enum:['conversation','action','clarify']}},required:['route']};
+ const messages=[
+  {role:'system',content:'Determine si le message demande une operation concrete sur le PC Windows (action) ou une reponse textuelle / question / explication / negation (conversation). Ne classe jamais une negation comme action.'},
+  {role:'user',content:'Explique-moi comment fonctionne React'},
+  {role:'assistant',content:'{"route":"conversation"}'},
+  {role:'user',content:'Crée un fichier test sur le bureau'},
+  {role:'assistant',content:'{"route":"action"}'},
+  {role:'user',content:'C est quoi une PWA ?'},
+  {role:'assistant',content:'{"route":"conversation"}'},
+  {role:'user',content:'ecrit un fichier de test su mon bureau'},
+  {role:'assistant',content:'{"route":"action"}'},
+  {role:'user',content:'Bonjour EVA comment ca va ?'},
+  {role:'assistant',content:'{"route":"conversation"}'},
+  {role:'user',content:'Ouvre YouTube'},
+  {role:'assistant',content:'{"route":"action"}'},
+  {role:'user',content:'N\'ouvre pas YouTube et ne fais rien'},
+  {role:'assistant',content:'{"route":"conversation"}'},
+  {role:'user',content:prompt}
+ ];
+ const response=await w.eva.system.llmChat(messages,{sessionId:id,jsonSchema:schema,maxTokens:64,temperature:0,stopTriggers:[]});
+ if(response.aborted)throw Error('CANCELLED');
+ return JSON.parse(response.choices[0].message.content).route;
+}
 async function consume(uid,id,epoch){
  if(epoch!==generation||uid!==user)return;
  const r=ref(uid,id);
@@ -18,45 +63,36 @@ async function consume(uid,id,epoch){
   tx.update(r,{owner,status:'running',state:'running',step:'Prise en charge par le PC',startedAt:ts(),updatedAt:ts()});return d;
  });
  if(!data)return;
- let agent=null,result=null,unsubCancel=()=>{};const steps=[];let expired=false;
- current={id,r,stop:()=>{if(agent)agent.stop();else w.eva.cloudworks.cancel(id).catch(console.warn);}};
+ let agent=null,result=null,unsubCancel=()=>{},overlayShown=false;const steps=[];let expired=false;
+ current={
+  id,r,
+  stop:()=>{if(agent)agent.stop();else w.eva.cloudworks.cancel(id).catch(console.warn);},
+  onApproval:tool=>{ownedUpdate(r,{state:'waiting_user',step:'Autorisation locale requise sur le PC : '+tool}).catch(()=>{});}
+ };
  const deadline=setTimeout(()=>{expired=true;current?.id===id&&current.stop();},300000);
- 
  let prompt=data.payload?.prompt||data.action||'';
- // Afficher la bulle overlay flottante en haut de l'ecran Windows des que CloudWorks s'active
- try {
-  if (w.eva?.overlay?.show) {
-    w.eva.overlay.show('cloudworks', prompt || 'Tache CloudWorks');
-    w.eva.overlay.setState('cloudworks', 'Prise en charge par le PC...');
-  }
- } catch(_) {}
 
  const progress=async(text,status)=>{
   steps.push({text:String(text).slice(0,600),ts:new Date().toISOString(),state:status==='error'?'error':'running'});
   const ok=await ownedUpdate(r,{step:String(text).slice(0,600),steps:steps.slice(-40),state:status==='executing'?'executing':'running'});
   if(!ok)throw Error('OWNERSHIP_LOST_OR_CANCELLED');
   emit('cw:step',{cmdId:id,step:text});
-  try {
-    if (w.eva?.overlay?.setState) {
-      w.eva.overlay.setState('cloudworks', String(text).slice(0, 80));
-    }
-  } catch(_) {}
+  if(overlayShown)updateOverlay(status==='error'?'error':'cloudworks',text);
  };
  try{
   const config=await w.eva.cloudworks.status();if(!config.enabled)throw Error('CLOUDWORKS_DISABLED');
   unsubCancel=r.onSnapshot(s=>{if(s.exists&&s.data().status==='cancelled')current?.id===id&&current.stop();});
   if(data.payload?.command||data.payload?.tool||data.payload?.name)throw Error('LEGACY_DIRECT_EXECUTION_DISABLED: renvoyer la demande en langage naturel');
   if(data.type==='chat_request'){
-   const schema={type:'object',properties:{route:{enum:['action','conversation','clarify']}}};
-   const response=await w.eva.system.llmChat([{role:'system',content:'Classe le message: action = demande effective de faire une operation sur le PC (ouvrir, fichiers, applications, systeme). conversation = question, explication, note, rappel, alarme, agenda ou generation de document a telecharger sans destination PC. clarify = demande PC ambigue. Ne classe jamais une negation ou une simple citation comme une demande d execution. JSON uniquement.'},{role:'user',content:prompt}],{sessionId:id,jsonSchema:schema,maxTokens:100,temperature:0,stopTriggers:[]});
-   if(response.aborted)throw Error('CANCELLED');
-   const route=JSON.parse(response.choices[0].message.content).route;
+   const route=await routeMessage(id,prompt);
    if(route==='conversation'){
     await ownedUpdate(r,{routing:'conversation',status:'done',state:'succeeded',step:'Message conversationnel; aucune action PC',result:{success:true,routed:true,executed:false},completedAt:ts()});return;
    }
    if(route!=='action')throw Error('CLARIFICATION_REQUIRED: precise la demande PC');
    if(!await ownedUpdate(r,{routing:'action'}))throw Error('CANCELLED');
   }
+  overlayShown=true;
+  showOverlay('cloudworks',prompt||'Tâche CloudWorks');
   emit('cw:task-start',{cmdId:id,type:data.type,prompt});
   if(['agentic_task','chat_request'].includes(data.type)){
    if(!prompt.trim())throw Error('EMPTY_PROMPT');
@@ -64,9 +100,9 @@ async function consume(uid,id,epoch){
   }else{
    const quick={sysinfo:['system_status',{}],screenshot:['screenshot_take',{}],open_explorer:['app_launch',{target:'explorer.exe',args:null}],lock:['session_lock',{}],sleep:['system_sleep',{}],shutdown:['system_shutdown',{}]};
    if(!quick[data.type])throw Error('UNSUPPORTED_COMMAND: '+data.type);
-   await progress('Execution : '+data.type,'executing');
+   await progress('Exécution : '+data.type,'executing');
    result=await w.eva.cloudworks.executeTool(...quick[data.type],{taskId:id});
-   if(result.success)result={...result,output:result.result?.summary||'Commande transmise au systeme'};
+   if(result.success)result={...result,output:result.result?.summary||'Commande transmise au système'};
   }
  }catch(e){result={success:false,error:e.message};}
  finally{
@@ -77,12 +113,11 @@ async function consume(uid,id,epoch){
    const safe={success:result.success===true,output:result.output||result.response||null,error:result.error||null,partial:!!result.partial,indeterminate:!!result.indeterminate};
    const persisted=await ownedUpdate(r,{status,state:result.indeterminate?'indeterminate':result.partial?'partial':status==='done'?'succeeded':status==='cancelled'?'cancelled':'failed',step:safe.output||safe.error||status,result:safe,steps:steps.slice(-40),completedAt:ts()}).catch(e=>{console.error('[CW] Final write failed',id,e);return false;});
    emit('cw:task-done',{cmdId:id,status:persisted?status:'error',result:persisted?safe:{success:false,error:'FINAL_STATE_NOT_PERSISTED; verifier avant toute nouvelle execution'},type:data.type});
-   try {
-     if (w.eva?.overlay?.setState) {
-       w.eva.overlay.setState('cloudworks', safe.output || safe.error || 'Termine');
-       setTimeout(() => { if (w.eva?.overlay?.hide) w.eva.overlay.hide(); }, 4000);
-     }
-   } catch(_) {}
+   if(overlayShown){
+    hideOverlaySoon(status==='done'?'done':'error',safe.output||safe.error||(status==='done'?'Action terminée':'Échec de la tâche'));
+   }
+  }else if(overlayShown){
+   try{w.eva?.overlay?.hide?.();}catch(_){}
   }
   current=null;
  }
@@ -95,6 +130,13 @@ async function setup(uid){
  if(!deviceId){deviceId='PC-'+crypto.randomUUID();localStorage.setItem('cw_device_id',deviceId);}
  w._cwDeviceId=deviceId;
  const device=w.db.collection('cloudworks').doc(uid).collection('devices').doc(deviceId);w.pcAgentDocRef=device;
+ try{
+  const udoc=await w.db.collection('users').doc(uid).get();
+  const auto=udoc.data()?.cloudworks?.autonomousMode;
+  if(typeof auto==='boolean'&&w.eva?.cloudworks?.setAutonomous){
+   await w.eva.cloudworks.setAutonomous(auto).catch(()=>{});
+  }
+ }catch(_){}
  const beat=async()=>{
   const status=await w.eva.cloudworks.status(),chk=await w.eva.system.llmCheck();
   const stale=await w.db.collection('cloudworks').doc(uid).collection('commands').where('deviceId','==',deviceId).get();
@@ -114,5 +156,8 @@ w.pcAgent={getDeviceId:()=>w._cwDeviceId,sendCommand:(type,payload,uid)=>{if(uid
 w.cancelCurrentCloudWorksTask=()=>current?w.CWBus.cancel(current.id):Promise.resolve();
 function init(){if(!w.firebase?.auth||!w.db||!w.CWBus){setTimeout(init,300);return;}w.firebase.auth().onAuthStateChanged(u=>setup(u?.uid||null).catch(console.error));}
 init();
-w.addEventListener('beforeunload',()=>{unsubscribe?.();clearInterval(heartbeat);current?.stop();});
+w.addEventListener('beforeunload',()=>{
+ unsubscribe?.();clearInterval(heartbeat);current?.stop();
+ if(w.pcAgentDocRef)try{w.pcAgentDocRef.set({online:false,updatedAt:ts()},{merge:true}).catch(()=>{});}catch(_){}
+});
 })(window);

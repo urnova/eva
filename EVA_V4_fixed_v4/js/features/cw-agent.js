@@ -13,14 +13,17 @@ CWAgent.prototype.run=async function(prompt,emit){
  const finish=(success,message,extra={})=>({success,response:message,output:success?message:null,error:success?null:message,observations,...extra});
  try{
   if(!w.CWTools||!w.eva?.system?.llmChat)throw Error('LOCAL_MODEL_REQUIRED');
-  const system='Tu es EVA, agent Windows. Tu dois accomplir la requete de l utilisateur en appelant les outils appropries.\n'+
+  const system='Tu es EVA, agent Windows. Accomplis la requete de l utilisateur avec les outils Windows.\n'+
    'Format obligatoire (JSON uniquement) :\n'+
-   'Pour ouvrir un site web ou une app : {"kind":"tool","name":"app_launch","args":{"target":"https://youtube.com","args":null}}\n'+
-   'Pour creer un fichier : {"kind":"tool","name":"file_create","args":{"path":"$env:USERPROFILE\\\\Desktop\\\\test.txt","content":"Contenu du fichier","append":false}}\n'+
-   'Pour chercher une app installee : {"kind":"tool","name":"app_resolve","args":{"query":"notepad"}}\n'+
-   'Pour lister un dossier : {"kind":"tool","name":"file_list","args":{"path":"$env:USERPROFILE\\\\Desktop","depth":1}}\n'+
-   'Pour terminer (UNIQUEMENT apres qu un outil ait reussi) : {"kind":"done","message":"Action effectuee avec succes."}\n'+
-   'Tu DOIS utiliser un outil au premier tour. Tu ne peux PAS utiliser done sans avoir d abord execute un outil avec succes.';
+   '- Ouvrir un site web : {"kind":"tool","name":"app_launch","args":{"target":"https://youtube.com","args":null}}\n'+
+   '- Lancer une application Windows connue (calculatrice=calc.exe, bloc-notes=notepad.exe, explorateur=explorer.exe, paint=mspaint.exe) : {"kind":"tool","name":"app_launch","args":{"target":"calc.exe","args":null}}\n'+
+   '- Chercher une application installee dont tu ignores l executable : {"kind":"tool","name":"app_resolve","args":{"query":"spotify"}}\n'+
+   '- Creer ou ecrire un fichier texte (si le nom ou contenu est imprecis, choisis un nom clair comme test.txt et un texte court) : {"kind":"tool","name":"file_create","args":{"path":"$env:USERPROFILE\\\\Desktop\\\\test.txt","content":"Bonjour","append":false}}\n'+
+   '- Lister un dossier : {"kind":"tool","name":"file_list","args":{"path":"$env:USERPROFILE\\\\Desktop","depth":1}}\n'+
+   '- Capture d ecran : {"kind":"tool","name":"screenshot_take","args":{}}\n'+
+   '- Infos systeme : {"kind":"tool","name":"system_status","args":{}}\n'+
+   '- Terminer (UNIQUEMENT apres observation d un outil reussi) : {"kind":"done","message":"Action effectuee avec succes."}\n'+
+   'Regle : au premier tour, choisis OBLIGATOIREMENT un outil (kind:"tool"). Ne choisis jamais un site web si l utilisateur demande une application Windows locale.';
   
   for(let turn=0;turn<12;turn++){
    if(this.stopped)throw Error('CANCELLED');

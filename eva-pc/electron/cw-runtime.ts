@@ -31,6 +31,11 @@ async function localPath(value,write=false){
  let p=text(value,4096).replace(/\$env:USERPROFILE|%USERPROFILE%|^~/gi,os.homedir());
  if(!path.isAbsolute(p)||/^\\\\/.test(p)||/^\\[?.]\\/.test(p)||/\$env:|%[A-Z_]+%/i.test(p))throw Error('ABSOLUTE_LOCAL_PATH_REQUIRED');
  p=path.resolve(p);
+ const frDesktop=path.join(os.homedir(),'Bureau');
+ const enDesktop=path.join(os.homedir(),'Desktop');
+ if((p.toLowerCase()===frDesktop.toLowerCase()||p.toLowerCase().startsWith(frDesktop.toLowerCase()+path.sep))){
+  try{await fs.stat(frDesktop);}catch(_){try{if((await fs.stat(enDesktop)).isDirectory())p=enDesktop+p.slice(frDesktop.length);}catch(_2){}}
+ }
  if(process.platform==='win32'&&p.slice(3).includes(':'))throw Error('NTFS_STREAM_NOT_ALLOWED');
  // Resolve nearest existing parent and reject symlinks/reparse escapes.
  let probe=p;
@@ -118,8 +123,14 @@ export function installCWRuntime({ipcMain,dialog,shell,BrowserWindow,store,mainW
     args.path=await localPath(path.join(args.destination,args.filename),true);
    }
    const sensitive=contract[name]?.sensitive||['session_lock','system_sleep','system_shutdown'].includes(name);
-   if(sensitive){
-    const answer=await dialog.showMessageBox(mainWindow(),{type:'warning',title:'EVA CloudWorks — autorisation locale',message:'Autoriser cette operation exacte sur ce PC ?',detail:JSON.stringify({tool:name,args},null,2),buttons:['Refuser','Autoriser'],defaultId:0,cancelId:0,noLink:true});
+   const alwaysApprove=['command_run','app_install','app_close','system_shutdown','session_lock','system_sleep','screenshot_take','folder_organize','file_read'].includes(name);
+   const autonomous=!!store.get('cwAutonomousMode',false);
+   if(sensitive&&(alwaysApprove||!autonomous)){
+    const win=mainWindow();
+    const canAttach=win&&!win.isDestroyed()&&win.isVisible()&&!win.isMinimized();
+    try{if(win&&!win.isDestroyed())win.webContents.send('cw:approval-pending',{taskId:id,tool:name,args});}catch(_){}
+    const msgOpts={type:'warning',title:'EVA CloudWorks — autorisation locale',message:'Autoriser cette operation exacte sur ce PC ?',detail:JSON.stringify({tool:name,args},null,2),buttons:['Refuser','Autoriser'],defaultId:0,cancelId:0,noLink:true};
+    const answer=canAttach?await dialog.showMessageBox(win,msgOpts):await dialog.showMessageBox(msgOpts);
     if(answer.response!==1)throw Error('APPROVAL_DENIED');
    }
    if(cancelled.has(id)||controller.signal.aborted)throw Error('CANCELLED');

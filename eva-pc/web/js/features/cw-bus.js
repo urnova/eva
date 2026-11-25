@@ -9,16 +9,13 @@ async function target(explicit){
  const saved=localStorage.getItem('cw_target_device');
  const snap=await w.db.collection('cloudworks').doc(uid()).collection('devices').get();
  const now = Date.now();
- const online=snap.docs.map(d=>({id:d.id, ...d.data()})).filter(x=>{
-   const t = x.lastSeen?.toMillis?.() || x.lastSeen?.toDate?.()?.getTime() || (x.lastSeen instanceof Date ? x.lastSeen.getTime() : (typeof x.lastSeen === 'number' ? x.lastSeen : 0));
-   return x.online && (t === 0 || (now - t) < 300000);
- });
+ const toMs = v => v?.toMillis?.() || v?.toDate?.()?.getTime() || (v instanceof Date ? v.getTime() : (typeof v === 'number' ? v : 0));
+ const online = snap.docs.map(d=>({id:d.id, ...d.data()})).map(x=>({...x, _ts: toMs(x.lastSeen) || toMs(x.updatedAt)})).filter(x=>x.online === true && x._ts > 0 && (now - x._ts) < 120000);
+ online.sort((a,b)=>((b.workerVersion===2?1:0)-(a.workerVersion===2?1:0))||((b.platform==='win32'||b.deviceType==='windows'?1:0)-(a.platform==='win32'||a.deviceType==='windows'?1:0))||(b._ts-a._ts));
  if(saved&&online.some(d=>d.id===saved))return saved;
- if(online.length>=1){
-   const win=online.find(d=>d.platform==='win32'||d.deviceType==='windows')||online[0];
-   return win.id;
- }
- throw Error('NO_PC_ONLINE: Aucun PC connecte a CloudWorks');
+ if(saved)try{localStorage.removeItem('cw_target_device');}catch(_){}
+ if(online.length>=1)return online[0].id;
+ throw Error('NO_PC_ONLINE: Aucun PC connecte a CloudWorks (verifiez que EVA Desktop est ouvert et CloudWorks active)');
 }
 async function submit(type,payload={},options={}){
  const deviceId=await target(options.deviceId);

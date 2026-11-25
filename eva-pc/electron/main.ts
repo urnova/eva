@@ -323,21 +323,23 @@ function createWindow() {
 function createOverlayWindow() {
   const { screen } = require('electron')
   const primaryDisplay = screen.getPrimaryDisplay()
-  const { width, height } = primaryDisplay.workAreaSize
+  const wa = primaryDisplay.workArea || { x: 0, y: 0, width: primaryDisplay.workAreaSize.width, height: primaryDisplay.workAreaSize.height }
 
-  const overlayWidth = 340
-  const overlayHeight = 140
+  const overlayWidth = 400
+  const overlayHeight = 104
 
   overlayWindow = new BrowserWindow({
     width: overlayWidth,
     height: overlayHeight,
-    x: width - overlayWidth - 20, // En haut à droite, avec un peu de marge
-    y: 20,
+    x: Math.round(wa.x + wa.width - overlayWidth - 16),
+    y: Math.round(wa.y + 16),
     transparent: true,
     frame: false,
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: true,
+    hasShadow: false,
+    focusable: false,
     show: false,
     webPreferences: {
       plugins: true,
@@ -349,6 +351,7 @@ function createOverlayWindow() {
   })
 
   overlayWindow.setAlwaysOnTop(true, 'screen-saver')
+  overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
   if (isDev) {
     overlayWindow.loadFile(join(__dirname, '../web/overlay.html'))
@@ -728,6 +731,7 @@ ipcMain.handle('window:focus', () => {
 // â”€â”€â”€ IPC Handlers â€” Overlay Agentique â”€â”€â”€
 ipcMain.handle('overlay:show', (_event, state?: string, text?: string) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.setAlwaysOnTop(true, 'screen-saver')
     if (state) overlayWindow.webContents.send('overlay:setState', state, text)
     overlayWindow.showInactive() // Affiche sans voler le focus
   }
@@ -1842,6 +1846,12 @@ ipcMain.handle('cloudworks:disable', async () => {
   stopLLM();
   if (tray) tray.setToolTip('E.V.A - Evolutionary Virtual Assistant');
   return { success: true };
+});
+
+ipcMain.handle('cloudworks:setAutonomous', async (event, enabled: boolean) => {
+  assertCWLocalSender(event);
+  store.set('cwAutonomousMode', !!enabled);
+  return { success: true, autonomousMode: !!enabled };
 });
 
 // ─── IPC Handlers — STT (Faster-Whisper GPU & Fallback SAPI) ───

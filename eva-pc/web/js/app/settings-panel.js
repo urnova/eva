@@ -720,11 +720,17 @@ function renderSettings(section) {
         }
         document.getElementById('cwApprovalToggle').checked = _cwData.approvalMode;
         document.getElementById('cwAutonomousToggle').checked = _cwData.autonomousMode;
+        if (window.eva && window.eva.cloudworks && window.eva.cloudworks.setAutonomous) {
+          window.eva.cloudworks.setAutonomous(!!_cwData.autonomousMode).catch(function(){});
+        }
       }).catch(function(){});
     }
 
     function _saveCWSettings(key, value) {
       if (!S.user) return;
+      if (key === 'autonomousMode' && window.eva && window.eva.cloudworks && window.eva.cloudworks.setAutonomous) {
+        window.eva.cloudworks.setAutonomous(!!value).catch(function(){});
+      }
       var update = {};
       update['cloudworks.' + key] = value;
       window.db.collection('users').doc(S.user.uid).update(update).catch(function(e) {
@@ -768,7 +774,7 @@ function renderSettings(section) {
     });
 
     document.getElementById('cwAutonomousToggle').addEventListener('change', function(e) {
-      if (e.target.checked && !confirm('Activer le mode autonome ? EVA pourra executer des actions sur votre PC sans demander confirmation. Vous pouvez l\'arreter a tout moment avec le bouton Arreter dans CloudWorks.')) {
+      if (e.target.checked && !confirm('Activer le mode autonome ? EVA pourra executer la creation de fichiers et documents sans demander confirmation. Vous pouvez l\'arreter a tout moment avec le bouton Arreter dans CloudWorks.')) {
         e.target.checked = false;
         return;
       }
