@@ -1,26 +1,32 @@
-﻿# STATE — EVA — 24 Nov 2026 (mise à jour 16h05)
+﻿# STATE — EVA — 25 Nov 2026 (v5.6.25)
 
 ## Statut actuel
-**D1 — Refonte Candidate Intégrée & Déployée** — v5.6.23 ✅ PUBLIÉE GitHub Releases (commit b1f2a75, push OK)
+**D1 — Refonte, Corrections & Déploiement v5.6.25** — v5.6.25 ✅ PUBLIÉE sur GitHub Releases (`E.V.A-Setup-5.6.25.exe`)
 
-### Refonte candidate GPT 6.2 SOL appliquée (Protocole 2)
-1. **Consommateur Firestore Unique** :
-   - Désactivation du deuxième écouteur concurrent dans `pc-bridge.js`. Seul `pc-agent.js` consomme et met à jour les commandes avec transition transactionnelle `pending` -> `running`.
-2. **Bus Unifié (`cw-bus.js` & `cw-chat.js`)** :
-   - Parcours unifié : Chat Web, Chat PC et Tâche libre passent tous par le bus commun qui produit une enveloppe canonique (`schemaVersion: 2`).
-   - Routage automatique des commandes PC avant le provider conversationnel + commandes `/pc` et `/chat` disponibles.
-3. **Moteur d'exécution privilégié (`cw-runtime.ts` & `main.ts`)** :
-   - Validation de l'expéditeur, contrôle des permissions sensibles et exécution des outils système directement dans le processus principal Electron via `eva.cloudworks.executeTool`.
-4. **Indépendance totale vis-à-vis de Puter** :
-   - Le tracker CloudWorks (`cw-modal.js`) s'appuie désormais directement sur le résultat local de l'outil exécuté, sans aucun appel cloud à Puter pour rédiger le récapitulatif.
-5. **Nettoyage massif du codebase** :
-   - 27 fichiers mis à jour, 6 643 lignes de code redondant ou conflictuel éradiquées.
-   - Compilation TypeScript validée (0 erreur) et Vite build validé.
+### Causes racines identifiées et corrigées en v5.6.25 (après test réel sur GGUF 3B + audit complet)
+| Problème constaté | Cause racine réelle vérifiée | Solution appliquée |
+|---|---|---|
+| **Chat : "Créer un fichier test sur le bureau" échoue ou part sur Puter** | En test réel avec `EVA-PC-Agentic-3B-Q4_K_M-v5.gguf`, le routeur `pc-agent.js` classait `"Créer un fichier test sur le bureau"` en `clarify` (échec `CLARIFICATION_REQUIRED`) et `"ecrit un fichier de test su mon bureau"` en `conversation` (envoyé sur Puter). | Routeur multi-tours few-shot dans `pc-agent.js` + exemples calibrés. Benchmark GGUF 3B passé à 10/11 (et 100% sur création de fichiers, lancement d'apps, capture, système, salutations, explications React/PWA). |
+| **Chat normal bloqué si CloudWorks est désactivé** | `cw-chat.js` ne vérifiait pas `eva.cloudworks.status().enabled` avant de soumettre `chat_request`, provoquant une erreur `CLOUDWORKS_DISABLED` sur des messages normaux. | Garde ajoutée dans `cw-chat.js` (`!forced && !enabled => return false`), vérifiée par test unitaire. |
+| **Collision `cw-chat.js` vs `cloudworks.js` (pas d'overlay au clic, double encadrement)** | `cw-chat.js` (chargé en dernier dans `chat.html`) écrasait `_cwRunAgenticTask`, `_cwStopAgent` et `_cwQuickCmd` de `cloudworks.js`. | `cw-chat.js` préserve les handlers de `cloudworks.js` ; `_cwRunAgenticTask` et `_cwQuickCmd` utilisent `CWBus` + `appendCloudWorksTracker` sans double cadre. |
+| **Bulle overlay bloquée ou mal dimensionnée / halo gris** | 1) `pc-agent.js` affichait l'overlay avant le routage `chat_request` et sortait sur `conversation` sans le cacher. 2) `overlay.html` utilisait `backdrop-filter` et `mask-composite` sur Electron transparent Windows (`340x140`). | 1) Overlay affiché uniquement si `route === 'action'` ou tâche PC directe, avec `overlayHideTimer` et fermeture garantie. 2) Refonte complète `overlay.html` (`400x104`, `workArea`, fond opaque/dégradé net, états `cloudworks`, `approval`, `done`, `error`). |
+| **Carte tracker CloudWorks (`cw-modal.js`) jugée moche** | Bordures imbriquées dans `#cwAgenticStatus`, absence de liste d'étapes en direct, `renderSavedTrackerCard` cassé sur l'état sauvegardé. | Refonte complète `cw-modal.js` (dark glass, liste des 5 dernières étapes, résumé stylisé, suppression double bordure, correction `renderSavedTrackerCard`), synchronisée avec `EVA_V4_fixed_v4`. |
+| **Blocage "En attente du PC" à distance (Multi-PC)** | `cw-bus.js` acceptait des devices sans `lastSeen` (`t === 0`) et jusqu'à 5 min sans trier par fraîcheur, ni purger un `cw_target_device` périmé. | Filtrage strict `online === true && ts > 0 && age < 120s`, tri par `workerVersion` / `win32` / `lastSeen` décroissant, purge des sélections obsolètes. |
+| **Autorisation Windows cachée en arrière-plan & chemin `Bureau`** | `dialog.showMessageBox(mainWindow(), ...)` restait attaché si fenêtre minimisée, sans notifier Firestore/Overlay, et ignorait `autonomousMode`. | `cw-runtime.ts` notifie `cw:approval-pending` (état `waiting_user` + overlay ambre), détache le dialogue si fenêtre non visible, respecte `cwAutonomousMode` pour la création de fichiers/documents, et normalise `Bureau` -> `Desktop`. |
+
+### Vérifications effectuées
+- Benchmark GGUF `EVA-PC-Agentic-3B-Q4_K_M-v5.gguf` (node-llama-cpp) : outils Tour 0 & Tour 1 OK (file_create, app_launch `youtube.com` / `calc.exe` / `notepad.exe`, screenshot_take, system_status, file_list). Routeur few-shot : 10/11 (seul cas edge restant : `"N ouvre pas YouTube"` sans apostrophe).
+- `node --check` sur les 14 fichiers JS (PC + Web) : 14/14 OK.
+- `npx tsc --noEmit` & `npm run compile` : 0 erreur.
+- Suite unitaire `verify_d1.mjs` : 5/5 OK (`cw-tools`, `cw-bus`, `cw-chat`, parité PC/Web).
+- Non testé en interactif ici : exécution E2E dans la fenêtre Electron packagée + Vercel live après push.
 
 ### Prochaine étape
-- Test utilisateur sous Windows avec l'installateur **`E.V.A-Setup-5.6.23.exe`**.
-- Vérification du comportement réel avec le modèle local 3B sur le chat et la tâche libre.
-- Passage officiel à la phase **D2**.
+- Installer `E.V.A-Setup-5.6.25.exe` depuis GitHub Releases (`v5.6.25`).
+- Vérifier en conditions réelles : tâche libre CloudWorks, commande dans le chat, commande à distance, apparence de la nouvelle bulle overlay et de la carte.
+- Passer ensuite à la Phase D2 dès validation utilisateur.
+
+---
 
 ## Statut actuel
 **D1 en cours** — v5.6.17 ✅ PUBLIÉE sur GitHub Releases (commit 52d181e)
