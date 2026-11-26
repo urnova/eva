@@ -506,6 +506,7 @@ window.speakMsg = speakMsg;
 async function handleSend(customText) {
   var input = document.getElementById('msgInput');
   var text = (typeof customText === 'string' && customText.trim()) ? customText.trim() : ((input && input.value) || '').trim();
+  if (input && !customText) { input.value = ''; input.style.height = 'auto'; }
   /* CW_UNIFIED_V2 */
   if (window.CWChat && await window.CWChat.route(text)) return;
   text = text.replace(/^\/chat\s+/i, '');
@@ -539,7 +540,12 @@ async function handleSend(customText) {
   S.document = null; S.documents = [];
 
   var displayText = text || (allImages.length > 1 ? '📷 ' + allImages.length + ' photos jointes' : allImages.length === 1 ? '📷 Photo jointe' : allDocs.length > 1 ? '' : allDocs.length === 1 ? '' : '');
-  appendMsg('user', displayText, allImages, allDocs);
+  if (window._cwPreRenderedUserText && window._cwPreRenderedUserText === displayText) {
+    window._cwPreRenderedUserText = null;
+  } else {
+    window._cwPreRenderedUserText = null;
+    appendMsg('user', displayText, allImages, allDocs);
+  }
   showTyping(text); /* Passe le message pour l'analyse contextuelle des pensées */
   window.setThinkingPhase(_SVG_THINK_BRAIN, 'Réfléchis...', 'Je lis votre message...');
 
@@ -589,50 +595,14 @@ async function handleSend(customText) {
   // Injection date/heure courante — EVA connaît ainsi l'heure pour créer alarmes/rappels
   var deviceId = window._cwDeviceId || localStorage.getItem('cw_device_id') || 'PC-inconnu';
   if (S.cwDevices && S.cwDevices.length > 0) {
-    userCtx += '\n\nÉTAT CLOUDWORKS (Vos Appareils Connectés) :\n';
+    userCtx += '\n\nAPPAREILS CLOUDWORKS CONNECTÉS :\n';
     S.cwDevices.forEach(function(d) {
         userCtx += '- ' + (d.deviceName || d.id) + ' (' + (d.online ? 'En Ligne' : 'Hors Ligne') + ')\n';
     });
-    userCtx += 'Si l\'utilisateur te demande d\'exécuter une tâche sur son PC, tu utiliseras l\'outil Tâche PC [ACTION:{"type":"agentic_task","prompt":"..."}]. S\'il y a des PC en ligne, la commande y sera envoyée.\n';
   }
 
   if (window.eva) {
-    // === VERSION PC DESKTOP ===
-    userCtx += '\nENVIRONNEMENT : Tu tournes SUR l\'application PC locale E.V.A Desktop.\n';
-    userCtx += 'DEVICE ID de ce PC : ' + deviceId + '\n';
-
-    // Statut LLM (si disponible)
-    if (window._llmStatus !== undefined) {
-      userCtx += 'LLM LOCAL : ' + (window._llmStatus ? 'Actif (tu peux déléguer des tâches autonomes complexes au LLM local)' : 'Inactif') + '\n';
-    }
-
-    userCtx += '\nRÈGLES IMPORTANTES POUR CE PC :\n';
-    userCtx += '- Pour toute action système sur CE PC, génère [ACTION:{...}] avec "deviceId":"' + deviceId + '"\n';
-    userCtx += '- EXÉCUTION INSTANTANÉE (CRITIQUE) : Pour toute tâche sur ce PC (fichiers, dossiers, navigation, scripts), inclus TOUJOURS le script PowerShell direct et complet dans la propriété "command" pour une exécution immédiate sans latence :\n';
-    userCtx += '  [ACTION:{"type":"agentic_task","prompt":"Description courte","command":"Script PowerShell direct avec chemins obligatoirement entre guillemets doubles...","deviceId":"' + deviceId + '"}]\n';
-    userCtx += '  RÈGLES POWERSHELL OBLIGATOIRES :\\n';
-    userCtx += '  1. GUILLEMETS DOUBLES OBLIGATOIRES AUTOUR DE CHAQUE CHEMIN : Ex: "$env:USERPROFILE\\\\Desktop\\\\Mon Fichier.txt", "$env:USERPROFILE\\\\Desktop\\\\Fichiers Test". Ne JAMAIS écrire de chemin sans guillemets !\\n';
-    userCtx += '  2. DOSSIERS SYSTÈME WINDOWS RÉELS :\\n';
-    userCtx += '     - Captures d\\\'écran / Screenshots : Le vrai dossier sur le disque est "$env:USERPROFILE\\\\Pictures\\\\Screenshots" (même sur Windows en français ! Ne JAMAIS écrire "capture d\\\'écran").\\n';
-    userCtx += '     - Bureau : "$env:USERPROFILE\\\\Desktop"\\n';
-    userCtx += '     - Documents : "$env:USERPROFILE\\\\Documents"\\n';
-    userCtx += '     - Images : "$env:USERPROFILE\\\\Pictures"\\n';
-    userCtx += '     - Téléchargements : "$env:USERPROFILE\\\\Downloads"\\n';
-    userCtx += '  3. Créer TOUJOURS les dossiers AVANT de déplacer ou créer des fichiers dedans : New-Item -Path "$env:USERPROFILE\\\\Desktop\\\\Fichiers Test" -ItemType Directory -Force;\\n';
-    userCtx += '  4. Déplacer des fichiers : Move-Item -Path "$env:USERPROFILE\\\\Desktop\\\\test1.txt" -Destination "$env:USERPROFILE\\\\Desktop\\\\Fichiers Test" -Force;\\n';
-    userCtx += '  5. Créer des fichiers texte avec contenu : Set-Content -Path "$env:USERPROFILE\\\\Desktop\\\\test1.txt" -Value \\\'Hello World 1\\\' -Encoding utf8 -Force;\\n';
-    userCtx += '  6. Pour ouvrir Edge ou une URL : Start-Process msedge "URL";\\n';
-    userCtx += '  7. Pour trier ou ranger des captures d\\\'écran ou fichiers par date : $src = "$env:USERPROFILE\\\\Pictures\\\\Screenshots"; Get-ChildItem -Path $src -File | ForEach-Object { $d = Join-Path $src $_.LastWriteTime.ToString("yyyy-MM"); if (-not (Test-Path $d)) { New-Item -Path $d -ItemType Directory -Force }; Move-Item -Path $_.FullName -Destination $d -Force };\\n';
-    userCtx += '- Si CloudWorks est désactivé, dis-le à l\'utilisateur et propose de l\'activer dans les paramètres\n';
-    userCtx += '- Si l\'utilisateur demande spécifiquement d\'utiliser le LLM local ou d\'exécuter avec le modèle autonome alors que le modèle n\'est pas téléchargé, invite-le à aller dans l\'onglet CloudWorks pour cliquer sur "Télécharger le modèle (2.0 Go)"\n';
-    userCtx += '- Identifie-toi comme étant sur ce PC précis, pas sur le web\n';
-
-    userCtx += '\nDETECTION AUTOMATIQUE CLOUDWORKS (TRES IMPORTANT) :\n';
-    userCtx += '1. Si l\'utilisateur mentionne un chemin EXPLICITE sur son systeme -> c\'est une tache CloudWorks locale.\n';
-    userCtx += '2. INTERDICTION FORMELLE : N\'utilise JAMAIS create_document pour des fichiers destines au PC local.\n';
-    userCtx += '3. Pour creer un vrai fichier sur le PC, delegue avec [ACTION:{"type":"agentic_task","prompt":"...","command":"...","deviceId":"' + deviceId + '"}]\n';
-    userCtx += '4. Redige le prompt en langage naturel.\n';
-    userCtx += '5. Si la demande est generique, utilise create_document.\n';
+    userCtx += '\nENVIRONNEMENT : Tu tournes sur E.V.A Desktop (Windows).\n';
   } else {
     // === VERSION WEB ===
     userCtx += '\nENVIRONNEMENT : Tu tournes sur la version Web/Navigateur. Tu n\'es PAS sur le PC localement.\n';

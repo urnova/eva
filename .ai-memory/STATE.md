@@ -1,8 +1,9 @@
 ﻿# STATE — E.V.A Multiplateforme
 
-- **Phase actuelle** : D1 implémentée, compilée, testée et publiée (`eva-pc` v5.6.26 sur GitHub Releases + Web sur `main` / Vercel).
-- **En attente** : Validation utilisateur en conditions réelles sur `v5.6.26` et Web avant d'ouvrir le chantier D2 (`D2_BACKLOG.md`).
-- **Commandes vérifiées** :
-  - `eva-pc`: `npm run compile` (`tsc && vite build && xcopy`)
-  - `eva-pc`: `node deploy.js` (incrément v5.6.26, build NSIS `E.V.A-Setup-5.6.26.exe`, publication GitHub Releases)
-  - `EVA_V4_fixed_v4`: `npm install`, `node --check api/tts.js`, test live handler `/api/tts` (`200`, `audio/mpeg`)
+- **Phase actuelle** : D1 implémentée, vérifiée en E2E réel et publiée (`eva-pc` v5.6.27 sur GitHub Releases + Web sur `main` / Vercel).
+- **Correctifs v5.6.27** :
+  - `cw-runtime.ts` : `app_launch` étend `$env:USERPROFILE` / `%USERPROFILE%` / `~` / `Bureau` et ouvre les fichiers non exécutables (`.html`, `.txt`, `.md`, `.pdf`, etc.) via `shell.openPath()`.
+  - `cw-agent.js` : planificateur structuré par étapes avec verrouillage par outil (`schemaForTool`), garde-fou contre l’écrasement d’un fichier précédent, et rédaction de contenu riche HTML/doc via le provider IA actif (fallback 3B local hors ligne).
+  - `overlay.html` : design glassmorphique d’origine à double anneau rotatif + boutons `[✓ Autoriser]` / `[✗ Refuser]`.
+  - `messages.js`, `cw-chat.js`, `cw-modal.js` : vidage immédiat de la barre d’envoi sans gel, réponse d’EVA avant le lancement et bilan d’EVA après la fin d’une tâche CloudWorks.
+- **En attente** : Retour utilisateur sur `v5.6.27` + vocal avant de démarrer D2 ([D2_BACKLOG.md](file:///f:/code/eva/evaprojectmultiplatforme/.ai-memory/D2_BACKLOG.md)).

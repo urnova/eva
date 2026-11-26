@@ -184,11 +184,12 @@ export function installCWRuntime({ipcMain,dialog,shell,BrowserWindow,store,mainW
      if(name==='web_browse')throw Error('HTTP_URL_REQUIRED');
      const browserURL=launchArgs?httpURL(launchArgs).href:null;
      if(browserURL&&!/^(msedge|chrome|firefox|brave|opera)(\.exe)?$/i.test(path.basename(target)))throw Error('BROWSER_ARGUMENTS_ONLY');
-     if(path.isAbsolute(target)){
+     if(path.isAbsolute(target)||/(\/|\\|\$env:|%USERPROFILE%|^~)/i.test(target)){
       const p=await localPath(target);const stat=await fs.stat(p);
-      if(stat.isDirectory()){if(browserURL)throw Error('DIRECTORY_ARGUMENTS_DENIED');const err=await shell.openPath(p);if(err)throw Error(err);}
-      else if(/\.exe$/i.test(p))await ps('if($p.arg){Start-Process -FilePath $p.target -ArgumentList $p.arg -ErrorAction Stop}else{Start-Process -FilePath $p.target -ErrorAction Stop}',{target:p,arg:browserURL},signal);
-      else throw Error('ONLY_DIRECTORY_OR_EXE_ALLOWED');
+      if(stat.isDirectory()){if(browserURL)throw Error('DIRECTORY_ARGUMENTS_DENIED');const err=await shell.openPath(p);if(err)throw Error(err);result={accepted:true,opened:p,summary:'Dossier ouvert : '+p};break;}
+      else if(/\.exe$/i.test(p)){await ps('if($p.arg){Start-Process -FilePath $p.target -ArgumentList $p.arg -ErrorAction Stop}else{Start-Process -FilePath $p.target -ErrorAction Stop}',{target:p,arg:browserURL},signal);result={accepted:true,opened:p,summary:'Application lancee : '+p};break;}
+      else if(!dangerousExtensions.test(p)){if(browserURL)throw Error('FILE_ARGUMENTS_DENIED');const err=await shell.openPath(p);if(err)throw Error(err);result={accepted:true,opened:p,summary:'Fichier ouvert : '+p};break;}
+      else throw Error('EXECUTABLE_OPEN_DENIED');
      }else if(target.includes('!')&&/^[\w.{}!\-]+$/.test(target)){
       if(browserURL)throw Error('APP_ID_ARGUMENTS_DENIED');
       const out=await ps('$a=@(Get-StartApps | Where-Object {$_.AppID -eq $p.id}); if($a.Count -ne 1){throw "APP_ID_NOT_RESOLVED"}; Start-Process explorer.exe -ArgumentList ("shell:AppsFolder\\"+$p.id)',{id:target},signal);

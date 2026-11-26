@@ -486,6 +486,25 @@ w.appendCloudWorksTracker = function(id, prompt, container) {
       timestamp: w.timestamp ? w.timestamp() : new Date()
     }).catch(console.error);
 
+    if (target.id !== 'cwAgenticStatus') {
+      const closingMsg = d.status === 'done'
+        ? '✅ ' + summary
+        : d.status === 'cancelled'
+          ? '■ Tâche CloudWorks annulée.'
+          : '⚠️ Je n’ai pas pu terminer l’action sur votre PC : ' + summary;
+      if (typeof w.appendMsg === 'function') w.appendMsg('eva', closingMsg);
+      if (uid && conv && w.db) {
+        w.db.collection('users').doc(uid).collection('conversations').doc(conv).collection('messages').add({
+          role: 'assistant',
+          content: closingMsg,
+          timestamp: w.timestamp ? w.timestamp() : new Date()
+        }).catch(console.error);
+      }
+      if (!w._isJarvisActive && w.S?.ttsOn && w.EVATTS?.speakTextStreaming) {
+        w.EVATTS.speakTextStreaming(closingMsg, w.S.config || {});
+      }
+    }
+
     if (w.S) { w.S.busy = false; w.S.cwRunning = false; }
     if (typeof w.hideTyping === 'function') w.hideTyping();
     const send = document.getElementById('sendBtn');
