@@ -64,29 +64,50 @@ function stripOuterCodeFences(str){
  return m?m[1]:String(str||'');
 }
 
-async function generateRichFileContent(fullPrompt,stepGoal,filePath,existingArtifacts){
- const provName=w.S?.config?.aiProvider||'';
- if(!w.EVAProviders?.createProvider||!w.S?.config||['qwen','eva'].includes(provName))return null;
- try{
-  const provider=w.EVAProviders.createProvider(provName,w.S.config);
-  const ext=(String(filePath||'').split('.').pop()||'').toLowerCase();
-  const isHtml=ext==='html'||ext==='htm';
-  const sysPrompt=isHtml
-   ?'Tu es un generateur de code web expert. Retourne UNIQUEMENT le code HTML5 complet, autonome (<style> et <script> inclus, sans CDN externe, sans commentaire d introduction ni balise ```). Tout jeu ou appli demande doit etre reellement jouable, fluide et esthétique.'
-   :'Tu es un assistant precis. Retourne UNIQUEMENT le contenu texte brut exact du fichier demande (sans introduction, sans commentaire ni balise ```).';
-  const userMsg='Demande globale utilisateur : '+fullPrompt+'\n'+
-   'Fichier exact a ecrire : '+filePath+'\n'+
-   'Objectif de ce fichier : '+stepGoal+'\n'+
-   (existingArtifacts?.length?('Autres fichiers de la tache :\n'+existingArtifacts.map(a=>'- '+a.path+': '+String(a.preview||'').slice(0,400)).join('\n')+'\n'):'')+
-   'Ecris maintenant le contenu complet et directement utilisable du fichier.';
-  const aiPromise=provider.chat([{role:'user',content:userMsg}],sysPrompt);
-  const tmoPromise=new Promise((_,rej)=>setTimeout(()=>rej(Error('RICH_CONTENT_TIMEOUT')),22000));
-  const res=await Promise.race([aiPromise,tmoPromise]);
-  if(res&&res.success&&res.content&&res.content.trim().length>20){
-   return stripOuterCodeFences(res.content);
+function safeParseDecision(raw,forcedStep){
+ try{return JSON.parse(raw);}catch(e){
+  const str=String(raw||'');
+  const nm=str.match(/"name"\s*:\s*"([^"]+)"/);
+  const toolName=nm?nm[1]:forcedStep?.tool;
+  if(toolName==='file_create'){
+   const pm=str.match(/"path"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+   if(pm){return {kind:'tool',name:'file_create',args:{path:JSON.parse('"'+pm[1]+'"'),content:'DRAFT'}};}
   }
- }catch(e){
-  console.warn('[CWAgent] Fallback contenu 3B local:',e?.message||e);
+  throw e;
+ }
+}
+
+async function generateRichFileContent(fullPrompt,stepGoal,filePath,existingArtifacts,taskId){
+ const ext=(String(filePath||'').split('.').pop()||'').toLowerCase();
+ const isHtml=ext==='html'||ext==='htm';
+ const sysPrompt=isHtml
+  ?'Tu es un generateur de code web expert. Retourne UNIQUEMENT le code HTML5 complet, autonome (<style> et <script> inclus, sans CDN externe, sans commentaire d introduction ni balise ```). Tout jeu ou appli demande doit etre reellement jouable, fluide et esthétique.'
+  :'Tu es un assistant precis. Retourne UNIQUEMENT le contenu texte brut exact du fichier demande (sans introduction, sans commentaire ni balise ```).';
+ const userMsg='Demande globale utilisateur : '+fullPrompt+'\n'+
+  'Fichier exact a ecrire : '+filePath+'\n'+
+  'Objectif de ce fichier : '+stepGoal+'\n'+
+  (existingArtifacts?.length?('Autres fichiers de la tache :\n'+existingArtifacts.map(a=>'- '+a.path+': '+String(a.preview||'').slice(0,500)).join('\n')+'\n'):'')+
+  'Ecris maintenant le contenu complet et directement utilisable du fichier.';
+ const provName=w.S?.config?.aiProvider||'';
+ if(w.EVAProviders?.createProvider&&w.S?.config&&!['qwen','eva'].includes(provName)){
+  try{
+   const provider=w.EVAProviders.createProvider(provName,w.S.config);
+   const aiPromise=provider.chat([{role:'user',content:userMsg}],sysPrompt);
+   const tmoPromise=new Promise((_,rej)=>setTimeout(()=>rej(Error('RICH_CONTENT_TIMEOUT')),22000));
+   const res=await Promise.race([aiPromise,tmoPromise]);
+   if(res&&res.success&&res.content&&res.content.trim().length>10){
+    return stripOuterCodeFences(res.content);
+   }
+  }catch(e){
+   console.warn('[CWAgent] Fallback contenu 3B local:',e?.message||e);
+  }
+ }
+ if(w.eva?.system?.llmChat){
+  try{
+   const rl=await w.eva.system.llmChat([{role:'system',content:sysPrompt},{role:'user',content:userMsg}],{sessionId:taskId,maxTokens:2048,temperature:0.2,stopTriggers:[],timeoutMs:60000});
+   const txt=stripOuterCodeFences(content(rl));
+   if(txt&&txt.trim().length>5)return txt;
+  }catch(e2){console.warn('[CWAgent] Fallback texte libre 3B echoue:',e2?.message||e2);}
  }
  return null;
 }
@@ -132,6 +153,7 @@ CWAgent.prototype.run=async function(prompt,emit){
    '- Bureau Windows : utilise $env:USERPROFILE\\\\Desktop (ex: $env:USERPROFILE\\\\Desktop\\\\MonDossier\\\\index.html).\n'+
    '- Si un dossier a deja ete cree a l etape precedente (voir completedSteps), cree les fichiers A L INTERIEUR de ce dossier.\n'+
    '- N ecrase JAMAIS un fichier deja cree a une etape precedente (choisis le nouveau nom de fichier demande par stepGoal).\n'+
+   '- Pour file_create, si le contenu depasse quelques mots (HTML, jeu, cheat codes, document, texte), ecris simplement "DRAFT" dans content : le contenu complet sera redige juste apres.\n'+
    '- Si app_resolve retourne primaryMatch.AppID ou path dans completedSteps, passe exactement cette valeur dans target pour app_launch.';
 
   const runTurnLoop=async(forcedStep,stepIdx,totalSteps)=>{
@@ -158,7 +180,7 @@ CWAgent.prototype.run=async function(prompt,emit){
 
    const r=await w.eva.system.llmChat(messages,{sessionId:this._taskId,maxTokens:2048,temperature:0,jsonSchema:currentSchema,stopTriggers:[],timeoutMs:120000});
    if(this.stopped)throw Error('CANCELLED');
-   const decision=JSON.parse(content(r));
+   const decision=safeParseDecision(content(r),forcedStep);
    if(!decision||!['tool','done','clarify','fail'].includes(decision.kind))throw Error('INVALID_DECISION');
    if(decision.kind!=='tool')return decision;
    decision.args=w.CWTools.validate(decision.name,decision.args||{});
@@ -171,16 +193,17 @@ CWAgent.prototype.run=async function(prompt,emit){
     ];
     const r2=await w.eva.system.llmChat(retryMsgs,{sessionId:this._taskId,maxTokens:2048,temperature:0,jsonSchema:currentSchema,stopTriggers:[],timeoutMs:60000});
     if(this.stopped)throw Error('CANCELLED');
-    const dec2=JSON.parse(content(r2));
+    const dec2=safeParseDecision(content(r2),forcedStep);
     if(dec2?.kind==='tool')decision.args=w.CWTools.validate(decision.name,dec2.args||{});
    }
 
    if(decision.name==='file_create'&&decision.args.path){
-    const needsRich=/\.(html?|css|md)$/i.test(decision.args.path)||
+    const rawC=String(decision.args.content||'').trim();
+    const needsRich=rawC==='DRAFT'||!rawC||/\.(html?|css|md|txt|js)$/i.test(decision.args.path)||
      /tetris|jeu|game|page|site|cheat|code|script|article|guide|rapport|document|texte|hello/i.test(prompt+' '+(forcedStep?.goal||''));
     if(needsRich){
      await output('Rédaction du contenu ('+(decision.args.path.split(/[\\/]/).pop()||'fichier')+')...','running');
-     const rich=await generateRichFileContent(prompt,forcedStep?.goal||prompt,decision.args.path,createdPreviews);
+     const rich=await generateRichFileContent(prompt,forcedStep?.goal||prompt,decision.args.path,createdPreviews,this._taskId);
      if(rich)decision.args.content=rich;
     }
    }

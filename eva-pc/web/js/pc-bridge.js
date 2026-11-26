@@ -163,13 +163,6 @@
   /* ══════════════════════════════════════════════════════════
      MODE JARVIS EN ARRIÈRE-PLAN (Bulle Vocale + TTS forcé + Boucle Conversationnelle)
      ══════════════════════════════════════════════════════════ */
-  var FOLLOW_UP_PROMPTS = [
-    "C'est tout ce que je peux faire pour vous ?",
-    "Puis-je faire autre chose pour vous ?",
-    "Avez-vous besoin d'autre chose ?",
-    "Y a-t-il autre chose que je puisse faire pour vous ?"
-  ];
-
   var FAREWELL_PROMPTS = [
     "Très bien, je reste à votre disposition !",
     "Parfait, je vous laisse !",
@@ -177,7 +170,7 @@
     "Compris, à plus tard !"
   ];
 
-  var CLOSING_REGEX = /\b(non|c'est bon|c'est tout|non merci|rien d'autre|ça ira|merci|au revoir|bonne journée|stop|ferme|quitter|rien)\b/i;
+  var CLOSING_REGEX = /^(?:non|non merci|c'est bon|c'est tout|rien d'autre|ça ira|merci(?:\s+beaucoup)?|au revoir|bonne journée|bonne soirée|stop|ferme|quitter|rien)[.!?\s]*$/i;
 
   var _jarvisFollowUpTimer = null;
   var _jarvisFollowUpSilence = null;
@@ -523,37 +516,22 @@
     }
   });
 
-  // Appelé à la fin de la réponse vocale d'EVA en mode Jarvis
+  // Appelé à la fin de la réponse vocale d'EVA en mode Jarvis : ouvre l'écoute en silence sans phrase répétitive
   function handleJarvisFollowUp() {
     _clearJarvisThinkingWatchdog();
     if (!window._isJarvisActive) return;
-    window._jarvisState = 'followup_prompt';
 
-    // Choisir une question de relance aléatoire
-    var q = FOLLOW_UP_PROMPTS[Math.floor(Math.random() * FOLLOW_UP_PROMPTS.length)];
-    console.log('[Jarvis] Relance de suivi :', q);
-
-    if (window.eva && window.eva.overlay) {
-      window.eva.overlay.setState('speaking', q);
-    }
-
-    if (window.EVATTS && typeof window.EVATTS.speakText === 'function') {
-      window.EVATTS.speakText(q, window.S ? window.S.config : {});
-    }
-
-    // Attendre que la voix TTS se termine réellement avant d'ouvrir le micro
-    var checkTtsFinished = function() {
+    var openListen = function() {
       if (window.EVATTS && typeof window.EVATTS.isSpeaking === 'function' && window.EVATTS.isSpeaking()) {
-        setTimeout(checkTtsFinished, 150);
+        setTimeout(openListen, 150);
         return;
       }
-      // Marge de 600ms après la parole pour dissiper la réverbération acoustique
       setTimeout(function() {
         if (!window._isJarvisActive) return;
         startJarvisListeningWindow();
-      }, 600);
+      }, 450);
     };
-    setTimeout(checkTtsFinished, 1000);
+    setTimeout(openListen, 200);
   }
   window.handleJarvisFollowUp = handleJarvisFollowUp;
 
@@ -565,7 +543,7 @@
     console.log('[Jarvis] Début fenêtre écoute réponse utilisateur (7s)...');
 
     if (window.eva && window.eva.overlay) {
-      window.eva.overlay.setState('listening', 'Autre chose ? (Dites "Non" pour quitter)');
+      window.eva.overlay.setState('listening', 'Je vous écoute...');
     }
 
     window._jarvisListener = function(text, isFinal) {

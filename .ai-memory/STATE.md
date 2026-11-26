@@ -1,6 +1,9 @@
 ﻿# STATE — E.V.A Multiplateforme
 
-- **Phase actuelle** : D1 finalisée et publiée (`eva-pc` v5.6.30 sur GitHub Releases + Web sur `main` / Vercel).
+- **Phase actuelle** : D1 finalisée et publiée (`eva-pc` v5.6.31 sur GitHub Releases + Web sur `main` / Vercel).
+- **Correctifs v5.6.31** :
+  - `eva-pc/web/js/pc-bridge.js` : suppression des phrases répétitives vocales `FOLLOW_UP_PROMPTS` (`"Avez-vous besoin d'autre chose ?"`…) dans `handleJarvisFollowUp()` ; ouverture directe et silencieuse de la fenêtre d'écoute après réponse, et `CLOSING_REGEX` restreinte aux formules complètes de clôture.
+  - `cw-agent.js` (PC & Web) : ajout de `safeParseDecision()` pour récupérer les JSON tronqués par la limite de tokens sur `file_create`, consigne `"DRAFT"` pour les contenus longs, et fallback en texte libre sur `llmChat` (sans `jsonSchema`) quand le fournisseur cloud est absent/hors ligne.
 - **Correctifs v5.6.30** :
   - `eva-pc/package.json` : exclusion des binaires/sources redondants de l'archive (`!public/models/**/*`, `!dist/js/patches/**/*`, `!node_modules/node-llama-cpp/llama/llama.cpp/**/*`, `!node_modules/node-llama-cpp/llama/gitRelease.bundle`, `!node_modules/@node-llama-cpp/win-arm64/**/*`, `!node_modules/@node-llama-cpp/win-x64-cuda/**/*`, `!node_modules/@node-llama-cpp/win-x64-cuda-ext/**/*`), passage à `"compression": "normal"` et `"perMachine": false` (`allowElevation: true`), ramenant `E.V.A-Setup-5.6.30.exe` de `367,7 Mo` à **`128,3 Mo`** (`app.asar.unpacked` de `679,5 Mo` à `149,5 Mo`).
   - `eva-pc/build/installer.nsh` : suppression de `wmic` (absent sur Windows 11 26200) et du script PowerShell à froid au profit d'un `taskkill` ciblé rapide (`Sleep 500`).
