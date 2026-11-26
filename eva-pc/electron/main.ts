@@ -335,6 +335,7 @@ function createWindow() {
 
 let _lastOverlayState: { state: string; text?: string; data?: any } | null = null;
 let _overlayReady = false;
+let _overlayCancelledUntil = 0;
 let _pendingUpdateInfo: any = null;
 let _pendingUpdateDownloaded: any = null;
 let _isDownloadingUpdate = false;
@@ -784,6 +785,7 @@ ipcMain.handle('window:focus', () => {
 
 // â”€â”€â”€ IPC Handlers â€” Overlay Agentique â”€â”€â”€
 function _showOverlayInternal(state?: string, text?: string, data?: any) {
+  if (Date.now() < _overlayCancelledUntil && state !== 'listening' && state !== 'approval') return;
   ensureOverlayWindow()
   positionOverlayWindow()
   if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -865,7 +867,8 @@ ipcMain.on('overlay:action', (_event, action, data) => {
   }
   // Autres actions (cancel, etc.) → forwarded tel quel
   if (action === 'cancel') {
-    logMain('[Main] Cancel reçu depuis overlay : arrêt LLM et processus');
+    logMain('[Main] Cancel reçu depuis overlay : arrêt LLM, TTS et processus');
+    _overlayCancelledUntil = Date.now() + 2500;
     if (activeAbortController) {
       try { activeAbortController.abort(); } catch(e) {}
       activeAbortController = null;
@@ -874,6 +877,8 @@ ipcMain.on('overlay:action', (_event, action, data) => {
       try { child_process.execSync(`taskkill /F /T /PID ${activeExecProcess.pid}`); } catch(e) {}
       activeExecProcess = null;
     }
+    _killTtsProcess().catch(() => {});
+    _setSttMicPaused(false);
     _lastOverlayState = null;
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.hide();

@@ -2,15 +2,26 @@
 (function(w){'use strict';let routing=false;
 async function saveChatMsg(role,text){
  const uid=w.S?.user?.uid;if(!uid)return;
- if(!w.S.convId){const c=w.db.collection('users').doc(uid).collection('conversations').doc();await c.set({title:text.slice(0,60),createdAt:new Date(),updatedAt:new Date()});w.S.convId=c.id;}
- await w.db.collection('users').doc(uid).collection('conversations').doc(w.S.convId).collection('messages').add({role,content:text,timestamp:w.timestamp?w.timestamp():new Date()});
+ const now=w.timestamp?w.timestamp():new Date();
+ const convsCol=w.db.collection('users').doc(uid).collection('conversations');
+ if(!w.S.convId){
+  const c=convsCol.doc();
+  const data={title:text.slice(0,60),lastMessage:text.slice(0,120),createdAt:now,updatedAt:now};
+  await c.set(data);w.S.convId=c.id;
+  if(Array.isArray(w.S.convs)){w.S.convs.unshift(Object.assign({id:c.id},data));w.renderConvs?.();}
+ }else{
+  convsCol.doc(w.S.convId).update({lastMessage:text.slice(0,120),updatedAt:now}).catch(()=>{});
+ }
+ await convsCol.doc(w.S.convId).collection('messages').add({role,content:text,timestamp:now});
 }
+const PC_HINT_RE=/(ouvr|lanc|cr[eé]|effac|supprim|d[eé]plac|rang|tri|copi|coll|renomm|ferm|quitt|tue|kill|arr[eê]t|red[eé]marr|[eé]teins|verrouill|veille|captur|screenshot|ex[eé]cut|install|d[eé]sinstall|t[eé]l[eé]charg|cherch.*sur\s|va\s+sur\s|script|powershell|cmd|terminal|syst[eè]me|sysinfo|cpu|gpu|ram|disque|batterie|volume|luminosit|wifi|bluetooth|fichier|dossier|r[eé]pertoire|bureau|desktop|document|t[eé]l[eé]chargement|downloads|html|txt|pdf|json|csv|xlsx|word|excel|powerpoint|app|appli|logiciel|programme|fen[eê]tre|pc|ordinateur|machine|whatsapp|discord|spotify|chrome|edge|firefox|brave|youtube|google|github|tetris|bloc[- ]?notes?|notepad|calculatrice|calc|vscode|explorateur|explorer)/i;
 async function route(text){
  if(!text||!w.S?.user||!w.CWBus)return false;
  if(/^\/chat\s/i.test(text))return false;
  if(w.S.image||w.S.images?.length||w.S.document||w.S.documents?.length)return false;
  if(routing){w.toast?.('Routage deja en cours','info');return true;}
  const forced=/^\/pc\s/i.test(text),prompt=forced?text.replace(/^\/pc\s/i,''):text;
+ if(!forced&&!PC_HINT_RE.test(prompt))return false;
  if(!forced&&w.eva?.cloudworks?.status){
   try{const st=await w.eva.cloudworks.status();if(!st?.enabled)return false;}catch(_){return false;}
  }
@@ -30,6 +41,8 @@ async function route(text){
   const id=await w.CWBus.submit(forced?'agentic_task':'chat_request',{prompt},{deviceId});
   const result=forced?{handled:true,id}:await w.CWBus.wait(id,null,true);
   if(!result.handled||(!forced&&result.error==='CLOUDWORKS_DISABLED')){
+   w._cwPreRenderedUserText=null;
+   if(typeof w.hideTyping==='function')w.hideTyping();
    return false;
   }
   w._cwPreRenderedUserText=null;

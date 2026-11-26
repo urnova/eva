@@ -266,6 +266,7 @@ function showTyping(userMsg) {
 
   var list = document.getElementById('messagesList');
   if (!list) return;
+  document.querySelectorAll('#typingInd, .typing-bubble').forEach(function(old) { old.remove(); });
   var div = document.createElement('div');
   div.className = 'typing-bubble';
   div.id = 'typingInd';
@@ -353,8 +354,7 @@ function hideTyping() {
     S.busy = false;
   }
   if (_thinkTimer) { clearInterval(_thinkTimer); _thinkTimer = null; }
-  var el = document.getElementById('typingInd');
-  if (el) el.remove();
+  document.querySelectorAll('#typingInd, .typing-bubble').forEach(function(el) { el.remove(); });
   setEvaStatus(null);
   if (window.EvaCharacter && typeof window.EvaCharacter.setIdle === 'function') {
     try { window.EvaCharacter.setIdle(); } catch(_) {}
@@ -831,6 +831,38 @@ async function handleSend(customText) {
         });
       }
       toast('Session Puter expirée — reconnexion requise', 'warning');
+
+    /* ── Erreur Puter : quota dépassé / solde insuffisant ── */
+    } else if (_errMsg === 'PUTER_QUOTA_EXCEEDED') {
+      appendMsg('eva', '');
+      var _bubblesQuota = document.querySelectorAll('.message.eva .msg-bubble');
+      var _lbQuota = _bubblesQuota[_bubblesQuota.length - 1];
+      if (_lbQuota) {
+        _lbQuota.innerHTML =
+          '<div style="font-size:0.84em;font-weight:700;margin-bottom:8px;color:#f59e0b;">⚠️ Quota Puter épuisé</div>' +
+          '<div style="font-size:0.78em;color:var(--text-muted);line-height:1.55;margin-bottom:10px;">' +
+          'Vous n\'avez plus de quota d\'utilisation sur ce compte Puter. Changez de compte Puter ou passez sur un autre fournisseur IA.' +
+          '</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button id="puterSwitchBtn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid var(--cyan);border-radius:10px;background:rgba(0,212,255,0.08);color:var(--cyan);font-size:0.78em;font-weight:700;cursor:pointer;font-family:inherit;">☁️ Changer de compte Puter</button>' +
+          '<button onclick="openSettings(\'ai\')" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid rgba(245,158,11,0.45);border-radius:10px;background:rgba(245,158,11,0.08);color:#f59e0b;font-size:0.78em;font-weight:600;cursor:pointer;font-family:inherit;">⚙️ Changer de provider IA</button>' +
+          '</div>';
+        document.getElementById('puterSwitchBtn').addEventListener('click', async function() {
+          this.disabled = true;
+          this.textContent = '⏳ Connexion...';
+          try { if (window.puter && window.puter.auth && typeof window.puter.auth.signOut === 'function') await window.puter.auth.signOut(); } catch(_) {}
+          if (window._puterReconnectAction) {
+            var ok = await window._puterReconnectAction();
+            if (ok) {
+              _lbQuota.innerHTML = '✅ Nouveau compte Puter connecté ! Renvoyez votre message.';
+            } else {
+              this.disabled = false;
+              this.textContent = '☁️ Réessayer';
+            }
+          }
+        });
+      }
+      toast('Quota Puter épuisé — changez de compte ou de provider IA', 'warning');
 
     /* ── Erreur Puter sur Edge : cookies tiers/popups bloqués ── */
     } else if (_errMsg === 'EDGE_PUTER_BLOCKED') {

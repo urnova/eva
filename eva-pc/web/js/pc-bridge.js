@@ -289,7 +289,7 @@
         return;
       }
       if (window._isJarvisActive && (window._jarvisState === 'processing' || window._jarvisState === 'thinking')) {
-        console.warn('[Jarvis Watchdog] Délai de réflexion de 15s dépassé — déblocage automatique');
+        console.warn('[Jarvis Watchdog] Délai de réflexion de 25s dépassé — déblocage automatique');
         if (window.S) {
           window.S.busy = false;
           window.S.cwRunning = false;
@@ -299,6 +299,9 @@
         if (window.eva && window.eva.overlay) {
           window.eva.overlay.setState('speaking', timeoutMsg);
         }
+        if (typeof window.saveEvaOnlyMsg === 'function') {
+          window.saveEvaOnlyMsg(timeoutMsg).catch(function(){});
+        }
         if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
           window.EVATTS.speakTextStreaming(timeoutMsg, window.S ? window.S.config : {});
         } else {
@@ -307,7 +310,7 @@
           }, 4000);
         }
       }
-    }, 15000);
+    }, 25000);
   }
 
   function _clearJarvisThinkingWatchdog() {
@@ -316,6 +319,8 @@
       _jarvisThinkingWatchdog = null;
     }
   }
+  window._startJarvisThinkingWatchdog = _startJarvisThinkingWatchdog;
+  window._clearJarvisThinkingWatchdog = _clearJarvisThinkingWatchdog;
 
   async function closeJarvisConversation() {
     _clearJarvisThinkingWatchdog();
@@ -323,12 +328,23 @@
     if (_jarvisFollowUpSilence) { clearTimeout(_jarvisFollowUpSilence); _jarvisFollowUpSilence = null; }
     window._jarvisListener = null;
 
-    if (window.S && window.S.user && window.S.convId && window.db) {
+    var closingConvId = window.S && window.S.convId;
+    if (window.S && window.S.user && closingConvId && window.db) {
       try {
-        var convRef = window.db.collection('users').doc(window.S.user.uid).collection('conversations').doc(window.S.convId);
-        await convRef.update({
-          updatedAt: (typeof window.timestamp === 'function') ? window.timestamp() : new Date()
-        });
+        var convRef = window.db.collection('users').doc(window.S.user.uid).collection('conversations').doc(closingConvId);
+        var msgSnap = await convRef.collection('messages').limit(1).get();
+        if (msgSnap.empty) {
+          await convRef.delete();
+          if (Array.isArray(window.S.convs)) {
+            window.S.convs = window.S.convs.filter(function(x) { return x.id !== closingConvId; });
+            if (typeof window.renderConvs === 'function') window.renderConvs();
+          }
+          console.log('[Jarvis Firebase] Session vocale vide supprimée:', closingConvId);
+        } else {
+          await convRef.update({
+            updatedAt: (typeof window.timestamp === 'function') ? window.timestamp() : new Date()
+          });
+        }
       } catch(e) {}
     }
     _jarvisConvInitialized = false;
@@ -340,7 +356,7 @@
   }
   window.closeJarvisConversation = closeJarvisConversation;
 
-  function handleJarvisWakeWord(phrase, command) {
+  async function handleJarvisWakeWord(phrase, command) {
     console.log('[Jarvis] handleJarvisWakeWord déclenché:', { phrase: phrase, command: command });
     window._isJarvisActive = true;
 
@@ -349,11 +365,6 @@
     if (_jarvisFollowUpTimer) { clearTimeout(_jarvisFollowUpTimer); _jarvisFollowUpTimer = null; }
     if (_jarvisFollowUpSilence) { clearTimeout(_jarvisFollowUpSilence); _jarvisFollowUpSilence = null; }
     window._jarvisListener = null;
-
-    // Créer la session vocale Firebase seulement si aucune conversation n'est active
-    if (!window.S || !window.S.convId) {
-      startJarvisConversation();
-    }
 
     var trimmedCmd = command ? command.trim() : '';
 
@@ -375,6 +386,9 @@
     }
 
     if (trimmedCmd.length > 1) {
+      if (!window.S || !window.S.convId) {
+        await startJarvisConversation();
+      }
       window._jarvisState = 'processing';
       updateJarvisConversationTitle(trimmedCmd);
       if (window.eva && window.eva.overlay) {
@@ -653,17 +667,22 @@
       } else if (action === 'cancel') {
         console.log('[PC Bridge] Action Annuler reçue depuis l\'overlay');
         _clearJarvisThinkingWatchdog();
-        if (window._isVoiceInterrupting) return;
         window._isVoiceInterrupting = true;
-        setTimeout(function() { window._isVoiceInterrupting = false; }, 3000);
+        setTimeout(function() { window._isVoiceInterrupting = false; }, 1500);
         if (typeof window.cancelCurrentCloudWorksTask === 'function') {
-          window.cancelCurrentCloudWorksTask();
+          try { window.cancelCurrentCloudWorksTask(); } catch(_) {}
         }
         if (typeof window.stopGeneration === 'function') {
-          window.stopGeneration();
+          try { window.stopGeneration(); } catch(_) {}
         }
         if (window.EVATTS && typeof window.EVATTS.stopTTS === 'function') {
-          window.EVATTS.stopTTS();
+          try { window.EVATTS.stopTTS(); } catch(_) {}
+        }
+        if (window.eva && window.eva.tts && typeof window.eva.tts.stop === 'function') {
+          try { window.eva.tts.stop(); } catch(_) {}
+        }
+        if (window.eva && window.eva.overlay && typeof window.eva.overlay.hide === 'function') {
+          try { window.eva.overlay.hide(); } catch(_) {}
         }
         if (window._isJarvisActive && typeof closeJarvisConversation === 'function') {
           closeJarvisConversation();
@@ -672,9 +691,12 @@
     });
   }
 
-  function _submitWakeWordCommand(text) {
+  async function _submitWakeWordCommand(text) {
     if (!text || !text.trim()) return;
     var t = text.trim();
+    if (window._isJarvisActive && (!window.S || !window.S.convId)) {
+      await startJarvisConversation();
+    }
     if (window._isJarvisActive && typeof updateJarvisConversationTitle === 'function') {
       updateJarvisConversationTitle(t);
     }

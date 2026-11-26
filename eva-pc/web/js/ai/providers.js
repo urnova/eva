@@ -185,8 +185,18 @@ class QwenProvider {
 
         return { success: true, content };
       } catch (error) {
-        const msg = error.message || '';
+        const msg = (error && (error.message || (error.error && error.error.message) || (typeof error === 'string' ? error : JSON.stringify(error)))) || '';
         const msgLow = msg.toLowerCase();
+
+        if (msgLow.includes('low balance') || msgLow.includes('insufficient') || msgLow.includes('quota') ||
+            msgLow.includes('usage limit') || msgLow.includes('rate limit') || msgLow.includes('credit') ||
+            msgLow.includes('funding') || msgLow.includes('402') || msgLow.includes('payment')) {
+          return {
+            success: false,
+            error: 'PUTER_QUOTA_EXCEEDED',
+            details: msg
+          };
+        }
 
         
 

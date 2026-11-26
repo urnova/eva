@@ -260,6 +260,7 @@ function showTyping(userMsg) {
 
   var list = document.getElementById('messagesList');
   if (!list) return;
+  document.querySelectorAll('#typingInd, .typing-bubble').forEach(function(old) { old.remove(); });
   var div = document.createElement('div');
   div.className = 'typing-bubble';
   div.id = 'typingInd';
@@ -354,8 +355,7 @@ function hideTyping() {
     S.busy = false;
   }
   if (_thinkTimer) { clearInterval(_thinkTimer); _thinkTimer = null; }
-  var el = document.getElementById('typingInd');
-  if (el) el.remove();
+  document.querySelectorAll('#typingInd, .typing-bubble').forEach(function(el) { el.remove(); });
   setEvaStatus(null);
   if (window.EvaCharacter && typeof window.EvaCharacter.setIdle === 'function') {
     try { window.EvaCharacter.setIdle(); } catch(_) {}
@@ -790,6 +790,7 @@ async function handleSend(customText) {
   });
 
   window.EVA_SYSTEM_PROMPT = origSys;
+  if (typeof window._clearJarvisThinkingWatchdog === 'function') window._clearJarvisThinkingWatchdog();
 
   var hasCW = result.content && /\[ACTION:\s*\{[^}]*"(agentic_task|screenshot|sysinfo|run_script|lock|sleep|shutdown|open_ide_file)"/i.test(result.content);
   if (hasCW) {
@@ -845,9 +846,11 @@ async function handleSend(customText) {
         if (window.eva && window.eva.window && typeof window.eva.window.show === 'function') {
           window.eva.window.show();
         }
+        window._jarvisState = 'answering';
         if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
           window.EVATTS.speakTextStreaming(puterVoice, S.config);
         }
+        if (typeof saveConvMsg === 'function') await saveConvMsg(text || '[Vocal]', puterVoice);
       }
       appendMsg('eva', '');
       var _bubbles2 = document.querySelectorAll('.message.eva .msg-bubble');
@@ -874,7 +877,50 @@ async function handleSend(customText) {
       }
       toast('Session Puter expirée — reconnexion requise', 'warning');
 
-    /* ── Erreur Puter sur Edge : cookies tiers/popups bloqués ── */
+    /* -- Erreur Puter : quota depasse / solde insuffisant -- */
+    } else if (_errMsg === 'PUTER_QUOTA_EXCEEDED') {
+      var quotaVoice = "Vous n'avez plus de quota d'utilisation sur votre compte Puter. Veuillez changer votre compte Puter ou choisir un autre fournisseur IA dans les param\u00e8tres.";
+      if (window._isJarvisActive) {
+        window._jarvisState = 'answering';
+        if (window.eva && window.eva.overlay) {
+          window.eva.overlay.setState('speaking', quotaVoice);
+        }
+        if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
+          window.EVATTS.speakTextStreaming(quotaVoice, window.S ? window.S.config : {});
+        }
+        if (typeof saveConvMsg === 'function') await saveConvMsg(text || '[Vocal]', quotaVoice);
+      }
+      appendMsg('eva', '');
+      var _bubblesQuota = document.querySelectorAll('.message.eva .msg-bubble');
+      var _lbQuota = _bubblesQuota[_bubblesQuota.length - 1];
+      if (_lbQuota) {
+        _lbQuota.innerHTML =
+          '<div style="font-size:0.84em;font-weight:700;margin-bottom:8px;color:#f59e0b;">\u26a0\ufe0f Quota Puter \u00e9puis\u00e9</div>' +
+          '<div style="font-size:0.78em;color:var(--text-muted);line-height:1.55;margin-bottom:10px;">' +
+          'Vous n\'avez plus de quota d\'utilisation sur ce compte Puter. Changez de compte Puter ou passez sur un autre fournisseur IA.' +
+          '</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button id="puterSwitchBtn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid var(--cyan);border-radius:10px;background:rgba(0,212,255,0.08);color:var(--cyan);font-size:0.78em;font-weight:700;cursor:pointer;font-family:inherit;">\u2601\ufe0f Changer de compte Puter</button>' +
+          '<button onclick="openSettings(\'ai\')" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid rgba(245,158,11,0.45);border-radius:10px;background:rgba(245,158,11,0.08);color:#f59e0b;font-size:0.78em;font-weight:600;cursor:pointer;font-family:inherit;">\u2699\ufe0f Changer de provider IA</button>' +
+          '</div>';
+        document.getElementById('puterSwitchBtn').addEventListener('click', async function() {
+          this.disabled = true;
+          this.textContent = 'Connexion...';
+          try { if (window.puter && window.puter.auth && typeof window.puter.auth.signOut === 'function') await window.puter.auth.signOut(); } catch(_) {}
+          if (window._puterReconnectAction) {
+            var ok = await window._puterReconnectAction();
+            if (ok) {
+              _lbQuota.innerHTML = '\u2705 Nouveau compte Puter connect\u00e9 ! Renvoyez votre message.';
+            } else {
+              this.disabled = false;
+              this.textContent = 'R\u00e9essayer';
+            }
+          }
+        });
+      }
+      toast('Quota Puter \u00e9puis\u00e9 \u2014 changez de compte ou de provider IA', 'warning');
+
+    /* -- Erreur Puter sur Edge : cookies tiers/popups bloques -- */
     } else if (_errMsg === 'EDGE_PUTER_BLOCKED') {
       appendMsg('eva', '');
       var _bubblesEdge = document.querySelectorAll('.message.eva .msg-bubble');
@@ -912,40 +958,44 @@ async function handleSend(customText) {
           _errMsg.toLowerCase().indexOf('timeout') !== -1
         ));
       if (_isNetworkErr && _netBanner) {
-        document.getElementById('networkErrorMsg').textContent = 'Connexion perdue — vérifie ta connexion internet et réessaie.';
+        document.getElementById('networkErrorMsg').textContent = 'Connexion perdue \u2014 v\u00e9rifie ta connexion internet et r\u00e9essaie.';
         _netBanner.style.display = 'flex';
-      } else {
-        var _errText = "Désolée, une erreur est survenue : " + (typeof _errMsg === 'string' ? _errMsg : "Erreur inconnue");
         if (window._isJarvisActive) {
-          var voiceErr = "Désolée, je n'ai pas pu obtenir de réponse. Souhaitez-vous que je réessaie ?";
+          var netVoiceErr = "Le mod\u00e8le met trop de temps \u00e0 r\u00e9pondre ou la connexion est perdue. V\u00e9rifiez votre connexion ou changez de fournisseur IA.";
+          window._jarvisState = 'answering';
+          if (window.eva && window.eva.overlay) {
+            window.eva.overlay.setState('speaking', netVoiceErr);
+          }
+          if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
+            window.EVATTS.speakTextStreaming(netVoiceErr, window.S ? window.S.config : {});
+          }
+          if (typeof saveConvMsg === 'function') await saveConvMsg(text || '[Vocal]', netVoiceErr);
+        }
+      } else {
+        var _errText = "D\u00e9sol\u00e9e, une erreur est survenue : " + (typeof _errMsg === 'string' ? _errMsg : "Erreur inconnue");
+        if (window._isJarvisActive) {
+          var voiceErr = "D\u00e9sol\u00e9e, je n'ai pas pu obtenir de r\u00e9ponse. V\u00e9rifiez les param\u00e8tres de votre fournisseur IA.";
+          window._jarvisState = 'answering';
           if (window.eva && window.eva.overlay) {
             window.eva.overlay.setState('speaking', voiceErr);
           }
           if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
-            window.EVATTS.speakTextStreaming(voiceErr, S.config);
+            window.EVATTS.speakTextStreaming(voiceErr, window.S ? window.S.config : {});
           }
+          if (typeof saveConvMsg === 'function') await saveConvMsg(text || '[Vocal]', voiceErr);
         }
         appendMsg('eva', _errText);
-        console.error("Erreur IA détaillée :", _errMsg);
+        console.error("Erreur IA d\u00e9taill\u00e9e :", _errMsg);
         var _bubbles = document.querySelectorAll('.message.eva .msg-bubble');
         var _lastBubble = _bubbles[_bubbles.length - 1];
         if (_lastBubble) {
           var _reportBtn = document.createElement('button');
           _reportBtn.onclick = function() { openReportModal(); };
           _reportBtn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:5px 12px;border:1px solid rgba(248,113,113,0.5);border-radius:8px;background:rgba(248,113,113,0.08);color:#f87171;font-size:0.78em;cursor:pointer;font-family:inherit;';
-          _reportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Signaler ce problème';
+          _reportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Signaler ce probl\u00e8me';
           _lastBubble.appendChild(_reportBtn);
         }
-        toast('Erreur IA — vérifiez les paramètres', 'error');
-        if (window._isJarvisActive) {
-          var errVoice = "Désolée, une erreur est survenue lors de la communication avec le modèle d'intelligence artificielle.";
-          if (window.eva && window.eva.overlay) {
-            window.eva.overlay.setState('speaking', errVoice);
-          }
-          if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
-            window.EVATTS.speakTextStreaming(errVoice, window.S ? window.S.config : {});
-          }
-        }
+        toast('Erreur IA \u2014 v\u00e9rifiez les param\u00e8tres', 'error');
       }
     }
     if (window.EvaCharacter) window.EvaCharacter.setIdle();
@@ -959,19 +1009,22 @@ async function handleSend(customText) {
   }
   } catch(err) {
     console.error("[handleSend] Exception inattendue:", err);
+    if (typeof window._clearJarvisThinkingWatchdog === "function") window._clearJarvisThinkingWatchdog();
     if (typeof hideTyping === "function") hideTyping();
     if (window.S) {
       window.S.busy = false;
       window.S.cwRunning = false;
     }
     if (window._isJarvisActive) {
-      var catchVoice = "Une difficulté technique est survenue. Pouvez-vous répéter votre question ?";
+      var catchVoice = "Une difficult\u00e9 technique est survenue. Pouvez-vous r\u00e9p\u00e9ter votre question ?";
       if (window.eva && window.eva.overlay) {
         window.eva.overlay.setState("speaking", catchVoice);
       }
+      window._jarvisState = "answering";
       if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === "function") {
         window.EVATTS.speakTextStreaming(catchVoice, window.S ? window.S.config : {});
       }
+      if (typeof saveConvMsg === "function") await saveConvMsg(text || "[Vocal]", catchVoice);
     }
   }
 }
