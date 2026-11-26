@@ -1,0 +1,8 @@
+{
+  "name": "eva-web",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "msedge-tts": "^2.1.1"
+  }
+}

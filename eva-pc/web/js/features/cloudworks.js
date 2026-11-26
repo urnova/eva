@@ -25,6 +25,10 @@ async function loadCloudWorks() {
   } catch(e) { console.error('[CloudWorks] Erreur _renderPCLayout:', e); }
 
   try {
+    await _initControlToggles(uid);
+  } catch(e) { console.error('[CloudWorks] Erreur _initControlToggles:', e); }
+
+  try {
     // Initialiser le polling LLM
     _initLLMPanel();
   } catch(e) { console.error('[CloudWorks] Erreur _initLLMPanel:', e); }
@@ -45,6 +49,37 @@ async function loadCloudWorks() {
 ══════════════════════════════════════════ */
 function _renderPCLayout(container, uid) {
   container.innerHTML = `
+    <!-- SECTION 0 : CONTRÔLE CLOUDWORKS & VALIDATION -->
+    <div class="cw-section cw-control-section">
+      <div class="cw-section-header">
+        <span class="cw-section-icon">☁️</span>
+        <span class="cw-section-title">Contrôle CloudWorks — Ce PC</span>
+        <div id="cwEnabledBadge" class="cw-badge cw-badge-off">Vérification...</div>
+      </div>
+      <div class="cw-section-body" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;background:rgba(0,0,0,0.22);border-radius:10px;border:1px solid rgba(0,212,255,0.12);">
+          <div>
+            <div style="font-weight:700;font-size:0.84em;color:#f1f5f9;">CloudWorks actif sur ce PC</div>
+            <div style="font-size:0.74em;color:#94a3b8;margin-top:2px;">Autorise le contrôle Windows local et l'exécution de tâches à distance.</div>
+          </div>
+          <label class="cw-switch">
+            <input type="checkbox" id="cwEnabledToggle" onchange="window._cwToggleEnabled(this.checked)">
+            <span class="cw-switch-slider"></span>
+          </label>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;background:rgba(249,115,22,0.06);border-radius:10px;border:1px solid rgba(249,115,22,0.25);">
+          <div>
+            <div style="font-weight:700;font-size:0.84em;color:#fb923c;">Mode autonome <span style="font-size:0.75em;background:rgba(249,115,22,0.2);color:#fdba74;padding:2px 6px;border-radius:8px;margin-left:4px;">SANS VALIDATION</span></div>
+            <div style="font-size:0.74em;color:#94a3b8;margin-top:2px;">Désactivé = mode validation (demande Autoriser / Refuser avant action sensible).</div>
+          </div>
+          <label class="cw-switch">
+            <input type="checkbox" id="cwAutonomousToggle" onchange="window._cwToggleAutonomous(this.checked)">
+            <span class="cw-switch-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
     <!-- SECTION 1 : LLM LOCAL -->
     <div class="cw-section cw-llm-section">
       <div class="cw-section-header">
@@ -59,6 +94,7 @@ function _renderPCLayout(container, uid) {
           <div class="cw-info-row"><span class="cw-info-label">Statut</span><span id="cwLLMStatus" class="cw-info-value">—</span></div>
         </div>
         <div class="cw-llm-actions">
+          <button class="cw-btn cw-btn-primary" id="cwStartLLMBtn" onclick="window._cwStartLLM()">▶ Démarrer le LLM</button>
           <button class="cw-btn cw-btn-warning" id="cwRestartLLMBtn" onclick="window._cwRestartLLM()">⟳ Redémarrage d'urgence</button>
           <button class="cw-btn cw-btn-primary" id="cwDownloadLLMBtn" style="display:none;" onclick="window._cwDownloadLLM()">⬇ Télécharger le modèle IA (2.0 Go)</button>
         </div>
@@ -124,6 +160,9 @@ function _renderPCLayout(container, uid) {
         <span id="cwDevicesChevron" class="cw-chevron">▼</span>
       </div>
       <div class="cw-section-body" id="cwDevicesBody" style="display:none">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+          <button class="cw-btn cw-btn-danger" style="font-size:0.72em;padding:5px 10px;" onclick="window._cwPurgeOfflineDevices()">🧹 Purger appareils hors ligne</button>
+        </div>
         <div id="cwDeviceListInner"><div class="cw-empty"><div class="cw-spinner"></div>Chargement…</div></div>
       </div>
     </div>
@@ -217,34 +256,129 @@ async function _checkLLMHealth() {
 function _updateLLMBadge(state) {
   var badge = document.getElementById('cwLLMBadge');
   var statusEl = document.getElementById('cwLLMStatus');
+  var startBtn = document.getElementById('cwStartLLMBtn');
   if (!badge) return;
 
   if (state === 'not-downloaded') {
     badge.textContent = '○ Non téléchargé';
     badge.className = 'cw-badge cw-badge-warning';
     if (statusEl) statusEl.textContent = 'Modèle local non installé (2.0 Go requis)';
+    if (startBtn) startBtn.style.display = 'none';
   } else if (state === 'downloading') {
     badge.textContent = '⬇ Téléchargement...';
     badge.className = 'cw-badge cw-badge-starting';
     if (statusEl) statusEl.textContent = 'Téléchargement en cours depuis Hugging Face...';
+    if (startBtn) startBtn.style.display = 'none';
   } else if (state === true) {
     badge.textContent = '● Actif';
     badge.className = 'cw-badge cw-badge-on';
     if (statusEl) statusEl.textContent = 'Moteur IA opérationnel (node-llama-cpp)';
+    if (startBtn) startBtn.style.display = 'none';
   } else if (state === 'starting') {
     badge.textContent = '⟳ En chargement...';
     badge.className = 'cw-badge cw-badge-starting';
     if (statusEl) statusEl.textContent = 'Chargement du modèle en mémoire...';
+    if (startBtn) startBtn.style.display = 'none';
   } else if (state === false) {
     badge.textContent = '○ Arrêté';
     badge.className = 'cw-badge cw-badge-off';
     if (statusEl) statusEl.textContent = 'Non démarré';
+    if (startBtn) startBtn.style.display = 'inline-flex';
   } else {
     badge.textContent = '? Vérification...';
     badge.className = 'cw-badge cw-badge-unknown';
     if (statusEl) statusEl.textContent = 'Vérification en cours...';
+    if (startBtn) startBtn.style.display = 'inline-flex';
   }
 }
+
+async function _initControlToggles(uid) {
+  var enToggle = document.getElementById('cwEnabledToggle');
+  var enBadge = document.getElementById('cwEnabledBadge');
+  var autoToggle = document.getElementById('cwAutonomousToggle');
+  if (window.eva?.cloudworks?.status) {
+    try {
+      var st = await window.eva.cloudworks.status();
+      if (enToggle) enToggle.checked = !!st.enabled;
+      if (autoToggle && typeof st.autonomousMode === 'boolean') autoToggle.checked = !!st.autonomousMode;
+      if (enBadge) {
+        enBadge.textContent = st.enabled ? '● Actif' : '○ Désactivé';
+        enBadge.className = 'cw-badge ' + (st.enabled ? 'cw-badge-on' : 'cw-badge-off');
+      }
+    } catch(_) {}
+  }
+  if (uid && window.db) {
+    try {
+      var udoc = await window.db.collection('users').doc(uid).get();
+      var autoVal = udoc.data()?.cloudworks?.autonomousMode;
+      if (typeof autoVal === 'boolean') {
+        if (autoToggle) autoToggle.checked = autoVal;
+        await window.eva?.cloudworks?.setAutonomous?.(autoVal).catch(function(){});
+      }
+    } catch(_) {}
+  }
+}
+
+window._cwToggleEnabled = async function(enabled) {
+  var enBadge = document.getElementById('cwEnabledBadge');
+  try {
+    if (enabled) {
+      await window.eva?.cloudworks?.enable?.();
+      if (enBadge) { enBadge.textContent = '● Actif'; enBadge.className = 'cw-badge cw-badge-on'; }
+      _addActivity('CloudWorks activé sur ce PC', 'done');
+      window.toast?.('CloudWorks activé', 'success');
+    } else {
+      await window.eva?.cloudworks?.disable?.();
+      if (enBadge) { enBadge.textContent = '○ Désactivé'; enBadge.className = 'cw-badge cw-badge-off'; }
+      _addActivity('CloudWorks désactivé sur ce PC', 'info');
+      window.toast?.('CloudWorks désactivé', 'info');
+    }
+    _checkLLMHealth();
+  } catch(e) {
+    window.toast?.('Erreur CloudWorks : ' + e.message, 'error');
+  }
+};
+
+window._cwToggleAutonomous = async function(enabled) {
+  var toggle = document.getElementById('cwAutonomousToggle');
+  if (enabled && !confirm('Activer le mode autonome ? EVA pourra exécuter la création de fichiers et documents sans demander confirmation. Un bouton Arrêter reste toujours visible dans la bulle et dans le chat.')) {
+    if (toggle) toggle.checked = false;
+    return;
+  }
+  try {
+    await window.eva?.cloudworks?.setAutonomous?.(!!enabled);
+    if (window.S?.user?.uid && window.db) {
+      await window.db.collection('users').doc(window.S.user.uid).set({ cloudworks: { autonomousMode: !!enabled } }, { merge: true });
+    }
+    _addActivity(enabled ? 'Mode autonome activé (sans validation)' : 'Mode validation activé (confirmation requise)', 'done');
+    window.toast?.(enabled ? 'Mode autonome activé' : 'Mode validation activé', 'success');
+  } catch(e) {
+    window.toast?.('Erreur mode autonome : ' + e.message, 'error');
+  }
+};
+
+window._cwPurgeOfflineDevices = async function() {
+  if (!window.S?.user?.uid || !window.db) return;
+  try {
+    var col = window.db.collection('cloudworks').doc(window.S.user.uid).collection('devices');
+    var snap = await col.get();
+    var removed = 0;
+    for (var i = 0; i < snap.docs.length; i++) {
+      var doc = snap.docs[i], d = doc.data();
+      if (window._cwDeviceId && doc.id === window._cwDeviceId) continue;
+      var seenMs = d.lastSeen?.toMillis ? d.lastSeen.toMillis() : (d.lastSeen?.toDate ? d.lastSeen.toDate().getTime() : 0);
+      var isOnline = !!d.online && seenMs > 0 && (Date.now() - seenMs) < 120000;
+      if (!isOnline) {
+        await doc.ref.delete();
+        removed++;
+      }
+    }
+    window.toast?.(removed + ' appareil(s) hors ligne supprimé(s)', 'success');
+    _addActivity('Purge appareils hors ligne (' + removed + ' supprimés)', 'done');
+  } catch(e) {
+    window.toast?.('Erreur purge : ' + e.message, 'error');
+  }
+};
 
 async function _updateLLMStatus() { await _checkLLMHealth(); }
 
@@ -761,6 +895,13 @@ window.loadCloudWorks = loadCloudWorks;
     .cw-task-step.running { color:#ffc800; }
     .cw-task-step.pending { color:#88889a; }
     .cw-spinner { width:20px; height:20px; border:2px solid rgba(0,212,255,0.2); border-top-color:var(--cyan,#00d4ff); border-radius:50%; animation:cwSpin 0.8s linear infinite; margin:0 auto 8px; }
+    .cw-switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
+    .cw-switch input { opacity:0; width:0; height:0; }
+    .cw-switch-slider { position:absolute; cursor:pointer; inset:0; background:rgba(148,163,184,0.28); border-radius:24px; transition:0.2s; }
+    .cw-switch-slider:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:0.2s; }
+    .cw-switch input:checked + .cw-switch-slider { background:#10b981; }
+    #cwAutonomousToggle:checked + .cw-switch-slider { background:#f97316; }
+    .cw-switch input:checked + .cw-switch-slider:before { transform:translateX(20px); }
     @keyframes cwSpin { to { transform:rotate(360deg); } }
   `;
   document.head.appendChild(s);

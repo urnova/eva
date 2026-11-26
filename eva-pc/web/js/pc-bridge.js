@@ -279,6 +279,15 @@
       _jarvisThinkingWatchdog = null;
     }
     _jarvisThinkingWatchdog = setTimeout(function() {
+      if (window.S && (window.S.cwRunning || (window._cwActiveTrackers && Object.keys(window._cwActiveTrackers).length > 0))) {
+        console.log('[Jarvis Watchdog] Tâche CloudWorks active — prolongation silencieuse du watchdog');
+        _startJarvisThinkingWatchdog();
+        return;
+      }
+      if (window._jarvisState === 'awaiting_approval') {
+        _startJarvisThinkingWatchdog();
+        return;
+      }
       if (window._isJarvisActive && (window._jarvisState === 'processing' || window._jarvisState === 'thinking')) {
         console.warn('[Jarvis Watchdog] Délai de réflexion de 15s dépassé — déblocage automatique');
         if (window.S) {
@@ -407,9 +416,50 @@
     }
   });
 
+  // Validation vocale oui/non en arrière-plan (Mode Jarvis) lorsqu'une action sensible attend accord
+  window.addEventListener('cw:approval-pending', function(e) {
+    if (!window._isJarvisActive) return;
+    _clearJarvisThinkingWatchdog();
+    var detail = (e && e.detail) || {};
+    var summary = detail.summary || ('Autoriser ' + (detail.tool || 'cette action'));
+    window._jarvisState = 'awaiting_approval';
+
+    if (window.eva && window.eva.overlay) {
+      window.eva.overlay.show('approval', summary, detail);
+    }
+
+    var ask = summary + '. Dites oui pour autoriser ou non pour refuser.';
+    if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
+      window.EVATTS.speakTextStreaming(ask, window.S ? window.S.config : {});
+    }
+
+    window._jarvisListener = function(text, isFinal) {
+      if (!text || !text.trim()) return false;
+      var clean = text.trim().toLowerCase();
+      if (/dites oui pour autoriser|validation requise/.test(clean)) return true;
+      if (window._lastTtsEndTime && (Date.now() - window._lastTtsEndTime < 650)) return true;
+
+      if (/\b(oui|autorise|autoriser|ok|okay|vas[- ]?y|accepte|accepter|valide|valider|d'accord)\b/i.test(clean)) {
+        window._jarvisListener = null;
+        window._jarvisState = 'processing';
+        _startJarvisThinkingWatchdog();
+        window.respondCurrentCloudWorksApproval?.(true);
+        return true;
+      }
+      if (/\b(non|refuse|refuser|annule|annuler|stop|interdis|pas question)\b/i.test(clean)) {
+        window._jarvisListener = null;
+        window._jarvisState = 'processing';
+        window.respondCurrentCloudWorksApproval?.(false);
+        return true;
+      }
+      return isFinal ? false : false;
+    };
+  });
+
   // Écouter la fin d'une tâche CloudWorks pour vocaliser le compte-rendu et relancer le cycle vocal
   window.addEventListener('cw:task-done', function(e) {
     _clearJarvisThinkingWatchdog();
+    if (window._jarvisState === 'awaiting_approval') window._jarvisListener = null;
     console.log('[Jarvis CloudWorks] cw:task-done reçu :', e && e.detail);
     var detail = (e && e.detail) || {};
     var status = detail.status;
@@ -432,16 +482,25 @@
       if (status === 'done' || status === 'completed') {
         vocalReport = outputText ? outputText : "C'est fait, j'ai terminé l'action demandée sur votre ordinateur.";
       } else if (status === 'cancelled' || status === 'aborted') {
-        // Tâche annulée par l'utilisateur : ne PAS vocaliser de compte-rendu en double !
         console.log('[Jarvis CloudWorks] Tâche annulée par l\'utilisateur, compte-rendu vocal ignoré.');
         return;
       } else {
         vocalReport = outputText ? ("Une difficulté est survenue : " + outputText) : "Je n'ai pas pu terminer l'action demandée.";
       }
 
+      if (window.S && window.S.user && window.S.convId && window.db) {
+        window.db.collection('users').doc(window.S.user.uid)
+          .collection('conversations').doc(window.S.convId)
+          .collection('messages').add({
+            role: 'assistant',
+            content: vocalReport,
+            timestamp: (typeof window.timestamp === 'function') ? window.timestamp() : new Date()
+          }).catch(function(){});
+      }
+
       window._jarvisState = 'answering';
       if (window.eva && window.eva.overlay) {
-        window.eva.overlay.setState('speaking', vocalReport);
+        window.eva.overlay.show('speaking', vocalReport);
       }
 
       if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {

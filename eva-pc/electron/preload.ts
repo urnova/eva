@@ -8,6 +8,7 @@ const evaAPI = {
   updater: {
     startDownload: () => ipcRenderer.invoke('updater:start-download'),
     quitAndInstall: () => ipcRenderer.invoke('updater:quit-and-install'),
+    check: () => ipcRenderer.invoke('updater:check'),
     onUpdateAvailable: (callback: (info: any) => void) => ipcRenderer.on('updater:available', (e, info) => callback(info)),
     onUpdateProgress: (callback: (progress: any) => void) => ipcRenderer.on('updater:progress', (e, info) => callback(info)),
     onUpdateDownloaded: (callback: () => void) => ipcRenderer.on('updater:downloaded', callback),
@@ -115,7 +116,8 @@ const evaAPI = {
     enable: () => ipcRenderer.invoke('cloudworks:enable'),
     disable: () => ipcRenderer.invoke('cloudworks:disable'),
     setAutonomous: (enabled: boolean) => ipcRenderer.invoke('cloudworks:setAutonomous', enabled),
-    onApprovalPending: (callback: (data: { taskId: string, tool: string, args: any }) => void) => {
+    respondApproval: (taskId: string, approved: boolean) => ipcRenderer.invoke('cw:respond-approval', taskId, approved),
+    onApprovalPending: (callback: (data: { taskId: string, tool: string, args: any, summary?: string }) => void) => {
       const listener = (_: unknown, data: any) => callback(data)
       ipcRenderer.on('cw:approval-pending', listener)
       return () => ipcRenderer.removeListener('cw:approval-pending', listener)
@@ -222,10 +224,12 @@ const evaAPI = {
     }
   },
 
-  // ── TTS (Text-to-Speech — Windows SAPI) ──
+  // ── TTS (Text-to-Speech — Edge Neural & Windows SAPI) ──
   tts: {
     speak: (text: string) => ipcRenderer.invoke('tts:speak', text),
     stop: () => ipcRenderer.invoke('tts:stop'),
+    edgeSpeak: (text: string, voice?: string, rate?: string) => ipcRenderer.invoke('tts:edge-speak', text, voice, rate),
+    setMicPaused: (paused: boolean) => ipcRenderer.invoke('tts:mic-paused', paused)
   },
 
   // ── LLM Shortcuts ──
@@ -237,13 +241,13 @@ const evaAPI = {
   llmStatus: () => ipcRenderer.invoke('llm:status'),
 
 overlay: {
-    show: (state?: string, text?: string) => ipcRenderer.invoke('overlay:show', state, text),
+    show: (state?: string, text?: string, data?: any) => ipcRenderer.invoke('overlay:show', state, text, data),
     hide: () => ipcRenderer.invoke('overlay:hide'),
-    setState: (state: string, text?: string) => ipcRenderer.invoke('overlay:setState', state, text),
+    setState: (state: string, text?: string, data?: any) => ipcRenderer.invoke('overlay:setState', state, text, data),
     sendAction: (action: string, data?: string) => ipcRenderer.send('overlay:action', action, data),
-    onSetState: (callback: (state: string, text?: string) => void) => {
+    onSetState: (callback: (state: string, text?: string, data?: any) => void) => {
       const channel = 'overlay:setState'
-      const listener = (_: unknown, state: string, text?: string) => callback(state, text)
+      const listener = (_: unknown, state: string, text?: string, data?: any) => callback(state, text, data)
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     },

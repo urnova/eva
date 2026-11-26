@@ -1,6 +1,7 @@
 import { installCWRuntime } from './cw-runtime'
 import { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut , Notification } from 'electron'
-// Optimisations GPU : Accélération matérielle activée, zéro-copy et GPU rasterization
+// Optimisations GPU + transparence Windows 11 fiable pour l'overlay
+app.commandLine.appendSwitch('enable-transparent-visuals');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
@@ -25,7 +26,7 @@ function logMain(...args: any[]) {
     console.log(...args);
   } catch(e) {}
 }
-logMain('[EVA Main] Process started, PID:', process.pid, 'isPackaged:', app.isPackaged);
+logMain('[EVA Main] Process started, PID:', process.pid, 'isPackaged:', app.isPackaged, 'version:', app.getVersion(), 'exe:', app.getPath('exe'));
 
 process.on('uncaughtException', (err: any) => {
   logMain('[EVA Main] UNCAUGHT EXCEPTION:', err && err.stack ? err.stack : String(err));
@@ -295,6 +296,17 @@ function createWindow() {
     }
   }
 
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    const isVis = !!(mainWindow.isVisible() && !mainWindow.isMinimized())
+    notifyWindowVisibility(isVis)
+    if (_pendingUpdateDownloaded) {
+      mainWindow.webContents.send('updater:downloaded', _pendingUpdateDownloaded)
+    } else if (_pendingUpdateInfo) {
+      mainWindow.webContents.send('updater:available', _pendingUpdateInfo)
+    }
+  })
+
   // ─── Minimize to tray & Visibilité ───
   mainWindow.on('show', () => {
     notifyWindowVisibility(true)
@@ -305,7 +317,10 @@ function createWindow() {
   mainWindow.on('hide', () => notifyWindowVisibility(false))
   mainWindow.on('minimize', () => notifyWindowVisibility(false))
   mainWindow.on('restore', () => notifyWindowVisibility(true))
-  mainWindow.on('focus', () => notifyWindowVisibility(true))
+  mainWindow.on('focus', () => {
+    const isVis = !!(mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized())
+    notifyWindowVisibility(isVis)
+  })
   mainWindow.on('maximize', () => notifyWindowVisibility(true))
   mainWindow.on('unmaximize', () => notifyWindowVisibility(true))
   mainWindow.on('close', (event) => {
@@ -318,15 +333,36 @@ function createWindow() {
   mainWindow.on('closed', () => { mainWindow = null })
 }
 
+let _lastOverlayState: { state: string; text?: string; data?: any } | null = null;
+let _overlayReady = false;
+let _pendingUpdateInfo: any = null;
+let _pendingUpdateDownloaded: any = null;
+let _isDownloadingUpdate = false;
+let _isInstallingUpdate = false;
 
+function positionOverlayWindow() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return
+  const { screen } = require('electron')
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const wa = primaryDisplay.workArea || { x: 0, y: 0, width: primaryDisplay.workAreaSize.width, height: primaryDisplay.workAreaSize.height }
+  const overlayWidth = 420
+  const overlayHeight = 118
+  overlayWindow.setBounds({
+    width: overlayWidth,
+    height: overlayHeight,
+    x: Math.round(wa.x + wa.width - overlayWidth - 16),
+    y: Math.round(wa.y + 16)
+  })
+}
 
 function createOverlayWindow() {
   const { screen } = require('electron')
   const primaryDisplay = screen.getPrimaryDisplay()
   const wa = primaryDisplay.workArea || { x: 0, y: 0, width: primaryDisplay.workAreaSize.width, height: primaryDisplay.workAreaSize.height }
 
-  const overlayWidth = 400
-  const overlayHeight = 104
+  const overlayWidth = 420
+  const overlayHeight = 118
+  _overlayReady = false
 
   overlayWindow = new BrowserWindow({
     width: overlayWidth,
@@ -335,6 +371,8 @@ function createOverlayWindow() {
     y: Math.round(wa.y + 16),
     transparent: true,
     frame: false,
+    thickFrame: false,
+    backgroundColor: '#00000000',
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: true,
@@ -353,13 +391,26 @@ function createOverlayWindow() {
   overlayWindow.setAlwaysOnTop(true, 'screen-saver')
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
+  overlayWindow.webContents.on('did-finish-load', () => {
+    _overlayReady = true
+    if (_lastOverlayState && overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('overlay:setState', _lastOverlayState.state, _lastOverlayState.text, _lastOverlayState.data)
+    }
+  })
+
   if (isDev) {
     overlayWindow.loadFile(join(__dirname, '../web/overlay.html'))
   } else {
     overlayWindow.loadFile(join(__dirname, '../dist/overlay.html'))
   }
 
-  overlayWindow.on('closed', () => { overlayWindow = null })
+  overlayWindow.on('closed', () => { overlayWindow = null; _overlayReady = false })
+}
+
+function ensureOverlayWindow() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    createOverlayWindow()
+  }
 }
 
 function saveBounds() {
@@ -450,7 +501,7 @@ function _rebuildTrayMenu() {
 
 // â”€â”€â”€ App Events â”€â”€â”€
 app.whenReady().then(async () => {
-  logMain('[EVA Main] app.whenReady fired');
+  logMain('[EVA Main] app.whenReady fired, cwEnabled:', store.get('cwEnabled', false));
   if (isDev) {
     app.setAsDefaultProtocolClient('eva-desktop', process.execPath, [
       path.resolve(process.argv[1])
@@ -521,33 +572,38 @@ app.whenReady().then(async () => {
   });
 
   autoUpdater.on('checking-for-update', () => {
+    logMain('[AutoUpdater] checking-for-update');
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('splash:status', 'Vérification des mises à jour...');
   });
 
   autoUpdater.on('update-available', (info) => {
     clearTimeout(updateSafetyTimeout);
-    console.log('[AutoUpdater] Mise à jour disponible:', info);
+    _pendingUpdateInfo = info;
+    logMain('[AutoUpdater] Mise à jour disponible:', info?.version || JSON.stringify(info));
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('splash:status', 'Mise à jour trouvée.');
       mainWindow.webContents.send('updater:available', info);
     }
-    // FIX v5.6.20: Filet de securite anti-boucle de demarrage (si non telecharge dans les 15s, on lance l'app)
+    // Lancer l'app après le splash si aucun téléchargement immédiat n'est en cours, tout en gardant la bannière dans chat.html
     setTimeout(() => {
-      if (!updateHandled) {
-        console.log('[EVA] Splash fallback après update-available — démarrage app');
+      if (!updateHandled && !_isDownloadingUpdate) {
+        logMain('[EVA] Splash fallback après update-available — ouverture app avec bannière de mise à jour');
         finishSplash(0);
       }
-    }, 15000);
+    }, 3500);
   });
   
   autoUpdater.on('update-not-available', (_info) => {
     clearTimeout(updateSafetyTimeout);
+    logMain('[AutoUpdater] update-not-available');
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('splash:status', 'Système à jour. Démarrage...');
     finishSplash(600);
   });
 
   autoUpdater.on('error', (err) => {
     clearTimeout(updateSafetyTimeout);
+    _isDownloadingUpdate = false;
+    logMain('[AutoUpdater] error:', err ? String(err) : 'Unknown error');
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('updater:error', err ? err.toString() : 'Unknown error');
       mainWindow.webContents.send('splash:status', 'Démarrage...');
@@ -556,16 +612,14 @@ app.whenReady().then(async () => {
   });
   
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('[AutoUpdater] Mise à jour téléchargée:', info);
+    _pendingUpdateDownloaded = info;
+    _isDownloadingUpdate = false;
+    logMain('[AutoUpdater] Mise à jour téléchargée:', info?.version || JSON.stringify(info));
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('splash:status', 'Mise à jour prête. Redémarrage...');
       mainWindow.webContents.send('updater:downloaded', info);
     }
-    setTimeout(() => {
-      stopLLM();
-      try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy(); } catch(_) {}
-      autoUpdater.quitAndInstall(false, true); // FIX v5.6.20: non-silent (interface visible sans blocage UAC) + forceRunAfter
-    }, 1500);
+    setTimeout(performQuitAndInstall, 1500);
   });
 
   const shouldAutoLaunch = store.get('autoLaunch');
@@ -729,48 +783,63 @@ ipcMain.handle('window:focus', () => {
 })
 
 // â”€â”€â”€ IPC Handlers â€” Overlay Agentique â”€â”€â”€
-ipcMain.handle('overlay:show', (_event, state?: string, text?: string) => {
+function _showOverlayInternal(state?: string, text?: string, data?: any) {
+  ensureOverlayWindow()
+  positionOverlayWindow()
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.setAlwaysOnTop(true, 'screen-saver')
-    if (state) overlayWindow.webContents.send('overlay:setState', state, text)
-    overlayWindow.showInactive() // Affiche sans voler le focus
+    if (state) {
+      _lastOverlayState = { state, text, data }
+      if (_overlayReady) overlayWindow.webContents.send('overlay:setState', state, text, data)
+    }
+    if (!overlayWindow.isVisible()) overlayWindow.showInactive()
   }
+}
+
+ipcMain.handle('overlay:show', (_event, state?: string, text?: string, data?: any) => {
+  _showOverlayInternal(state, text, data)
 })
 
 ipcMain.handle('window:isFocused', () => !!(mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()))
 
 ipcMain.handle('overlay:hide', () => {
+  _lastOverlayState = null
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.hide()
   }
 })
 
-ipcMain.handle('overlay:setState', (_event, state, text) => {
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.webContents.send('overlay:setState', state, text)
+ipcMain.handle('overlay:setState', (_event, state, text, data) => {
+  _lastOverlayState = { state, text, data }
+  if (overlayWindow && !overlayWindow.isDestroyed() && _overlayReady) {
+    overlayWindow.webContents.send('overlay:setState', state, text, data)
   }
 })
 
-// IPC Handler — Mode Jarvis : synchronisation état overlay et microphone
-ipcMain.handle('jarvis:state', (_event, data: { state: string, text?: string, pauseMic?: boolean }) => {
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    if (data.state === 'hidden') {
-      overlayWindow.hide();
-    } else {
-      overlayWindow.webContents.send('overlay:setState', data.state, data.text);
-      if (!overlayWindow.isVisible()) overlayWindow.showInactive();
-    }
-  }
-  if (_sttProcess && _sttProcess.stdin && data.pauseMic !== undefined) {
+function _setSttMicPaused(paused: boolean) {
+  if (_sttProcess && _sttProcess.stdin) {
     try {
-      const cmd = data.pauseMic ? 'pause' : 'resume';
+      const cmd = paused ? 'pause' : 'resume';
       _sttProcess.stdin.write(JSON.stringify({ command: cmd }) + '\n');
     } catch(e) {}
+  }
+}
+
+// IPC Handler — Mode Jarvis : synchronisation état overlay et microphone
+ipcMain.handle('jarvis:state', (_event, data: { state: string, text?: string, pauseMic?: boolean }) => {
+  if (data.state === 'hidden') {
+    _lastOverlayState = null;
+    if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.hide();
+  } else {
+    _showOverlayInternal(data.state, data.text);
+  }
+  if (data.pauseMic !== undefined) {
+    _setSttMicPaused(!!data.pauseMic);
   }
   return { success: true };
 })
 
-// Communication Overlay -> Main App (Ex: Bouton Annuler appuyé, Wake Word)
+// Communication Overlay -> Main App (Ex: Bouton Annuler appuyé, Approbation, Wake Word)
 ipcMain.on('overlay:action', (_event, action, data) => {
   // Action wake word : premier plan (chat) vs arrière-plan (Mode Jarvis)
   if (action === 'wakeword' && data) {
@@ -779,19 +848,24 @@ ipcMain.on('overlay:action', (_event, action, data) => {
       mainWindow.focus();
       mainWindow.webContents.send('wakeword:command', data);
     } else {
-      if (overlayWindow && !overlayWindow.isDestroyed()) {
-        overlayWindow.webContents.send('overlay:setState', 'listening', data);
-        overlayWindow.showInactive();
-      }
+      _showOverlayInternal('listening', data);
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('jarvis:voiceCommand', { phrase: data, command: data });
       }
     }
     return;
   }
+  if (action === 'approve' || action === 'deny') {
+    logMain('[Overlay] Décision reçue depuis bulle:', action, data || '');
+    _showOverlayInternal('working', action === 'approve' ? 'Action autorisée, exécution...' : 'Action refusée.');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('overlay:action', action, data);
+    }
+    return;
+  }
   // Autres actions (cancel, etc.) → forwarded tel quel
   if (action === 'cancel') {
-    console.log('[Main] Cancel reçu depuis overlay : arrêt LLM et processus');
+    logMain('[Main] Cancel reçu depuis overlay : arrêt LLM et processus');
     if (activeAbortController) {
       try { activeAbortController.abort(); } catch(e) {}
       activeAbortController = null;
@@ -800,6 +874,7 @@ ipcMain.on('overlay:action', (_event, action, data) => {
       try { child_process.execSync(`taskkill /F /T /PID ${activeExecProcess.pid}`); } catch(e) {}
       activeExecProcess = null;
     }
+    _lastOverlayState = null;
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.hide();
     }
@@ -1327,10 +1402,46 @@ ipcMain.handle('app:path', () => app.getPath('userData'))
 ipcMain.handle('app:quit', () => { app.isQuitting = true; app.quit() })
 
 // --- Updater IPC ---
+function performQuitAndInstall() {
+  if (_isInstallingUpdate) return;
+  _isInstallingUpdate = true;
+  logMain('[AutoUpdater] performQuitAndInstall started');
+  forceQuit = true;
+  app.isQuitting = true;
+  try { activeAbortController?.abort(); } catch(_) {}
+  try { stopLLM(); } catch(_) {}
+  try { if (_sttProcess) { _sttProcess.kill(); _sttProcess = null; } } catch(_) {}
+  try { if (_ttsProcess) { _ttsProcess.kill(); _ttsProcess = null; } } catch(_) {}
+  try { if (activeExecProcess) { child_process.execSync(`taskkill /F /T /PID ${activeExecProcess.pid}`); activeExecProcess = null; } } catch(_) {}
+  try { globalShortcut.unregisterAll(); } catch(_) {}
+  try { if (tray) { tray.destroy(); tray = null; } } catch(_) {}
+  try { if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.destroy(); } catch(_) {}
+  try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy(); } catch(_) {}
+  setImmediate(() => {
+    autoUpdater.quitAndInstall(false, true);
+  });
+}
+
+ipcMain.handle('updater:check', async () => {
+  if (_pendingUpdateDownloaded && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updater:downloaded', _pendingUpdateDownloaded);
+  } else if (_pendingUpdateInfo && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updater:available', _pendingUpdateInfo);
+  }
+  if (!isDev) {
+    _lastUpdateCheck = 0;
+    _checkForUpdatesIfNeeded(false);
+  }
+  return { ok: true, availableInfo: _pendingUpdateInfo, downloadedInfo: _pendingUpdateDownloaded };
+})
+
 ipcMain.handle('updater:start-download', () => {
   if (!isDev) {
+    _isDownloadingUpdate = true;
+    logMain('[AutoUpdater] Téléchargement démarré par l’utilisateur');
     autoUpdater.downloadUpdate().catch(err => {
-      console.error(err);
+      _isDownloadingUpdate = false;
+      logMain('[AutoUpdater] Erreur téléchargement:', err ? String(err) : 'Unknown error');
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('updater:error', err ? err.toString() : 'Unknown error');
       }
@@ -1339,9 +1450,7 @@ ipcMain.handle('updater:start-download', () => {
 })
 ipcMain.handle('updater:quit-and-install', () => {
   if (!isDev) {
-    stopLLM();
-    try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy(); } catch(_) {}
-    autoUpdater.quitAndInstall(false, true);
+    performQuitAndInstall();
   }
 })
 autoUpdater.on('download-progress', (progressObj) => {
@@ -1447,10 +1556,11 @@ async function _startLLMInternal(): Promise<boolean> {
     });
     
     console.log('[LLM] Moteur LLM prêt !');
+    logMain('[LLM] Modèle chargé avec succès:', resolvedModelFile);
     _notifyLLMReady();
     return true;
   } catch (err: any) {
-    console.error('[LLM] Erreur lors du chargement:', err);
+    logMain('[LLM] Erreur chargement modèle:', err?.message || String(err));
     try { await llamaContext?.dispose(); } catch (_) {}
     try { await llamaModel?.dispose(); } catch (_) {}
     llamaModel = null;
@@ -1531,7 +1641,10 @@ function assertCWLocalSender(event: any) {
 installCWRuntime({ ipcMain, dialog, shell, BrowserWindow, store,
   mainWindow: () => mainWindow,
   assertSender: assertCWLocalSender,
-  abortLLM: (id: string) => { if (_cwPromptTask === id) activeAbortController?.abort(); }
+  abortLLM: (id: string) => { if (_cwPromptTask === id) activeAbortController?.abort(); },
+  onApprovalOverlay: ({ taskId, tool, summary }: any) => {
+    _showOverlayInternal('approval', summary || `Autoriser : ${tool}`, { taskId, tool, summary });
+  }
 });
 ipcMain.handle('llm:chat', async (event, messages: any[], options: any = {}) => {
   assertCWLocalSender(event);
@@ -1546,6 +1659,7 @@ ipcMain.handle('llm:chat', async (event, messages: any[], options: any = {}) => 
   const controller = new AbortController();
   let timedOut = false;
   let timer: NodeJS.Timeout | null = null;
+  const t0 = Date.now();
   try {
     if (llmTimeout) { clearTimeout(llmTimeout); llmTimeout = null; }
     disposeActiveSession();
@@ -1571,9 +1685,13 @@ ipcMain.handle('llm:chat', async (event, messages: any[], options: any = {}) => 
       signal: controller.signal, stopOnAbortSignal: true,
       budgets: { thoughtTokens: 0 }
     });
+    logMain('[LLM] llm:chat OK in', (Date.now() - t0) + 'ms', 'chars:', (response || '').length);
     if (timedOut) throw new Error('LLM_TIMEOUT');
     if (controller.signal.aborted) return { aborted: true, choices: [] };
     return { choices: [{ message: { role: 'assistant', content: response } }] };
+  } catch (err: any) {
+    logMain('[LLM] llm:chat ERR after', (Date.now() - t0) + 'ms:', err?.message || String(err));
+    throw err;
   } finally {
     if (timer) clearTimeout(timer);
     _cwPromptTask = null;
@@ -2123,10 +2241,55 @@ ipcMain.handle('tts:speak', async (_, text: string) => {
 ipcMain.handle('tts:stop', async () => {
   await _killTtsProcess();
   // Réactiver le micro STT
-  if (_sttProcess && _sttProcess.stdin) {
-    try { _sttProcess.stdin.write(JSON.stringify({ command: 'resume' }) + '\n'); } catch(e) {}
-  }
+  _setSttMicPaused(false);
   return { success: true };
+});
+
+ipcMain.handle('tts:mic-paused', async (_event, paused: boolean) => {
+  _setSttMicPaused(!!paused);
+  return { success: true };
+});
+
+// ─── Edge Neural TTS (Microsoft Edge Read Aloud — gratuit, sans clé, sans quota) ───
+ipcMain.handle('tts:edge-speak', async (_event, text: string, voice: string = 'fr-FR-DeniseNeural', rate?: string) => {
+  const cleanText = String(text || '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/\[ACTION:[\s\S]*?\]/g, '')
+    .replace(/[a-zA-Z]:\\[^\s"'`]+/g, 'fichier local')
+    .replace(/[*#_`~>]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleanText) return { success: true, audioBase64: '', mimeType: 'audio/mpeg' };
+
+  const safeVoice = (typeof voice === 'string' && /^[a-z]{2}-[A-Z]{2}-[A-Za-z0-9]+Neural$/.test(voice))
+    ? voice : 'fr-FR-DeniseNeural';
+
+  let tts: any = null;
+  try {
+    const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
+    tts = new MsEdgeTTS();
+    await tts.setMetadata(safeVoice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+    const streamOpts = rate ? { rate } : undefined;
+    const { audioStream } = tts.toStream(cleanText, streamOpts);
+    const audioBuf: Buffer = await new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      const tmo = setTimeout(() => reject(new Error('EDGE_TTS_TIMEOUT')), 15000);
+      audioStream.on('data', (chunk: Buffer) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+      audioStream.on('end', () => { clearTimeout(tmo); resolve(Buffer.concat(chunks)); });
+      audioStream.on('error', (err: any) => { clearTimeout(tmo); reject(err); });
+    });
+    return {
+      success: true,
+      audioBase64: audioBuf.toString('base64'),
+      mimeType: 'audio/mpeg',
+      voice: safeVoice
+    };
+  } catch (err: any) {
+    logMain('[TTS Edge] Erreur:', err?.message || String(err));
+    return { success: false, error: err?.message || String(err) };
+  } finally {
+    try { tts?.close(); } catch(_) {}
+  }
 });
 
 // ─── PWA Detection (FIX v5.6.11) ────────────────────────────────────────────

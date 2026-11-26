@@ -5,8 +5,8 @@ const S = (description, properties, sensitive=false, effect=false) => ({descript
 const str={type:'string'}, num={type:'number'}, bool={type:'boolean'};
 const opt=t=>({oneOf:[t,{type:'null'}]});
 const specs={
- app_launch:S('Ouvrir URL HTTP(S), dossier ou application Windows; ne pas executer de script.',{target:str,args:opt(str)},false,true),
- app_resolve:S('Chercher une application par nom court.',{query:str}),
+ app_launch:S('Ouvrir URL HTTP(S), dossier, raccourci ou application Windows (y compris shell:AppsFolder).',{target:str,args:opt(str)},false,true),
+ app_resolve:S('Chercher une application Windows ou PWA/Store par nom court.',{query:str}),
  app_check:S('Verifier une application installee.',{name:str}),
  app_close:S('Fermer les processus portant exactement ce nom.',{name:str},true,true),
  app_install:S('Installer un identifiant exact Winget; confirmation PC obligatoire.',{name:str},true,true),
@@ -29,21 +29,31 @@ const specs={
  command_run:S('Executer PowerShell explicite seulement apres validation PC.',{command:str},true,true)
 };
 const classification=Object.fromEntries(Object.entries(specs).map(([n,s])=>[n,s.sensitive?'SENSITIVE':'SAFE']));
+
 function schema(allowDone=true){
- const toolSchemas=Object.entries(specs).map(([name,s])=>({type:'object',properties:{kind:{enum:['tool']},name:{enum:[name]},args:{type:'object',properties:s.properties}},required:['kind','name','args']}));
- const endings=(allowDone?['done','clarify','fail']:['clarify','fail']).map(kind=>({type:'object',properties:{kind:{enum:[kind]},message:str},required:['kind','message']}));
+ const toolSchemas=Object.entries(specs).map(([name,s])=>({
+  type:'object',
+  properties:{kind:{enum:['tool']},name:{enum:[name]},args:{type:'object',properties:s.properties}},
+  required:['kind','name','args']
+ }));
+ const endings=(allowDone?['done','clarify','fail']:['clarify','fail']).map(kind=>({
+  type:'object',
+  properties:{kind:{enum:[kind]},message:str},
+  required:['kind','message']
+ }));
  return {oneOf:[...toolSchemas,...endings]};
 }
 function matchesType(t,v){return t.oneOf?t.oneOf.some(x=>matchesType(x,v)):t.enum?t.enum.includes(v):t.type==='null'?v===null:typeof v===t.type&&(t.type!=='number'||Number.isFinite(v));}
-function validate(name,args){
- const s=specs[name]; if(!s||!args||Array.isArray(args)||typeof args!=='object')throw Error('INVALID_TOOL');
- for(const key of Object.keys(args))if(!Object.hasOwn(s.properties,key))throw Error('UNKNOWN_ARGUMENT: '+key);
+function validate(name,rawArgs){
+ const s=specs[name]; if(!s||!rawArgs||Array.isArray(rawArgs)||typeof rawArgs!=='object')throw Error('INVALID_TOOL');
+ const cleaned=Object.fromEntries(Object.entries(rawArgs).filter(([,v])=>v!==null&&v!==undefined));
+ for(const key of Object.keys(cleaned))if(!Object.hasOwn(s.properties,key))throw Error('UNKNOWN_ARGUMENT: '+key);
  for(const [key,t]of Object.entries(s.properties)){
-  const v=args[key];if((v==null)&&t.oneOf)continue;
-  if(v==null)throw Error('MISSING_ARGUMENT: '+key);
+  const v=cleaned[key];if((v===undefined)&&t.oneOf)continue;
+  if(v===undefined)throw Error('MISSING_ARGUMENT: '+key);
   if(!matchesType(t,v))throw Error('INVALID_TYPE: '+key);
  }
- return Object.fromEntries(Object.entries(args).filter(([,v])=>v!==null&&v!==undefined));
+ return cleaned;
 }
 async function executeTool(name,args,context){
  try{

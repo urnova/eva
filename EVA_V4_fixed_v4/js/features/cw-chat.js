@@ -24,11 +24,12 @@ async function route(text){
   const id=await w.CWBus.submit(forced?'agentic_task':'chat_request',{prompt},{deviceId});
   const result=forced?{handled:true,id}:await w.CWBus.wait(id,null,true);
   if(!result.handled||(!forced&&result.error==='CLOUDWORKS_DISABLED'))return false;
+  if(w.S)w.S.cwRunning=true;
   const input=document.getElementById('msgInput');if(input)input.value='';
   if(typeof w.appendMsg==='function')w.appendMsg('user',text);
   await saveUser(text);
   w.appendCloudWorksTracker(id,prompt);return true;
- }catch(e){w.toast?.('CloudWorks : '+e.message,'error');return true;}
+ }catch(e){if(w.S)w.S.cwRunning=false;w.toast?.('CloudWorks : '+e.message,'error');return true;}
  finally{routing=false;if(send)send.disabled=false;w.setEvaStatusHeader?.(null);}
 }
 w.CWChat={route};

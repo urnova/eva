@@ -18,8 +18,11 @@
 
   ; 3. Lire le chemin d'installation depuis le registre EVA et tuer les processus
   ;    appartenant à CE dossier précis seulement
-  ;    Note: on lit la clé standard electron-builder (GUID ou nom app)
-  ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\eva-assistant-pc" "InstallLocation"
+  ;    Note: electron-builder utilise l'AppId GUID dans Uninstall (ex: 7c... ou com.astraltechnologie.eva)
+  ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\com.astraltechnologie.eva" "InstallLocation"
+  ${If} $R0 == ""
+    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\eva-assistant-pc" "InstallLocation"
+  ${EndIf}
   ${If} $R0 != ""
     ; Construire la commande wmic avec le chemin interpolé par NSIS
     StrCpy $1 'wmic process where "ExecutablePath like ''$R0\\%''" call terminate'

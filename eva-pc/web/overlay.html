@@ -6,10 +6,10 @@
   <style>
     * { box-sizing: border-box; }
     :root {
-      --accent: #00d4ff;
-      --accent-soft: rgba(0, 212, 255, 0.22);
-      --accent-glow: rgba(0, 212, 255, 0.45);
-      --text: #eef2ff;
+      --accent: #f97316;
+      --accent-soft: rgba(249, 115, 22, 0.35);
+      --accent-glow: rgba(249, 115, 22, 0.65);
+      --text: #f8fafc;
       --muted: #94a3b8;
     }
 
@@ -19,13 +19,13 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: transparent;
+      background: transparent !important;
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
       user-select: none;
     }
 
     body {
-      padding: 8px 12px 14px 12px;
+      padding: 6px 10px 10px 10px;
       display: flex;
       justify-content: flex-end;
       align-items: flex-start;
@@ -34,23 +34,30 @@
 
     .pill {
       width: 100%;
-      max-width: 376px;
-      min-height: 68px;
-      background: linear-gradient(145deg, rgba(10, 14, 26, 0.96), rgba(16, 24, 42, 0.96));
+      max-width: 396px;
+      min-height: 70px;
+      background: linear-gradient(145deg, rgba(11, 15, 28, 0.96), rgba(19, 25, 43, 0.96));
       border: 1px solid var(--accent-soft);
-      border-radius: 14px;
-      padding: 11px 14px;
+      border-radius: 16px;
+      padding: 10px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .main-row {
       display: flex;
       align-items: center;
-      gap: 12px;
-      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+      gap: 11px;
+      width: 100%;
     }
 
     .indicator {
       position: relative;
-      width: 30px;
-      height: 30px;
+      width: 28px;
+      height: 28px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
@@ -64,18 +71,18 @@
       border: 2px solid transparent;
       border-top-color: var(--accent);
       border-right-color: var(--accent-soft);
-      animation: spin 1.6s linear infinite;
+      animation: spin 1.45s linear infinite;
     }
 
     .ring-static .ring {
       animation: none;
       border-color: var(--accent);
-      opacity: 0.7;
+      opacity: 0.72;
     }
 
     .orb {
-      width: 11px;
-      height: 11px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       background: var(--accent);
       box-shadow: 0 0 10px var(--accent-glow);
@@ -91,7 +98,7 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 2px;
     }
 
     .header-line {
@@ -102,8 +109,8 @@
 
     .dot-tag {
       font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.9px;
+      font-weight: 800;
+      letter-spacing: 0.85px;
       text-transform: uppercase;
       color: var(--accent);
       white-space: nowrap;
@@ -113,7 +120,7 @@
 
     .subtitle {
       font-size: 12px;
-      line-height: 1.32;
+      line-height: 1.3;
       font-weight: 500;
       color: var(--text);
       display: -webkit-box;
@@ -129,8 +136,8 @@
       height: 28px;
       flex-shrink: 0;
       border-radius: 8px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       color: var(--muted);
       cursor: pointer;
       display: flex;
@@ -140,63 +147,82 @@
     }
 
     .btn-stop:hover {
-      background: rgba(239, 68, 68, 0.2);
-      border-color: rgba(239, 68, 68, 0.55);
-      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.22);
+      border-color: rgba(239, 68, 68, 0.6);
+      color: #fecaca;
     }
 
     .btn-stop svg {
-      width: 13px;
-      height: 13px;
+      width: 12px;
+      height: 12px;
     }
 
-    /* États */
-    .state-cloudworks, .state-action {
-      --accent: #00d4ff;
-      --accent-soft: rgba(0, 212, 255, 0.35);
-      --accent-glow: rgba(0, 212, 255, 0.65);
+    .approval-actions {
+      -webkit-app-region: no-drag;
+      display: none;
+      gap: 8px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .approval-btn {
+      -webkit-app-region: no-drag;
+      flex: 1;
+      border: none;
+      border-radius: 7px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: filter 0.15s ease;
+    }
+
+    .approval-btn:hover { filter: brightness(1.1); }
+    .approval-btn.approve { background: #10b981; color: #04160e; }
+    .approval-btn.deny { background: rgba(239, 68, 68, 0.22); border: 1px solid rgba(239, 68, 68, 0.55); color: #fecaca; }
+
+    /* États CloudWorks (Orange vibrant) */
+    .state-cloudworks, .state-action, .state-working, .state-remote {
+      --accent: #f97316;
+      --accent-soft: rgba(249, 115, 22, 0.42);
+      --accent-glow: rgba(249, 115, 22, 0.7);
     }
 
     .state-approval {
       --accent: #f59e0b;
-      --accent-soft: rgba(245, 158, 11, 0.45);
-      --accent-glow: rgba(245, 158, 11, 0.7);
+      --accent-soft: rgba(245, 158, 11, 0.5);
+      --accent-glow: rgba(245, 158, 11, 0.72);
     }
 
     .state-done {
       --accent: #10b981;
-      --accent-soft: rgba(16, 185, 129, 0.45);
-      --accent-glow: rgba(16, 185, 129, 0.65);
+      --accent-soft: rgba(16, 185, 129, 0.48);
+      --accent-glow: rgba(16, 185, 129, 0.68);
     }
 
     .state-error {
       --accent: #ef4444;
-      --accent-soft: rgba(239, 68, 68, 0.45);
-      --accent-glow: rgba(239, 68, 68, 0.65);
+      --accent-soft: rgba(239, 68, 68, 0.48);
+      --accent-glow: rgba(239, 68, 68, 0.68);
     }
 
-    .state-remote {
-      --accent: #38bdf8;
-      --accent-soft: rgba(56, 189, 248, 0.4);
-      --accent-glow: rgba(56, 189, 248, 0.65);
-    }
-
+    /* États Mode Vocal / Jarvis */
     .state-listening {
-      --accent: #22d3ee;
-      --accent-soft: rgba(34, 211, 238, 0.38);
-      --accent-glow: rgba(34, 211, 238, 0.65);
+      --accent: #00d4ff;
+      --accent-soft: rgba(0, 212, 255, 0.42);
+      --accent-glow: rgba(0, 212, 255, 0.7);
     }
 
     .state-thinking {
       --accent: #fbbf24;
-      --accent-soft: rgba(251, 191, 36, 0.4);
-      --accent-glow: rgba(251, 191, 36, 0.65);
+      --accent-soft: rgba(251, 191, 36, 0.42);
+      --accent-glow: rgba(251, 191, 36, 0.68);
     }
 
     .state-speaking {
       --accent: #a855f7;
-      --accent-soft: rgba(168, 85, 247, 0.4);
-      --accent-glow: rgba(168, 85, 247, 0.65);
+      --accent-soft: rgba(168, 85, 247, 0.45);
+      --accent-glow: rgba(168, 85, 247, 0.7);
     }
 
     @keyframes spin {
@@ -212,31 +238,49 @@
 </head>
 <body>
   <div class="pill state-cloudworks" id="pill">
-    <div class="indicator">
-      <div class="ring"></div>
-      <div class="orb"></div>
-    </div>
-    <div class="content">
-      <div class="header-line">
-        <div class="dot-tag" id="titleText">EVA • CLOUDWORKS</div>
+    <div class="main-row">
+      <div class="indicator">
+        <div class="ring"></div>
+        <div class="orb"></div>
       </div>
-      <div class="subtitle" id="subText">Initialisation...</div>
+      <div class="content">
+        <div class="header-line">
+          <div class="dot-tag" id="titleText">CLOUDWORKS • ACTIF</div>
+        </div>
+        <div class="subtitle" id="subText">Initialisation...</div>
+      </div>
+      <button class="btn-stop" onclick="closeOverlay()" title="Arrêter / Fermer">
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      </button>
     </div>
-    <button class="btn-stop" onclick="closeOverlay()" title="Arrêter / Fermer">
-      <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-    </button>
+    <div id="approvalBar" class="approval-actions">
+      <button class="approval-btn approve" onclick="respondOverlayApproval(true)">✓ Autoriser</button>
+      <button class="approval-btn deny" onclick="respondOverlayApproval(false)">✗ Refuser</button>
+    </div>
   </div>
 
   <script>
+    var _currentApprovalTaskId = '';
     if (window.eva && window.eva.overlay && window.eva.overlay.onSetState) {
       const pill = document.getElementById('pill');
       const titleText = document.getElementById('titleText');
       const subText = document.getElementById('subText');
+      const approvalBar = document.getElementById('approvalBar');
 
-      window.eva.overlay.onSetState((state, text) => {
+      window.eva.overlay.onSetState((state, text, data) => {
         const s = state || 'cloudworks';
         const isStatic = s === 'done' || s === 'error';
         pill.className = 'pill state-' + s + (isStatic ? ' ring-static' : '');
+
+        if (approvalBar) {
+          if (s === 'approval') {
+            _currentApprovalTaskId = (data && data.taskId) ? String(data.taskId) : '';
+            approvalBar.style.display = 'flex';
+          } else {
+            _currentApprovalTaskId = '';
+            approvalBar.style.display = 'none';
+          }
+        }
 
         if (s === 'listening') {
           titleText.textContent = 'EVA • EN ÉCOUTE';
@@ -255,7 +299,7 @@
           titleText.textContent = 'EVA • PARLE';
           subText.textContent = text || 'Synthèse vocale...';
         } else if (s === 'approval') {
-          titleText.textContent = 'CLOUDWORKS • VALIDATION';
+          titleText.textContent = 'CLOUDWORKS • VALIDATION REQUISE';
           subText.textContent = text || 'Autorisation locale requise sur ce PC';
         } else if (s === 'done') {
           titleText.textContent = 'CLOUDWORKS • TERMINÉ';
@@ -265,12 +309,20 @@
           subText.textContent = text || 'Impossible d’exécuter la tâche';
         } else if (s === 'remote') {
           titleText.textContent = 'CLOUDWORKS • À DISTANCE';
-          subText.textContent = text || 'Exécution en cours...';
+          subText.textContent = text || 'Exécution sur ce PC...';
         } else {
           titleText.textContent = 'CLOUDWORKS • ACTIF';
           subText.textContent = text || 'Exécution locale en cours...';
         }
       });
+    }
+
+    function respondOverlayApproval(approved) {
+      if (window.eva && window.eva.overlay && window.eva.overlay.sendAction) {
+        window.eva.overlay.sendAction(approved ? 'approve' : 'deny', _currentApprovalTaskId);
+      }
+      var bar = document.getElementById('approvalBar');
+      if (bar) bar.style.display = 'none';
     }
 
     function closeOverlay() {

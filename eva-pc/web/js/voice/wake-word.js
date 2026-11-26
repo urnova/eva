@@ -55,16 +55,10 @@ function isRunning() {
    ══════════════════════════════════════════════════════════ */
 var _isWindowVisibleOnScreen = true; // Par défaut au chargement dans le chat, la fenêtre principale est affichée
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('focus', function() { _isWindowVisibleOnScreen = true; });
-}
-if (typeof document !== 'undefined') {
+if (!window.eva && typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', function() {
-    if (!document.hidden) _isWindowVisibleOnScreen = true;
+    _isWindowVisibleOnScreen = !document.hidden;
   });
-  document.addEventListener('mousemove', function() { _isWindowVisibleOnScreen = true; });
-  document.addEventListener('click', function() { _isWindowVisibleOnScreen = true; });
-  document.addEventListener('keydown', function() { _isWindowVisibleOnScreen = true; });
 }
 
 // Suivi direct et précis de la visibilité de la fenêtre Electron (non minimisée, non masquée)
@@ -90,18 +84,11 @@ if (typeof window !== 'undefined' && window.eva) {
 }
 
 function _isBackgroundSync() {
-  // 1. Si le document web est ouvert et visible à l'écran, la fenêtre est au premier plan
-  if (typeof document !== 'undefined' && !document.hidden && document.visibilityState === 'visible') {
-    _isWindowVisibleOnScreen = true;
-    return false;
-  }
-  // 2. Sur l'application PC : on est en arrière-plan UNIQUEMENT si la fenêtre principale est masquée ou minimisée
+  // 1. Sur Electron PC : faire confiance exclusivement à l'état réel de la fenêtre mainWindow
   if (typeof window !== 'undefined' && window.eva) {
-    if (typeof _isWindowVisibleOnScreen === 'boolean') {
-      return !_isWindowVisibleOnScreen;
-    }
+    return !_isWindowVisibleOnScreen;
   }
-  // 3. Sur navigateur standard : utiliser document.hidden
+  // 2. Sur navigateur standard : utiliser document.hidden
   if (typeof document !== 'undefined') {
     return !!document.hidden || document.visibilityState === 'hidden';
   }

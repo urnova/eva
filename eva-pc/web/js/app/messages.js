@@ -749,69 +749,15 @@ async function handleSend(customText) {
       '```stats\nMétrique: Valeur``` (chiffres clés), ```timeline\n2024 → Événement``` (chronologie)\n' +
       '\nDate : ' + _dateStr + ' — Heure : ' + _timeStr + '.';
   } else {
-    var savedDevId = (typeof localStorage !== 'undefined' ? localStorage.getItem('cw_device_id') : null) || window._cwDeviceId || null;
-    var targetPC = (S.cwDevices && S.cwDevices.length > 0)
-      ? (S.cwDevices.find(function(d){ return d.online; }) || S.cwDevices[0])
-      : null;
-    var targetDeviceId = (targetPC && (targetPC.deviceId || targetPC.id)) || savedDevId || 'PC-principal';
-
-    var desktopAgentHeader = '⚠️ CLOUDWORKS ACTIVÉ — CONTRÔLE SYSTÈME DU PC (Cible : ' + targetDeviceId + ')\n' +
-      'RÈGLE ABSOLUE ET PRIORITÉ SUPRÊME :\n' +
-      'Dès que l\'utilisateur demande d\'effectuer une action sur son PC (ouvrir une application, naviguer sur le web, installer une app, créer/supprimer/déplacer des fichiers ou dossiers, générer des documents/PDFs/exercices, trier des captures d\'écran, etc.) :\n' +
-      '1. Introduis chaleureusement ton action (ex: "Je m\'en occupe immédiatement !").\n' +
-      '2. TU DOIS OBLIGATOIREMENT GÉNÉRER LE BLOC [ACTION:{...}] À LA FIN DE TA RÉPONSE !\n' +
-      '3. RÈGLES PAR TYPE D\'ACTION :\n' +
-      '   - Pour ouvrir une app (Discord, Chrome, Spotify, Steam, Bloc-notes...) : [ACTION:{"type":"agentic_task","prompt":"Ouvrir Discord","tool":"app_launch","args":{"target":"Discord"},"deviceId":"' + targetDeviceId + '"}]\n' +
-      '   - Pour ouvrir un site / naviguer : [ACTION:{"type":"agentic_task","prompt":"Ouvrir le site","tool":"web_browse","args":{"url":"https://..."},"deviceId":"' + targetDeviceId + '"}]\n' +
-      '   - Pour installer une application : [ACTION:{"type":"agentic_task","prompt":"Installer VLC","tool":"app_install","args":{"name":"VLC"},"deviceId":"' + targetDeviceId + '"}]\n' +
-      '   - Pour trier des captures ou fichiers : [ACTION:{"type":"agentic_task","prompt":"Trier les captures d\'écran","tool":"folder_organize","args":{"sourcePath":"$env:USERPROFILE\\Pictures\\Screenshots","groupBy":"date_month"},"deviceId":"' + targetDeviceId + '"}]\n' +
-      '   - Pour des scripts personnalisés complexes : [ACTION:{"type":"agentic_task","prompt":"...","command":"<Script PowerShell avec guillemets et -Force>","deviceId":"' + targetDeviceId + '"}]\n' +
-      '4. INTERDICTION FORMELLE de t\'arrêter sans ce bloc ACTION !\n\n---\n\n';
-
-    /* Prompt complet pour les providers cloud (Puter, OpenAI, Claude, etc.) */
     if (_hasActiveTone) {
-      /* Le mode actif passe EN PREMIER pour garantir la priorité */
-      sysPrompt = desktopAgentHeader + '⚠️ MODE ACTIF — PRIORITÉ ABSOLUE (applique à CHAQUE réponse) :\n' + toneInstruction + '\n\n---\n\n' +
+      sysPrompt = 'MODE ACTIF - PRIORITE ABSOLUE :\n' + toneInstruction + '\n\n---\n\n' +
         SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx;
     } else {
-      sysPrompt = desktopAgentHeader + SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
+      sysPrompt = SYS + (userCtx ? '\n\n' + userCtx.trim() : '') + _dateCtx + toneInstruction;
     }
   }
-
-  var savedDevId = (typeof localStorage !== 'undefined' ? localStorage.getItem('cw_device_id') : null) || window._cwDeviceId || null;
-  var targetPC = (S.cwDevices && S.cwDevices.length > 0)
-    ? (S.cwDevices.find(function(d){ return d.online; }) || S.cwDevices[0])
-    : null;
-  var targetDeviceId = (targetPC && (targetPC.deviceId || targetPC.id)) || savedDevId || 'PC-principal';
-
-  var cwRegex = /(crÃ©e|cree|crÃ©er|creer|crÃ©ez|ecris|Ã©cris|Ã©crire|supprime|supprimer|efface|ouvre|ouvrir|lance|lancer|dÃ©place|deplace|copie|copier|mets|mettre|gÃ©nÃ¨re|genere|gÃ©nÃ©rer|generer|tÃ©lÃ©charge|telecharge|cherche|recherche)\b[\s\S]*?(fichier|dossier|bureau|desktop|document|documents|edge|chrome|navigateur|pc|windows|powershell|pdf|script|application|youtube|yt|spotify|discord|vlc|steam|netflix|twitch|calc|calculatrice|notepad|bloc-notes|cmd)/i;
-
-  var isConfirmation = /^(go|vas-y|vas y|lance|lancer|fais-le|fais le|fait le|faisle|c'est bon|c est bon|ok|oui|d'accord|on y va|valide|valider|exécute|execute)\b/i.test(text.trim()) ||
-    /^(go|vas-y|vas y|lance|fais-le|fais le|c'est bon|ok|oui|d'accord|on y va)\s*[!.]*$/i.test(text.trim());
-
-  var lastAssistantMsg = (S.messages && S.messages.length > 0)
-    ? S.messages.slice().reverse().find(function(m){ return m.role === 'eva' || m.role === 'assistant'; })
-    : null;
-  var prevWasCWPlan = lastAssistantMsg && (
-    /plan|dossier|fichier|documents|bureau|cloudworks|création|génération/i.test(lastAssistantMsg.content || '') ||
-    !!window._lastCWPlanPrompt
-  );
-
-  var isCWPCTask = /\[CloudWorks\]/i.test(text) || cwRegex.test(text) || (isConfirmation && prevWasCWPlan);
-
-  if (cwRegex.test(text) || /\[CloudWorks\]/i.test(text)) {
-    window._lastCWPlanPrompt = text;
-  }
-
+  var isCWPCTask = false;
   var msgContent = text;
-  if (isCWPCTask) {
-    if (isConfirmation && prevWasCWPlan) {
-      var plannedTask = window._lastCWPlanPrompt || (lastAssistantMsg && lastAssistantMsg.content) || "Exécuter les actions sur le PC";
-      msgContent = '[RAPPEL SYSTÈME : L\'utilisateur donne son accord immédiat ("' + text + '") pour la tâche suivante : "' + plannedTask.substring(0, 300).replace(/"/g, "'") + '". Tu DOIS IMMÉDIATEMENT lancer CloudWorks avec le bloc ACTION contenant toutes les étapes : [ACTION:{"type":"agentic_task","prompt":"' + plannedTask.substring(0, 300).replace(/"/g, "'") + '","command":"<Script PowerShell ou tool direct>","tool":"<optionnel: app_launch|web_browse|app_install|folder_organize>","deviceId":"' + targetDeviceId + '"}]. Rédige une phrase d\'introduction amicale et INTERDICTION formelle de redemander confirmation sans ce bloc ACTION !]\n\n' + msgContent;
-    } else {
-      msgContent = '[RAPPEL SYSTÈME : Action PC demandée. Tu peux présenter ton plan ou tes étapes à l\'utilisateur, mais tu DOIS OBLIGATOIREMENT terminer ta réponse par le bloc ACTION avec le script PowerShell direct : [ACTION:{"type":"agentic_task","prompt":"' + text.substring(0, 200).replace(/"/g, "'") + '","command":"<Script PowerShell ou tool direct>","tool":"<optionnel: app_launch|web_browse|app_install|folder_organize>","deviceId":"' + targetDeviceId + '"}]. INTERDICTION de dire "Je vais préparer cela" ou de t\'arrêter sans ce bloc ACTION !]\n\n' + msgContent;
-    }
-  }
     if (allImages.length) {
       window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine votre image...');
       try {
@@ -880,24 +826,6 @@ async function handleSend(customText) {
   window.EVA_SYSTEM_PROMPT = origSys;
 
   var hasCW = result.content && /\[ACTION:\s*\{[^}]*"(agentic_task|screenshot|sysinfo|run_script|lock|sleep|shutdown|open_ide_file)"/i.test(result.content);
-
-  // ── FILET DE SÉCURITÉ ABSOLU : Si le modèle a omis le tag [ACTION] sur une tâche PC/CloudWorks ──
-  if (!hasCW && isCWPCTask) {
-    console.warn('[CloudWorks Safety Net] Le modèle n\'a pas généré [ACTION], activation automatique de CloudWorks');
-    hasCW = true;
-    var rawTaskPrompt = (text || '').replace(/^\[CloudWorks\]\s*/i, '').trim();
-    setTimeout(function() {
-      if (typeof executeEvaAction === 'function') {
-        executeEvaAction({
-          type: 'agentic_task',
-          prompt: rawTaskPrompt,
-          deviceId: targetDeviceId,
-          command: null
-        });
-      }
-    }, 250);
-  }
-
   if (hasCW) {
     S.cwRunning = true;
     S.busy = true;

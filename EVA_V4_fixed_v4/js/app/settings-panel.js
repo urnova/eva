@@ -336,9 +336,9 @@ function renderSettings(section) {
     }, 50);
 
   } else if (section === 'voice') {
-    var curTTSProv = cfg.voiceProvider || 'eva-custom';
+    var curTTSProv = cfg.voiceProvider || 'edge-neural';
     if (curTTSProv === 'piper') curTTSProv = 'eva-custom';
-    var provLabels = {'eva-custom':'🎤 EVA Voice Personnalisée',native:'🎙 Navigateur (Web Speech)',eva:'🌟 EVA TTS — Kokoro',elevenlabs:'⚡ ElevenLabs',openai:'🤖 OpenAI TTS'};
+    var provLabels = {'edge-neural':'🎙️ Edge Neural (Denise)','eva-custom':'🎤 EVA Voice Personnalisée',native:'🎙 Navigateur (Web Speech)',eva:'🌟 EVA TTS — Kokoro',elevenlabs:'⚡ ElevenLabs',openai:'🤖 OpenAI TTS'};
     var curProvLabel = provLabels[curTTSProv] || curTTSProv;
     function ttsCardSt(key) {
       var a = key === curTTSProv;
@@ -385,6 +385,14 @@ function renderSettings(section) {
       /* === SERVICE DE VOIX — RECOMMANDÉS === */
       '<div style="font-size:0.65em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">⭐ Recommandés</div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:12px;margin-bottom:16px;">' +
+
+        /* Edge Neural — voix humaine féminine HD gratuite PC & Web */
+        '<div id="ttscard-edge-neural" style="'+ttsCardSt('edge-neural')+'" onclick="window._selectTTS(\'edge-neural\')">' +
+          ttsChk('edge-neural') + ttsDualTag('#0ea5e9','HD','#10b981','GRATUIT') +
+          '<div style="font-size:1.5em;margin-bottom:5px;">🎙️</div>' +
+          '<div style="font-weight:700;font-size:0.82em;margin-bottom:3px;">Edge Neural</div>' +
+          '<div style="font-size:0.66em;color:var(--text-muted);line-height:1.4;">Voix humaine FR (Denise)<br>PC &amp; Web · Sans clé</div>' +
+        '</div>' +
 
         /* Piper TTS — recommandé : voix neuronale française locale, sans clé */
         '<div id="ttscard-piper" style="'+ttsCardSt('piper')+'" onclick="window._selectTTS(\'piper\')">' +
@@ -451,7 +459,7 @@ function renderSettings(section) {
         /* Application immédiate sans clic Sauvegarder */
         if (S.config) S.config.voiceProvider = v;
         saveCfg();
-        ['native','eva','elevenlabs','openai','piper','eva-custom'].forEach(function(k) {
+        ['edge-neural','native','eva','elevenlabs','openai','piper','eva-custom'].forEach(function(k) {
           var card = document.getElementById('ttscard-'+k);
           if (!card) return;
           var active = k === v;
@@ -1125,7 +1133,26 @@ function renderTTSProvOpts(provider) {
   var keyInputStyle = 'font-family:monospace;font-size:0.78em;letter-spacing:0.05em;';
   var hintStyle = 'font-size:0.67em;color:var(--text-muted);margin-top:3px;line-height:1.4;';
 
-  if (provider === 'eva') {
+  if (provider === 'edge-neural') {
+    var edgeVoice = c.edgeVoice || 'fr-FR-DeniseNeural';
+    var edgeVoices = [
+      { id: 'fr-FR-DeniseNeural', label: 'Denise (FR féminine naturelle) ⭐' },
+      { id: 'fr-FR-VivienneMultilingualNeural', label: 'Vivienne (FR féminine chaleureuse)' },
+      { id: 'fr-FR-EloiseNeural', label: 'Éloïse (FR féminine douce)' },
+      { id: 'fr-CA-SylvieNeural', label: 'Sylvie (Québec féminine)' }
+    ];
+    el.innerHTML =
+      '<div style="background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.3);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:0.69em;color:rgba(125,211,252,0.95);line-height:1.5;">' +
+      '🎙️ <strong>Edge Neural TTS</strong> — Synthèse vocale Microsoft Edge Read Aloud (OpenJarvis), <strong>100% gratuite, sans clé ni quota</strong>, basse latence et voix humaine féminine identique sur PC et Web.' +
+      '</div>' +
+      '<div class="form-field"><label class="form-label">Voix féminine Edge Neural</label>' +
+      '<select class="form-select" id="sEdgeVoice">' +
+      edgeVoices.map(function(v){
+        return '<option value="'+v.id+'"'+(edgeVoice===v.id?' selected':'')+'>'+v.label+'</option>';
+      }).join('') +
+      '</select></div>';
+
+  } else if (provider === 'eva') {
     el.innerHTML =
       '<div style="background:rgba(168,85,247,0.07);border:1px solid rgba(168,85,247,0.25);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:0.69em;color:rgba(192,132,252,0.9);line-height:1.5;">' +
       '🧠 <strong>Kokoro Neural</strong> — Voix française <strong>féminine</strong> via Piper VITS (~63 Mo, mis en cache au 1er usage). Identique sur tous les navigateurs.' +
@@ -1257,6 +1284,9 @@ async function saveVoiceSettings() {
     }
   }
 
+  k = document.getElementById('sEdgeVoice');
+  if (k && k.value) S.config.edgeVoice = k.value;
+
   /* EVA Voice */
   k = document.getElementById('sEvaVoice');
   if (k) S.config.evaVoice = k.value;
@@ -1289,7 +1319,7 @@ async function saveVoiceSettings() {
     } catch(e) { console.warn('[EVA] Firebase voice prefs save:', e); }
   }
 
-  var provLabel = {'eva-custom':'EVA Voice Perso','native':'Navigateur','eva':'Kokoro Neural','elevenlabs':'ElevenLabs','openai':'OpenAI TTS','piper':'Piper TTS (FR)'}[S.config.voiceProvider||'piper'] || S.config.voiceProvider;
+  var provLabel = {'edge-neural':'Edge Neural (Denise)','eva-custom':'EVA Voice Perso','native':'Navigateur','eva':'Kokoro Neural','elevenlabs':'ElevenLabs','openai':'OpenAI TTS','piper':'Piper TTS (FR)'}[S.config.voiceProvider||'edge-neural'] || S.config.voiceProvider;
   toast('✓ Paramètres audio sauvegardés — provider : ' + provLabel, 'success');
 
   /* Re-render les options pour afficher l'état mis à jour des clés */
@@ -2359,6 +2389,7 @@ function testVoice() {
   k = document.getElementById('sElevenLabsKey'); if(k) testCfg.elevenLabsApiKey = k.value.trim();
   k = document.getElementById('sOpenAITTSKey');  if(k) testCfg.openAITTSApiKey  = k.value.trim();
   k = document.getElementById('sOpenAITTSVoice'); if(k) testCfg.openAITTSVoice = k.value;
+  k = document.getElementById('sEdgeVoice');      if(k) testCfg.edgeVoice = k.value;
   k = document.getElementById('sEvaVoice');      if(k) testCfg.evaVoice = k.value;
   console.log('[testVoice] provider:', testCfg.voiceProvider, '| elevenKey:', testCfg.elevenLabsApiKey ? '✓' : '✗');
   window.EVATTS.speakText("Bonjour ! Je suis E.V.A, votre assistante virtuelle. Ravie de vous parler !", testCfg);

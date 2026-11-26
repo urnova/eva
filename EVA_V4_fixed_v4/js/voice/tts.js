@@ -23,10 +23,75 @@ var _muted       = false;
 var _currentText = '';
 var _skipTtsBtn  = null; /* bouton "couper la voix" dans le header */
 var _elevenlabsAudio = null; /* Audio en cours pour ElevenLabs */
+var _edgeAudio = null; /* Audio en cours pour Edge Neural TTS */
+var _edgeAbort = false;
 
 /* ── Appel le bon engine selon la config ── */
 function _getEngine(config) {
-  var prov = (config && config.voiceProvider) || 'eva-custom';
+  var prov = (config && config.voiceProvider) ||
+             (window.S && window.S.config && window.S.config.voiceProvider) ||
+             'edge-neural';
+
+  if (prov === 'edge-neural') {
+    return {
+      speak: function(text, cfg, onStart, onEnd) {
+        var voice = (cfg && cfg.edgeVoice) || (window.S && window.S.config && window.S.config.edgeVoice) || 'fr-FR-DeniseNeural';
+        var sr = parseFloat((cfg && cfg.speechRate) || (window.S && window.S.config && window.S.config.speechRate) || 1) || 1;
+        var pct = Math.round((sr - 1) * 100);
+        var rateStr = (pct >= 0 ? '+' : '') + pct + '%';
+        _edgeAbort = false;
+        if (onStart) onStart();
+        fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text, voice: voice, rate: rateStr })
+        }).then(function(r) {
+          if (!r.ok) throw new Error('Edge TTS HTTP ' + r.status);
+          return r.blob();
+        }).then(function(blob) {
+          if (_edgeAbort) { if (onEnd) onEnd(); return; }
+          var url = URL.createObjectURL(blob);
+          _edgeAudio = new Audio(url);
+          _edgeAudio.onended = function() {
+            try { URL.revokeObjectURL(url); } catch(_) {}
+            _edgeAudio = null;
+            if (onEnd) onEnd();
+          };
+          _edgeAudio.onerror = function() {
+            try { URL.revokeObjectURL(url); } catch(_) {}
+            _edgeAudio = null;
+            if (onEnd) onEnd();
+          };
+          _edgeAudio.play().catch(function() {
+            try { URL.revokeObjectURL(url); } catch(_) {}
+            _edgeAudio = null;
+            if (window.EvaCustomTTS && typeof window.EvaCustomTTS.speak === 'function') {
+              window.EvaCustomTTS.speak(text, cfg, null, onEnd);
+            } else {
+              _speakNative(text, cfg);
+              if (onEnd) onEnd();
+            }
+          });
+        }).catch(function(e) {
+          console.warn('[EVA TTS Edge Web] Fallback:', e);
+          _edgeAudio = null;
+          if (window.EvaCustomTTS && typeof window.EvaCustomTTS.speak === 'function') {
+            window.EvaCustomTTS.speak(text, cfg, null, onEnd);
+          } else {
+            _speakNative(text, cfg);
+            if (onEnd) onEnd();
+          }
+        });
+      },
+      stop: function() {
+        _edgeAbort = true;
+        if (_edgeAudio) {
+          try { _edgeAudio.pause(); } catch(_) {}
+          _edgeAudio = null;
+        }
+      }
+    };
+  }
   if (prov === 'eva-custom' || prov === 'piper-vits') {
     return window.EvaCustomTTS || null;
   }
@@ -257,6 +322,10 @@ window.EVATTS = {
     if (window.PiperTTS && typeof window.PiperTTS.stop === 'function') {
       try { window.PiperTTS.stop(); } catch(e) {}
     }
+    _edgeAbort = true;
+    if (_edgeAudio) {
+      try { _edgeAudio.pause(); _edgeAudio = null; } catch(e) {}
+    }
     if (_elevenlabsAudio) {
       try { _elevenlabsAudio.pause(); _elevenlabsAudio = null; } catch(e) {}
     }
@@ -274,6 +343,8 @@ window.EVATTS = {
    */
   isSpeaking: function() {
     if (_speaking) return true;
+    if (_edgeAudio && !_edgeAudio.paused) return true;
+    if (_elevenlabsAudio && !_elevenlabsAudio.paused) return true;
     if (window.EvaCustomTTS && typeof window.EvaCustomTTS.isPlaying === 'function') {
       try { if (window.EvaCustomTTS.isPlaying()) return true; } catch(e) {}
     }

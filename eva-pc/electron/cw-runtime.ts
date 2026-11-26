@@ -105,10 +105,20 @@ function xlsx(args){
  ['xl/_rels/workbook.xml.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'],['xl/worksheets/sheet1.xml',sheet]
  ]);
 }
-export function installCWRuntime({ipcMain,dialog,shell,BrowserWindow,store,mainWindow,assertSender,abortLLM}){
+export function installCWRuntime({ipcMain,dialog,shell,BrowserWindow,store,mainWindow,assertSender,abortLLM,onApprovalOverlay}:any){
  const running=new Map();
- ipcMain.handle('cw:status',event=>{assertSender(event);return {enabled:!!store.get('cwEnabled',false),hostname:os.hostname(),protocol:2};});
- ipcMain.handle('cw:cancel',(event,id)=>{assertSender(event);text(id,200);cancelled.add(id);running.get(id)?.abort();abortLLM(id);setTimeout(()=>cancelled.delete(id),3600000).unref();return {success:true};});
+ const pendingApprovals=new Map<string,{resolve:(ok:boolean)=>void,reject:(e:Error)=>void,timer:NodeJS.Timeout}>();
+ const resolveApproval=(id:string,approved:boolean)=>{
+  const entry=pendingApprovals.get(id);
+  if(!entry)return false;
+  clearTimeout(entry.timer);
+  pendingApprovals.delete(id);
+  entry.resolve(!!approved);
+  return true;
+ };
+ ipcMain.handle('cw:status',event=>{assertSender(event);return {enabled:!!store.get('cwEnabled',false),autonomousMode:!!store.get('cwAutonomousMode',false),hostname:os.hostname(),protocol:2};});
+ ipcMain.handle('cw:respond-approval',(event,id:string,approved:boolean)=>{assertSender(event);text(id,200);return {success:resolveApproval(id,!!approved)};});
+ ipcMain.handle('cw:cancel',(event,id)=>{assertSender(event);text(id,200);cancelled.add(id);const entry=pendingApprovals.get(id);if(entry){clearTimeout(entry.timer);pendingApprovals.delete(id);entry.reject(Error('CANCELLED'));}running.get(id)?.abort();abortLLM(id);setTimeout(()=>cancelled.delete(id),3600000).unref();return {success:true};});
  ipcMain.handle('cw:execute',async(event,name,input,context={})=>{
   let timer=null,controller=null,id=null;
   try{
@@ -123,15 +133,37 @@ export function installCWRuntime({ipcMain,dialog,shell,BrowserWindow,store,mainW
     args.path=await localPath(path.join(args.destination,args.filename),true);
    }
    const sensitive=contract[name]?.sensitive||['session_lock','system_sleep','system_shutdown'].includes(name);
-   const alwaysApprove=['command_run','app_install','app_close','system_shutdown','session_lock','system_sleep','screenshot_take','folder_organize','file_read'].includes(name);
+   const alwaysApprove=['command_run','app_install','app_close','system_shutdown','session_lock','system_sleep'].includes(name);
    const autonomous=!!store.get('cwAutonomousMode',false);
    if(sensitive&&(alwaysApprove||!autonomous)){
     const win=mainWindow();
-    const canAttach=win&&!win.isDestroyed()&&win.isVisible()&&!win.isMinimized();
-    try{if(win&&!win.isDestroyed())win.webContents.send('cw:approval-pending',{taskId:id,tool:name,args});}catch(_){}
-    const msgOpts={type:'warning',title:'EVA CloudWorks — autorisation locale',message:'Autoriser cette operation exacte sur ce PC ?',detail:JSON.stringify({tool:name,args},null,2),buttons:['Refuser','Autoriser'],defaultId:0,cancelId:0,noLink:true};
-    const answer=canAttach?await dialog.showMessageBox(win,msgOpts):await dialog.showMessageBox(msgOpts);
-    if(answer.response!==1)throw Error('APPROVAL_DENIED');
+    const summaryMap:Record<string,string>={
+     file_create:'Créer le fichier '+path.basename(args.path||'fichier'),
+     folder_create:'Créer le dossier '+path.basename(args.path||'dossier'),
+     folder_organize:'Trier le dossier '+path.basename(args.sourcePath||'dossier'),
+     pdf_create:'Créer le PDF '+path.basename(args.path||'document.pdf'),
+     excel_create:'Créer le fichier Excel '+path.basename(args.path||'classeur.xlsx'),
+     document_create:'Créer le document '+(args.filename||'document'),
+     file_read:'Lire le fichier '+path.basename(args.path||'fichier'),
+     screenshot_take:'Prendre une capture d\'écran du PC',
+     app_close:'Fermer l\'application '+(args.name||''),
+     app_install:'Installer '+(args.name||''),
+     command_run:'Exécuter une commande PowerShell',
+     session_lock:'Verrouiller la session Windows',
+     system_sleep:'Mettre le PC en veille',
+     system_shutdown:'Éteindre le PC'
+    };
+    const summary=summaryMap[name]||('Autoriser '+name);
+    const approved=await new Promise<boolean>((resolve,reject)=>{
+     const approvalTimer=setTimeout(()=>{
+      pendingApprovals.delete(id);
+      reject(Error('APPROVAL_TIMEOUT'));
+     },120000);
+     pendingApprovals.set(id,{resolve,reject,timer:approvalTimer});
+     try{if(win&&!win.isDestroyed())win.webContents.send('cw:approval-pending',{taskId:id,tool:name,args,summary});}catch(_){}
+     try{onApprovalOverlay?.({taskId:id,tool:name,summary});}catch(_){}
+    });
+    if(!approved)throw Error('APPROVAL_DENIED');
    }
    if(cancelled.has(id)||controller.signal.aborted)throw Error('CANCELLED');
    timer=setTimeout(()=>controller.abort(),45000);
@@ -141,8 +173,10 @@ export function installCWRuntime({ipcMain,dialog,shell,BrowserWindow,store,mainW
     case 'system_status':result={platform:os.platform(),hostname:os.hostname(),cpu:os.cpus()[0]?.model,totalmem:os.totalmem(),freemem:os.freemem(),summary:'Informations systeme recuperees'};break;
     case 'app_resolve':case 'app_check':{
      const q=text(args.query||args.name,100);
-     const out=await ps('$items=@(Get-StartApps | Where-Object { $_.Name -like ("*"+$p.q+"*") -or $_.AppID -eq $p.q } | Select-Object -First 10 Name,AppID); $cmd=Get-Command -Name $p.q -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1; if($cmd){$items+=@{Name=$cmd.Name;path=$cmd.Source}}; ConvertTo-Json -InputObject @($items) -Compress',{q},signal);
-     const matches=JSON.parse(out||'[]');result={found:matches.length>0,installed:matches.length>0,matches,primaryMatch:matches[0]||null};break;
+     const out=await ps('$q=$p.q; $items=@(); $apps=Get-StartApps | Where-Object { $_.Name -like ("*"+$q+"*") -or $_.AppID -eq $q } | Select-Object -First 10 Name,AppID; foreach($a in $apps){ $isPwa=($a.AppID -match "_|chrome|msedge|brave|Web|App" -or $a.AppID -like "*!*"); $items+=@{Name=$a.Name;AppID=$a.AppID;isPWA=[bool]$isPwa} }; $regPaths=@("HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*","HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*"); foreach($rp in $regPaths){ Get-ItemProperty $rp -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like ("*"+$q+"*") } | Select-Object -First 5 | ForEach-Object { $items+=@{Name=$_.DisplayName;icon=$_.DisplayIcon;installLocation=$_.InstallLocation;isPWA=($_.DisplayIcon -match "msedge|chrome|brave" -or $_.UninstallString -match "--app-id=")} } }; $cmd=Get-Command -Name $q -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1; if($cmd){$items+=@{Name=$cmd.Name;path=$cmd.Source;isPWA=$false}}; ConvertTo-Json -InputObject @($items) -Compress',{q},signal);
+     const matches=JSON.parse(out||'[]');
+     const pwaFirst=matches.find((m:any)=>m.AppID)||matches[0]||null;
+     result={found:matches.length>0,installed:matches.length>0,matches,primaryMatch:pwaFirst};break;
     }
     case 'app_launch':case 'web_browse':{
      const target=text(args.target||args.url,4096),launchArgs=args.args||'';
