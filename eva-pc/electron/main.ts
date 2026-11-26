@@ -552,6 +552,10 @@ app.whenReady().then(async () => {
   const _t = _enc.split('').reverse().join('')
   autoUpdater.requestHeaders = { "Authorization": "token " + _t }
   autoUpdater.autoDownload = false
+  if (app.isPackaged) {
+    (autoUpdater as any).installDirectory = path.dirname(app.getPath('exe'));
+    logMain('[AutoUpdater] Target installDirectory:', (autoUpdater as any).installDirectory);
+  }
 
   let updateHandled = false;
   const finishSplash = (delay = 600) => {
@@ -1407,10 +1411,44 @@ ipcMain.handle('app:path', () => app.getPath('userData'))
 ipcMain.handle('app:quit', () => { app.isQuitting = true; app.quit() })
 
 // --- Updater IPC ---
+function _prepareUpdaterEnv(): string {
+  const exeDir = path.dirname(app.getPath('exe'));
+  if (app.isPackaged) {
+    (autoUpdater as any).installDirectory = exeDir;
+  }
+  const minBytes = 1500 * 1024 * 1024;
+  const sysTmp = os.tmpdir();
+  let tmpFree = 0;
+  try {
+    const st = fs.statfsSync(sysTmp);
+    tmpFree = st.bavail * st.bsize;
+  } catch (_) {}
+  if (tmpFree < minBytes) {
+    const candidates = [
+      path.join(path.dirname(exeDir), '.eva-update-tmp'),
+      'F:\\temp\\eva-update-tmp',
+    ];
+    for (const c of candidates) {
+      try {
+        fs.mkdirSync(c, { recursive: true });
+        const st = fs.statfsSync(c);
+        if (st.bavail * st.bsize >= minBytes) {
+          process.env.TEMP = c;
+          process.env.TMP = c;
+          logMain('[AutoUpdater] TEMP redirigé hors C: ->', c);
+          return c;
+        }
+      } catch (_) {}
+    }
+  }
+  return sysTmp;
+}
+
 function performQuitAndInstall() {
   if (_isInstallingUpdate) return;
   _isInstallingUpdate = true;
-  logMain('[AutoUpdater] performQuitAndInstall started');
+  const updTmp = _prepareUpdaterEnv();
+  logMain('[AutoUpdater] performQuitAndInstall started | dir:', (autoUpdater as any).installDirectory || '(default)', '| TEMP:', updTmp);
   forceQuit = true;
   app.isQuitting = true;
   try { activeAbortController?.abort(); } catch(_) {}
@@ -1423,7 +1461,7 @@ function performQuitAndInstall() {
   try { if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.destroy(); } catch(_) {}
   try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy(); } catch(_) {}
   setImmediate(() => {
-    autoUpdater.quitAndInstall(false, true);
+    autoUpdater.quitAndInstall(true, true);
   });
 }
 

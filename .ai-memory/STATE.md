@@ -1,6 +1,8 @@
 ﻿# STATE — E.V.A Multiplateforme
 
-- **Phase actuelle** : D1 finalisée et publiée (`eva-pc` v5.6.28 sur GitHub Releases + Web sur `main` / Vercel).
+- **Phase actuelle** : D1 finalisée et publiée (`eva-pc` v5.6.29 sur GitHub Releases + Web sur `main` / Vercel).
+- **Correctifs v5.6.29** :
+  - `eva-pc/electron/main.ts` : définition explicite de `autoUpdater.installDirectory = path.dirname(app.getPath('exe'))`, redirection automatique de `TEMP`/`TMP` hors de `C:` (`_prepareUpdaterEnv`) s'il reste moins de 1,5 Go libres, et passage à `autoUpdater.quitAndInstall(true, true)` pour exécuter l'installation silencieuse et relancer EVA automatiquement après UAC.
 - **Correctifs v5.6.28** :
   - `overlay.html`, `main.ts`, `pc-bridge.js` : zone `-webkit-app-region: drag` déplacée sur `.drag-zone` (hors `.btn-action` et `#approvalBar`), bouton Power/Annuler stoppe immédiatement TTS/Jarvis/CloudWorks et garde l'overlay masqué (`_overlayCancelledUntil`).
   - `cw-chat.js`, `messages.js` : coupe-circuit conversationnel à 0 ms pour les salutations/questions pures sans mots-clés PC/fichier/app ; suppression complète des bulles `#typingInd, .typing-bubble` lors du basculement ou après réponse (`Génère...` ne reste plus figé).
