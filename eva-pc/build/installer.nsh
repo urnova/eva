@@ -1,47 +1,8 @@
 !macro customInit
-  ; ═══════════════════════════════════════════════════════
-  ; FIX v5.6.10 — Fermeture CIBLÉE d'EVA avant installation
-  ; RÈGLES DE SÉCURITÉ :
-  ;   - Aucun "$_" dans ce fichier (NSIS l'interpréterait comme variable)
-  ;   - Aucun kill générique par chemin court "%EVA%" (tue des apps tierces !)
-  ;   - On ne tue QUE les processus portant exactement le nom de l'exe EVA
-  ;     ou dont le chemin contient "EVA Assistant" (nom unique de l'installeur)
-  ; ═══════════════════════════════════════════════════════
-
-  ; 1. Tuer directement par nom de processus EVA (noms exacts uniquement)
+  ; Fermeture rapide et ciblée d'EVA avant installation (sans wmic ni PowerShell lents)
   nsExec::Exec 'taskkill /F /IM "EVA Assistant.exe" /T'
   nsExec::Exec 'taskkill /F /IM "eva-assistant-pc.exe" /T'
-
-  ; 2. Tuer les processus Electron helper orphelins UNIQUEMENT dans le dossier "EVA Assistant"
-  ;    Le chemin contient "EVA Assistant" (nom complet) — pas de faux positifs
-  nsExec::Exec 'wmic process where "ExecutablePath like ''%EVA Assistant%''" call terminate'
-
-  ; 3. Lire le chemin d'installation depuis le registre EVA et tuer les processus
-  ;    appartenant à CE dossier précis seulement
-  ;    Note: electron-builder utilise l'AppId GUID dans Uninstall (ex: 7c... ou com.astraltechnologie.eva)
-  ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\com.astraltechnologie.eva" "InstallLocation"
-  ${If} $R0 == ""
-    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\eva-assistant-pc" "InstallLocation"
-  ${EndIf}
-  ${If} $R0 != ""
-    ; Construire la commande wmic avec le chemin interpolé par NSIS
-    StrCpy $1 'wmic process where "ExecutablePath like ''$R0\\%''" call terminate'
-    nsExec::Exec '$1'
-  ${EndIf}
-
-  ; 4. Libérer le port local EVA 45454 — UNIQUEMENT si le processus est lié à EVA
-  ;    On écrit un script PS temporaire pour éviter l'interprétation de $ par NSIS
-  ;    Dans NSIS : $$ = dollar littéral, $\r$\n = saut de ligne
-  GetTempFileName $R2
-  FileOpen $R3 "$R2.ps1" w
-  FileWrite $R3 "try { foreach ($$c in (Get-NetTCPConnection -LocalPort 45454 -ErrorAction SilentlyContinue)) { $$info = Get-Process -Id $$c.OwningProcess -EA SilentlyContinue; if ($$info -and ($$info.Name -like '*eva*' -or $$info.Name -like '*EVA*')) { Stop-Process -Id $$c.OwningProcess -Force -EA SilentlyContinue } } } catch {}"
-  FileClose $R3
-  nsExec::Exec 'powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$R2.ps1"'
-  Delete "$R2.ps1"
-  Delete "$R2"
-
-  ; 5. Attendre que les processus soient bien tués
-  Sleep 1500
+  Sleep 500
 !macroend
 
 !include "LogicLib.nsh"

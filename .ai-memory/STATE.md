@@ -1,6 +1,9 @@
 ﻿# STATE — E.V.A Multiplateforme
 
-- **Phase actuelle** : D1 finalisée et publiée (`eva-pc` v5.6.29 sur GitHub Releases + Web sur `main` / Vercel).
+- **Phase actuelle** : D1 finalisée et publiée (`eva-pc` v5.6.30 sur GitHub Releases + Web sur `main` / Vercel).
+- **Correctifs v5.6.30** :
+  - `eva-pc/package.json` : exclusion des binaires/sources redondants de l'archive (`!public/models/**/*`, `!dist/js/patches/**/*`, `!node_modules/node-llama-cpp/llama/llama.cpp/**/*`, `!node_modules/node-llama-cpp/llama/gitRelease.bundle`, `!node_modules/@node-llama-cpp/win-arm64/**/*`, `!node_modules/@node-llama-cpp/win-x64-cuda/**/*`, `!node_modules/@node-llama-cpp/win-x64-cuda-ext/**/*`), passage à `"compression": "normal"` et `"perMachine": false` (`allowElevation: true`), ramenant `E.V.A-Setup-5.6.30.exe` de `367,7 Mo` à **`128,3 Mo`** (`app.asar.unpacked` de `679,5 Mo` à `149,5 Mo`).
+  - `eva-pc/build/installer.nsh` : suppression de `wmic` (absent sur Windows 11 26200) et du script PowerShell à froid au profit d'un `taskkill` ciblé rapide (`Sleep 500`).
 - **Correctifs v5.6.29** :
   - `eva-pc/electron/main.ts` : définition explicite de `autoUpdater.installDirectory = path.dirname(app.getPath('exe'))`, redirection automatique de `TEMP`/`TMP` hors de `C:` (`_prepareUpdaterEnv`) s'il reste moins de 1,5 Go libres, et passage à `autoUpdater.quitAndInstall(true, true)` pour exécuter l'installation silencieuse et relancer EVA automatiquement après UAC.
 - **Correctifs v5.6.28** :
