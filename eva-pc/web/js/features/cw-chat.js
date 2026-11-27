@@ -21,7 +21,8 @@ async function route(text){
  if(w.S.image||w.S.images?.length||w.S.document||w.S.documents?.length)return false;
  if(routing){w.toast?.('Routage deja en cours','info');return true;}
  const forced=/^\/pc\s/i.test(text),prompt=forced?text.replace(/^\/pc\s/i,''):text;
- if(!forced&&!PC_HINT_RE.test(prompt))return false;
+ const isPureWebInfo=/\b(m[eé]t[eé]o|quel temps|temp[eé]rature|actualit[eé]s?|news|qui est|qu['’]est[- ]ce|d[eé]finition|prix|cours)\b/i.test(prompt)&&!/\b(dossier|fichier|bureau|app|appli|logiciel|programme|chrome|edge|tetris|pdf|excel)\b/i.test(prompt);
+ if(!forced&&(isPureWebInfo||!PC_HINT_RE.test(prompt)))return false;
  if(!forced&&w.eva?.cloudworks?.status){
   try{const st=await w.eva.cloudworks.status();if(!st?.enabled)return false;}catch(_){return false;}
  }

@@ -110,25 +110,38 @@ function currentDateTimeStr() {
   return date + ' à ' + time;
 }
 
+/* ── Fetch avec timeout strict (5s) pour éviter tout blocage vocal ── */
+async function _fetchWithTimeout(url, ms) {
+  var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var tId = ctrl ? setTimeout(function() { ctrl.abort(); }, ms || 5000) : null;
+  try {
+    return await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
+  } finally {
+    if (tId) clearTimeout(tId);
+  }
+}
+
 /* ── Météo via Open-Meteo (gratuit, sans clé) ─────────────── */
 async function fetchWeather(city) {
   try {
-    var geoRes = await fetch(
+    var geoRes = await _fetchWithTimeout(
       'https://geocoding-api.open-meteo.com/v1/search?name=' +
-      encodeURIComponent(city) + '&count=1&language=fr&format=json'
+      encodeURIComponent(city) + '&count=1&language=fr&format=json',
+      5000
     );
     if (!geoRes.ok) return null;
     var geoData = await geoRes.json();
     if (!geoData.results || geoData.results.length === 0) return null;
     var loc = geoData.results[0];
 
-    var weatherRes = await fetch(
+    var weatherRes = await _fetchWithTimeout(
       'https://api.open-meteo.com/v1/forecast' +
       '?latitude=' + loc.latitude +
       '&longitude=' + loc.longitude +
       '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation,weather_code,apparent_temperature' +
       '&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code' +
-      '&timezone=auto&forecast_days=4'
+      '&timezone=auto&forecast_days=4',
+      5000
     );
     if (!weatherRes.ok) return null;
     var w = await weatherRes.json();
@@ -170,9 +183,10 @@ async function fetchDDG(query) {
     var parts = [];
     
     // 1. Essai API Instant Answer (rapide, propre pour les définitions)
-    var res = await fetch(
+    var res = await _fetchWithTimeout(
       'https://api.duckduckgo.com/?q=' + encodeURIComponent(query) +
-      '&format=json&no_redirect=1&no_html=1&skip_disambig=1'
+      '&format=json&no_redirect=1&no_html=1&skip_disambig=1',
+      4500
     );
     if (res.ok) {
       var data = await res.json();
@@ -191,7 +205,7 @@ async function fetchDDG(query) {
     // 2. Si l'API Instant Answer n'a rien donné, on scrape le HTML via AllOrigins (CORS)
     if (parts.length === 0) {
       var htmlUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query));
-      var res2 = await fetch(htmlUrl);
+      var res2 = await _fetchWithTimeout(htmlUrl, 5000);
       if (res2.ok) {
         var data2 = await res2.json();
         var html = data2.contents;

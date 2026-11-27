@@ -25,6 +25,8 @@ var _skipTtsBtn  = null; /* bouton "couper la voix" dans le header */
 var _elevenlabsAudio = null; /* Audio en cours pour ElevenLabs */
 var _edgeAudio = null; /* Audio en cours pour Edge Neural TTS */
 var _edgeAbort = false;
+var _ttsGen = 0;
+var _streamTimer = null;
 
 /* ── Helper de secours vocal gratuit (EvaCustomTTS / Web Speech / SAPI) sans jamais bloquer le cycle ── */
 var _lastTtsWarningTime = 0;
@@ -113,58 +115,62 @@ function _getEngine(config) {
         var rateStr = (pct >= 0 ? '+' : '') + pct + '%';
 
         _edgeAbort = false;
+        var myGen = _ttsGen;
         if (onStart) onStart();
         if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) {
           try { window.eva.tts.setMicPaused(true); } catch(_) {}
         }
 
-        var finishEdge = function() {
+        var finishEdge = function(aborted) {
           _edgeAudio = null;
           if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) {
             try { window.eva.tts.setMicPaused(false); } catch(_) {}
           }
           window._lastTtsEndTime = Date.now();
-          if (onEnd) onEnd();
+          if (!aborted && myGen === _ttsGen && onEnd) onEnd();
         };
 
         var playBlobOrB64 = function(src, isBlob) {
-          if (_edgeAbort) {
+          if (_edgeAbort || myGen !== _ttsGen) {
             if (isBlob) try { URL.revokeObjectURL(src); } catch(_) {}
-            finishEdge();
+            finishEdge(true);
             return;
           }
           _edgeAudio = new Audio(src);
           _edgeAudio.onended = function() {
             if (isBlob) try { URL.revokeObjectURL(src); } catch(_) {}
-            finishEdge();
+            finishEdge(_edgeAbort || myGen !== _ttsGen);
           };
           _edgeAudio.onerror = function() {
             if (isBlob) try { URL.revokeObjectURL(src); } catch(_) {}
-            finishEdge();
+            finishEdge(_edgeAbort || myGen !== _ttsGen);
           };
           _edgeAudio.play().catch(function(err) {
             console.warn('[EVA TTS Edge] Lecture bloquée:', err);
             if (isBlob) try { URL.revokeObjectURL(src); } catch(_) {}
+            if (_edgeAbort || myGen !== _ttsGen) { finishEdge(true); return; }
             if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) {
               try { window.eva.tts.setMicPaused(false); } catch(_) {}
             }
-            _speakFallback(text, cfg, null, onEnd);
+            _speakFallback(text, cfg, null, function() { if (myGen === _ttsGen && onEnd) onEnd(); });
           });
         };
 
         if (window.eva && window.eva.tts && typeof window.eva.tts.edgeSpeak === 'function') {
           window.eva.tts.edgeSpeak(text, voice, rateStr).then(function(res) {
+            if (_edgeAbort || myGen !== _ttsGen) { finishEdge(true); return; }
             if (res && res.success && res.audioBase64) {
               playBlobOrB64('data:audio/mpeg;base64,' + res.audioBase64, false);
             } else {
               throw new Error((res && res.error) || 'EDGE_IPC_FAILED');
             }
           }).catch(function(err) {
+            if (_edgeAbort || myGen !== _ttsGen) { finishEdge(true); return; }
             console.warn('[EVA TTS Edge PC] Fallback local:', err);
             if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) {
               try { window.eva.tts.setMicPaused(false); } catch(_) {}
             }
-            _speakFallback(text, cfg, null, onEnd);
+            _speakFallback(text, cfg, null, function() { if (myGen === _ttsGen && onEnd) onEnd(); });
           });
         } else {
           fetch('/api/tts', {
@@ -175,10 +181,12 @@ function _getEngine(config) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.blob();
           }).then(function(blob) {
+            if (_edgeAbort || myGen !== _ttsGen) { finishEdge(true); return; }
             playBlobOrB64(URL.createObjectURL(blob), true);
           }).catch(function(err) {
+            if (_edgeAbort || myGen !== _ttsGen) { finishEdge(true); return; }
             console.warn('[EVA TTS Edge API] Fallback local:', err);
-            _speakFallback(text, cfg, null, onEnd);
+            _speakFallback(text, cfg, null, function() { if (myGen === _ttsGen && onEnd) onEnd(); });
           });
         }
       },
@@ -435,13 +443,19 @@ function _ensureVoices(cb) {
 }
 
 function _speakNative(text, config) {
-  // === Sur l'app Electron Windows : utiliser PowerShell TTS (System.Speech) ===
-  // C'est 100% fiable — ne dépend pas des voix Chromium ou de onvoiceschanged
+  var myGen = _ttsGen;
+  if (window.eva && window.eva.tts && typeof window.eva.tts.speak === 'function') {
+    _speaking = true;
+    _updateSkipBtn();
+    window.eva.tts.speak(text)
+      .then(function() { _speaking = false; _updateSkipBtn(); if (myGen === _ttsGen) _onSpeakEnd(); })
+      .catch(function() { _speaking = false; _updateSkipBtn(); if (myGen === _ttsGen) _speakWebSpeech(text, config); });
+    return;
+  }
   if (window.eva && window.eva.system && window.eva.system.exec) {
     _speakPowerShell(text, config);
     return;
   }
-  // === Fallback Web Speech API (navigateur ou Electron sans exec) ===
   _speakWebSpeech(text, config);
 }
 
@@ -611,8 +625,13 @@ window.EVATTS = {
   speakTextStreaming: function(text, config) {
     this.stopTTS();
     var self = this;
+    var myGen = _ttsGen;
     /* Petit délai pour laisser l'arrêt prendre effet */
-    setTimeout(function() { self.speakText(text, config); }, 120);
+    _streamTimer = setTimeout(function() {
+      _streamTimer = null;
+      if (myGen !== _ttsGen) return;
+      self.speakText(text, config);
+    }, 120);
   },
 
   /**
@@ -620,6 +639,8 @@ window.EVATTS = {
    * Stoppe toute lecture vocale en cours
    */
   stopTTS: function() {
+    _ttsGen++;
+    if (_streamTimer) { clearTimeout(_streamTimer); _streamTimer = null; }
     _speaking = false;
     _updateSkipBtn();
     /* Stopper la voix native Windows SAPI si active */
@@ -638,16 +659,16 @@ window.EVATTS = {
     }
     _edgeAbort = true;
     if (_edgeAudio) {
-      try { _edgeAudio.pause(); _edgeAudio = null; } catch(e) {}
+      try { _edgeAudio.pause(); _edgeAudio.currentTime = 0; _edgeAudio.src = ''; _edgeAudio = null; } catch(e) { _edgeAudio = null; }
     }
     if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) {
       try { window.eva.tts.setMicPaused(false); } catch(e) {}
     }
     if (_elevenlabsAudio) {
-      try { _elevenlabsAudio.pause(); _elevenlabsAudio = null; } catch(e) {}
+      try { _elevenlabsAudio.pause(); _elevenlabsAudio.currentTime = 0; _elevenlabsAudio.src = ''; _elevenlabsAudio = null; } catch(e) { _elevenlabsAudio = null; }
     }
     if (window._openaiAudio) {
-      try { window._openaiAudio.pause(); window._openaiAudio = null; } catch(e) {}
+      try { window._openaiAudio.pause(); window._openaiAudio.currentTime = 0; window._openaiAudio.src = ''; window._openaiAudio = null; } catch(e) { window._openaiAudio = null; }
     }
     if (typeof speechSynthesis !== 'undefined') {
       try { speechSynthesis.cancel(); } catch(e) {}

@@ -1,6 +1,11 @@
 ﻿# STATE — E.V.A Multiplateforme
 
-- **Phase actuelle** : D1 finalisée et publiée (`eva-pc` v5.6.31 sur GitHub Releases + Web sur `main` / Vercel).
+- **Phase actuelle** : D1 finalisée et publiée (`eva-pc` v5.6.32 sur GitHub Releases + Web sur `main` / Vercel).
+- **Correctifs v5.6.32** :
+  - `eva-pc/electron/main.ts` & `eva-pc/build/installer.nsh` : `quitAndInstall(false, true)` pour conserver la barre de progression visuelle NSIS pendant l'installation, plus `!macro customFinishPage` auto-lançant EVA et fermant l'installeur sous `--updated` ; ajout d'un repli `vulkan` -> CPU si `getLlama()` échoue à froid ; garde `_sttProcess` IPC pour ne pas écraser l'overlay `'thinking'/'speaking'` par `'listening'`.
+  - `eva-pc/web/overlay.html`, `eva-pc/electron/preload.ts`, `eva-pc/web/js/voice/tts.js`, `eva-pc/web/js/pc-bridge.js` : `-webkit-app-region: no-drag` strict + `onpointerdown`/`onclick` sur `#btnPowerAction`, IPC `tts:force-stop`, annulation du timer `speakTextStreaming` + compteur `_ttsGen` empêchant toute reprise ou relance `handleJarvisFollowUp()` après Power, et déduplication/blocage wakeword pendant traitement actif.
+  - `eva-pc/scripts/eva_whisper_service.py`, `eva-pc/web/js/voice/stt.js`, `eva-pc/web/js/voice/wake-word.js` : modèle Whisper `small` CUDA `float16` (`base` CPU), `vad_filter=True`, suppression du faux `INITIAL_PROMPT`, seuils `no_speech_prob`/`avg_logprob`/RMS contre les hallucinations silencieuses, priorité à Whisper GPU sur Electron (avec porte RMS aussi sur Vosk).
+  - `web-search.js`, `cw-chat.js`, `messages.js`, `overlay.html` : timeout `5000 ms` sur météo/DDG, exclusion météo/actualités du routage CloudWorks, et relais d'étapes `EVA — RECHERCHE WEB` → `EVA ANALYSE...` → `EVA PARLE` dans la bulle.
 - **Correctifs v5.6.31** :
   - `eva-pc/web/js/pc-bridge.js` : suppression des phrases répétitives vocales `FOLLOW_UP_PROMPTS` (`"Avez-vous besoin d'autre chose ?"`…) dans `handleJarvisFollowUp()` ; ouverture directe et silencieuse de la fenêtre d'écoute après réponse, et `CLOSING_REGEX` restreinte aux formules complètes de clôture.
   - `cw-agent.js` (PC & Web) : ajout de `safeParseDecision()` pour récupérer les JSON tronqués par la limite de tokens sur `file_create`, consigne `"DRAFT"` pour les contenus longs, et fallback en texte libre sur `llmChat` (sans `jsonSchema`) quand le fournisseur cloud est absent/hors ligne.

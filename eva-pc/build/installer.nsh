@@ -37,3 +37,28 @@
   ; Le modele LLM est desormais telecharge a la demande depuis l'application (CloudWorks)
   ; pour une installation ultra-rapide (en quelques secondes).
 !macroend
+
+!macro customFinishPage
+  Function CustomStartApp
+    ${if} ${isUpdated}
+      StrCpy $1 "--updated"
+    ${else}
+      StrCpy $1 ""
+    ${endif}
+    ${StdUtils.ExecShellAsUser} $0 "$launchLink" "open" "$1"
+  FunctionEnd
+
+  Function finishPagePre
+    ${if} ${isUpdated}
+      Call CustomStartApp
+      Abort
+    ${endif}
+  FunctionEnd
+
+  !define MUI_PAGE_CUSTOMFUNCTION_PRE finishPagePre
+  !ifndef HIDE_RUN_AFTER_FINISH
+    !define MUI_FINISHPAGE_RUN
+    !define MUI_FINISHPAGE_RUN_FUNCTION "CustomStartApp"
+  !endif
+  !insertmacro MUI_PAGE_FINISH
+!macroend

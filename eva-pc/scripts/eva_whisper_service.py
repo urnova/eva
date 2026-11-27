@@ -28,7 +28,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import numpy as np
 
 WAKE_WORDS = ['eva', 'éva', 'hey eva', 'e.v.a', 'eh va', 'eva,', 'éva,']
-INITIAL_PROMPT = "Bonjour Eva. Test 1 2 3, un deux trois. Comment vas-tu ? Active CloudWorks."
+INITIAL_PROMPT = None
+
+HALLUCINATIONS = {
+    "merci", "merci.", "merci beaucoup", "merci beaucoup.",
+    "merci d'avoir regardé", "merci d'avoir regarde",
+    "sous-titres", "sous-titres réalisés", "amara.org",
+    "test 1 2 3", "un deux trois", "active cloudworks",
+    "c'est parti", "...", ".", "!", "?"
+}
 
 def set_low_priority():
     """Abaisse la priorité du processus pour ne jamais ralentir le système (jeux, navigation, etc.)."""
@@ -113,24 +121,27 @@ def main():
 
     if hw["gpu_available"]:
         try:
-            sys.stderr.write(f"[Whisper] GPU dédié détecté : {hw['gpu_name']} ({hw['vram_gb']} Go VRAM). Chargement CUDA float16...\n")
-            model = faster_whisper.WhisperModel("tiny", device="cuda", compute_type="float16")
+            sys.stderr.write(f"[Whisper] GPU dédié détecté : {hw['gpu_name']} ({hw['vram_gb']} Go VRAM). Chargement 'small' CUDA float16...\n")
+            model = faster_whisper.WhisperModel("small", device="cuda", compute_type="float16")
             device = "cuda"
             compute_type = "float16"
+            model_name = "small"
         except Exception as e:
-            sys.stderr.write(f"[Whisper] Échec CUDA ({e}). Bascule sécurisée sur CPU int8...\n")
+            sys.stderr.write(f"[Whisper] Échec CUDA ({e}). Bascule sécurisée sur CPU 'base' int8...\n")
             device = "cpu"
             compute_type = "int8"
-            model = faster_whisper.WhisperModel("tiny", device="cpu", compute_type="int8", cpu_threads=hw["cpu_threads"])
+            model_name = "base"
+            model = faster_whisper.WhisperModel("base", device="cpu", compute_type="int8", cpu_threads=hw["cpu_threads"])
     else:
-        sys.stderr.write(f"[Whisper] Mode CPU int8 optimisé ({hw['cpu_threads']} threads, 0 ralentissement système)...\n")
-        model = faster_whisper.WhisperModel("tiny", device="cpu", compute_type="int8", cpu_threads=hw["cpu_threads"])
+        sys.stderr.write(f"[Whisper] Mode CPU 'base' int8 optimisé ({hw['cpu_threads']} threads, 0 ralentissement système)...\n")
+        model_name = "base"
+        model = faster_whisper.WhisperModel("base", device="cpu", compute_type="int8", cpu_threads=hw["cpu_threads"])
 
     send_json({
         "type": "ready",
         "device": device,
         "compute_type": compute_type,
-        "model": "tiny",
+        "model": model_name,
         "cpu_threads": hw["cpu_threads"],
         "gpu_name": hw["gpu_name"]
     })
@@ -163,6 +174,9 @@ def main():
                         try: audio_queue.get_nowait()
                         except: break
                 elif cmd == "resume":
+                    while not audio_queue.empty():
+                        try: audio_queue.get_nowait()
+                        except: break
                     is_paused = False
                 elif cmd == "stop":
                     is_running = False
@@ -191,9 +205,30 @@ def main():
     speech_blocks = []
     in_speech = False
     silence_blocks_count = 0
-    SILENCE_THRESHOLD_BLOCKS = 7
+    SILENCE_THRESHOLD_BLOCKS = 8
     NOISE_FLOOR = 0.005
+    peak_rms = 0.0
     last_interim_time = 0
+
+    def filter_segments(segments, seg_peak_rms):
+        kept = []
+        for s in segments:
+            txt = (s.text or "").strip()
+            if not txt:
+                continue
+            if getattr(s, "no_speech_prob", 0.0) > 0.60:
+                continue
+            if getattr(s, "avg_logprob", 0.0) < -1.05:
+                continue
+            if getattr(s, "compression_ratio", 1.0) > 2.2:
+                continue
+            low = txt.lower().strip()
+            if any(bad in low for bad in ("sous-titr", "amara.org", "merci d'avoir regard", "test 1 2 3")):
+                continue
+            if low in HALLUCINATIONS and seg_peak_rms < max(0.025, NOISE_FLOOR * 4.0):
+                continue
+            kept.append(txt)
+        return " ".join(kept).strip()
 
     try:
         while is_running:
@@ -207,16 +242,19 @@ def main():
 
             if not in_speech:
                 NOISE_FLOOR = min(max(0.001, NOISE_FLOOR * 0.99 + rms * 0.01), 0.05)
-                vad_threshold = max(0.012, NOISE_FLOOR * 2.8)
+                vad_threshold = max(0.018, NOISE_FLOOR * 3.5)
             else:
-                vad_threshold = max(0.010, NOISE_FLOOR * 2.2)
+                vad_threshold = max(0.013, NOISE_FLOOR * 2.5)
 
             if rms > vad_threshold:
                 silence_blocks_count = 0
                 if not in_speech:
                     in_speech = True
+                    peak_rms = rms
                     speech_blocks = list(pre_speech_blocks)
                     last_interim_time = time.time()
+                elif rms > peak_rms:
+                    peak_rms = rms
                 speech_blocks.append(flat)
             else:
                 if in_speech:
@@ -226,17 +264,19 @@ def main():
                         total_samples = sum(len(b) for b in speech_blocks)
                         duration_sec = total_samples / SAMPLE_RATE
 
-                        if duration_sec >= 0.35:
+                        if duration_sec >= 0.45 and peak_rms >= max(0.020, NOISE_FLOOR * 3.5):
                             audio_data = np.concatenate(speech_blocks)
                             try:
                                 segments, _ = model.transcribe(
                                     audio_data,
                                     language="fr",
                                     initial_prompt=INITIAL_PROMPT,
-                                    beam_size=1,
-                                    vad_filter=False
+                                    condition_on_previous_text=False,
+                                    beam_size=2 if device == "cuda" else 1,
+                                    vad_filter=True,
+                                    vad_parameters={"min_silence_duration_ms": 400, "speech_pad_ms": 180}
                                 )
-                                final_text = " ".join([s.text for s in segments]).strip()
+                                final_text = filter_segments(segments, peak_rms)
                                 if final_text:
                                     has_ww, cmd = check_wakeword(final_text)
                                     send_json({
@@ -257,6 +297,7 @@ def main():
                         in_speech = False
                         speech_blocks = []
                         silence_blocks_count = 0
+                        peak_rms = 0.0
                 else:
                     pre_speech_blocks.append(flat)
                     if len(pre_speech_blocks) > MAX_PRE_SPEECH:
@@ -267,17 +308,19 @@ def main():
             if device == "cuda" and in_speech and (time.time() - last_interim_time > 0.5):
                 last_interim_time = time.time()
                 total_samples = sum(len(b) for b in speech_blocks)
-                if total_samples / SAMPLE_RATE >= 0.6:
+                if total_samples / SAMPLE_RATE >= 0.6 and peak_rms >= max(0.020, NOISE_FLOOR * 3.5):
                     audio_data = np.concatenate(speech_blocks)
                     try:
                         segments, _ = model.transcribe(
                             audio_data,
                             language="fr",
                             initial_prompt=INITIAL_PROMPT,
+                            condition_on_previous_text=False,
                             beam_size=1,
-                            vad_filter=False
+                            vad_filter=True,
+                            vad_parameters={"min_silence_duration_ms": 400, "speech_pad_ms": 180}
                         )
-                        interim_text = " ".join([s.text for s in segments]).strip()
+                        interim_text = filter_segments(segments, peak_rms)
                         if interim_text:
                             send_json({"type": "interim", "text": interim_text})
                     except Exception:

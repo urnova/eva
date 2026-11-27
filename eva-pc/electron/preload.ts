@@ -125,17 +125,19 @@ const evaAPI = {
   },
 
 
-  // ── STT (Speech-to-Text — PowerShell Windows) ──
+  // ── STT (Speech-to-Text — Faster-Whisper GPU & fallback) ──
   stt: {
     start: () => ipcRenderer.invoke('stt:start'),
     stop: () => ipcRenderer.invoke('stt:stop'),
-    onResult: (callback: (result: {text: string}) => void) => {
-      ipcRenderer.removeAllListeners('stt:result');
-      ipcRenderer.on('stt:result', (_: unknown, result: {text: string}) => callback(result));
+    onResult: (callback: (result: {text: string, isFinal?: boolean}) => void) => {
+      const listener = (_: unknown, result: {text: string, isFinal?: boolean}) => callback(result);
+      ipcRenderer.on('stt:result', listener);
+      return () => ipcRenderer.removeListener('stt:result', listener);
     },
     onStopped: (callback: () => void) => {
-      ipcRenderer.removeAllListeners('stt:stopped');
-      ipcRenderer.on('stt:stopped', () => callback());
+      const listener = () => callback();
+      ipcRenderer.on('stt:stopped', listener);
+      return () => ipcRenderer.removeListener('stt:stopped', listener);
     },
     offAll: () => {
       ipcRenderer.removeAllListeners('stt:result');
@@ -229,7 +231,12 @@ const evaAPI = {
     speak: (text: string) => ipcRenderer.invoke('tts:speak', text),
     stop: () => ipcRenderer.invoke('tts:stop'),
     edgeSpeak: (text: string, voice?: string, rate?: string) => ipcRenderer.invoke('tts:edge-speak', text, voice, rate),
-    setMicPaused: (paused: boolean) => ipcRenderer.invoke('tts:mic-paused', paused)
+    setMicPaused: (paused: boolean) => ipcRenderer.invoke('tts:mic-paused', paused),
+    onForceStop: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on('tts:force-stop', listener);
+      return () => ipcRenderer.removeListener('tts:force-stop', listener);
+    }
   },
 
   // ── LLM Shortcuts ──

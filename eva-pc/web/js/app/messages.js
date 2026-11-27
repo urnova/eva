@@ -774,6 +774,9 @@ async function handleSend(customText) {
     }
     setEvaStatus('EVA RÉFLÉCHIT...', 'thinking');
   }
+  if (typeof window.setThinkingPhase === 'function') {
+    window.setThinkingPhase(_SVG_THINK_BRAIN, 'Analyse...', 'Analyse et r\u00e9daction de la r\u00e9ponse...');
+  }
 
   // Override system prompt so chat-handler uses ours
   var origSys = window.EVA_SYSTEM_PROMPT;

@@ -15,6 +15,10 @@ var _onEndCallback = null;
 var _isListening = false;
 var _committed = '';
 
+// IPC Electron Whisper
+var _ipcSttUnsub = null;
+var _ipcSttActive = false;
+
 // Audio context & stream
 var _mediaStream = null;
 var _audioCtx = null;
@@ -105,9 +109,23 @@ async function _startVoskSTT(stream, onResult) {
 
     var source = _audioCtx.createMediaStreamSource(stream);
     _scriptProcessor = _audioCtx.createScriptProcessor(4096, 1, 1);
+    var _voskNoise = 0.004;
+    var _voskHang = 0;
     _scriptProcessor.onaudioprocess = function(event) {
       if (!_isListening || !_voskRecognizer) return;
       try {
+        var ch = event.inputBuffer.getChannelData(0);
+        var sum = 0;
+        for (var k = 0; k < ch.length; k++) sum += ch[k] * ch[k];
+        var rms = Math.sqrt(sum / (ch.length || 1));
+        var thr = Math.max(0.014, _voskNoise * 3.0);
+        if (rms > thr) {
+          _voskHang = 3;
+        } else {
+          _voskNoise = Math.min(0.04, Math.max(0.001, _voskNoise * 0.98 + rms * 0.02));
+          if (_voskHang > 0) _voskHang--;
+          else return;
+        }
         _voskRecognizer.acceptWaveform(event.inputBuffer);
       } catch(e) {}
     };
@@ -183,7 +201,32 @@ async function startListening(onResult, onEnd) {
   _shouldKeepListening = true;
 
   try {
-    // 1. Capture microphone Web Audio standard (infaillible sous Electron)
+    // 1. Sur Electron PC : privilégier Faster-Whisper GPU si disponible
+    if (_isElectron()) {
+      try {
+        var stRes = await window.eva.stt.start();
+        if (stRes && stRes.success && stRes.engine === 'whisper-gpu') {
+          _ipcSttActive = true;
+          if (_ipcSttUnsub) { try { _ipcSttUnsub(); } catch(_) {} _ipcSttUnsub = null; }
+          _ipcSttUnsub = window.eva.stt.onResult(function(result) {
+            if (!_isListening || !result || !result.text) return;
+            if (result.isFinal) {
+              _committed += (_committed ? ' ' : '') + result.text.trim();
+              if (_onResultCallback) _onResultCallback(_committed, true);
+            } else {
+              var interim = _committed + (_committed ? ' ' : '') + result.text.trim();
+              if (_onResultCallback) _onResultCallback(interim, false);
+            }
+          });
+          console.log('[STT] Faster-Whisper GPU actif ✓');
+          return true;
+        }
+      } catch(wErr) {
+        console.warn('[STT] Whisper GPU indisponible, repli Vosk:', wErr);
+      }
+    }
+
+    // 2. Capture microphone Web Audio + Vosk (avec VAD RMS)
     _mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
@@ -194,30 +237,12 @@ async function startListening(onResult, onEnd) {
       }
     });
 
-    // 2. Démarrage de Vosk en priorité
     var voskStarted = await _startVoskSTT(_mediaStream, onResult);
     if (!voskStarted) {
       // 3. Fallback Web Speech Recognition
       if (!_webRecognition) _webRecognition = _buildWebRecognition();
       if (_webRecognition) {
         try { _webRecognition.start(); } catch(e) {}
-      }
-
-      // 4. Si IPC Electron disponible, écouter aussi en parallèle
-      if (_isElectron()) {
-        try {
-          window.eva.stt.onResult(function(result) {
-            if (!_isListening || !result || !result.text) return;
-            if (result.isFinal) {
-              _committed += (_committed ? ' ' : '') + result.text.trim();
-              if (_onResultCallback) _onResultCallback(_committed, true);
-            } else {
-              var interim = _committed + (_committed ? ' ' : '') + result.text.trim();
-              if (_onResultCallback) _onResultCallback(interim, false);
-            }
-          });
-          window.eva.stt.start().catch(function() {});
-        } catch(ipcErr) {}
       }
     }
 
@@ -265,8 +290,15 @@ function stopListening() {
   }
 
   // Nettoyage Electron IPC
-  if (_isElectron()) {
-    try { window.eva.stt.stop(); } catch(e) {}
+  if (_ipcSttUnsub) {
+    try { _ipcSttUnsub(); } catch(e) {}
+    _ipcSttUnsub = null;
+  }
+  if (_ipcSttActive && _isElectron()) {
+    _ipcSttActive = false;
+    if (!(window.S && window.S.wakeWordOn)) {
+      try { window.eva.stt.stop(); } catch(e) {}
+    }
   }
 
   // Notifier le callback de fin une fois arrêté

@@ -887,6 +887,9 @@ ipcMain.on('overlay:action', (_event, action, data) => {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.hide();
     }
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('tts:force-stop');
+    }
   }
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('overlay:action', action, data);
@@ -1461,7 +1464,7 @@ function performQuitAndInstall() {
   try { if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.destroy(); } catch(_) {}
   try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy(); } catch(_) {}
   setImmediate(() => {
-    autoUpdater.quitAndInstall(true, true);
+    autoUpdater.quitAndInstall(false, true);
   });
 }
 
@@ -1580,7 +1583,16 @@ async function _startLLMInternal(): Promise<boolean> {
     if (!llamaInstance) {
       console.log('[LLM] Initialisation de node-llama-cpp...');
       const { getLlama } = await getLlamaCpp();
-      llamaInstance = await getLlama();
+      try {
+        llamaInstance = await getLlama();
+      } catch (eAuto: any) {
+        logMain('[LLM] getLlama auto échoué, tentative Vulkan puis CPU:', eAuto?.message || String(eAuto));
+        try {
+          llamaInstance = await getLlama({ gpu: 'vulkan', build: 'never' });
+        } catch (_eVulk: any) {
+          llamaInstance = await getLlama({ gpu: false, build: 'never' });
+        }
+      }
       console.log('[LLM] Backend détecté automatiquement:', llamaInstance.gpu);
     }
 
@@ -2072,7 +2084,8 @@ ipcMain.handle('stt:start', async () => {
                 mainWindow.webContents.send('stt:result', { text: ev.text, isFinal: false });
               }
               const isForeground = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized();
-              if (!isForeground && overlayWindow && !overlayWindow.isDestroyed()) {
+              const busyOverlay = _lastOverlayState && ['thinking', 'speaking', 'cloudworks', 'working', 'remote', 'approval'].includes(_lastOverlayState.state);
+              if (!isForeground && !busyOverlay && overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
                 overlayWindow.webContents.send('overlay:setState', 'listening', ev.text);
               }
             } else if (ev.type === 'final') {
@@ -2083,11 +2096,12 @@ ipcMain.handle('stt:start', async () => {
               console.log(`[STT] Wake word détecté: "${ev.phrase}" (Cmd: "${ev.command}")`);
               const isForeground = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized();
               const cmd = ev.command || ev.phrase;
+              const busyOverlay = _lastOverlayState && ['thinking', 'speaking', 'cloudworks', 'working', 'remote', 'approval'].includes(_lastOverlayState.state);
               if (isForeground && mainWindow) {
                 mainWindow.focus();
                 mainWindow.webContents.send('wakeword:command', cmd);
-              } else {
-                // Mode Jarvis en arrière-plan : bulle overlay
+              } else if (!busyOverlay) {
+                // Mode Jarvis en arrière-plan : uniquement si EVA n'est pas déjà en cours de traitement/réponse
                 if (overlayWindow && !overlayWindow.isDestroyed()) {
                   overlayWindow.webContents.send('overlay:setState', 'listening', ev.phrase);
                   overlayWindow.showInactive();

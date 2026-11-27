@@ -25,6 +25,8 @@ var _audioCtx = null;
 var _scriptNode = null;
 var _recognizer = null;
 var _isStarting = false;
+var _ipcWhisperUnsub = null;
+var _usingWhisperGPU = false;
 
 // Fallback Web Speech (utilisé seulement si Vosk est indisponible dans un navigateur standard)
 var _webRecognition = null;
@@ -392,6 +394,8 @@ async function _startVoskRecognizer() {
 
     var source = _audioCtx.createMediaStreamSource(_audioStream);
     _scriptNode = _audioCtx.createScriptProcessor(4096, 1, 1);
+    var _wwNoise = 0.004;
+    var _wwHang = 0;
     _scriptNode.onaudioprocess = function(ev) {
       if (!isActive || !_recognizer) return;
       if (_audioCtx && _audioCtx.state === 'suspended') {
@@ -399,6 +403,18 @@ async function _startVoskRecognizer() {
       }
       if (window.EVATTS && typeof window.EVATTS.isSpeaking === 'function' && window.EVATTS.isSpeaking()) return;
       try {
+        var ch = ev.inputBuffer.getChannelData(0);
+        var sum = 0;
+        for (var k = 0; k < ch.length; k++) sum += ch[k] * ch[k];
+        var rms = Math.sqrt(sum / (ch.length || 1));
+        var thr = Math.max(0.014, _wwNoise * 3.2);
+        if (rms > thr) {
+          _wwHang = 3;
+        } else {
+          _wwNoise = Math.min(0.04, Math.max(0.001, _wwNoise * 0.98 + rms * 0.02));
+          if (_wwHang > 0) _wwHang--;
+          else return;
+        }
         _recognizer.acceptWaveform(ev.inputBuffer);
       } catch(e) {}
     };
@@ -480,6 +496,23 @@ async function start() {
   }
 
   try {
+    if (window.eva && window.eva.stt && typeof window.eva.stt.start === 'function') {
+      try {
+        var stRes = await window.eva.stt.start();
+        if (stRes && stRes.success && stRes.engine === 'whisper-gpu') {
+          _usingWhisperGPU = true;
+          if (_ipcWhisperUnsub) { try { _ipcWhisperUnsub(); } catch(_) {} _ipcWhisperUnsub = null; }
+          _ipcWhisperUnsub = window.eva.stt.onResult(function(ev) {
+            if (!isActive || !ev || !ev.text) return;
+            _handleTranscript(ev.text, !!ev.isFinal);
+          });
+          console.log('[WakeWord] Faster-Whisper GPU actif ✓');
+          return;
+        }
+      } catch(we) {
+        console.warn('[WakeWord] Whisper GPU indisponible, repli Vosk:', we);
+      }
+    }
     var voskOk = await _startVoskRecognizer();
     if (!voskOk) {
       _startWebFallback();
@@ -493,6 +526,17 @@ function stop() {
   isActive = false;
   state = 'idle';
   currentUtterance = '';
+
+  if (_ipcWhisperUnsub) {
+    try { _ipcWhisperUnsub(); } catch(e) {}
+    _ipcWhisperUnsub = null;
+  }
+  if (_usingWhisperGPU) {
+    _usingWhisperGPU = false;
+    if (window.eva && window.eva.stt && typeof window.eva.stt.stop === 'function') {
+      try { window.eva.stt.stop(); } catch(e) {}
+    }
+  }
 
   if (triggerTimer) { clearTimeout(triggerTimer); triggerTimer = null; }
   if (_webRestartTimer) { clearTimeout(_webRestartTimer); _webRestartTimer = null; }

@@ -349,7 +349,26 @@
   }
   window.closeJarvisConversation = closeJarvisConversation;
 
+  var _lastWakeDispatchText = '';
+  var _lastWakeDispatchAt = 0;
+
   async function handleJarvisWakeWord(phrase, command) {
+    var trimmedCheck = (command || phrase || '').trim().toLowerCase();
+    var nowMs = Date.now();
+    if (trimmedCheck && trimmedCheck === _lastWakeDispatchText && (nowMs - _lastWakeDispatchAt < 2000)) {
+      console.log('[Jarvis] Doublon wakeword ignoré:', trimmedCheck);
+      return;
+    }
+    if (window._isJarvisActive && ['processing', 'thinking', 'answering', 'awaiting_approval'].indexOf(window._jarvisState) !== -1) {
+      if (!/\b(stop|annule|annuler|arrête|arrete|chut|tais-toi|tais toi)\b/i.test(trimmedCheck)) {
+        console.log('[Jarvis] Requête déjà en cours, nouvelle entrée ignorée:', trimmedCheck);
+        return;
+      }
+    }
+    if (trimmedCheck) {
+      _lastWakeDispatchText = trimmedCheck;
+      _lastWakeDispatchAt = nowMs;
+    }
     console.log('[Jarvis] handleJarvisWakeWord déclenché:', { phrase: phrase, command: command });
     window._isJarvisActive = true;
 
@@ -404,10 +423,30 @@
 
   function handleJarvisVoiceCommand(query) {
     if (!query || !query.trim()) return;
+    if (window._isJarvisActive && ['processing', 'thinking', 'answering', 'awaiting_approval'].indexOf(window._jarvisState) !== -1) {
+      if (/\b(stop|annule|annuler|arrête|arrete|chut|tais-toi|tais toi)\b/i.test(query)) {
+        if (window.EVATTS && typeof window.EVATTS.stopTTS === 'function') window.EVATTS.stopTTS();
+        if (window.stopGeneration) window.stopGeneration();
+        if (window.eva && window.eva.overlay) window.eva.overlay.hide();
+        closeJarvisConversation();
+      } else {
+        console.log('[Jarvis] Commande ignorée pendant traitement actif:', query);
+      }
+      return;
+    }
     console.log('[Jarvis] Commande vocale reçue en arrière-plan:', query);
     handleJarvisWakeWord(query, query);
   }
   window.handleJarvisVoiceCommand = handleJarvisVoiceCommand;
+
+  if (window.eva && window.eva.tts && typeof window.eva.tts.onForceStop === 'function') {
+    window.eva.tts.onForceStop(function() {
+      console.log('[PC Bridge] Force stop TTS reçu depuis overlay');
+      if (window.EVATTS && typeof window.EVATTS.stopTTS === 'function') window.EVATTS.stopTTS();
+      if (window.stopGeneration) try { window.stopGeneration(); } catch(_) {}
+      if (window._isJarvisActive) closeJarvisConversation();
+    });
+  }
 
   if (window.eva && window.eva.jarvis && window.eva.jarvis.onVoiceCommand) {
     window.eva.jarvis.onVoiceCommand(function(data) {
