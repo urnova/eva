@@ -1133,6 +1133,9 @@ function streamEvaMsg(content) {
   if (!isSystemAbortMsg && (S.ttsOn || window._isJarvisActive) && window.EVATTS && plain && plain.trim().length > 0) {
     setEvaStatus('EVA PARLE...', 'speaking');
     if (window._isJarvisActive) {
+      if (/\b(me mets en veille|passe en veille|repasse en veille|mets en veille|\u00e0 plus tard|bonne (?:journ\u00e9e|soir\u00e9e)|au revoir)\b/i.test(plain)) {
+        window._jarvisCloseAfterSpeak = true;
+      }
       window._jarvisState = 'answering';
       var preview = plain.substring(0, 100) + (plain.length > 100 ? '...' : '');
       if (window.eva && window.eva.overlay) {

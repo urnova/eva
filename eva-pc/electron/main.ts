@@ -2029,6 +2029,9 @@ ipcMain.handle('cloudworks:setAutonomous', async (event, enabled: boolean) => {
 
 // ─── IPC Handlers — STT (Faster-Whisper GPU & Fallback SAPI) ───
 let _sttProcess: any = null;
+let _sttReady = false;
+let _sttEngine = '';
+let _sttStartPromise: Promise<{ success: boolean; alreadyRunning?: boolean; engine?: string; error?: string }> | null = null;
 
 function getWhisperScriptPath(): string {
   const devPath = path.join(__dirname, '..', 'scripts', 'eva_whisper_service.py');
@@ -2052,88 +2055,142 @@ function getPythonPath(): string {
 }
 
 ipcMain.handle('stt:start', async () => {
-  if (_sttProcess) return { success: true, alreadyRunning: true };
+  if (_sttProcess && _sttReady) return { success: true, alreadyRunning: true, engine: _sttEngine || 'whisper-gpu' };
+  if (_sttStartPromise) return _sttStartPromise;
 
   const pythonExe = getPythonPath();
   const scriptPath = getWhisperScriptPath();
 
   if (fs.existsSync(pythonExe) && fs.existsSync(scriptPath)) {
-    try {
-      console.log(`[STT] Démarrage du moteur Faster-Whisper GPU (${pythonExe})...`);
-      const { spawn: _spawn } = require('child_process');
-      _sttProcess = _spawn(pythonExe, ['-u', scriptPath], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        windowsHide: true
-      });
-
-      let buffer = '';
-      _sttProcess.stdout.on('data', (data: Buffer) => {
-        buffer += data.toString('utf8');
-        const lines = buffer.split(/\r?\n/);
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) continue;
-          try {
-            const ev = JSON.parse(trimmed);
-            if (ev.type === 'ready') {
-              console.log(`[STT] Faster-Whisper GPU prêt (Device: ${ev.device}, Mode: ${ev.compute_type})`);
-            } else if (ev.type === 'interim') {
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('stt:result', { text: ev.text, isFinal: false });
-              }
-              const isForeground = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized();
-              const busyOverlay = _lastOverlayState && ['thinking', 'speaking', 'cloudworks', 'working', 'remote', 'approval'].includes(_lastOverlayState.state);
-              if (!isForeground && !busyOverlay && overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
-                overlayWindow.webContents.send('overlay:setState', 'listening', ev.text);
-              }
-            } else if (ev.type === 'final') {
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('stt:result', { text: ev.text, isFinal: true });
-              }
-            } else if (ev.type === 'wakeword') {
-              console.log(`[STT] Wake word détecté: "${ev.phrase}" (Cmd: "${ev.command}")`);
-              const isForeground = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized();
-              const cmd = ev.command || ev.phrase;
-              const busyOverlay = _lastOverlayState && ['thinking', 'speaking', 'cloudworks', 'working', 'remote', 'approval'].includes(_lastOverlayState.state);
-              if (isForeground && mainWindow) {
-                mainWindow.focus();
-                mainWindow.webContents.send('wakeword:command', cmd);
-              } else if (!busyOverlay) {
-                // Mode Jarvis en arrière-plan : uniquement si EVA n'est pas déjà en cours de traitement/réponse
-                if (overlayWindow && !overlayWindow.isDestroyed()) {
-                  overlayWindow.webContents.send('overlay:setState', 'listening', ev.phrase);
-                  overlayWindow.showInactive();
-                }
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                  mainWindow.webContents.send('jarvis:voiceCommand', { phrase: ev.phrase, command: cmd });
-                }
-              }
-            }
-          } catch(err) {
-            console.log('[STT Info]', trimmed);
+    _sttStartPromise = new Promise((resolve) => {
+      let settled = false;
+      const done = (res: { success: boolean; engine?: string; error?: string }) => {
+        if (settled) return;
+        settled = true;
+        _sttStartPromise = null;
+        resolve(res);
+      };
+      try {
+        logMain(`[STT] Démarrage du moteur Faster-Whisper GPU (${pythonExe})...`);
+        const { spawn: _spawn } = require('child_process');
+        const hfHome = process.env.HF_HOME || (fs.existsSync('F:\\huggingface_cache') ? 'F:\\huggingface_cache' : path.join(app.getPath('userData'), 'hf_cache'));
+        try { fs.mkdirSync(hfHome, { recursive: true }); } catch (_) {}
+        _sttReady = false;
+        _sttEngine = 'whisper-gpu';
+        _sttProcess = _spawn(pythonExe, ['-u', scriptPath], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          windowsHide: true,
+          env: {
+            ...process.env,
+            HF_HOME: hfHome,
+            HF_HUB_DISABLE_SYMLINKS_WARNING: '1',
+            PYTHONIOENCODING: 'utf-8'
           }
-        }
-      });
+        });
 
-      _sttProcess.stderr.on('data', (data: Buffer) => {
-        const msg = data.toString('utf8').trim();
-        if (msg) console.warn('[STT Service stderr]:', msg);
-      });
+        const startupTimer = setTimeout(() => {
+          if (!_sttReady) {
+            logMain('[STT] Timeout démarrage Faster-Whisper (20s), repli navigateur/Vosk');
+            try { _sttProcess?.kill(); } catch (_) {}
+            _sttProcess = null;
+            _sttReady = false;
+            _sttEngine = '';
+            done({ success: false, error: 'WHISPER_TIMEOUT' });
+          }
+        }, 20000);
 
-      _sttProcess.on('exit', (code: number) => {
-        console.log('[STT] Faster-Whisper service terminé, code:', code);
+        let buffer = '';
+        _sttProcess.stdout.on('data', (data: Buffer) => {
+          buffer += data.toString('utf8');
+          const lines = buffer.split(/\r?\n/);
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            try {
+              const ev = JSON.parse(trimmed);
+              if (ev.type === 'ready') {
+                clearTimeout(startupTimer);
+                _sttReady = true;
+                _sttEngine = 'whisper-gpu';
+                logMain(`[STT] Faster-Whisper prêt (${ev.model}, ${ev.device}, ${ev.compute_type})`);
+                done({ success: true, engine: 'whisper-gpu' });
+              } else if (ev.type === 'error') {
+                clearTimeout(startupTimer);
+                logMain('[STT] Erreur moteur Whisper:', ev.message || trimmed);
+                if (!_sttReady) {
+                  try { _sttProcess?.kill(); } catch (_) {}
+                  _sttProcess = null;
+                  _sttEngine = '';
+                  done({ success: false, error: ev.message || 'WHISPER_ERROR' });
+                }
+              } else if (ev.type === 'interim') {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send('stt:result', { text: ev.text, isFinal: false });
+                }
+                const isForeground = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized();
+                const busyOverlay = _lastOverlayState && ['thinking', 'speaking', 'cloudworks', 'working', 'remote', 'approval'].includes(_lastOverlayState.state);
+                if (!isForeground && !busyOverlay && overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
+                  overlayWindow.webContents.send('overlay:setState', 'listening', ev.text);
+                }
+              } else if (ev.type === 'final') {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send('stt:result', { text: ev.text, isFinal: true });
+                }
+              } else if (ev.type === 'wakeword') {
+                console.log(`[STT] Wake word détecté: "${ev.phrase}" (Cmd: "${ev.command}")`);
+                const isForeground = mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized();
+                const cmd = ev.command || ev.phrase;
+                const busyOverlay = _lastOverlayState && ['thinking', 'speaking', 'cloudworks', 'working', 'remote', 'approval'].includes(_lastOverlayState.state);
+                if (isForeground && mainWindow) {
+                  mainWindow.focus();
+                  mainWindow.webContents.send('wakeword:command', cmd);
+                } else if (!busyOverlay) {
+                  if (overlayWindow && !overlayWindow.isDestroyed()) {
+                    overlayWindow.webContents.send('overlay:setState', 'listening', ev.phrase);
+                    overlayWindow.showInactive();
+                  }
+                  if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('jarvis:voiceCommand', { phrase: ev.phrase, command: cmd });
+                  }
+                }
+              }
+            } catch(err) {
+              console.log('[STT Info]', trimmed);
+            }
+          }
+        });
+
+        _sttProcess.stderr.on('data', (data: Buffer) => {
+          const msg = data.toString('utf8').trim();
+          if (msg && /Error|Traceback|Exception/i.test(msg)) logMain('[STT stderr]:', msg.slice(0, 300));
+        });
+
+        _sttProcess.on('exit', (code: number) => {
+          clearTimeout(startupTimer);
+          const wasReady = _sttReady;
+          logMain('[STT] Faster-Whisper terminé, code:', code, 'wasReady:', wasReady);
+          _sttProcess = null;
+          _sttReady = false;
+          _sttEngine = '';
+          if (!wasReady) {
+            done({ success: false, error: 'WHISPER_EXITED_' + code });
+          } else if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('stt:stopped', {});
+          }
+        });
+      } catch(e) {
+        logMain('[STT] Erreur spawn Faster-Whisper:', String(e));
         _sttProcess = null;
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('stt:stopped', {});
-        }
-      });
-
-      return { success: true, engine: 'whisper-gpu' };
-    } catch(e) {
-      console.error('[STT] Erreur spawn Faster-Whisper GPU, bascule sur SAPI:', e);
-    }
+        _sttReady = false;
+        done({ success: false, error: String(e) });
+      }
+    });
+    const whisperRes = await _sttStartPromise;
+    if (whisperRes && whisperRes.success) return whisperRes;
+    logMain('[STT] Retour échec Faster-Whisper au renderer pour repli Vosk:', whisperRes?.error);
+    return whisperRes;
   }
 
   // Fallback vers PowerShell Windows SAPI si Python non disponible
@@ -2192,6 +2249,9 @@ ipcMain.handle('stt:start', async () => {
 });
 
 ipcMain.handle('stt:stop', async () => {
+  _sttReady = false;
+  _sttEngine = '';
+  _sttStartPromise = null;
   if (_sttProcess) {
     try {
       if (_sttProcess.stdin) {

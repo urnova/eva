@@ -14,8 +14,25 @@ import io
 import json
 import time
 import queue
+import shutil
 import threading
 import warnings
+
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+if sys.platform == "win32":
+    _orig_symlink = os.symlink
+    def _safe_symlink(src, dst, target_is_directory=False, *args, **kwargs):
+        try:
+            return _orig_symlink(src, dst, target_is_directory=target_is_directory, *args, **kwargs)
+        except OSError:
+            real_src = src if os.path.isabs(src) else os.path.normpath(os.path.join(os.path.dirname(dst), src))
+            if os.path.isdir(real_src):
+                if os.path.exists(dst):
+                    shutil.rmtree(dst, ignore_errors=True)
+                shutil.copytree(real_src, dst)
+            else:
+                shutil.copy2(real_src, dst)
+    os.symlink = _safe_symlink
 
 # Forcer l'encodage UTF-8 pour stdin et stdout
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
@@ -120,22 +137,39 @@ def main():
     model = None
 
     if hw["gpu_available"]:
-        try:
-            sys.stderr.write(f"[Whisper] GPU dédié détecté : {hw['gpu_name']} ({hw['vram_gb']} Go VRAM). Chargement 'small' CUDA float16...\n")
-            model = faster_whisper.WhisperModel("small", device="cuda", compute_type="float16")
-            device = "cuda"
-            compute_type = "float16"
-            model_name = "small"
-        except Exception as e:
-            sys.stderr.write(f"[Whisper] Échec CUDA ({e}). Bascule sécurisée sur CPU 'base' int8...\n")
+        for cand in ("small", "tiny"):
+            try:
+                sys.stderr.write(f"[Whisper] GPU dédié détecté : {hw['gpu_name']} ({hw['vram_gb']} Go VRAM). Chargement '{cand}' CUDA float16...\n")
+                model = faster_whisper.WhisperModel(cand, device="cuda", compute_type="float16")
+                device = "cuda"
+                compute_type = "float16"
+                model_name = cand
+                break
+            except Exception as e:
+                sys.stderr.write(f"[Whisper] Échec CUDA '{cand}' ({e}).\n")
+        if model is None:
             device = "cpu"
             compute_type = "int8"
-            model_name = "base"
-            model = faster_whisper.WhisperModel("base", device="cpu", compute_type="int8", cpu_threads=hw["cpu_threads"])
+            for cand in ("base", "tiny"):
+                try:
+                    model_name = cand
+                    model = faster_whisper.WhisperModel(cand, device="cpu", compute_type="int8", cpu_threads=hw["cpu_threads"])
+                    break
+                except Exception as e2:
+                    sys.stderr.write(f"[Whisper] Échec CPU '{cand}' ({e2}).\n")
     else:
-        sys.stderr.write(f"[Whisper] Mode CPU 'base' int8 optimisé ({hw['cpu_threads']} threads, 0 ralentissement système)...\n")
-        model_name = "base"
-        model = faster_whisper.WhisperModel("base", device="cpu", compute_type="int8", cpu_threads=hw["cpu_threads"])
+        for cand in ("base", "tiny"):
+            try:
+                sys.stderr.write(f"[Whisper] Mode CPU '{cand}' int8 optimisé ({hw['cpu_threads']} threads)...\n")
+                model_name = cand
+                model = faster_whisper.WhisperModel(cand, device="cpu", compute_type="int8", cpu_threads=hw["cpu_threads"])
+                break
+            except Exception as e2:
+                sys.stderr.write(f"[Whisper] Échec CPU '{cand}' ({e2}).\n")
+
+    if model is None:
+        send_json({"type": "error", "message": "Impossible de charger un modèle Whisper."})
+        return
 
     send_json({
         "type": "ready",

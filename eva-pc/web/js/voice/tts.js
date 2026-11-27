@@ -558,6 +558,15 @@ function _onSpeakEnd() {
     window.evaResetWakeWordState();
   }
   if (window._isJarvisActive && window.eva) {
+    if (window._jarvisCloseAfterSpeak) {
+      window._jarvisCloseAfterSpeak = false;
+      console.log('[Jarvis TTS] Clôture vocale demandée -> mise en veille sans relance');
+      setTimeout(function() {
+        if (window.eva && window.eva.overlay) window.eva.overlay.hide();
+        if (typeof window.closeJarvisConversation === 'function') window.closeJarvisConversation();
+      }, 400);
+      return;
+    }
     // Si une tâche CloudWorks est en cours d'exécution sur le PC, NE PAS lancer le follow-up maintenant !
     // Le follow-up sera déclenché après le compte-rendu vocal final de CloudWorks.
     if (window.S && window.S.cwRunning) {

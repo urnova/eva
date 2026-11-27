@@ -30,7 +30,7 @@
   - Bulles utilisateur (gradient asymétrique) avec **vraie photo de profil Google/Firebase** (ou initiale du vrai nom — jamais le vieux `U`).
   - **Bulles dédiées par Agent** (CloudWorks, Agenda, Gmail, etc.) + design final harmonisé de la bulle overlay Windows & tracker.
   - **3 suggestions de suivi cliquables style Perplexity** après les réponses EVA.
-- **Sidebar** : supprimer le gros bouton moche *« Nouvelle conversation »* (petit `+` discret) ; **corriger « PC Desktop » qui s'enchevêtre avec l'icône paramètres** ; remplacer l'engrenage par `SlidersHorizontal`.
+- **Sidebar** : supprimer le gros bouton moche *« Nouvelle conversation »* (petit `+` discret) ; **corriger « PC Desktop » qui s'enchevêtre avec l'icône paramètres** ; remplacer l'engrenage par `SlidersHorizontal` ; **séparer les conversations vocales (`isVoiceSession`) des conversations textuelles** (afficher par défaut uniquement les chats textuels dans la liste principale et ranger les sessions vocales fréquentes dans une section/onglet dédié).
 - **Pages secondaires refaites intégralement (PC + Web)** :
   - **Paramètres** à onglets (Général, IA, Voix, Connecteurs MCP/Codemod, Compte/Sessions, Expérimental, Avancé) ; corriger section Notifications PC (pas de message navigateur/cadenas) ; cerveau/mémoire sélective (uniquement faits personnels durables, pas les recherches ponctuelles).
   - **À propos d'EVA** (soignée, logo animé, version, liens réels).

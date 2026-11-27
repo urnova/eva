@@ -170,7 +170,7 @@
     "Compris, à plus tard !"
   ];
 
-  var CLOSING_REGEX = /^(?:non|non merci|c'est bon|c'est tout|rien d'autre|ça ira|merci(?:\s+beaucoup)?|au revoir|bonne journée|bonne soirée|stop|ferme|quitter|rien)[.!?\s]*$/i;
+  var CLOSING_REGEX = /^(?:non(?:\s+merci)?|c['’]est bon(?:\s+maintenant|\s+merci)?|c['’]est tout|rien d['’]autre|ça ira|merci(?:\s+beaucoup)?|au revoir|bonne (?:journée|soirée)|stop|ferme|quitter|rien|mets[- ]toi en veille|passe en veille|tu peux te mettre en veille|tu peux y aller|je (?:ne )?te parlais pas|laisse[- ]moi|pas besoin de toi)[.!?\s]*$/i;
 
   var _jarvisFollowUpTimer = null;
   var _jarvisFollowUpSilence = null;
@@ -379,6 +379,26 @@
     window._jarvisListener = null;
 
     var trimmedCmd = command ? command.trim() : '';
+
+    // Intention vocale directe de mise en veille / fin d'interaction
+    if (trimmedCmd && CLOSING_REGEX.test(trimmedCmd)) {
+      window._jarvisCloseAfterSpeak = true;
+      var sleepMsg = /parlais pas/i.test(trimmedCmd) ? "Compris, je repasse en veille." : FAREWELL_PROMPTS[Math.floor(Math.random() * FAREWELL_PROMPTS.length)];
+      window._jarvisState = 'closing';
+      if (window.eva && window.eva.overlay) {
+        window.eva.overlay.show('speaking', sleepMsg);
+        window.eva.overlay.setState('speaking', sleepMsg);
+      }
+      if (window.EVATTS && typeof window.EVATTS.speakTextStreaming === 'function') {
+        window.EVATTS.speakTextStreaming(sleepMsg, window.S ? window.S.config : {});
+      } else {
+        setTimeout(function() {
+          if (window.eva && window.eva.overlay) window.eva.overlay.hide();
+          closeJarvisConversation();
+        }, 1200);
+      }
+      return;
+    }
 
     // Intention vocale directe : ouvrir/afficher l'application
     if (trimmedCmd && /\b(ouvre|ouvrir|affiche|montre|bascule|mets)\s+(l'application|l'appli|l'interface|eva|la fen[eê]tre)\b/i.test(trimmedCmd)) {
