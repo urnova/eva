@@ -36,15 +36,13 @@
 
   /* ── 4. Injecter le badge PC dans la sidebar ── */
   function injectPCBadge() {
-    var userBadgeWrap = document.getElementById('userBadgeText');
-    if (userBadgeWrap) {
-      var pcBadge = document.createElement('div');
-      pcBadge.style.cssText = 'font-size:0.6em;color:rgba(123,139,245,0.7);margin-top:2px;letter-spacing:1.5px;';
+    var sbHeader = document.querySelector('.sb-header');
+    if (sbHeader && !document.getElementById('pcDesktopBadge')) {
+      var pcBadge = document.createElement('span');
+      pcBadge.id = 'pcDesktopBadge';
+      pcBadge.className = 'sb-platform-pill';
       pcBadge.textContent = 'PC DESKTOP';
-      if (!document.getElementById('pcDesktopBadge')) {
-        pcBadge.id = 'pcDesktopBadge';
-        if (userBadgeWrap.parentNode) userBadgeWrap.parentNode.insertBefore(pcBadge, userBadgeWrap.nextSibling);
-      }
+      sbHeader.appendChild(pcBadge);
     }
   }
 
@@ -66,8 +64,7 @@
 
   /* ── 7. Ajouter un onglet "PC Settings" dans la modale des paramètres ── */
   function injectPCSettingsTab() {
-    var navContainer = document.querySelector('.settings-nav-list') ||
-                       document.querySelector('.modal-nav');
+    var navContainer = document.querySelector('.settings-nav-list') || document.querySelector('.modal-sidebar') || document.querySelector('.modal-nav');
     if (!navContainer || document.querySelector('[data-section="pc"]')) return;
 
     var pcBtn = document.createElement('button');
@@ -890,6 +887,7 @@
     document.addEventListener('DOMContentLoaded', function() {
       hidePCUnnecessaryElements();
       injectPCBadge();
+    if (window.eva && window.eva.app && window.eva.app.version) { window.eva.app.version().then(function(v){ var av = document.getElementById("aboutVersionLabel"); if (av) av.textContent = "E.V.A Desktop v" + v; }).catch(function(){}); }
     });
     document.addEventListener('eva:authReady', function() {
       injectPCSettingsTab();

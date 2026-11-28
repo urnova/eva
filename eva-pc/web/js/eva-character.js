@@ -921,7 +921,7 @@ function buildHTML() {
   flex-direction:column;gap:10px;z-index:10;
 }
 #evaLoading span{
-  font-size:.62em;color:rgba(123,139,245,.55);font-family:'Space Mono',monospace;
+  font-size:.62em;color:rgba(123,139,245,.55);font-family:'Inter', 'Segoe UI', system-ui, sans-serif;
   letter-spacing:4px;text-transform:uppercase;text-align:center;
 }
 .eva-load-bar{
@@ -935,7 +935,7 @@ function buildHTML() {
 .eva-status{
   position:absolute;bottom:4px;left:0;right:0;
   display:flex;align-items:center;justify-content:center;gap:5px;
-  font-size:.52em;color:rgba(123,139,245,.4);font-family:'Space Mono',monospace;
+  font-size:.52em;color:rgba(123,139,245,.4);font-family:'Inter', 'Segoe UI', system-ui, sans-serif;
   letter-spacing:3px;text-transform:uppercase;z-index:6;
 }
 .eva-status-dot{

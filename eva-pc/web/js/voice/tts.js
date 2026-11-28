@@ -566,9 +566,6 @@ function _cleanForTts(text) {
 
 function _onSpeakEnd() {
   /* Remettre l'orbe en idle après la voix */
-  if (window.EvaCharacter && typeof window.EvaCharacter.setIdle === 'function') {
-    try { window.EvaCharacter.setIdle(); } catch(e) {}
-  }
   if (window.setEvaStatusHeader) {
     try { window.setEvaStatusHeader(null); } catch(e) {}
   }
@@ -625,9 +622,6 @@ window.EVATTS = {
       _speaking = true;
       _updateSkipBtn();
       /* Utiliser l'Orbe si disponible */
-      if (window.EvaCharacter && typeof window.EvaCharacter.setSpeaking === 'function') {
-        try { window.EvaCharacter.setSpeaking(); } catch(e) {}
-      }
       try {
         engine.speak(clean, config,
           function onStart() { _speaking = true; _updateSkipBtn(); },

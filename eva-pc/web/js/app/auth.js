@@ -1,16 +1,20 @@
 /* ═══ AUTH ═══ */
 function initAuth() {
   auth.onAuthStateChanged(function(user) {
-    if (!user) { window.location.href = '/login'; return; }
+    if (!user) { window.location.href = window.eva ? '/app-login.html' : '/login'; return; }
     S.user = user;
 
     
-    // Register session
-    S.sessionId = localStorage.getItem('eva_session_id');
-    if (!S.sessionId) {
-      S.sessionId = 'SES-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-      localStorage.setItem('eva_session_id', S.sessionId);
+    // Empreinte appareil/session déterministe + lien CloudWorks
+    var appMode = window.eva ? ((location.protocol === 'file:' || location.protocol === 'app:') ? 'app' : 'dev') : 'web';
+    var fp = localStorage.getItem('eva_device_fp');
+    if (!fp) {
+      fp = (window._cwDeviceId || localStorage.getItem('cw_device_id') || ('WEB-' + navigator.platform.replace(/\W/g,'') + '-' + (Math.random().toString(36).substr(2, 8).toUpperCase())));
+      localStorage.setItem('eva_device_fp', fp);
     }
+    S.deviceFingerprint = fp;
+    S.sessionId = localStorage.getItem('eva_session_id') || ('SES-' + appMode.toUpperCase() + '-' + fp);
+    localStorage.setItem('eva_session_id', S.sessionId);
     
     var devType = window.eva ? 'Application PC' : (/Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Navigateur Web');
     var browserName = window.eva ? 'E.V.A OS Agent' : 'Navigateur';
@@ -50,6 +54,10 @@ function initAuth() {
         device: devType,
         browser: browserName,
         os: osName,
+        appMode: appMode,
+        fingerprint: fp,
+        linkedDeviceId: window._cwDeviceId || localStorage.getItem('cw_device_id') || null,
+        revoke: false,
         lastSeen: window.timestamp ? window.timestamp() : new Date(),
         connectedAt: window.timestamp ? window.timestamp() : new Date(),
         online: true
@@ -181,7 +189,7 @@ async function loadProfile(uid) {
           }
         }
         /* Re-apply panel pref now that Firebase config is loaded */
-        if (typeof applyEvaPanelPreference === 'function') applyEvaPanelPreference();
+        
         /* Persist merged config back to localStorage as cache */
         try { localStorage.setItem('eva_config', JSON.stringify(S.config)); } catch(e){}
       }
@@ -343,12 +351,22 @@ function renderUserUI(p) {
     }
   }
 
+  var firstLabel = (p.nickname || p.displayName || (p.email ? p.email.split('@')[0] : '') || '').trim();
+  var firstWord = firstLabel ? firstLabel.split(/s+/)[0] : '';
+  var welcomeEl = document.getElementById('welcomeGreeting');
+  if (welcomeEl) {
+    var hr = new Date().getHours();
+    var salutation = hr >= 18 || hr < 4 ? 'Bonsoir' : 'Bonjour';
+    welcomeEl.textContent = firstWord ? (salutation + ' ' + firstWord + ' !') : (salutation + ' !');
+  }
+
   var ava = document.getElementById('userAvatar');
   if (ava) {
     if (p.photoURL) {
       ava.innerHTML = '<img src="'+p.photoURL+'" alt="avatar">';
     } else {
-      ava.textContent = name.split(' ').map(function(n){return n[0]||'';}).join('').toUpperCase().slice(0,2);
+      var ini = (firstLabel || 'E').split(/s+/).map(function(n){return n[0]||'';}).join('').toUpperCase().slice(0,2) || 'E';
+      ava.textContent = ini;
     }
   }
   
@@ -357,7 +375,7 @@ function renderUserUI(p) {
     if (p.photoURL) {
       avaNode.innerHTML = '<img src="' + p.photoURL + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">';
     } else {
-      var un = p.displayName || p.nickname || p.email || 'U';
+      var un = p.nickname || p.displayName || (p.email ? p.email.split('@')[0] : '') || '?';
       avaNode.innerHTML = '<span>' + un.charAt(0).toUpperCase() + '</span>';
     }
   });

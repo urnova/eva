@@ -19,7 +19,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="E.V.A">
 <link rel="apple-touch-icon" href="/assets/images/eva-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/styles/fonts.css">
 <!-- Chart.js pour les statistiques d'utilisation -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -109,7 +109,11 @@
     <div class="conv-section">
       <div class="conv-header">
         <span class="conv-label">Conversations</span>
-        <button class="new-conv-btn" id="newConvBtn">+ Nouvelle</button>
+        <button class="new-conv-icon-btn" id="newConvBtn" title="Nouvelle conversation" aria-label="Nouvelle conversation"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+      </div>
+      <div class="conv-tabs" id="convTabs">
+        <button type="button" class="conv-tab active" id="convTabChat" onclick="setConvTab('chat')">Chats <span class="conv-tab-count" id="convTabChatCount">0</span></button>
+        <button type="button" class="conv-tab" id="convTabVoice" onclick="setConvTab('voice')">🎙️ Vocal <span class="conv-tab-count" id="convTabVoiceCount">0</span></button>
       </div>
       <div id="convList"><div class="conv-empty">Aucune conversation</div></div>
     </div>
@@ -122,12 +126,10 @@
         <div class="user-name" id="userNameText">Chargement...</div>
         <div class="user-role" id="userBadgeText">👤 Utilisateur</div>
       </div>
-      <div class="user-card-gear">
-        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
-      </div>
+      <div class="user-card-gear"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg></div>
       <div class="user-menu">
         <button class="menu-item" id="settingsMenuBtn">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
           Paramètres
         </button>
         <button class="menu-item" onclick="openReportModal()" style="color:var(--text-muted);">
@@ -174,7 +176,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;">
             <div style="font-size:0.78em;font-weight:700;color:var(--text);margin-bottom:3px;">Multi-providers IA</div>
-            <div style="font-size:0.68em;color:var(--text-muted);line-height:1.5;">Puter (GPT-4o gratuit), OpenAI, Claude, Qwen local, LM Studio, Ollama</div>
+            <div style="font-size:0.68em;color:var(--text-muted);line-height:1.5;">E.V.A Local, Pollinations, Puter, Google Gemini, OpenAI, Claude, LM Studio, Ollama</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;">
             <div style="font-size:0.78em;font-weight:700;color:var(--text);margin-bottom:3px;">Vision (Analyse d'images)</div>
@@ -288,7 +290,7 @@
 
       <!-- Footer -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding-top:6px;border-top:1px solid var(--border);">
-        <div style="font-size:0.65em;color:var(--text-dim);">Version Bêta V4.1 · Astral Technologie © 2026</div>
+        <div style="font-size:0.65em;color:var(--text-dim);"><span id="aboutVersionLabel">EVA D2 · V5.6</span> · Astral Technologie © 2026 · <a href="/download" target="_blank" style="color:var(--cyan);text-decoration:none;">Téléchargements</a></div>
         <a href="mailto:contact@astral-technologie.fr" style="font-size:0.65em;color:var(--cyan);text-decoration:none;">Contact</a>
       </div>
     </div>
@@ -334,10 +336,7 @@
             <svg id="ttsBtnIcon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
           </button>
         </div>
-        <button class="eva-toggle-btn" id="evaToggleBtn">
-          <svg viewBox="0 0 24 24" width="12" height="12" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          EVA
-        </button>
+        <div class="hdr-provider-chip" id="providerChip" onclick="openSettings('ai')" title="Fournisseur IA actif"><div class="provider-dot"></div><span id="providerName">Pollinations (Gratuit)</span></div>
       </div>
     </div>
 
@@ -345,10 +344,8 @@
     <div class="view active" id="viewChat">
       <div class="messages-area" id="messagesArea">
         <div class="chat-welcome" id="chatWelcome">
-          <div class="welcome-icon">
-            <img src="/assets/images/eva-logo.png" alt="EVA" style="width:52px;height:auto;opacity:0.65;">
-          </div>
-          <div class="welcome-title">PRÊTE</div>
+          <div class="welcome-orb"><img src="/assets/images/eva-logo.png" alt="EVA"></div>
+          <div class="welcome-title" id="welcomeGreeting">Bonjour !</div>
           <div class="welcome-sub">Votre assistante virtuelle intelligente. Posez une question, créez une alarme, prenez une note...</div>
           <div class="prompt-chips">
             <div class="prompt-chip" data-prompt="Bonjour Eva ! Présente-toi en quelques mots.">👋 Présente-toi Eva</div>
@@ -361,81 +358,76 @@
         <div id="messagesList"></div>
       </div>
 
-      <!-- ── Sélection Ton + Modèle ── -->
-      <div class="tone-bar">
-        <!-- Sélecteur de ton -->
-        <div class="tone-select-wrap" id="toneSelectWrap">
-          <button class="tone-select-btn" id="toneSelectBtn" onclick="toggleToneMenu(event)" aria-haspopup="true" aria-expanded="false">
-            <span class="tone-select-icon" id="toneSelectIcon">😊</span>
-            <span class="tone-select-label" id="toneSelectLabel">Normal</span>
-            <svg class="tone-select-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="tone-dropdown" id="toneDropdown" role="menu">
-            <button class="tone-option active" data-tone="normal" data-icon="😊" data-label="Normal" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">😊</span><span class="tone-opt-label">Normal</span>
-            </button>
-            <button class="tone-option" data-tone="professional" data-icon="💼" data-label="Professionnel" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">💼</span><span class="tone-opt-label">Professionnel</span>
-            </button>
-            <button class="tone-option" data-tone="friendly" data-icon="🤗" data-label="Amical" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">🤗</span><span class="tone-opt-label">Amical</span>
-            </button>
-            <button class="tone-option" data-tone="code" data-icon="💻" data-label="Code" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">💻</span><span class="tone-opt-label">Code</span>
-            </button>
-            <button class="tone-option" data-tone="creative" data-icon="🎨" data-label="Créatif" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">🎨</span><span class="tone-opt-label">Créatif</span>
-            </button>
-            <button class="tone-option" data-tone="trading" data-icon="📈" data-label="Trading" onclick="selectTone(this)" role="menuitem">
-              <span class="tone-opt-icon">📈</span><span class="tone-opt-label">Trading</span>
-            </button>
-          </div>
-        </div>
-        <!-- Sélecteur de modèle -->
-        <div class="tone-select-wrap" id="convModelWrap" style="margin-left:auto;">
-          <button class="tone-select-btn" id="convModelBtn" onclick="toggleModelMenu(event)" aria-haspopup="true" aria-expanded="false">
-            <span class="tone-select-icon" id="convModelIcon">🤖</span>
-            <span class="tone-select-label" id="convModelLabel">GPT-4o — Expert</span>
-            <svg class="tone-select-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="tone-dropdown model-dropdown" id="modelDropdown" role="menu"></div>
-          <!-- select caché pour compat JS existant -->
-          <select id="convModelSelect" style="display:none;" onchange="changeConvModel(this.value)"></select>
-        </div>
-      </div>
-
-
       <!-- Bannière avertissement mode local -->
       <div id="localModeBanner" style="display:none;align-items:center;gap:10px;background:rgba(245,158,11,0.12);border-top:1px solid rgba(245,158,11,0.35);padding:7px 16px;font-size:0.72em;color:#fbbf24;line-height:1.4;">
         <span style="font-size:1.1em;">⚠️</span>
-        <span><strong>Mode local actif</strong> — Performances limitées. Pour changer de modèle ou de fournisseur, <span style="text-decoration:underline;cursor:pointer;" onclick="openSettings('ai')">ouvrez les paramètres IA</span>.</span>
+        <span><strong>Mode local actif</strong> — Pour changer de modèle ou de fournisseur, <span style="text-decoration:underline;cursor:pointer;" onclick="openSettings('ai')">ouvrez les paramètres IA</span>.</span>
         <button onclick="document.getElementById('localModeBanner').style.display='none'" style="margin-left:auto;background:none;border:none;color:#fbbf24;cursor:pointer;font-size:1em;opacity:0.7;">✕</button>
       </div>
 
       <!-- Bannière erreur réseau -->
-      <div id="networkErrorBanner" style="display:none;align-items:center;gap:10px;padding:10px 18px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:10px;margin:0 0 8px;color:#f87171;font-size:0.85em;">
+      <div id="networkErrorBanner" style="display:none;align-items:center;gap:10px;padding:10px 18px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:10px;margin:0 18px 8px;color:#f87171;font-size:0.85em;">
         <span style="font-size:1.2em;">📡</span>
         <span id="networkErrorMsg">Connexion perdue — vérifie ta connexion internet.</span>
         <button onclick="document.getElementById('networkErrorBanner').style.display='none'" style="margin-left:auto;background:none;border:none;color:#f87171;cursor:pointer;font-size:1em;opacity:0.7;">✕</button>
       </div>
 
-      <div class="input-area">
+      <div class="input-area" id="chatInputArea">
         <div id="imagePreviewBar" style="display:none;flex-wrap:wrap;gap:6px;padding:4px 0;"></div>
         <div id="docPreviewBar" style="display:none;flex-wrap:wrap;gap:6px;padding:4px 0;"></div>
-        <div class="input-box">
-          <button class="input-btn" id="attachBtn" title="Joindre une image ou un document (PDF, Word, Excel, PowerPoint, CSV, TXT)">
-            <svg viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-          </button>
-          <textarea id="msgInput" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true" data-lpignore="true" data-1p-ignore placeholder="Message à Eva... (Entrée pour envoyer)" rows="1"></textarea>
-          <button class="input-btn" id="micBtn" title="Message vocal">
-            <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-          </button>
-          <button class="input-btn send-btn" id="sendBtn" title="Envoyer" disabled>
-            <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-          <button class="input-btn send-btn" id="stopBtn" title="Arrêter" style="display:none; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.5); color:#f87171;" onclick="stopGeneration()">
-            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-          </button>
+        <div class="input-box d2-input-pill">
+          <textarea id="msgInput" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true" data-lpignore="true" data-1p-ignore placeholder="Message à Eva... (Entrée pour envoyer, glissez un fichier)" rows="1"></textarea>
+          <div class="input-toolbar">
+            <div class="input-tools-left">
+              <button class="input-btn" id="attachBtn" title="Joindre une image ou un document (PDF, Word, Excel, PowerPoint, CSV, TXT)">
+                <svg viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              </button>
+              <div class="tone-select-wrap" id="toneSelectWrap">
+                <button class="tone-select-btn" id="toneSelectBtn" onclick="toggleToneMenu(event)" aria-haspopup="true" aria-expanded="false">
+                  <span class="tone-select-icon" id="toneSelectIcon">😊</span>
+                  <span class="tone-select-label" id="toneSelectLabel">Normal</span>
+                  <svg class="tone-select-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="tone-dropdown" id="toneDropdown" role="menu">
+                  <button class="tone-option active" data-tone="normal" data-icon="😊" data-label="Normal" onclick="selectTone(this)" role="menuitem"><span class="tone-opt-icon">😊</span><span class="tone-opt-label">Normal</span></button>
+                  <button class="tone-option" data-tone="professional" data-icon="💼" data-label="Professionnel" onclick="selectTone(this)" role="menuitem"><span class="tone-opt-icon">💼</span><span class="tone-opt-label">Professionnel</span></button>
+                  <button class="tone-option" data-tone="friendly" data-icon="🤗" data-label="Amical" onclick="selectTone(this)" role="menuitem"><span class="tone-opt-icon">🤗</span><span class="tone-opt-label">Amical</span></button>
+                  <button class="tone-option" data-tone="code" data-icon="💻" data-label="Code" onclick="selectTone(this)" role="menuitem"><span class="tone-opt-icon">💻</span><span class="tone-opt-label">Code</span></button>
+                  <button class="tone-option" data-tone="creative" data-icon="🎨" data-label="Créatif" onclick="selectTone(this)" role="menuitem"><span class="tone-opt-icon">🎨</span><span class="tone-opt-label">Créatif</span></button>
+                  <button class="tone-option" data-tone="trading" data-icon="📈" data-label="Trading" onclick="selectTone(this)" role="menuitem"><span class="tone-opt-icon">📈</span><span class="tone-opt-label">Trading</span></button>
+                </div>
+              </div>
+              <button type="button" class="input-pill-toggle" id="deepSearchBtn" title="Activer l'agent Recherche approfondie multi-sources">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <span>Recherche approfondie</span>
+              </button>
+              <button type="button" class="input-pill-toggle live-btn" id="liveModeBtn" title="Démarrer une session vocale Live mains libres">
+                <svg viewBox="0 0 24 24"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+                <span>Live</span>
+              </button>
+            </div>
+            <div class="input-tools-right">
+              <div class="tone-select-wrap" id="convModelWrap">
+                <button class="tone-select-btn" id="convModelBtn" onclick="toggleModelMenu(event)" aria-haspopup="true" aria-expanded="false">
+                  <span class="tone-select-icon" id="convModelIcon">🤖</span>
+                  <span class="tone-select-label" id="convModelLabel">GPT-4o — Expert</span>
+                  <svg class="tone-select-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="tone-dropdown model-dropdown" id="modelDropdown" role="menu"></div>
+                <select id="convModelSelect" style="display:none;" onchange="changeConvModel(this.value)"></select>
+              </div>
+              <button class="input-btn" id="micBtn" title="Message vocal">
+                <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                <span class="mic-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+              </button>
+              <button class="input-btn send-btn" id="sendBtn" title="Envoyer">
+                <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+              <button class="input-btn send-btn" id="stopBtn" title="Arrêter" style="display:none; background:rgba(239,68,68,0.18); border-color:rgba(239,68,68,0.5); color:#f87171;" onclick="stopGeneration()">
+                <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
         <p class="input-disclaimer">E.V.A peut faire des erreurs · Vérifiez les informations importantes</p>
       </div>
@@ -1012,37 +1004,7 @@
 
   </div>
 
-  <!-- ══ EVA PANEL ══ -->
-  <div class="eva-panel" id="evaPanel">
-    <div class="eva-panel-header"></div>
-    <div class="eva-panel-char" id="evaCharContainer">
-      <!-- Contenu injecté dynamiquement par EvaCharacter.create() -->
-      <div class="eva-ground-glow"></div>
-    </div>
-    <div class="eva-panel-info">
-      <div class="eva-provider-chip" id="providerChip" onclick="openSettings('ai')">
-        <div class="provider-dot"></div>
-        <span id="providerName">Puter (Gratuit)</span>
-      </div>
-      <!-- ── Raccourcis rapides EVA ── -->
-      <div class="eva-quick-strip" id="evaQuickStrip">
-        <button class="quick-strip-btn" onclick="sendQuick('Crée une note rapide')">
-          <svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>Note
-        </button>
-        <button class="quick-strip-btn" onclick="sendQuick('Crée une alarme pour demain matin 7h')">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="m4.5 4.5 1.5 1.5M19.5 4.5 18 6"/></svg>Alarme
-        </button>
-        <button class="quick-strip-btn" onclick="sendQuick('Ajoute un événement à mon agenda')">
-          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Agenda
-        </button>
-        <button class="quick-strip-btn" onclick="sendQuick('Résume ce que nous avons dit')">
-          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Résumé
-        </button>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /.app-main -->
+  </div><!-- /.app-main -->
 
 <!-- ════════════════ SETTINGS MODAL ════════════════ -->
 <div class="modal-overlay" id="settingsModal">
@@ -1069,13 +1031,17 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Utilisation
         </button>
+        <button class="settings-nav" data-section="connectors">
+          <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></svg>
+          Connecteurs
+        </button>
         <button class="settings-nav" data-section="voice">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
           Voix
         </button>
         <button class="settings-nav" data-section="account">
-          <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M5 5l4.24 4.24m5.52 5.52L19 19M1 12h6m6 0h6M5 19l4.24-4.24m5.52-5.52L19 5"/></svg>
-          Compte
+          <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Compte & Sessions
         </button>
         <button class="settings-nav" data-section="brain">
           <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
@@ -1229,7 +1195,7 @@
 <script src="/js/voice/piper-tts.js" defer></script>
 <script src="/js/voice/stt.js"></script>
 <script src="/js/voice/wake-word.js"></script>
-<script src="/js/ui/eva-neural.js"></script>
+<script src="/js/voice/live-mode.js"></script>
 <script src="/js/app/core.js"></script>
 <script src="/js/app/auth.js"></script>
 <script src="/js/app/chat-session.js"></script>
@@ -1237,6 +1203,7 @@
 <script src="/js/app/conversations.js"></script>
 <script src="/js/app/memory.js"></script>
 <script src="/js/app/messages.js"></script>
+<script src="/js/features/connectors.js"></script>
 <script src="/js/app/settings-panel.js"></script>
 <script src="/js/app/file-gen.js"></script>
 <script src="/js/app/admin.js"></script>
@@ -1249,12 +1216,12 @@
 <!-- File Viewer Overlay -->
 <div id="fileViewerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(5px);z-index:999999;align-items:center;justify-content:center;flex-direction:column;opacity:0;transition:opacity 0.2s;">
   <div style="position:absolute;top:20px;right:20px;display:flex;gap:12px;z-index:10;align-items:center;">
-    <button id="fileViewerSystemBtn" onclick="openCurrentFileInSystem()" style="display:none;background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.3);color:var(--cyan);border-radius:8px;padding:8px 15px;cursor:pointer;align-items:center;justify-content:center;font-size:13px;font-family:'Space Mono',monospace;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,212,255,0.25)'" onmouseout="this.style.background='rgba(0,212,255,0.15)'">Ouvrir dans l'application</button>
-    <button id="fileViewerDownloadBtn" onclick="downloadCurrentFile()" style="display:none;background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:8px;padding:8px 15px;cursor:pointer;align-items:center;justify-content:center;font-size:13px;font-family:'Space Mono',monospace;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Télécharger</button>
-    <button id="fileViewerPrintBtn" onclick="printCurrentFile()" style="display:none;background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:8px;padding:8px 15px;cursor:pointer;align-items:center;justify-content:center;font-size:13px;font-family:'Space Mono',monospace;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Imprimer</button>
+    <button id="fileViewerSystemBtn" onclick="openCurrentFileInSystem()" style="display:none;background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.3);color:var(--cyan);border-radius:8px;padding:8px 15px;cursor:pointer;align-items:center;justify-content:center;font-size:13px;font-family:'Inter', 'Segoe UI', system-ui, sans-serif;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,212,255,0.25)'" onmouseout="this.style.background='rgba(0,212,255,0.15)'">Ouvrir dans l'application</button>
+    <button id="fileViewerDownloadBtn" onclick="downloadCurrentFile()" style="display:none;background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:8px;padding:8px 15px;cursor:pointer;align-items:center;justify-content:center;font-size:13px;font-family:'Inter', 'Segoe UI', system-ui, sans-serif;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Télécharger</button>
+    <button id="fileViewerPrintBtn" onclick="printCurrentFile()" style="display:none;background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:8px;padding:8px 15px;cursor:pointer;align-items:center;justify-content:center;font-size:13px;font-family:'Inter', 'Segoe UI', system-ui, sans-serif;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Imprimer</button>
     <button onclick="closeFileViewer()" style="background:rgba(255,255,255,0.1);border:none;color:#fff;border-radius:50%;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">✖</button>
   </div>
-  <div id="fileViewerHeader" style="position:absolute;top:25px;left:25px;color:#fff;font-family:'Space Mono',monospace;font-size:16px;background:rgba(0,0,0,0.5);padding:8px 15px;border-radius:8px;"></div>
+  <div id="fileViewerHeader" style="position:absolute;top:25px;left:25px;color:#fff;font-family:'Inter', 'Segoe UI', system-ui, sans-serif;font-size:16px;background:rgba(0,0,0,0.5);padding:8px 15px;border-radius:8px;"></div>
   
   <div id="fileViewerContent" style="width:90%;height:85%;background:var(--surface);border-radius:12px;overflow:auto;padding:30px;color:var(--text);font-family:sans-serif;font-size:14px;line-height:1.6;box-shadow:0 10px 40px rgba(0,0,0,0.5);display:none;white-space:pre-wrap;"></div>
   <iframe id="fileViewerIframe" style="width:90%;height:85%;background:#fff;border-radius:12px;border:none;box-shadow:0 10px 40px rgba(0,0,0,0.5);display:none;"></iframe>

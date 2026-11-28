@@ -784,7 +784,7 @@ class PollinationsProvider {
 
     /* ── Fallback Puter si Pollinations entièrement indisponible ── */
     if (!response) {
-      if (window.puter) { // Fallback Puter actif mme sans compte li
+      if (this.config && this.config.autoFallback === true && window.puter) {
         console.warn('[EVA Pollinations] Tous les endpoints en échec — fallback Puter AI...');
         if (window.toast) window.toast('Pollinations indisponible — bascule sur Puter AI', 'warning');
         try {
@@ -839,6 +839,146 @@ class PollinationsProvider {
   }
 }
 
+
+// ═══ QUOTA TRACKER D2 ═══
+const _QUOTA_LIMITS = {
+  pollinations: { daily: 120, label: 'Pollinations (Gratuit)' },
+  puter:        { daily: 60,  label: 'Puter Cloud' },
+  gemini:       { daily: 250, label: 'Google Gemini' },
+  openai:       { daily: 500, label: 'OpenAI API' },
+  claude:       { daily: 500, label: 'Anthropic Claude' },
+  eva:          { daily: Infinity, label: 'E.V.A Local' },
+  qwen:         { daily: Infinity, label: 'Local Privé' },
+  lmstudio:     { daily: Infinity, label: 'LM Studio' },
+  ollama:       { daily: Infinity, label: 'Ollama' }
+};
+
+function _todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+const EVAQuotas = {
+  _load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('eva_quotas_v2') || '{}');
+      if (raw.date !== _todayKey()) return { date: _todayKey(), counts: {} };
+      return { date: raw.date, counts: raw.counts || {} };
+    } catch (_) { return { date: _todayKey(), counts: {} }; }
+  },
+  record(provider, model) {
+    const store = this._load();
+    const p = String(provider || 'unknown');
+    store.counts[p] = (store.counts[p] || 0) + 1;
+    if (model) {
+      const mk = p + ':' + model;
+      store.counts[mk] = (store.counts[mk] || 0) + 1;
+    }
+    try { localStorage.setItem('eva_quotas_v2', JSON.stringify(store)); } catch (_) {}
+    if (window.S?.user?.uid && window.db) {
+      try {
+        window.db.collection('users').doc(window.S.user.uid)
+          .set({ quotas: { date: store.date, counts: store.counts } }, { merge: true }).catch(() => {});
+      } catch (_) {}
+    }
+    return store;
+  },
+  getAll() {
+    const store = this._load();
+    return Object.keys(_QUOTA_LIMITS).map(k => {
+      const lim = _QUOTA_LIMITS[k];
+      const used = store.counts[k] || 0;
+      const pct = Number.isFinite(lim.daily) ? Math.min(100, Math.round((used / lim.daily) * 100)) : 0;
+      return { key: k, label: lim.label, used, daily: lim.daily, pct };
+    });
+  }
+};
+
+// ═══ GOOGLE GEMINI PROVIDER ═══
+class GeminiProvider {
+  constructor(config) {
+    this.config = config || {};
+    this.ready = true;
+  }
+  async initialize() {
+    if (!this.config.geminiApiKey) {
+      return { success: false, error: 'Clé API Google Gemini manquante (Paramètres → IA)' };
+    }
+    return { success: true };
+  }
+  async sendMessage(messages, systemPrompt) {
+    const apiKey = (this.config.geminiApiKey || '').trim();
+    if (!apiKey) return { success: false, error: 'Clé API Google Gemini manquante.' };
+    const model = this.config.geminiModel || 'gemini-2.5-flash';
+    const contents = (messages || []).map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content || '') }]
+    }));
+    const body = {
+      contents,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
+    };
+    if (systemPrompt) {
+      body.systemInstruction = { parts: [{ text: systemPrompt }] };
+    }
+    try {
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(apiKey);
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        const msg = data?.error?.message || ('Gemini HTTP ' + r.status);
+        return { success: false, error: msg };
+      }
+      const txt = data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+      if (!txt) return { success: false, error: 'Réponse Gemini vide.' };
+      return { success: true, content: _stripLeakedPrefix(txt) };
+    } catch (e) {
+      return { success: false, error: e.message || 'Erreur réseau Gemini' };
+    }
+  }
+}
+
+// ═══ MEDIA GENERATION (IMAGE / AUDIO / VIDEO — DISABLED BY DEFAULT) ═══
+const EVAMedia = {
+  isEnabled(cfg) {
+    const c = cfg || (window.S && window.S.config) || {};
+    return c.mediaEnabled === true;
+  },
+  async generateImage(prompt, cfg) {
+    const c = cfg || (window.S && window.S.config) || {};
+    if (!this.isEnabled(c)) {
+      return { success: false, disabled: true, error: 'Génération média désactivée par défaut. Activez-la dans Paramètres → IA & Quotas.' };
+    }
+    const prov = c.mediaImageProvider || 'pollinations-flux';
+    if (prov === 'gemini-imagen' && c.geminiApiKey) {
+      try {
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=' + encodeURIComponent(c.geminiApiKey), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instances: [{ prompt }], parameters: { sampleCount: 1 } })
+        });
+        const j = await r.json();
+        const b64 = j?.predictions?.[0]?.bytesBase64Encoded;
+        if (b64) return { success: true, type: 'image', url: 'data:image/png;base64,' + b64, provider: 'Gemini Imagen' };
+      } catch (e) { return { success: false, error: e.message }; }
+    }
+    const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?width=1024&height=1024&nologo=true&seed=' + (Date.now() % 999999);
+    return { success: true, type: 'image', url, provider: 'Pollinations Flux' };
+  },
+  async generateAudio(prompt, cfg) {
+    const c = cfg || (window.S && window.S.config) || {};
+    if (!this.isEnabled(c)) {
+      return { success: false, disabled: true, error: 'Génération audio désactivée par défaut. Activez-la dans Paramètres → IA & Quotas.' };
+    }
+    const voice = c.mediaAudioVoice || 'nova';
+    const url = 'https://text.pollinations.ai/' + encodeURIComponent(prompt) + '?model=openai-audio&voice=' + encodeURIComponent(voice);
+    return { success: true, type: 'audio', url, provider: 'Pollinations Audio' };
+  }
+};
+
 // ═══ PROVIDER FACTORY ═══
 function createProvider(providerName, config) {
   switch (providerName) {
@@ -850,6 +990,8 @@ function createProvider(providerName, config) {
       return new PuterProvider(config);
     case 'pollinations':
       return new PollinationsProvider(config);
+    case 'gemini':
+      return new GeminiProvider(config);
     case 'openai':
       return new OpenAIProvider(config);
     case 'claude':
@@ -873,6 +1015,9 @@ window.EVAProviders = {
   ClaudeProvider,
   LMStudioProvider,
   OllamaProvider,
+  GeminiProvider,
+  EVAQuotas,
+  EVAMedia,
   createProvider,
   preloadLocalModel
 };

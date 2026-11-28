@@ -276,10 +276,10 @@ function showTyping(userMsg) {
 
   div.innerHTML =
     '<div class="thinking-wrap">' +
-      '<div class="thinking-steps" id="thinkingStepsEl">' +
-        '<span class="thinking-icon" id="thinkIcon">' + firstThought.icon + '</span>' +
-        '<span class="thinking-label" id="thinkLabel">' + firstThought.label + '</span>' +
-        '<div class="thinking-dots-mini"><div class="thinking-dot-mini"></div><div class="thinking-dot-mini"></div><div class="thinking-dot-mini"></div></div>' +
+      '<div class="typing-dots-d2" id="thinkingStepsEl">' +
+        '<div class="typing-dots-ring"><span class="typing-dot-d2"></span><span class="typing-dot-d2"></span><span class="typing-dot-d2"></span></div>' +
+        '<span class="thinking-icon" id="thinkIcon" style="display:none;">' + firstThought.icon + '</span>' +
+        '<span class="typing-phase-pill" id="thinkLabel">' + firstThought.label + '</span>' +
       '</div>' +
       '<div class="thinking-detail" id="thinkDetail">' + firstThought.detail + '</div>' +
     '</div>';
@@ -304,7 +304,6 @@ function showTyping(userMsg) {
     stopBtn.style.display = 'inline-flex';
   }
 
-  if (window.EvaCharacter) window.EvaCharacter.setThinking();
   setEvaStatus('EVA RÉFLÉCHIT...', 'thinking');
 }
 
@@ -356,9 +355,6 @@ function hideTyping() {
   if (_thinkTimer) { clearInterval(_thinkTimer); _thinkTimer = null; }
   document.querySelectorAll('#typingInd, .typing-bubble').forEach(function(el) { el.remove(); });
   setEvaStatus(null);
-  if (window.EvaCharacter && typeof window.EvaCharacter.setIdle === 'function') {
-    try { window.EvaCharacter.setIdle(); } catch(_) {}
-  }
   /* FIX v5.6.11 : sendBtn restaure TOUJOURS meme si cwRunning=true */
   S.busy = false;
   var sendBtn = document.getElementById('sendBtn');
@@ -524,7 +520,6 @@ async function handleSend(customText) {
     window.EVASTS.stopListening();
     var micBtn = document.getElementById('micBtn');
     if (micBtn) micBtn.classList.remove('recording');
-    if (window.EvaCharacter) window.EvaCharacter.setIdle();
     setEvaStatusHeader(null);
     if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 800);
   }
@@ -691,7 +686,53 @@ async function handleSend(customText) {
     }
   }
 
-  var isCWPCTask = false;
+  // Handle media intent cleanly (D2: disabled by default until enabled in Settings)
+  var _isMediaAsk = /^\s*(?:g[eé]n[eè]re|cr[eé]e|dessine|fais|imagine)\s+(?:une?|des?|l['’]|un)?\s*(?:image|photo|illustration|dessin|logo|avatar|audio|musique|vid[eé]o)\b/i.test(text || '');
+  if (_isMediaAsk && (!window.EVAProviders?.EVAMedia || !window.EVAProviders.EVAMedia.isEnabled(S.config))) {
+    var noMediaMsg = "La génération d'images, d'audio et de vidéo est **désactivée par défaut** dans E.V.A.\n\nVous pouvez l'activer et choisir votre fournisseur média dans **Paramètres → IA & Quotas**.";
+    appendMsg('eva', noMediaMsg);
+    var _lastB = document.querySelectorAll('.message.eva .msg-bubble');
+    var _b = _lastB[_lastB.length - 1];
+    if (_b) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-primary';
+      btn.style.cssText = 'margin-top:8px;font-size:0.78em;padding:6px 14px;';
+      btn.textContent = '⚙️ Activer dans Paramètres IA';
+      btn.onclick = function() { openSettings('ai'); };
+      _b.appendChild(btn);
+    }
+    if (typeof saveConvMsg === 'function') await saveConvMsg(text, noMediaMsg);
+    return;
+  }
+  if (_isMediaAsk && window.EVAProviders?.EVAMedia?.isEnabled(S.config)) {
+    window._lastAgentMeta = { key: 'media', label: 'Studio Média', icon: '🎨' };
+    showTyping(text);
+    window.setThinkingPhase(_SVG_THINK_SPARK, 'Création média...', 'Génération via ' + (S.config.mediaImageProvider || 'Pollinations Flux'));
+    var mRes = /audio|musique/i.test(text)
+      ? await window.EVAProviders.EVAMedia.generateAudio(text, S.config)
+      : await window.EVAProviders.EVAMedia.generateImage(text, S.config);
+    hideTyping();
+    if (mRes && mRes.success) {
+      var replyTxt = mRes.type === 'audio' ? ('Audio généré via **' + mRes.provider + '** :') : ('Image générée via **' + mRes.provider + '** :');
+      appendMsg('eva', replyTxt);
+      var _bs = document.querySelectorAll('.message.eva .msg-bubble');
+      var _lb = _bs[_bs.length - 1];
+      if (_lb) {
+        if (mRes.type === 'image') {
+          _lb.innerHTML += '<div style="margin-top:8px;"><img src="' + mRes.url + '" alt="Média EVA" style="max-width:100%;max-height:380px;border-radius:12px;border:1px solid rgba(0,212,255,0.35);display:block;cursor:pointer;" onclick="if(window.openDocumentViewer)openDocumentViewer({name:\'image.png\',ext:\'png\',url:this.src})"><a href="' + mRes.url + '" download="eva-image.png" style="display:inline-block;margin-top:6px;font-size:0.76em;color:var(--cyan);text-decoration:none;">⬇ Télécharger l\'image</a></div>';
+        } else {
+          _lb.innerHTML += '<div style="margin-top:8px;"><audio controls src="' + mRes.url + '" style="width:100%;max-width:340px;"></audio></div>';
+        }
+      }
+      if (typeof saveConvMsg === 'function') await saveConvMsg(text, replyTxt + '\n' + mRes.url);
+    } else {
+      appendMsg('eva', '⚠️ Impossible de générer le média : ' + (mRes?.error || 'erreur'));
+    }
+    return;
+  }
+  /* EVAMediaTrigger */
+    var isCWPCTask = false;
   var msgContent = text;
     if (allImages.length) {
       window.setThinkingPhase(_SVG_THINK_SEARCH, 'Analyse...', 'J\'examine votre image...');
@@ -725,16 +766,21 @@ async function handleSend(customText) {
     var _isLocalProv = (_activeProv === 'lmstudio' || _activeProv === 'ollama' ||
                       _activeProv === 'qwen'    || _activeProv === 'eva');
 
+  var _isDeep = !!window._evaDeepSearch && !isCWPCTask;
+  window._lastAgentMeta = _isDeep ? { key: 'deep-search', label: 'Recherche approfondie', icon: '🔍' } : null;
   var _shouldSearch = !isCWPCTask && window.EVAWebSearch && (
+    _isDeep ||
     window.EVAWebSearch.needsSearch(msgContent) ||
     (_isLocalProv && window.EVAWebSearch.needsSearchLocal && window.EVAWebSearch.needsSearchLocal(msgContent))
   );
   if (_shouldSearch) {
     var searchLabel = msgContent.length > 40 ? msgContent.substring(0, 40) + '...' : msgContent;
-    window.setThinkingPhase(_SVG_THINK_SEARCH, 'Recherche...', 'Recherche web : "' + searchLabel + '"');
-    setEvaStatus('🔍 RECHERCHE...', 'thinking');
+    window.setThinkingPhase(_SVG_THINK_SEARCH, _isDeep ? 'Recherche approfondie...' : 'Recherche...', (_isDeep ? 'Analyse multi-sources : "' : 'Recherche web : "') + searchLabel + '"');
+    setEvaStatus(_isDeep ? '🔍 RECHERCHE APPROFONDIE...' : '🔍 RECHERCHE...', 'thinking');
     try {
-      var searchData = await window.EVAWebSearch.search(msgContent);
+      var searchData = (_isDeep && window.EVAWebSearch.deepSearch)
+        ? await window.EVAWebSearch.deepSearch(msgContent)
+        : await window.EVAWebSearch.search(msgContent);
       if (searchData) {
         msgContent = msgContent + '\n\n' + searchData;
       }
@@ -920,8 +966,7 @@ async function handleSend(customText) {
         toast('Erreur IA — vérifiez les paramètres', 'error');
       }
     }
-    if (window.EvaCharacter) window.EvaCharacter.setIdle();
-  }
+    }
 }
 
 /* Bannière réseau auto via browser offline event */
@@ -987,6 +1032,21 @@ function streamEvaMsg(content) {
   }
   window.clearThinkingHistory = function() { _thinkHistory = []; };
 
+  // Badge agent contextuel D2
+  var agentMeta = window._lastAgentMeta;
+  if (!agentMeta && content) {
+    if (/\[(ACTION|CW)[:\{]/.test(content) && /cloudworks|agentic_task|pc/i.test(content)) agentMeta = { key: 'cloudworks', label: 'Agent CloudWorks', icon: '⚡' };
+    else if (/agenda|événement|calendrier|event/i.test(_lastUserMsg || '') && /agenda|événement|planifié|calendrier/i.test(content)) agentMeta = { key: 'calendar', label: 'Agent Agenda', icon: '📅' };
+    else if (/mail|gmail|courriel|message/i.test(_lastUserMsg || '') && /brouillon|gmail|mail|objet/i.test(content)) agentMeta = { key: 'gmail', label: 'Agent Gmail', icon: '✉️' };
+  }
+  if (agentMeta) {
+    var ab = document.createElement('div');
+    ab.className = 'eva-agent-badge agent-' + agentMeta.key;
+    ab.innerHTML = '<span>' + agentMeta.icon + '</span><span>' + agentMeta.label + '</span>';
+    msgContent.appendChild(ab);
+  }
+  window._lastAgentMeta = null;
+
   // Bulle
   var bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
@@ -1020,7 +1080,6 @@ function streamEvaMsg(content) {
     setEvaStatus('EVA PARLE...', 'speaking');
     window.EVATTS.speakTextStreaming(plain, S.config);
   } else {
-    if (window.EvaCharacter) window.EvaCharacter.setThinking();
     setEvaStatus('EVA ÉCRIT...', 'writing');
     
     // Si la synthèse est activée mais le texte est vide (ex: juste un graphique),
@@ -1034,15 +1093,19 @@ function streamEvaMsg(content) {
   renderMdDom(content, bubble);
   scrollDown();
 
+  // Rendu 3 suggestions de suivi Perplexity-style
+  try {
+    if (!isSystemAbortMsg && !window._isJarvisActive && content && content.length > 35 && typeof _generateFollowupChips === 'function') {
+      _generateFollowupChips(msgContent, _lastUserMsg || '', content);
+    }
+  } catch(_) {}
+
   // Pseudo-streaming
   _revealMsgBlocks(bubble, function() {
     if (!S.ttsOn || !window.EVATTS) {
       setEvaStatus(null);
     }
-    if (window.EvaCharacter && !S.ttsOn) {
-      window.EvaCharacter.setIdle();
-    }
-  });
+    });
 }
 
 /* Révèle les éléments enfants du bubble progressivement */
@@ -1420,43 +1483,29 @@ function _refreshFilePreviewBars() {
   var docBar = document.getElementById('docPreviewBar');
   if (!imgBar || !docBar) return;
 
-  /* ── Images : thumbnails carrées avec bouton X ── */
   if (S.images && S.images.length) {
     imgBar.innerHTML = S.images.map(function(im, i) {
-      var shortName = (im.name || 'image').length > 10
-        ? (im.name||'image').slice(0, 9) + '…'
-        : (im.name || 'image');
-      return '<div class="attach-img-card">' +
-        '<img src="' + im.url + '" alt="' + esc(im.name||'image') + '" title="' + esc(im.name||'image') + '">' +
-        '<button class="attach-remove" onclick="removeImageAttachment(' + i + ')" title="Retirer">✕</button>' +
-        '<span class="attach-name">' + esc(shortName) + '</span>' +
-        '</div>';
+      var label = im.name || 'image.png';
+      return '<span class="attach-chip">' +
+        '<img class="attach-chip-thumb" src="' + im.url + '" alt="' + esc(label) + '">' +
+        '<span class="attach-chip-name" title="' + esc(label) + '">' + esc(label) + '</span>' +
+        '<button type="button" class="attach-chip-remove" onclick="removeImageAttachment(' + i + ')" title="Retirer">×</button>' +
+        '</span>';
     }).join('');
     imgBar.style.display = 'flex';
   } else {
     imgBar.style.display = 'none';
   }
 
-  /* ── Documents : cartes avec icône, nom, extension, taille ── */
   if (S.documents && S.documents.length) {
     docBar.innerHTML = S.documents.map(function(doc, i) {
       var loading = doc._loading;
-      var sizeStr = doc.size ? (doc.size > 1024*1024
-        ? (doc.size/(1024*1024)).toFixed(1) + ' Mo'
-        : Math.round(doc.size/1024) + ' Ko') : '';
       var icon = loading ? '⏳' : _docIconExt(doc.ext || '');
-      return '<div class="attach-doc-card">' +
-        '<span class="attach-doc-icon">' + icon + '</span>' +
-        '<div class="attach-doc-info">' +
-          '<span class="attach-doc-name" title="' + esc(doc.name||'document') + '">' + esc(doc.name||'document') + '</span>' +
-          '<div class="attach-doc-meta">' +
-            (doc.ext ? '<span class="attach-doc-ext">' + doc.ext + '</span>' : '') +
-            (sizeStr ? '<span class="attach-doc-size">' + sizeStr + '</span>' : '') +
-            (loading ? '<span class="attach-doc-loading">Lecture...</span>' : '') +
-          '</div>' +
-        '</div>' +
-        (!loading ? '<button class="attach-remove" onclick="removeDocAttachment(' + i + ')" title="Retirer">✕</button>' : '') +
-        '</div>';
+      return '<span class="attach-chip">' +
+        '<span>' + icon + '</span>' +
+        '<span class="attach-chip-name" title="' + esc(doc.name||'document') + '">' + esc(doc.name||'document') + (loading ? '…' : '') + '</span>' +
+        (!loading ? '<button type="button" class="attach-chip-remove" onclick="removeDocAttachment(' + i + ')" title="Retirer">×</button>' : '') +
+        '</span>';
     }).join('');
     docBar.style.display = 'flex';
   } else {
@@ -1512,7 +1561,6 @@ function handleMic() {
   if (window.EVASTS.getIsListening()) {
     window.EVASTS.stopListening();
     btn.classList.remove('recording');
-    if (window.EvaCharacter) window.EvaCharacter.setIdle();
     setEvaStatusHeader(null);
     if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 600);
     return;
@@ -1522,7 +1570,6 @@ function handleMic() {
     if (!ok) { toast('Permission micro refusée','error'); return; }
     if (S.wakeWordOn && window.EVAWakeWord) window.EVAWakeWord.stop();
     btn.classList.add('recording');
-    if (window.EvaCharacter) window.EvaCharacter.setListening();
     setEvaStatusHeader('🎤 ÉCOUTE...', 'listening');
     window.EVASTS.startListening(
       function(transcript, isFinal) {
@@ -1536,7 +1583,6 @@ function handleMic() {
       function() {
         /* Arrêt définitif (erreur non récupérable) */
         btn.classList.remove('recording');
-        if (window.EvaCharacter) window.EvaCharacter.setIdle();
         setEvaStatusHeader(null);
         if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 800);
       }
@@ -1642,3 +1688,42 @@ function initChatDragDropPaste() {
 window.initChatDragDropPaste = initChatDragDropPaste;
 
 /* CloudWorks tracker functions removed, see cw-modal.js */
+
+
+function _generateFollowupChips(container, userQ, reply) {
+  if (!container) return;
+  var existing = container.querySelector('.eva-followups-row');
+  if (existing) existing.remove();
+  var cleanQ = String(userQ || '').trim();
+  var suggs = [];
+  if (/code|script|html|python|js|bug|erreur/i.test(cleanQ + ' ' + reply)) {
+    suggs = ['Explique-moi ce code étape par étape', 'Propose une version optimisée', 'Ajoute des tests unitaires'];
+  } else if (/météo|temps|climat|pluie/i.test(cleanQ)) {
+    suggs = ['Et pour demain ?', 'Prévisions du week-end', 'Que me conseilles-tu de porter ?'];
+  } else if (/pdf|excel|pptx|présentation|document|cv/i.test(cleanQ + ' ' + reply)) {
+    suggs = ['Adapte-le dans un thème différent', 'Résume les points clés en 5 puces', 'Exporte une version plus détaillée'];
+  } else if (/agenda|mail|gmail|réunion|rdv|calendrier/i.test(cleanQ + ' ' + reply)) {
+    suggs = ['Créer un rappel associé', 'Vérifier mes disponibilités demain', 'Résumer mes priorités du jour'];
+  } else {
+    suggs = ['Approfondis ce sujet en détail', 'Donne un exemple concret', 'Résume en 3 points essentiels'];
+  }
+  var row = document.createElement('div');
+  row.className = 'eva-followups-row';
+  suggs.slice(0, 3).forEach(function(txt) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'eva-followup-chip';
+    btn.innerHTML = '<span>✨</span><span>' + esc(txt) + '</span>';
+    btn.onclick = function() {
+      var inp = document.getElementById('msgInput');
+      if (inp) {
+        inp.value = txt;
+        var sb = document.getElementById('sendBtn');
+        if (sb) sb.disabled = false;
+        handleSend();
+      }
+    };
+    row.appendChild(btn);
+  });
+  container.appendChild(row);
+}

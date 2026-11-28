@@ -858,9 +858,9 @@ window.loadCloudWorks = loadCloudWorks;
     .cw-quick-icon { font-size:1.4em; }
     .cw-agentic-box { margin-top:4px; }
     .cw-agentic-label { font-size:0.72em; color:#88889a; margin-bottom:6px; }
-    .cw-textarea { width:100%; background:rgba(0,0,0,0.3); border:1px solid rgba(0,212,255,0.15); border-radius:8px; padding:10px; color:var(--text,#e4e4ef); font-size:0.78em; font-family:'Space Mono',monospace; resize:vertical; outline:none; }
+    .cw-textarea { width:100%; background:rgba(0,0,0,0.3); border:1px solid rgba(0,212,255,0.15); border-radius:8px; padding:10px; color:var(--text,#e4e4ef); font-size:0.78em; font-family:'Inter', 'Segoe UI', system-ui, sans-serif; resize:vertical; outline:none; }
     .cw-textarea:focus { border-color:rgba(0,212,255,0.4); }
-    .cw-agentic-status { margin-top:8px; padding:8px 12px; border-radius:8px; font-size:0.75em; font-family:'Space Mono',monospace; }
+    .cw-agentic-status { margin-top:8px; padding:8px 12px; border-radius:8px; font-size:0.75em; font-family:'Inter', 'Segoe UI', system-ui, sans-serif; }
     .cw-agentic-status.running { background:rgba(255,200,0,0.1); color:#ffc800; border:1px solid rgba(255,200,0,0.2); }
     .cw-agentic-status.done { background:rgba(0,255,136,0.1); color:#00ff88; border:1px solid rgba(0,255,136,0.2); }
     .cw-agentic-status.error { background:rgba(255,77,109,0.1); color:#ff4d6d; border:1px solid rgba(255,77,109,0.2); }

@@ -332,6 +332,15 @@ async function executeEvaAction(action) {
       setEvaStatus('📅 ÉVÉNEMENT AJOUTÉ !', 'action');
       setTimeout(function(){ setEvaStatus(null); }, 3000);
 
+    } else if (action.type === 'gws_calendar' && window.EVAConnectors) {
+      await window.EVAConnectors.handleCalendarAction(action);
+
+    } else if (action.type === 'gws_gmail' && window.EVAConnectors) {
+      await window.EVAConnectors.handleGmailAction(action);
+
+    } else if (action.type === 'github_query' && window.EVAConnectors) {
+      await window.EVAConnectors.handleGithubQuery(action);
+
     } else if (action.type === 'pdf') {
       _evaGenerateHtmlPdf(action);
 
@@ -557,6 +566,18 @@ async function _evaGeneratePdf(action) {
 
 /* ── Téléchargement PDF via html2pdf.js (rendu identique au viewer) ── */
 async function _downloadHtmlAsPdf(blobUrl, filename) {
+  var meta = window._evaPdfMeta && window._evaPdfMeta[blobUrl];
+  if (window.eva && window.eva.fs && window.eva.fs.saveDialog && window.eva.fs.createPdf && meta && meta.html) {
+    try {
+      var resDlg = await window.eva.fs.saveDialog({ defaultPath: filename || 'document.pdf', filters: [{ name: 'PDF', extensions: ['pdf'] }] });
+      var outPath = resDlg && (resDlg.filePath || (typeof resDlg === 'string' ? resDlg : null));
+      if (outPath) {
+        await window.eva.fs.createPdf(outPath, meta.html, { landscape: meta.orientation === 'landscape' });
+        if (typeof toast === 'function') toast('PDF enregistré : ' + filename, 'success');
+        return;
+      }
+    } catch(ne) { console.warn('[Native PDF]', ne); }
+  }
   if (typeof toast === 'function') toast('Génération du PDF en cours…', 'info');
   var pdfIframe;
   try {
@@ -608,37 +629,54 @@ function _evaGenerateHtmlPdf(action) {
   if (!filename.toLowerCase().endsWith('.pdf')) filename += '.pdf';
   var card = _evaGenCard('pdf', filename);
   try {
-    var htmlContent = action.content || '';
-    /* Strip possible code fences */
-    htmlContent = htmlContent.replace(/^```[a-z]*\n?/i,'').replace(/\n?```$/,'');
+    var htmlContent = (action.content || '').replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '');
     if (!htmlContent.trim()) {
       if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Contenu HTML manquant</span>';
       setEvaStatus(null); return;
     }
-    /* Inject A4 page-simulation CSS — viewer shows white card on gray bg, print preserves all styling */
-    if (!htmlContent.includes('__eva_a4__')) {
-      var a4css = '<style id="__eva_a4__">html{background:#6b6b6b;padding:28px 16px;margin:0;min-height:100vh;box-sizing:border-box}body{background:white!important;max-width:794px;margin:0 auto 32px!important;padding:36px 56px!important;box-shadow:0 4px 24px rgba(0,0,0,.45);box-sizing:border-box;min-height:1123px;font-size:13.5px;line-height:1.75}@page{size:A4 portrait;margin:20mm 22mm}@media print{html{background:white!important;padding:0!important;margin:0!important}body{background:white!important;max-width:none!important;margin:0!important;padding:0!important;box-shadow:none!important;min-height:auto!important;font-size:12pt!important;line-height:1.65!important}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}h1,h2,h3,h4{page-break-after:avoid}table{page-break-inside:avoid}tr{page-break-inside:avoid}}</style>';
-      if (htmlContent.includes('</head>')) {
-        htmlContent = htmlContent.replace('</head>', a4css + '</head>');
-      } else if (htmlContent.includes('<body')) {
-        htmlContent = htmlContent.replace('<body', a4css + '<body');
-      } else {
-        htmlContent = a4css + htmlContent;
+    var orientation = (String(action.orientation || '').toLowerCase() === 'landscape' || String(action.orientation || '').toLowerCase() === 'paysage') ? 'landscape' : 'portrait';
+    var themeKey = (action.theme || _detectPdfStyle(action) || 'moderne').toLowerCase();
+    var th = _EVA_PDF_THEMES[themeKey] || _EVA_PDF_THEMES.moderne;
+
+    // Réutiliser la dernière photo envoyée dans le chat si CV/badge ou placeholder présent
+    var userImg = (window._lastAttachedImages && window._lastAttachedImages[0] && window._lastAttachedImages[0].data) || (window.S && window.S.images && window.S.images[0] && window.S.images[0].data) || null;
+    if (userImg) {
+      htmlContent = htmlContent.replace(/\[USER_PHOTO\]|\{\{PHOTO\}\}/gi, userImg);
+      if (/cv|curriculum/i.test(filename + ' ' + (action.title || '')) && !htmlContent.includes('data:image/')) {
+        htmlContent = htmlContent.replace(/<body([^>]*)>/i, '<body$1><img src="' + userImg + '" alt="Photo" style="float:right;width:96px;height:96px;object-fit:cover;border-radius:12px;border:2px solid ' + th.accent + ';margin:0 0 14px 18px;">');
       }
     }
-    var blob = new Blob([htmlContent], {type:'text/html;charset=utf-8'});
+
+    var pageW = orientation === 'landscape' ? '1123px' : '794px';
+    var minH  = orientation === 'landscape' ? '794px'  : '1123px';
+    if (!htmlContent.includes('__eva_a4__')) {
+      var a4css = '<style id="__eva_a4__">' +
+        'html{background:#232336;padding:28px 16px;margin:0;min-height:100vh;box-sizing:border-box;font-family:' + th.font + '}' +
+        'body{background:' + (th.bg === '#0d0d14' ? '#0d0d14' : 'white') + '!important;color:' + (th.bodyTxt || '#1e293b') + ';max-width:' + pageW + ';margin:0 auto 32px!important;padding:42px 54px!important;box-shadow:0 12px 36px rgba(0,0,0,0.48);box-sizing:border-box;min-height:' + minH + ';font-size:13.5px;line-height:1.7;border-top:5px solid ' + th.accent + ';position:relative}' +
+        'h1{color:' + th.accent + '}table{width:100%;border-collapse:collapse}th{background:' + th.accent + ';color:#fff;padding:8px}td{padding:8px;border:1px solid #cbd5e1}' +
+        '@page{size:A4 ' + orientation + ';margin:16mm 18mm;@bottom-right{content:"Page " counter(page) " / " counter(pages);font-size:9pt;color:#64748b}}' +
+        '@media print{html{background:white!important;padding:0!important}body{max-width:none!important;margin:0!important;box-shadow:none!important;min-height:auto!important}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}h1,h2,h3,tr{break-inside:avoid}}' +
+        '</style>';
+      if (htmlContent.includes('</head>')) htmlContent = htmlContent.replace('</head>', a4css + '</head>');
+      else if (htmlContent.includes('<body')) htmlContent = htmlContent.replace('<body', a4css + '<body');
+      else htmlContent = '<!DOCTYPE html><html><head><meta charset="utf-8">' + a4css + '</head><body>' + htmlContent + '</body></html>';
+    }
+
+    var blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
     var url = URL.createObjectURL(blob);
-    toast('PDF prêt : '+filename, 'success');
-    setEvaStatus('PDF CRÉÉ', 'action');
-    setTimeout(function(){ setEvaStatus(null); }, 3000);
-    /* Store as html ext so the viewer uses iframe */
-    _evaCardReady(card, 'pdf', filename, url);
-    /* Override: mark internally so viewer uses iframe */
+    window._evaPdfMeta = window._evaPdfMeta || {};
+    window._evaPdfMeta[url] = { html: htmlContent, orientation: orientation, theme: themeKey, filename: filename };
     window._lastPdfUrl = url;
+    _queueDocArtifact({ name: filename, ext: 'pdf', orientation: orientation, theme: themeKey, html: htmlContent });
+
+    toast('PDF A4 prêt : ' + filename, 'success');
+    setEvaStatus('PDF CRÉÉ', 'action');
+    setTimeout(function() { setEvaStatus(null); }, 3000);
+    _evaCardReady(card, 'pdf', filename, url);
   } catch(e) {
     console.error('[EVA PDF]', e);
-    toast('Erreur génération PDF : '+e.message, 'error');
-    if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Erreur : '+e.message+'</span>';
+    toast('Erreur génération PDF : ' + e.message, 'error');
+    if (card) card.innerHTML = '<span style="color:#ff6b6b;font-size:0.75em;">❌ Erreur : ' + e.message + '</span>';
     setEvaStatus(null);
   }
 }
@@ -673,6 +711,7 @@ function _evaGenerateExcel(action) {
     var wbout = XLSXLib.write(wb, {bookType:'xlsx', type:'array'});
     var blob = new Blob([new Uint8Array(wbout)], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     var url = URL.createObjectURL(blob);
+    _queueDocArtifact({ name: filename, ext: 'xlsx', rows: wsData });
     toast('Excel prêt : ' + filename, 'success');
     setEvaStatus('EXCEL CRÉÉ', 'action');
     setTimeout(function(){ setEvaStatus(null); }, 3000);
@@ -747,7 +786,9 @@ async function _evaGeneratePptx(action) {
       var slide = pptx.addSlide();
 
       /* Fond sombre EVA */
-      slide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:'100%', h:'100%', fill:{color:'0d0d1a'} });
+      var _ptKey = (action.theme && _EVA_PPTX_THEMES[action.theme]) ? action.theme : 'midnight-cyber';
+      var _pt = _EVA_PPTX_THEMES[_ptKey] || _EVA_PPTX_THEMES['midnight-cyber'];
+      slide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:'100%', h:'100%', fill:{color:_pt.bg} });
       /* Barre d'accent cyan */
       slide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:0.07, h:'100%', fill:{color:'00d4ff'} });
       /* Ligne séparatrice sous le titre */
@@ -804,7 +845,9 @@ async function _evaGeneratePptx(action) {
     if (!window._evaSlidesCache) window._evaSlidesCache = {};
     pptx.write({outputType:'blob'}).then(function(blob) {
       var url = URL.createObjectURL(blob);
-      if (window._evaSlidesCache) window._evaSlidesCache[url] = action.slides || [];
+      var _pTheme = (action.theme && _EVA_PPTX_THEMES[action.theme]) ? action.theme : 'midnight-cyber';
+      if (window._evaSlidesCache) window._evaSlidesCache[url] = { slides: slides, theme: _pTheme };
+      _queueDocArtifact({ name: filename, ext: 'pptx', slides: slides, theme: _pTheme });
       toast('PowerPoint prêt : '+filename, 'success');
       setEvaStatus('PPTX CRÉÉ', 'action');
       setTimeout(function(){ setEvaStatus(null); }, 3000);
@@ -830,6 +873,7 @@ function _evaGenerateTxt(action) {
     var content = (action.content || '').replace(/\\n/g, '\n');
     var blob = new Blob([content], {type:'text/plain;charset=utf-8'});
     var url = URL.createObjectURL(blob);
+    _queueDocArtifact({ name: filename, ext: 'txt', text: content });
     toast('Fichier texte prêt : ' + filename, 'success');
     setEvaStatus('TXT CRÉÉ', 'action');
     setTimeout(function(){ setEvaStatus(null); }, 3000);
@@ -859,6 +903,7 @@ function _evaGenerateCsv(action) {
     }).join('\n');
     var blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
     var url = URL.createObjectURL(blob);
+    _queueDocArtifact({ name: filename, ext: 'csv', text: csvText || (action.csv || '') });
     toast('CSV prêt : ' + filename, 'success');
     setEvaStatus('CSV CRÉÉ', 'action');
     setTimeout(function(){ setEvaStatus(null); }, 3000);
@@ -1207,3 +1252,56 @@ async function _evaGenerateRepairPdf(action) {
 /* ═══════════════════════════════════════════════════
    DEV KEY ACTIVATION
 ═══════════════════════════════════════════════════ */
+
+/* ═══ MULTI-THEME PDF & PPTX + PERSISTENCE D2 ═══ */
+var _EVA_PDF_THEMES = {
+  corporate:  { accent:'#0f4c81', bg:'#f8fafc', hdrBg:'#0f172a', hdrTxt:'#ffffff', font:'"Inter","Segoe UI",sans-serif' },
+  moderne:    { accent:'#00a8cc', bg:'#ffffff', hdrBg:'linear-gradient(135deg,#0d0d14,#1a1a2e)', hdrTxt:'#eef2ff', font:'"Inter","Segoe UI",sans-serif' },
+  noir:       { accent:'#8b5cf6', bg:'#0d0d14', hdrBg:'#13131f', hdrTxt:'#eef2ff', bodyTxt:'#e2e8f0', font:'"Inter","Segoe UI",sans-serif' },
+  minimal:    { accent:'#111827', bg:'#ffffff', hdrBg:'#ffffff', hdrTxt:'#111827', font:'"Inter","Segoe UI",sans-serif' },
+  academique: { accent:'#1e3a5f', bg:'#ffffff', hdrBg:'#1e3a5f', hdrTxt:'#ffffff', font:'Georgia,"Times New Roman",serif' }
+};
+
+var _EVA_PPTX_THEMES = {
+  'midnight-cyber': { bg:'0d0d14', panel:'13131f', accent:'00d4ff', accent2:'8b5cf6', title:'eef2ff', text:'cbd5e1', muted:'64748b' },
+  'executive-dark': { bg:'0f172a', panel:'1e293b', accent:'38bdf8', accent2:'f59e0b', title:'f8fafc', text:'cbd5e1', muted:'94a3b8' },
+  'light-clean':    { bg:'f8fafc', panel:'ffffff', accent:'0284c7', accent2:'6366f1', title:'0f172a', text:'334155', muted:'64748b' },
+  'emerald-tech':   { bg:'071412', panel:'0d211d', accent:'10b981', accent2:'00d4ff', title:'ecfdf5', text:'d1fae5', muted:'6ee7b7' }
+};
+
+function _queueDocArtifact(artifact) {
+  if (!artifact) return;
+  try {
+    var jsonSize = JSON.stringify(artifact).length;
+    if (jsonSize > 650000) {
+      artifact = Object.assign({}, artifact);
+      if (artifact.html && artifact.html.length > 150000) artifact.html = artifact.html.slice(0, 150000);
+    }
+  } catch(_) {}
+  window._pendingDocArtifacts = window._pendingDocArtifacts || [];
+  window._pendingDocArtifacts.push(artifact);
+}
+
+window.reconstructDocArtifact = function(art) {
+  if (!art || !art.ext) return null;
+  var ext = String(art.ext).toLowerCase();
+  var url = '';
+  if (ext === 'pdf' && art.html) {
+    url = URL.createObjectURL(new Blob([art.html], { type: 'text/html;charset=utf-8' }));
+  } else if (ext === 'html' && art.html) {
+    url = URL.createObjectURL(new Blob([art.html], { type: 'text/html;charset=utf-8' }));
+  } else if ((ext === 'txt' || ext === 'csv' || ext === 'js' || ext === 'py' || ext === 'json' || ext === 'md' || ext === 'css') && art.text != null) {
+    url = URL.createObjectURL(new Blob([art.text], { type: 'text/plain;charset=utf-8' }));
+  } else if (ext === 'xlsx' && art.rows && window.XLSX && window.XLSX.utils) {
+    var ws = window.XLSX.utils.aoa_to_sheet(art.rows);
+    var wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Données');
+    var wbout = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    url = URL.createObjectURL(new Blob([new Uint8Array(wbout)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  } else if (ext === 'pptx' && art.slides) {
+    url = 'pptx-cached://' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    if (!window._evaSlidesCache) window._evaSlidesCache = {};
+    window._evaSlidesCache[url] = { slides: art.slides, theme: art.theme || 'midnight-cyber' };
+  }
+  return { name: art.name || ('document.' + ext), ext: ext, url: url, text: art.text || '', docArtifact: art };
+};

@@ -119,7 +119,7 @@ function toggleEvaPanelSetting(show) {
   if (show) {
     panel.classList.remove('collapsed');
     S.evaOpen = true;
-    _loadEvaCharacter();
+    /* 3D character removed in D2 */
   } else {
     panel.classList.add('collapsed');
     S.evaOpen = false;

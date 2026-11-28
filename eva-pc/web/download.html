@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="E.V.A">
 <link rel="apple-touch-icon" href="/assets/images/icon-192.png">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/styles/fonts.css">
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -24,7 +24,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);overflow-x:hidden;}
+body{font-family:'Inter', 'Segoe UI', system-ui, sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(0,212,255,0.2);border-radius:10px}
@@ -94,12 +94,12 @@ nav.scrolled{background:rgba(15,15,18,0.97);border-bottom-color:var(--border);}
   z-index:200;
 }
 .nav-profile-menu.open{opacity:1;pointer-events:all;transform:translateY(0);}
-.nav-profile-info{padding:8px 10px 6px;font-family:'Space Mono',monospace;}
+.nav-profile-info{padding:8px 10px 6px;font-family:'Inter', 'Segoe UI', system-ui, sans-serif;}
 .nav-profile-item{
   display:flex;align-items:center;gap:8px;
   padding:9px 12px;border-radius:8px;
   text-decoration:none;color:var(--text);
-  font-size:0.8em;font-family:'Space Mono',monospace;
+  font-size:0.8em;font-family:'Inter', 'Segoe UI', system-ui, sans-serif;
   transition:background 0.15s;cursor:pointer;
   background:none;border:none;width:100%;text-align:left;
 }
@@ -338,7 +338,7 @@ footer{
       <div class="dl-card-features">
         <div class="dl-card-feature">Application native légère et rapide</div>
         <div class="dl-card-feature">Accès depuis la barre des tâches</div>
-        <div class="dl-card-feature">Modèles IA locaux (Ollama, LM Studio)</div>
+        <div class="dl-card-feature">E.V.A Local GPU + Gemini + Pollinations + MCP / Codemod</div>
         <div class="dl-card-feature">Raccourci clavier global pour invoquer EVA</div>
         <div class="dl-card-feature">Génération et gestion de fichiers en local</div>
       </div>
@@ -374,7 +374,7 @@ footer{
     <span style="color:rgba(0,212,255,0.2);font-size:1.2em;">×</span>
     <img src="/assets/images/astral-logo.png" alt="Astral Technologie" style="height:22px;width:auto;opacity:0.85;">
   </div>
-  <div class="footer-copy">© 2026 Astral Technologie — Evolutionary Virtual Assistant — Beta V4</div>
+  <div class="footer-copy">© 2026 Astral Technologie — Evolutionary Virtual Assistant — D2 · Astral Technologie</div>
   <div class="footer-links">
     <a href="/login" target="_top" class="footer-link">Connexion</a>
     <a href="/conditions" class="footer-link">Conditions d'utilisation</a>

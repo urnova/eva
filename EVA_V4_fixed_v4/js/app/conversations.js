@@ -28,16 +28,36 @@ async function loadConvs() {
   document.dispatchEvent(new CustomEvent('eva:appFullyLoaded'));
 }
 
+window._convTab = window._convTab || 'chat';
+window.setConvTab = function(tab) {
+  window._convTab = tab === 'voice' ? 'voice' : 'chat';
+  var cBtn = document.getElementById('convTabChat');
+  var vBtn = document.getElementById('convTabVoice');
+  if (cBtn) cBtn.classList.toggle('active', window._convTab === 'chat');
+  if (vBtn) vBtn.classList.toggle('active', window._convTab === 'voice');
+  var si = document.getElementById('searchInput');
+  renderConvs(si ? si.value : '');
+};
+
 function renderConvs(filter) {
   var list = document.getElementById('convList');
   if (!list) return;
-  var convs = S.convs;
+  var allConvs = S.convs || [];
+  var chatCount = allConvs.filter(function(c){ return !c.isVoiceSession; }).length;
+  var voiceCount = allConvs.filter(function(c){ return !!c.isVoiceSession; }).length;
+  var cCntEl = document.getElementById('convTabChatCount');
+  var vCntEl = document.getElementById('convTabVoiceCount');
+  if (cCntEl) cCntEl.textContent = chatCount;
+  if (vCntEl) vCntEl.textContent = voiceCount;
+
+  var wantVoice = window._convTab === 'voice';
+  var convs = allConvs.filter(function(c){ return wantVoice ? !!c.isVoiceSession : !c.isVoiceSession; });
   if (filter) {
     var f = filter.toLowerCase();
     convs = convs.filter(function(c){ return (c.title||'').toLowerCase().includes(f); });
   }
   if (!convs.length) {
-    list.innerHTML = '<div class="conv-empty">Aucune conversation</div>';
+    list.innerHTML = '<div class="conv-empty">' + (wantVoice ? 'Aucune session vocale' : 'Aucune conversation') + '</div>';
     return;
   }
   var _svgDots = '<svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>';
@@ -127,7 +147,6 @@ async function newConv() {
   document.querySelectorAll('.conv-item').forEach(function(el){el.classList.remove('active');});
   setView('chat');
   closeSidebar();
-  if (window.EvaCharacter) window.EvaCharacter.setIdle();
   updateModelSelectUI();
 }
 
@@ -270,8 +289,15 @@ async function saveConvMsg(userMsg, evaMsg) {
       if (c) c.lastMessage = evaMsg.slice(0,80);
     }
     var msgs = ref.collection('messages');
-    await msgs.add({role:'user', content:userMsg, timestamp:window.timestamp()});
-    await msgs.add({role:'eva', content:evaMsg, timestamp:window.timestamp()});
+    var attMeta = (window.S && window.S.documents ? window.S.documents.map(function(d){ return { name: d.name, ext: d.ext, size: d.size }; }) : []);
+    await msgs.add({ role: 'user', content: userMsg, attachments: attMeta.length ? attMeta : null, timestamp: window.timestamp() });
+    await msgs.add({ role: 'eva', content: evaMsg, timestamp: window.timestamp() });
+    if (window._pendingDocArtifacts && window._pendingDocArtifacts.length) {
+      while (window._pendingDocArtifacts.length) {
+        var art = window._pendingDocArtifacts.shift();
+        await msgs.add({ role: 'eva', type: 'doc_artifact', content: '📄 ' + art.name, docArtifact: art, timestamp: window.timestamp() }).catch(function(){});
+      }
+    }
     
     // Assurer le bon tri après mise à jour
     S.convs.sort(function(a, b) {

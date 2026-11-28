@@ -183,9 +183,22 @@ async function setup(uid){
  generation++;const epoch=generation;user=uid;
  unsubscribe?.();clearInterval(heartbeat);current?.stop();
  if(!uid)return;
- let deviceId=localStorage.getItem('cw_device_id');
- if(!deviceId){deviceId='PC-'+crypto.randomUUID();localStorage.setItem('cw_device_id',deviceId);}
+ let deviceId=null;
+ let sysHostname='';
+ const isPackagedApp = location.protocol === 'file:' || location.protocol === 'app:';
+ if(w.eva?.system?.info){
+  try{
+   const info=await w.eva.system.info();
+   if(info?.os?.hostname){ sysHostname=info.os.hostname; localStorage.setItem('cw_hostname', sysHostname); }
+   const phys=(info?.net||[]).find(n=>n.ip4&&!n.internal&&n.mac&&n.mac!=='00:00:00:00:00:00');
+   if(info?.uuid?.os) deviceId='UUID-'+String(info.uuid.os).toUpperCase();
+   else if(phys?.mac) deviceId='MAC-'+String(phys.mac).replace(/:/g,'-').toUpperCase();
+  }catch(_){}
+ }
+ if(!deviceId) deviceId=localStorage.getItem('cw_device_id')||('PC-'+crypto.randomUUID());
+ localStorage.setItem('cw_device_id',deviceId);
  w._cwDeviceId=deviceId;
+ w._cwHostname=sysHostname;
  const device=w.db.collection('cloudworks').doc(uid).collection('devices').doc(deviceId);w.pcAgentDocRef=device;
  try{
   const udoc=await w.db.collection('users').doc(uid).get();
@@ -198,7 +211,7 @@ async function setup(uid){
   const status=await w.eva.cloudworks.status(),chk=await w.eva.system.llmCheck();
   const stale=await w.db.collection('cloudworks').doc(uid).collection('commands').where('deviceId','==',deviceId).get();
   for(const d of stale.docs){const x=d.data(),started=x.startedAt?.toMillis?.()||0;if(x.status==='running'&&started&&Date.now()-started>360000){await w.db.runTransaction(async tx=>{const now=await tx.get(d.ref);if(now.exists&&now.data().status==='running'&&now.data().owner===x.owner)tx.update(d.ref,{status:'error',state:'indeterminate',step:'Execution abandonnee ou interrompue; verifier avant de relancer',result:{success:false,indeterminate:true,error:'STALE_EXECUTION'},updatedAt:ts()});});}}
-  await device.set({deviceId,deviceName:status.hostname,deviceType:'windows',platform:'win32',online:status.enabled,llmModelInstalled:!!chk.exists,lastSeen:ts(),updatedAt:ts(),workerVersion:2},{merge:true});
+  await device.set({deviceId,deviceName:status.hostname||sysHostname||'PC',deviceType:'windows',platform:'win32',appMode:isPackagedApp?'app':'dev',linkedSessionId:w.S?.sessionId||null,online:status.enabled,llmModelInstalled:!!chk.exists,lastSeen:ts(),updatedAt:ts(),workerVersion:3},{merge:true});
  };
  await beat();if(epoch!==generation)return;
  heartbeat=setInterval(()=>beat().catch(console.error),30000);
@@ -207,7 +220,16 @@ async function setup(uid){
    scheduled.add(d.id);queue=queue.then(()=>consume(uid,d.id,epoch)).catch(console.error).finally(()=>scheduled.delete(d.id));
   }
  },console.error);
- emit('cw:device-registered',{deviceId});
+ const unsubDevice=device.onSnapshot(d=>{
+   if(d.exists && d.data()?.forceLogout===true){
+    device.update({forceLogout:false,online:false}).catch(()=>{});
+    try{ if(w.S?.sessionId) w.db.collection('users').doc(uid).collection('sessions').doc(w.S.sessionId).update({revoke:true}).catch(()=>{}); }catch(_){}
+    if(w.firebase?.auth) w.firebase.auth().signOut().then(()=>{ localStorage.removeItem('eva_session_id'); w.location.href='/app-login.html'; });
+   }
+  },console.error);
+  const oldUnsub=unsubscribe;
+  unsubscribe=()=>{oldUnsub?.();unsubDevice?.();};
+  emit('cw:device-registered',{deviceId});
 }
 w.pcAgent={getDeviceId:()=>w._cwDeviceId,sendCommand:(type,payload,uid)=>{if(uid&&uid!==user)throw Error('UID_MISMATCH');return w.CWBus.submit(type,payload,{deviceId:w._cwDeviceId});}};
 w.cancelCurrentCloudWorksTask=()=>current?w.CWBus.cancel(current.id):Promise.resolve();

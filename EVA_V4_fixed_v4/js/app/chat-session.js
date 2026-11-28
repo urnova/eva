@@ -100,9 +100,14 @@ var CONV_MODELS = {
     { id:'gpt-4o-mini', label:'GPT-4o Mini — Rapide' },
     { id:'gpt-4o', label:'GPT-4o — Expert' }
   ],
+  gemini: [
+    { id:'gemini-2.5-flash', label:'Gemini 2.5 Flash — Rapide & Gratuit' },
+    { id:'gemini-2.5-pro',   label:'Gemini 2.5 Pro — Raisonnement' },
+    { id:'gemini-2.0-flash', label:'Gemini 2.0 Flash' }
+  ],
   pollinations: [
     { id:'openai',          label:'GPT-4o Mini — Rapide' },
-    { id:'openai-large',    label:'GPT-4o — Expert' },
+    { id:'openai-fast',     label:'GPT-4o — Expert' },
     { id:'mistral',         label:'Mistral Nemo — Puissant' },
     { id:'llama',           label:'Llama 3.3 70B — Open Source' },
     { id:'deepseek',        label:'DeepSeek-V3 — Très performant' },
@@ -136,7 +141,7 @@ function getActiveProvider() {
 function getActiveModel() {
   if (S.conv && S.conv.model) return S.conv.model;
   var prov = getActiveProvider();
-  var mk = {eva:'evaModel',puter:'puterModel',openai:'openaiModel',claude:'claudeModel',qwen:'qwenModel'}[prov];
+  var mk = {eva:'evaModel',puter:'puterModel',pollinations:'pollinationsModel',gemini:'geminiModel',openai:'openaiModel',claude:'claudeModel',qwen:'qwenModel'}[prov];
   var fromCfg = mk && S.config[mk];
   var models = CONV_MODELS[prov];
   return fromCfg || (models && models[0] && models[0].id) || '';
@@ -145,7 +150,7 @@ window.getActiveModel = getActiveModel;
 
 /* Icônes par provider pour le dropdown modèle */
 var MODEL_ICONS = {
-  eva:'✨', puter:'🤖', pollinations:'🌸', openai:'🟢', claude:'🔷', qwen:'⚡', lmstudio:'🔧', ollama:'🦙'
+  eva:'✨', puter:'🤖', pollinations:'🌸', gemini:'💎', openai:'🟢', claude:'🔷', qwen:'⚡', lmstudio:'🔧', ollama:'🦙'
 };
 
 function updateModelSelectUI() {

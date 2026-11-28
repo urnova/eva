@@ -58,12 +58,28 @@ function setupUI() {
     }
   });
 
-  // EVA panel toggle (quick strip toujours visible)
-  document.getElementById('evaToggleBtn').addEventListener('click', function() {
-    S.evaOpen = !S.evaOpen;
-    document.getElementById('evaPanel').classList.toggle('collapsed', !S.evaOpen);
-    this.style.opacity = S.evaOpen ? '1' : '0.5';
-  });
+  var evaToggleEl = document.getElementById('evaToggleBtn');
+  if (evaToggleEl) {
+    evaToggleEl.addEventListener('click', function() {
+      var ep = document.getElementById('evaPanel');
+      if (ep) { S.evaOpen = !S.evaOpen; ep.classList.toggle('collapsed', !S.evaOpen); }
+    });
+  }
+  var deepBtn = document.getElementById('deepSearchBtn');
+  if (deepBtn) {
+    deepBtn.addEventListener('click', function() {
+      window._evaDeepSearch = !window._evaDeepSearch;
+      this.classList.toggle('active', !!window._evaDeepSearch);
+      toast(window._evaDeepSearch ? '🔍 Recherche approfondie activée pour ce chat' : 'Recherche approfondie désactivée', 'info');
+    });
+  }
+  var liveBtn = document.getElementById('liveModeBtn');
+  if (liveBtn) {
+    liveBtn.addEventListener('click', function() {
+      if (typeof window.toggleLiveMode === 'function') window.toggleLiveMode();
+      else toast('Mode Live en cours d\'initialisation...', 'info');
+    });
+  }
 
   // Nav
   document.querySelectorAll('.nav-item[data-view]').forEach(function(el) {

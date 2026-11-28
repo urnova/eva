@@ -919,9 +919,7 @@ function esc(t) {
    INIT
 ═══════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', function() {
-  initChar();
   setupUI();
-  applyEvaPanelPreference();
   initAuth();
   initCalendar();
   setupNotifications();
@@ -930,31 +928,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
 var _charInitialized = false;
 
-function _loadEvaCharacter() {
-  if (_charInitialized) return;
-  _charInitialized = true;
-  if (window.EvaCharacter) window.EvaCharacter.create('evaCharContainer');
-}
-
-function initChar() {
-  var config = cfg();
-  if (config.showEvaPanel === false) return;
-  _loadEvaCharacter();
-}
 
 
 window.getDynamicSysPrompt = async function() {
   let prompt = SYS;
+  const isPC = !!(window.eva && (window.eva.cloudworks || window.eva.system));
+  const localHost = window._cwHostname || localStorage.getItem('cw_hostname') || '';
+  const localId = window._cwDeviceId || localStorage.getItem('cw_device_id') || '';
+  if (isPC) {
+    prompt += "\n\n[PLATEFORME] Tu tournes actuellement DANS L'APPLICATION PC DESKTOP sur la machine \"" + (localHost || 'ce PC') + "\" (deviceId: " + (localId || 'local') + "). Privilégie toujours ce PC local pour les tâches système et fichiers.";
+  } else {
+    prompt += "\n\n[PLATEFORME] Tu tournes actuellement sur l'interface WEB (navigateur). Les actions système locales s'exécutent à distance via CloudWorks sur les PC connectés.";
+  }
   try {
     if (window.db && window.S && window.S.user) {
-      let snap = await window.db.collection('cloudworks').doc(window.S.user.uid).collection('devices').where('online','==',true).get();
-      let devices = [];
-      snap.forEach(d => { devices.push(d.id + ' (OS: ' + d.data().os + ')'); });
-      if (devices.length > 0) {
-        prompt += "\n\n[CLOUDWORKS] Appareils actuellement en ligne : " + devices.join(', ') + ". Pour toute action système (agentic_task, shutdown, etc.), tu DOIS spécifier le deviceId exact dans le JSON. S'il y a plusieurs appareils ou s'il y a le moindre doute sur la cible de l'action, DEMANDE à l'utilisateur de préciser l'appareil AVANT de générer le bloc d'action.";
+      let snap = await window.db.collection('cloudworks').doc(window.S.user.uid).collection('devices').get();
+      let onlineDevs = [], offlineDevs = [];
+      snap.forEach(d => {
+        const data = d.data() || {};
+        const label = (data.deviceName || d.id) + ' [' + d.id + ', ' + (data.platform || data.os || 'Windows') + ']';
+        const seen = data.lastSeen?.toMillis ? data.lastSeen.toMillis() : 0;
+        const isOnline = data.online === true && seen > 0 && (Date.now() - seen) < 120000;
+        if (isOnline) onlineDevs.push(label);
+        else offlineDevs.push(label);
+      });
+      if (onlineDevs.length > 0) {
+        prompt += "\n[CLOUDWORKS EN LIGNE] " + onlineDevs.join(', ') + ".";
+      } else if (offlineDevs.length > 0 && !isPC) {
+        prompt += "\n[CLOUDWORKS HORS LIGNE] Appareils enregistrés mais hors ligne : " + offlineDevs.join(', ') + ".";
       }
     }
   } catch(e) {}
+  if (window.EVAConnectors && typeof window.EVAConnectors.buildSystemPromptAddendum === 'function') {
+    prompt += window.EVAConnectors.buildSystemPromptAddendum();
+  }
   return prompt;
 };
 
@@ -964,6 +971,9 @@ window._currentViewerDoc = null;
 
 window.openDocumentViewer = function(doc) {
   if (!doc) return;
+  if (!doc.url && doc.docArtifact && typeof window.reconstructDocArtifact === 'function') {
+    doc = window.reconstructDocArtifact(doc.docArtifact) || doc;
+  }
   window._currentViewerDoc = doc;
   var overlay = document.getElementById('fileViewerOverlay');
   var header = document.getElementById('fileViewerHeader');
@@ -973,80 +983,125 @@ window.openDocumentViewer = function(doc) {
   var downloadBtn = document.getElementById('fileViewerDownloadBtn');
   var printBtn = document.getElementById('fileViewerPrintBtn');
   var systemBtn = document.getElementById('fileViewerSystemBtn');
-  if(!overlay) return;
-  
+  if (!overlay) return;
+
+  var ext = (doc.ext || (doc.name && doc.name.split('.').pop()) || '').toLowerCase();
   if (header) header.innerText = doc.name || 'Document';
-  if (content) content.style.display = 'none';
+  if (content) { content.style.display = 'none'; content.innerHTML = ''; content.removeAttribute('style'); content.style.cssText = 'width:90%;height:85%;background:#13131f;border:1px solid rgba(139,92,246,0.28);border-radius:14px;overflow:auto;padding:24px;color:#eef2ff;font-size:14px;line-height:1.65;box-shadow:0 18px 50px rgba(0,0,0,0.65);display:none;'; }
   if (iframe) iframe.style.display = 'none';
   if (imgContent) imgContent.style.display = 'none';
   if (downloadBtn) downloadBtn.style.display = 'flex';
   if (printBtn) printBtn.style.display = 'flex';
   if (systemBtn) {
-    var hasLocalPath = !!(doc.path || doc.filePath || (doc.url && !doc.url.startsWith('blob:') && !doc.url.startsWith('data:')));
+    var hasLocalPath = !!(doc.path || doc.filePath || (doc.url && !doc.url.startsWith('blob:') && !doc.url.startsWith('data:') && !doc.url.startsWith('pptx-cached://')));
     systemBtn.style.display = (window.eva && window.eva.fs && hasLocalPath) ? 'flex' : 'none';
   }
-  
-  if (doc.url) {
-    if (doc.ext === 'pdf') {
-      if (iframe) {
-        iframe.src = doc.url + '#toolbar=0';
-        iframe.style.display = 'block';
-      }
-      /* Change download button label to indicate print-to-PDF flow */
-      if (downloadBtn) { downloadBtn.title = 'Cliquez pour ouvrir la boîte de dialogue Imprimer — choisissez « Enregistrer en PDF »'; }
-    } else if (doc.ext === 'html') {
-      /* HTML → render in iframe so the user sees the actual page */
-      if (iframe) {
-        iframe.src = doc.url;
-        iframe.style.display = 'block';
-      }
-    } else if (['js', 'css', 'json', 'txt', 'csv', 'md'].includes(doc.ext)) {
-      if (content) {
-        content.style.display = 'block';
-        content.style.fontFamily = "'Space Mono', monospace";
-        if (doc.text) {
-          content.textContent = doc.text;
-        } else {
-          // Fetch text from blob URL
-          fetch(doc.url).then(r => r.text()).then(t => { content.textContent = t; }).catch(function(){});
-        }
-      }
-    } else {
-      // Pour les autres formats (Excel, PPT, docx, etc.), la prévisualisation native iframe ne marche pas offline sans office viewer
-      // On affiche le texte extrait s'il existe, sinon on indique que la visualisation complète n'est pas dispo mais téléchargeable.
-      var slidesData = window._evaSlidesCache && window._evaSlidesCache[doc.url];
-      if (content) {
-        if (slidesData && slidesData.length) {
-          content.style.display = 'block';
-          content.innerHTML = '';
-          if (typeof _renderPptxPreview === 'function') {
-            _renderPptxPreview(slidesData, content);
-          } else {
-            content.style.cssText += ';background:#1a1a2e;padding:16px;';
-            content.innerHTML = '<div style="color:#00d4ff;text-align:center;padding:40px;font-size:0.9em;">Aperçu des ' + slidesData.length + ' diapositives — Téléchargez le .pptx pour une lecture complète.</div>';
-          }
-          if (printBtn) printBtn.style.display = 'none';
-        } else {
-          content.style.display = 'block';
-          content.innerHTML = '<div style="color:var(--text-muted);text-align:center;margin-top:40px;font-size:0.9em;">Téléchargez le fichier .' + (doc.ext || 'document') + ' pour le visualiser dans votre application dédiée.</div>';
-          if (printBtn) printBtn.style.display = 'none';
-        }
+
+  if (ext === 'png' || ext === 'jpg' || ext === 'jpeg' || ext === 'webp' || ext === 'gif') {
+    if (imgContent && doc.url) { imgContent.src = doc.url; imgContent.style.display = 'block'; }
+  } else if (ext === 'pdf' && doc.url) {
+    if (iframe) { iframe.src = doc.url + '#toolbar=0'; iframe.style.display = 'block'; }
+  } else if (ext === 'pptx') {
+    var rawCache = (window._evaSlidesCache && doc.url && window._evaSlidesCache[doc.url]) || (doc.docArtifact && doc.docArtifact.slides ? { slides: doc.docArtifact.slides, theme: doc.docArtifact.theme } : null);
+    var slides = Array.isArray(rawCache) ? rawCache : (rawCache && rawCache.slides) || [];
+    var slideIdx = 0;
+    if (content) {
+      content.style.display = 'flex';
+      content.style.flexDirection = 'column';
+      if (!slides.length) {
+        content.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px;">Téléchargez le fichier .pptx pour l\'ouvrir dans PowerPoint.</div>';
+      } else {
+        var renderSlideView = function() {
+          var s = slides[slideIdx] || {};
+          var pts = (s.points || []).map(function(p){ return '<li style="margin:8px 0;color:#e2e8f0;font-size:1.05em;">' + esc(p) + '</li>'; }).join('');
+          content.innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(139,92,246,0.22);">' +
+              '<button type="button" id="pptxPrevBtn" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(0,212,255,0.3);background:rgba(0,212,255,0.1);color:#00d4ff;cursor:pointer;font-weight:700;" ' + (slideIdx === 0 ? 'disabled' : '') + '>◀ Précédent</button>' +
+              '<span style="font-family:Orbitron,sans-serif;font-size:0.85em;color:#00d4ff;">Diapositive ' + (slideIdx + 1) + ' / ' + slides.length + '</span>' +
+              '<button type="button" id="pptxNextBtn" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(0,212,255,0.3);background:rgba(0,212,255,0.1);color:#00d4ff;cursor:pointer;font-weight:700;" ' + (slideIdx >= slides.length - 1 ? 'disabled' : '') + '>Suivant ▶</button>' +
+            '</div>' +
+            '<div style="flex:1;background:linear-gradient(145deg,#0d0d14,#1a1a2e);border:1px solid rgba(0,212,255,0.28);border-left:5px solid #00d4ff;border-radius:16px;padding:34px 40px;display:flex;flex-direction:column;justify-content:center;min-height:360px;">' +
+              '<h2 style="font-family:Orbitron,sans-serif;font-size:1.6em;color:#00d4ff;margin-bottom:10px;">' + esc(s.title || ('Slide ' + (slideIdx + 1))) + '</h2>' +
+              (s.subtitle ? '<div style="font-size:1em;color:#a5b4fc;font-style:italic;margin-bottom:16px;">' + esc(s.subtitle) + '</div>' : '') +
+              (pts ? '<ul style="padding-left:20px;margin:8px 0;">' + pts + '</ul>' : '') +
+              (s.content ? '<div style="white-space:pre-wrap;color:#e2e8f0;font-size:1.05em;">' + esc(s.content) + '</div>' : '') +
+            '</div>';
+          var pb = document.getElementById('pptxPrevBtn'), nb = document.getElementById('pptxNextBtn');
+          if (pb) pb.onclick = function(){ if (slideIdx > 0) { slideIdx--; renderSlideView(); } };
+          if (nb) nb.onclick = function(){ if (slideIdx < slides.length - 1) { slideIdx++; renderSlideView(); } };
+        };
+        renderSlideView();
       }
     }
-  } else if (doc.text) {
+  } else if (ext === 'xlsx' || ext === 'csv') {
     if (content) {
       content.style.display = 'block';
-      content.textContent = doc.text;
+      var renderRowsTable = function(rows) {
+        if (!rows || !rows.length) { content.innerHTML = '<div style="color:#94a3b8;padding:30px;text-align:center;">Feuille vide</div>'; return; }
+        var ths = (rows[0] || []).map(function(c){ return '<th style="background:#1a1a2e;color:#00d4ff;padding:9px 12px;border:1px solid rgba(139,92,246,0.25);text-align:left;position:sticky;top:0;">' + esc(String(c == null ? '' : c)) + '</th>'; }).join('');
+        var trs = rows.slice(1).map(function(r){ return '<tr>' + (r || []).map(function(c){ return '<td style="padding:8px 12px;border:1px solid rgba(255,255,255,0.08);color:#e2e8f0;">' + esc(String(c == null ? '' : c)) + '</td>'; }).join('') + '</tr>'; }).join('');
+        content.innerHTML = '<div style="overflow:auto;border-radius:10px;border:1px solid rgba(139,92,246,0.25);"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr>' + ths + '</tr></thead><tbody>' + trs + '</tbody></table></div>';
+      };
+      if (doc.docArtifact && doc.docArtifact.rows) {
+        renderRowsTable(doc.docArtifact.rows);
+      } else if (ext === 'xlsx' && doc.url && window.XLSX) {
+        fetch(doc.url).then(function(r){ return r.arrayBuffer(); }).then(function(ab) {
+          var wb = window.XLSX.read(new Uint8Array(ab), { type: 'array' });
+          var firstSheet = wb.Sheets[wb.SheetNames[0]];
+          renderRowsTable(window.XLSX.utils.sheet_to_json(firstSheet, { header: 1 }));
+        }).catch(function(){ content.innerHTML = '<div style="color:#94a3b8;">Téléchargez le fichier .xlsx pour l\'ouvrir.</div>'; });
+      } else if (doc.url) {
+        fetch(doc.url).then(function(r){ return r.text(); }).then(function(t){
+          renderRowsTable(t.split(/\r?\n/).filter(Boolean).map(function(l){ return l.split(','); }));
+        }).catch(function(){});
+      }
+    }
+  } else if (ext === 'html' || ['js','css','py','json','md','ts'].includes(ext)) {
+    if (content) {
+      var loadCode = doc.text ? Promise.resolve(doc.text) : (doc.url ? fetch(doc.url).then(function(r){ return r.text(); }) : Promise.resolve(''));
+      loadCode.then(function(src) {
+        var numbered = src.split('\n').map(function(line, idx) {
+          return '<div style="display:flex;gap:14px;"><span style="min-width:36px;text-align:right;color:#475569;user-select:none;">' + (idx + 1) + '</span><span style="white-space:pre;color:#e2e8f0;">' + esc(line) + '</span></div>';
+        }).join('');
+        if (ext === 'html' && doc.url && iframe) {
+          content.style.display = 'block';
+          content.innerHTML =
+            '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
+              '<button type="button" id="htmlTabPreview" style="padding:6px 14px;border-radius:8px;border:1px solid #00d4ff;background:rgba(0,212,255,0.16);color:#00d4ff;cursor:pointer;font-weight:700;">Aperçu rendu</button>' +
+              '<button type="button" id="htmlTabSource" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#94a3b8;cursor:pointer;">Code source (VS Code)</button>' +
+            '</div>' +
+            '<iframe id="htmlInlineFrame" src="' + doc.url + '" style="width:100%;height:calc(100% - 48px);background:#fff;border:none;border-radius:10px;"></iframe>' +
+            '<div id="htmlSourceBox" style="display:none;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:#0b0b12;padding:14px;border-radius:10px;border:1px solid rgba(139,92,246,0.22);overflow:auto;height:calc(100% - 48px);">' + numbered + '</div>';
+          document.getElementById('htmlTabPreview').onclick = function() {
+            document.getElementById('htmlInlineFrame').style.display = 'block';
+            document.getElementById('htmlSourceBox').style.display = 'none';
+          };
+          document.getElementById('htmlTabSource').onclick = function() {
+            document.getElementById('htmlInlineFrame').style.display = 'none';
+            document.getElementById('htmlSourceBox').style.display = 'block';
+          };
+        } else {
+          content.style.display = 'block';
+          content.style.fontFamily = 'ui-monospace,Consolas,monospace';
+          content.innerHTML = '<div style="background:#0b0b12;padding:16px;border-radius:10px;border:1px solid rgba(139,92,246,0.22);overflow:auto;">' + numbered + '</div>';
+        }
+      }).catch(function(){});
     }
   } else {
+    // Bloc-notes .txt / fallback
     if (content) {
       content.style.display = 'block';
-      content.innerHTML = '<div style="color:var(--text-muted);text-align:center;margin-top:20px;">Contenu du document non disponible (non lu ou non sauvegardé dans cette session).</div>';
+      content.style.fontFamily = 'ui-monospace,Consolas,monospace';
+      var showTxt = function(t) {
+        content.innerHTML = '<pre style="white-space:pre-wrap;margin:0;color:#e2e8f0;font-family:inherit;line-height:1.7;">' + esc(t || '') + '</pre>';
+      };
+      if (doc.text) showTxt(doc.text);
+      else if (doc.url) fetch(doc.url).then(function(r){ return r.text(); }).then(showTxt).catch(function(){});
     }
   }
-  
+
   overlay.style.display = 'flex';
-  setTimeout(function(){ overlay.style.opacity = '1'; }, 10);
+  setTimeout(function() { overlay.style.opacity = '1'; }, 10);
 };
 
 window.openImageViewer = function(url) {

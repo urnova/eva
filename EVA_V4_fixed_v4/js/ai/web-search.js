@@ -355,10 +355,29 @@ async function search(userMessage) {
 }
 
 /* ── Expose ──────────────────────────────────────────────── */
+async function deepSearch(query) {
+  var results = [];
+  var tasks = [search(query)];
+  try {
+    var wikiQ = encodeURIComponent(String(query || '').slice(0, 120));
+    tasks.push(
+      fetchWithTimeout('https://fr.wikipedia.org/api/rest_v1/page/summary/' + wikiQ, {}, 3500)
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(j){ return (j && j.extract) ? ('[WIKIPEDIA FR — ' + (j.title || '') + ']\n' + j.extract) : ''; })
+        .catch(function(){ return ''; })
+    );
+  } catch(_) {}
+  var settled = await Promise.all(tasks);
+  settled.forEach(function(part){ if (part && String(part).trim()) results.push(part); });
+  return results.join('\n\n');
+}
+
 window.EVAWebSearch = {
   needsSearch:      needsSearch,
   needsSearchLocal: needsSearchLocal,
-  search:           search
+  search:           search,
+  deepSearch:       deepSearch,
+  extractCity:      extractCity
 };
 
 })();

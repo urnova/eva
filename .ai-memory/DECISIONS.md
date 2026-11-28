@@ -3,10 +3,8 @@
 ## Décisions techniques validées
 
 ### Encodage fichiers
-- `eva-pc/web/js/app/*.js` → **Windows-1252 (latin-1)** → patcher UNIQUEMENT via Python avec `encoding='latin-1'`
-- `eva-pc/web/js/features/*.js` → UTF-8
-- `EVA_V4_fixed_v4/js/` → UTF-8 partout
-- Jamais utiliser `edit_file` directement sur les fichiers latin-1
+- Tous les fichiers `eva-pc/web/` et `EVA_V4_fixed_v4/` (HTML, CSS, JS) ont été normalisés en **UTF-8 propre sans BOM** (y compris `messages.js`, `memory.js` et `app-signup.html`)
+- Jamais de caractères de contrôle C1 (`\u0080-\u009f`) — toujours encoder en UTF-8 valide (`\u2026`, `\u2014`, accents UTF-8)
 
 ### API IPC Electron
 - `window.eva` exposé par `preload.ts` via `contextBridge.exposeInMainWorld`
@@ -48,11 +46,13 @@
 - `E:\eva\` → INTERDIT en écriture (installation production)
 - Lire uniquement pour debug si nécessaire
 
-## Décisions UI/UX pour D2 (pas encore commencé)
+## Décisions UI/UX & Architecture D2 (implémentées)
 
-- Redesign complet : palette #0d0d14 / #00d4ff / #8b5cf6, typo Inter + Orbitron
-- Refaire la bulle de conversation + bulle CloudWorks (différentes selon agent)
-- Refaire la fenêtre de réflexion + animations
-- Refaire l'affichage PDF, Excel, etc.
-- Gestion appareils : permettre révocation de session (liste avec "Cette session" vs dernière activité)
-- TTS inchangeable : SAPI Windows, ElevenLabs, Piper, eva-custom
+- Redesign complet PC + Web : palette `#0d0d14 / #13131f / #1a1a2e`, dégradé `#00d4ff -> #8b5cf6`, polices auto-hébergées `/assets/styles/fonts.css` (`Inter` + `Orbitron`) sans requêtes Google Fonts externes
+- Suppression complète du panneau/personnage 3D `EvaCharacter`
+- Barre de saisie arrondie unifiée avec sélecteur de modèle, Recherche approfondie (`deepSearchBtn`), Mode Live (`liveModeBtn`), micro Antigravity, chips de fichiers compactes
+- Séparation des conversations textuelles (`Chats`) et vocales (`isVoiceSession: true` -> onglet `🎙️ Vocal`)
+- Connecteurs Dual MCP + Codemod + Natifs mutuellement exclusifs par service (`js/features/connectors.js`) avec persistance Firestore sur `/users/{uid}.connectors` (compatible `firestore.rules`)
+- Providers `GeminiProvider` + `EVAQuotas` + délai configurable (`1500 ms` par défaut) + cascade fallback strictement opt-in (`autoFallback: false` par défaut) + génération média (`EVAMedia`) désactivée par défaut
+- Sessions & appareils unifiés avec empreinte déterministe `UUID`/`MAC`/`WEB` et révocation bidirectionnelle Compte ↔ CloudWorks
+- Moteurs TTS inchangés : SAPI Windows, ElevenLabs, Piper, eva-custom

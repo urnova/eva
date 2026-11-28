@@ -468,7 +468,17 @@ w.appendCloudWorksTracker = function(id, prompt, container) {
     footer.remove();
 
     const summary = d.result?.output || d.result?.error || d.step || d.status;
-    if (summary) {
+    if (c.dataset.cwRendered === '1') return;
+    c.dataset.cwRendered = '1';
+    const imgData = d.result?.image || d.result?.dataUrl || (typeof d.result?.base64 === 'string' ? ('data:image/png;base64,' + d.result.base64) : null);
+    if (imgData) {
+      out.style.display = 'block';
+      out.innerHTML = '<div style="margin-bottom:6px;font-weight:600;">Capture d\'écran reçue :</div><img src="' + imgData.replace(/"/g,'') + '" style="max-width:100%;border-radius:10px;border:1px solid rgba(0,212,255,0.28);cursor:pointer;" onclick="openImageModal?openImageModal(this.src):window.open(this.src)">';
+    } else if (d.result?.sysinfo || d.result?.cpu || d.result?.ram) {
+      out.style.display = 'block';
+      const si = d.result.sysinfo || d.result;
+      out.innerHTML = '<pre style="margin:0;white-space:pre-wrap;font-size:11.5px;color:#cbd5e1;">' + (typeof si === 'string' ? si : JSON.stringify(si, null, 2)) + '</pre>';
+    } else if (summary) {
       out.style.display = 'block';
       out.textContent = summary;
     }

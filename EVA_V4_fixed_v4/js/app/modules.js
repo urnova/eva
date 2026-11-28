@@ -338,10 +338,16 @@ window.cancelAlarmForm = cancelAlarmForm;
 ═══════════════════════════════════════════════════ */
 var swRegistration = null;
 
+function _canUsePushSW() {
+  if (window.eva && (window.eva.app || window.eva.window)) return false;
+  if (!('serviceWorker' in navigator)) return false;
+  return location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+}
+
 async function registerServiceWorker() {
-  if (!('serviceWorker' in navigator)) return;
+  if (!_canUsePushSW()) return;
   try {
-    swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    swRegistration = (_canUsePushSW() ? await navigator.serviceWorker.register('/firebase-messaging-sw.js') : null);
     navigator.serviceWorker.addEventListener('message', function(e) {
       if (e.data && e.data.type === 'STOP_ALARM_SOUND') {
         stopAlarmAudio();
@@ -503,7 +509,7 @@ async function initFCM() {
     var vapidKey = _EVA_VAPID_KEY;
 
     /* Enregistrer le service worker */
-    var swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    var swReg = (_canUsePushSW() ? await navigator.serviceWorker.register('/firebase-messaging-sw.js') : null);
 
     /* Initialiser Firebase Messaging */
     if (!_fcmMessaging) {
@@ -620,8 +626,8 @@ async function activateNotifications() {
           }
         }
         if (_fcmMessaging) {
-          var swReg = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
-                      || await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          var swReg = (_canUsePushSW() ? await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js') : null)
+                      || (_canUsePushSW() ? await navigator.serviceWorker.register('/firebase-messaging-sw.js') : null);
           /* Attendre que le service worker soit actif */
           if (swReg.installing || swReg.waiting) {
             await new Promise(function(resolve) {

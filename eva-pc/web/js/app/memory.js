@@ -63,7 +63,7 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
     var newMemoryText = null;
     var usedProvider = 'Aucun';
 
-    /* FIX v5.6.18 (B6) - Tentative 1 (priorit�) : OpenAI si clé dispo */
+    /* FIX v5.6.18 (B6) - Tentative 1 (priorité) : OpenAI si clé dispo */
     if (!newMemoryText && S.config && S.config.openaiApiKey) {
       try {
         var oaiResp = await fetch('https://api.openai.com/v1/chat/completions', {

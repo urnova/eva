@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>E.V.A — Créer un compte</title>
+<title>E.V.A â€” CrÃ©er un compte</title>
 <link rel="icon" type="image/png" href="assets/images/eva-logo.png">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#00d4ff">
@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="E.V.A">
 <link rel="apple-touch-icon" href="/assets/images/icon-192.png">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@0,400;0,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/styles/fonts.css">
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -23,7 +23,7 @@
   --border:rgba(255,255,255,0.07);--text:#e4e4ef;--text-muted:#88889a;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);}
+html,body{height:100%;font-family:'Inter', 'Segoe UI', system-ui, sans-serif;background:var(--bg);color:var(--text);}
 body::before{
   content:'';position:fixed;inset:0;
   background-image:linear-gradient(rgba(0,212,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.015) 1px,transparent 1px);
@@ -92,7 +92,7 @@ body::before{
 .form-input{
   width:100%;padding:11px 14px;
   background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:10px;
-  color:var(--text);font-family:'Space Mono',monospace;font-size:0.85em;
+  color:var(--text);font-family:'Inter', 'Segoe UI', system-ui, sans-serif;font-size:0.85em;
   outline:none;transition:all 0.2s;
 }
 .form-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,0.1);}
@@ -127,7 +127,7 @@ body::before{
 .btn-google{
   width:100%;padding:11px;border-radius:12px;
   background:rgba(255,255,255,0.05);border:1px solid var(--border);
-  color:var(--text);font-family:'Space Mono',monospace;font-size:0.8em;
+  color:var(--text);font-family:'Inter', 'Segoe UI', system-ui, sans-serif;font-size:0.8em;
   cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:10px;
 }
 .btn-google:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);}
@@ -140,7 +140,7 @@ body::before{
 .auth-footer{text-align:center;margin-top:16px;font-size:0.72em;color:var(--text-muted);}
 .auth-footer a{color:var(--cyan);text-decoration:none;}
 
-/* Écran de confirmation */
+/* Ã‰cran de confirmation */
 .confirm-screen{display:none;text-align:center;padding:20px 0;}
 .confirm-icon{font-size:3em;margin-bottom:16px;}
 .confirm-title{font-family:'Orbitron',monospace;font-size:1em;letter-spacing:3px;color:var(--cyan);margin-bottom:10px;}
@@ -192,33 +192,33 @@ body::before{
 <div class="page">
   <div class="auth-wrap">
 
-    <!-- Panneau décoratif gauche -->
+    <!-- Panneau dÃ©coratif gauche -->
     <div class="auth-deco">
       <div class="deco-logo">
         <div class="deco-circle">
           <img src="/assets/images/eva-logo.png" alt="EVA">
         </div>
         <div class="deco-sub">Evolutionary Virtual Assistant</div>
-        <div class="deco-badge">Beta V4 · Astral Technologie</div>
+        <div class="deco-badge">Beta V4 Â· Astral Technologie</div>
       </div>
-      <div class="deco-desc">Créez votre compte et accédez à votre assistante IA personnelle sur tous vos appareils.</div>
+      <div class="deco-desc">CrÃ©ez votre compte et accÃ©dez Ã  votre assistante IA personnelle sur tous vos appareils.</div>
       <div class="deco-features">
-        <div class="deco-feature">Compte unique — accès partout</div>
-        <div class="deco-feature">Conversations naturelles en français</div>
-        <div class="deco-feature">Synthèse vocale & reconnaissance</div>
-        <div class="deco-feature">Notes, alarmes et agenda intégrés</div>
+        <div class="deco-feature">Compte unique â€” accÃ¨s partout</div>
+        <div class="deco-feature">Conversations naturelles en franÃ§ais</div>
+        <div class="deco-feature">SynthÃ¨se vocale & reconnaissance</div>
+        <div class="deco-feature">Notes, alarmes et agenda intÃ©grÃ©s</div>
       </div>
     </div>
 
     <!-- Panneau formulaire droit -->
     <div class="auth-form-side">
       <div class="auth-form-title">INSCRIPTION</div>
-      <div class="auth-form-sub">Rejoignez E.V.A et commencez dès maintenant.<br>Déjà inscrit ? <a href="/app-login.html">Se connecter</a></div>
+      <div class="auth-form-sub">Rejoignez E.V.A et commencez dÃ¨s maintenant.<br>DÃ©jÃ  inscrit ? <a href="/app-login.html">Se connecter</a></div>
 
-      <!-- Bannière plateforme -->
+      <!-- BanniÃ¨re plateforme -->
       <div class="platform-banner">
         <div class="platform-dot"></div>
-        <span id="platformText">Détection de votre appareil…</span>
+        <span id="platformText">DÃ©tection de votre appareilâ€¦</span>
       </div>
 
       <div id="authMessage" class="auth-message"></div>
@@ -227,7 +227,7 @@ body::before{
       <div id="signupSection">
         <form id="signupForm" onsubmit="handleSignup(event)">
           <div class="form-group">
-            <label class="form-label">Prénom ou pseudo</label>
+            <label class="form-label">PrÃ©nom ou pseudo</label>
             <input type="text" class="form-input" id="displayName" placeholder="Enzo" required autocomplete="name">
           </div>
           <div class="form-group">
@@ -236,19 +236,19 @@ body::before{
           </div>
           <div class="form-group">
             <label class="form-label">Mot de passe</label>
-            <input type="password" class="form-input" id="passwordInput" placeholder="Minimum 8 caractères" required autocomplete="new-password" oninput="checkStrength(this.value)">
+            <input type="password" class="form-input" id="passwordInput" placeholder="Minimum 8 caractÃ¨res" required autocomplete="new-password" oninput="checkStrength(this.value)">
             <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
             <div class="strength-label" id="strengthLabel"></div>
           </div>
           <div class="form-group">
             <label class="form-label">Confirmer le mot de passe</label>
-            <input type="password" class="form-input" id="passwordConfirm" placeholder="••••••••" required autocomplete="new-password">
+            <input type="password" class="form-input" id="passwordConfirm" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required autocomplete="new-password">
           </div>
           <div class="cgu-row">
             <input type="checkbox" id="cguCheck" required>
-            <label for="cguCheck">J'accepte les <a href="/conditions.html" target="_blank">Conditions d'utilisation</a> et la <a href="/privacy.html" target="_blank">Politique de confidentialité</a> d'Astral Technologie.</label>
+            <label for="cguCheck">J'accepte les <a href="/conditions.html" target="_blank">Conditions d'utilisation</a> et la <a href="/privacy.html" target="_blank">Politique de confidentialitÃ©</a> d'Astral Technologie.</label>
           </div>
-          <button type="submit" class="btn-submit" id="signupBtn">CRÉER MON COMPTE</button>
+          <button type="submit" class="btn-submit" id="signupBtn">CRÃ‰ER MON COMPTE</button>
         </form>
 
         <div class="auth-divider">ou</div>
@@ -259,17 +259,17 @@ body::before{
         </button>
 
         <div class="auth-footer">
-          <a href="/conditions.html">CGU</a> · <a href="/privacy.html">Vie privée</a> · <a href="/cookies.html">Cookies</a><br>
-          Astral Technologie © 2026
+          <a href="/conditions.html">CGU</a> Â· <a href="/privacy.html">Vie privÃ©e</a> Â· <a href="/cookies.html">Cookies</a><br>
+          Astral Technologie Â© 2026
         </div>
       </div>
 
-      <!-- Écran de confirmation -->
+      <!-- Ã‰cran de confirmation -->
       <div id="confirmScreen" class="confirm-screen">
         <div class="confirm-icon">?</div>
-        <div class="confirm-title">COMPTE CRÉÉ !</div>
-        <div class="confirm-text" id="confirmText">Bienvenue dans E.V.A. Votre compte est prêt.</div>
-        <a href="/app-login.html" id="confirmLink" class="confirm-btn">ACCÉDER À E.V.A</a>
+        <div class="confirm-title">COMPTE CRÃ‰Ã‰ !</div>
+        <div class="confirm-text" id="confirmText">Bienvenue dans E.V.A. Votre compte est prÃªt.</div>
+        <a href="/app-login.html" id="confirmLink" class="confirm-btn">ACCÃ‰DER Ã€ E.V.A</a>
       </div>
 
     </div>
@@ -294,21 +294,21 @@ var PLATFORM = (function(){
 })();
 
 var platformLabels = {
-  mobile:  '<strong>Mobile détecté</strong> — Votre compte sera lié à l\'app E.V.A',
-  tablet:  '<strong>Tablette détectée</strong> — Votre compte sera lié à l\'app E.V.A',
-  windows: '<strong>PC Windows détecté</strong> — Votre compte sera lié à E.V.A Desktop',
-  mac:     '<strong>Mac détecté</strong> — Votre compte sera lié à E.V.A Desktop',
-  linux:   '<strong>Linux détecté</strong> — Votre compte sera lié à E.V.A Desktop',
-  web:     '<strong>Navigateur web détecté</strong> — Création de votre compte web'
+  mobile:  '<strong>Mobile dÃ©tectÃ©</strong> â€” Votre compte sera liÃ© Ã  l\'app E.V.A',
+  tablet:  '<strong>Tablette dÃ©tectÃ©e</strong> â€” Votre compte sera liÃ© Ã  l\'app E.V.A',
+  windows: '<strong>PC Windows dÃ©tectÃ©</strong> â€” Votre compte sera liÃ© Ã  E.V.A Desktop',
+  mac:     '<strong>Mac dÃ©tectÃ©</strong> â€” Votre compte sera liÃ© Ã  E.V.A Desktop',
+  linux:   '<strong>Linux dÃ©tectÃ©</strong> â€” Votre compte sera liÃ© Ã  E.V.A Desktop',
+  web:     '<strong>Navigateur web dÃ©tectÃ©</strong> â€” CrÃ©ation de votre compte web'
 };
 document.getElementById('platformText').innerHTML = platformLabels[PLATFORM] || platformLabels.web;
 
 var ERR = {
-  'auth/email-already-in-use':'Un compte existe déjà avec cet email.',
+  'auth/email-already-in-use':'Un compte existe dÃ©jÃ  avec cet email.',
   'auth/invalid-email':'Adresse email invalide.',
-  'auth/weak-password':'Mot de passe trop faible (minimum 6 caractères).',
-  'auth/network-request-failed':'Erreur réseau. Vérifiez votre connexion.',
-  'auth/popup-blocked':'Popup bloquée. Autorisez les popups pour ce site.'
+  'auth/weak-password':'Mot de passe trop faible (minimum 6 caractÃ¨res).',
+  'auth/network-request-failed':'Erreur rÃ©seau. VÃ©rifiez votre connexion.',
+  'auth/popup-blocked':'Popup bloquÃ©e. Autorisez les popups pour ce site.'
 };
 
 function showMsg(msg, type){
@@ -325,7 +325,7 @@ function checkStrength(val){
   if (/[0-9]/.test(val)) score++;
   if (/[^A-Za-z0-9]/.test(val)) score++;
   var colors = ['#f87171','#f87171','#fb923c','#facc15','#4ade80'];
-  var labels = ['Très faible','Faible','Moyen','Fort','Très fort'];
+  var labels = ['TrÃ¨s faible','Faible','Moyen','Fort','TrÃ¨s fort'];
   var fill = document.getElementById('strengthFill');
   var lbl  = document.getElementById('strengthLabel');
   fill.style.width  = (score * 20) + '%';
@@ -342,8 +342,8 @@ async function handleSignup(e){
   var passConf = document.getElementById('passwordConfirm').value;
   var btn      = document.getElementById('signupBtn');
   if (pass !== passConf){ showMsg('Les mots de passe ne correspondent pas.','error'); return; }
-  if (pass.length < 8){ showMsg('Le mot de passe doit contenir au moins 8 caractères.','error'); return; }
-  btn.disabled = true; btn.textContent = 'Création...';
+  if (pass.length < 8){ showMsg('Le mot de passe doit contenir au moins 8 caractÃ¨res.','error'); return; }
+  btn.disabled = true; btn.textContent = 'CrÃ©ation...';
   try {
     var cred = await auth.createUserWithEmailAndPassword(email, pass);
     await cred.user.updateProfile({ displayName: name });
@@ -358,7 +358,7 @@ async function handleSignup(e){
     }
     showConfirmation(name);
   } catch(err){
-    btn.disabled = false; btn.textContent = 'CRÉER MON COMPTE';
+    btn.disabled = false; btn.textContent = 'CRÃ‰ER MON COMPTE';
     showMsg(ERR[err.code] || 'Erreur : ' + err.message, 'error');
   }
 }
@@ -397,9 +397,9 @@ function showConfirmation(name){
   screen.style.display = 'block';
 
   if (isDesktop) {
-    var msg = '? Compte créé ! Bienvenue ' + (name||'') + ' !<br>Retour vers E.V.A Desktop…';
+    var msg = '? Compte crÃ©Ã© ! Bienvenue ' + (name||'') + ' !<br>Retour vers E.V.A Desktopâ€¦';
     document.getElementById('confirmText').innerHTML = msg;
-    // L'utilisateur n'est pas encore connecté (juste inscrit)
+    // L'utilisateur n'est pas encore connectÃ© (juste inscrit)
     // On redirige vers la page de login desktop pour finaliser
     setTimeout(function(){
       var user = auth.currentUser;
@@ -412,7 +412,7 @@ function showConfirmation(name){
     return;
   }
 
-  var msg2 = 'Bienvenue ' + (name||'') + ' ! Votre compte E.V.A est prêt.';
+  var msg2 = 'Bienvenue ' + (name||'') + ' ! Votre compte E.V.A est prÃªt.';
   if (PLATFORM === 'mobile' || PLATFORM === 'tablet') {
     msg2 += ' Ouvrez l\'app E.V.A sur votre mobile pour commencer.';
   } else if (PLATFORM !== 'web') {

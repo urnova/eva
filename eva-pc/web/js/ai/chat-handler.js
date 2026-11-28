@@ -20,6 +20,7 @@ let currentProvider = null;
 let currentConfig = null;
 let conversationContext = [];
 let isProcessing = false;
+let _lastCloudReqAt = 0;
 
 // ═══ SANITIZE LLM OUTPUT ═══
 // Les petits modèles (Llama-3.2-3B, etc.) hallucinent parfois des préfixes parasites
@@ -119,15 +120,39 @@ async function sendMessage(userMessage, options) {
       systemPrompt += `\n\nL'utilisateur s'appelle ${options.nickname}.`;
     }
 
-    // Envoyer au provider
-    const response = await currentProvider.sendMessage(
-      conversationContext,
-      systemPrompt
-    );
+    // Délai configurable entre requêtes cloud (activé par défaut: 1500 ms pour éviter le rate-limit)
+    const provName = (currentConfig && currentConfig.aiProvider) || 'pollinations';
+    const isLocal = ['eva', 'qwen', 'lmstudio', 'ollama'].includes(provName);
+    const delayEnabled = currentConfig?.requestDelayEnabled !== false;
+    const delayMs = delayEnabled ? (Number(currentConfig?.requestDelayMs) || 1500) : 0;
+    if (!isLocal && delayMs > 0 && _lastCloudReqAt > 0) {
+      const wait = delayMs - (Date.now() - _lastCloudReqAt);
+      if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    }
+    _lastCloudReqAt = Date.now();
+
+    // Envoyer au provider principal
+    let response = await currentProvider.sendMessage(conversationContext, systemPrompt);
+
+    // Cascade fallback STRICTEMENT opt-in (jamais silencieux si autoFallback !== true)
+    if (!response.success && currentConfig && currentConfig.autoFallback === true) {
+      const chain = ['pollinations', 'gemini', 'puter', 'eva'].filter(x => x !== provName);
+      for (const alt of chain) {
+        if (alt === 'gemini' && !currentConfig.geminiApiKey) continue;
+        try {
+          toast('Bascule opt-in vers ' + alt + '...', 'warning');
+          const altProv = window.EVAProviders.createProvider(alt, currentConfig);
+          if (altProv.initialize) await altProv.initialize().catch(() => ({}));
+          const altRes = await altProv.sendMessage(conversationContext, systemPrompt);
+          if (altRes && altRes.success) { response = altRes; break; }
+        } catch (_) {}
+      }
+    }
 
     if (!response.success) {
       throw new Error(response.error);
     }
+    try { window.EVAProviders?.EVAQuotas?.record(provName, currentConfig?.[provName + 'Model'] || ''); } catch (_) {}
 
     // Nettoyage défensif des préfixes parasites genre "cyan actif"
     const cleaned = _stripLeakedPrefix(response.content);

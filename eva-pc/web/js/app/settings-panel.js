@@ -73,9 +73,7 @@ function renderSettings(section) {
         return '<div style="font-size:0.78em;color:var(--cyan)">'+esc(roleLabels[(p.role||'user').toLowerCase()]||dLabel||p.role||roleLabels.user)+'</div>';
       })() + '</div>' +
       '</div>' +
-      '<div class="settings-row" style="padding:10px 0;border-top:1px solid var(--border)">' +
-      '<div><div class="settings-row-label" style="display:flex;align-items:center;gap:6px;">🔮 Orbe E.V.A <span style="font-size:0.68em;background:linear-gradient(135deg,#b08a5a,#e8c490);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700;letter-spacing:1px;">AVATAR</span></div><div class="settings-row-sub">Active l\'orbe holographique d\'E.V.A visible à droite du chat. Désactiver libère des ressources sur les appareils moins puissants.</div></div>' +
-      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sEvaPanel"'+(S.config.showEvaPanel!==false?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;" onchange="toggleEvaPanelSetting(this.checked)"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label>' +
+            '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="sEvaPanel"'+(S.config.showEvaPanel!==false?' checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;" onchange="toggleEvaPanelSetting(this.checked)"> <span style="font-size:0.78em;color:var(--text-muted)">Activé</span></label>' +
       '</div>' +
       '</div>' +
       '<div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="saveProfileSettings()">Sauvegarder le profil</button></div>';
@@ -98,6 +96,8 @@ function renderSettings(section) {
     var provDefs = {
       eva:      { label:'E.V.A', icon:'', tag:'LOCAL', tagColor:'#a855f7', desc:'Modèles officiels E.V.A par Astral Technologie. 100% local, 100% privé. Propulsé par WebLLM — téléchargement automatique et mise en cache navigateur.', models:[{id:'EVA-Expert',label:'EVA Expert — 3B · Meilleure qualité'},{id:'EVA-Rapide',label:'EVA Rapide — 1B · Ultra-rapide'}], modelKey:'evaModel' },
       puter:    { label:'Puter Cloud', icon:'☁️', tag:'GRATUIT', tagColor:'#06b6d4', desc:'Accès gratuit via Puter.com. Modèles GPT-4o disponibles. Quota : ~50 à 100 messages par jour et par compte.', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'}], modelKey:'puterModel' },
+      gemini:       { label:'Google Gemini', icon:'💎', tag:'GRATUIT', tagColor:'#38bdf8', desc:'API officielle Google Gemini (Flash 2.5, Pro 2.5). Nécessite une clé gratuite Google AI Studio (aistudio.google.com).', models:[{id:'gemini-2.5-flash',label:'Gemini 2.5 Flash — Rapide & Gratuit'},{id:'gemini-2.5-pro',label:'Gemini 2.5 Pro — Raisonnement'},{id:'gemini-2.0-flash',label:'Gemini 2.0 Flash'}], modelKey:'geminiModel' },
+      gemini:       { label:'Google Gemini', icon:'💎', tag:'GRATUIT', tagColor:'#38bdf8', desc:'API officielle Google Gemini (Flash 2.5, Pro 2.5). Nécessite une clé gratuite Google AI Studio (aistudio.google.com).', models:[{id:'gemini-2.5-flash',label:'Gemini 2.5 Flash — Rapide & Gratuit'},{id:'gemini-2.5-pro',label:'Gemini 2.5 Pro — Raisonnement'},{id:'gemini-2.0-flash',label:'Gemini 2.0 Flash'}], modelKey:'geminiModel' },
       pollinations: { label:'Pollinations', icon:'🌸', tag:'GRATUIT', tagColor:'#06b6d4', desc:'100% gratuit, sans compte ni clé API. Accès à GPT-4o, Gemini, DeepSeek, Llama. Quota : 1 message toutes les 10 secondes environ.', models:[{id:'openai',label:'GPT-4o Mini — Rapide'},{id:'openai-fast',label:'GPT-4o — Expert'},{id:'mistral',label:'Mistral Nemo — Puissant'},{id:'llama',label:'Llama 3.3 70B — Open Source'},{id:'deepseek',label:'DeepSeek-V3 — Très performant'},{id:'gemini',label:'Gemini Flash 2.0 — Google'},{id:'gemini-thinking',label:'Gemini 2.0 Thinking — Raisonnement'}], modelKey:'pollinationsModel' },
       openai:   { label:'OpenAI',      icon:'🤖', tag:'PAYANT',  tagColor:'#10b981', desc:'GPT-4o, GPT-4 Turbo. Nécessite une clé API OpenAI. Supporte la vision (analyse d\'images).', models:[{id:'gpt-4o-mini',label:'GPT-4o Mini — Rapide'},{id:'gpt-4o',label:'GPT-4o — Expert'},{id:'gpt-4-turbo',label:'GPT-4 Turbo — Puissant'},{id:'gpt-3.5-turbo',label:'GPT-3.5 Turbo — Économique'}], modelKey:'openaiModel' },
       claude:   { label:'Claude',      icon:'🧠', tag:'PAYANT',  tagColor:'#10b981', desc:'Claude Haiku et Opus d\'Anthropic. Excellent pour le raisonnement et l\'analyse. Supporte la vision.', models:[{id:'claude-3-5-haiku-20241022',label:'Haiku — Rapide'},{id:'claude-3-opus-20240229',label:'Opus — Ultra'}], modelKey:'claudeModel' },
@@ -174,6 +174,14 @@ function renderSettings(section) {
       '<div style="font-size:0.65em;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">Autres fournisseurs</div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-bottom:20px;">' +
 
+      /* Google Gemini */
+      '<div id="aicard-gemini" style="'+cardStyle('gemini')+'" onclick="window._selectAIProv(\'gemini\')">' +
+        checkMark('gemini') + tagBadge(provDefs.gemini) +
+        '<div style="font-size:1.3em;margin-bottom:5px;">💎</div>' +
+        '<div style="font-weight:700;font-size:0.8em;margin-bottom:3px;">Google Gemini</div>' +
+        '<div style="font-size:0.64em;color:var(--text-muted);">Flash 2.5 · Pro · Vision<br>Clé AI Studio</div>' +
+      '</div>' +
+
       /* OpenAI */
       '<div id="aicard-openai" style="'+cardStyle('openai')+'" onclick="window._selectAIProv(\'openai\')">' +
         checkMark('openai') + tagBadge(provDefs.openai) +
@@ -237,6 +245,13 @@ function renderSettings(section) {
         '<div style="font-size:0.66em;color:var(--text-muted);margin-top:4px">Le modèle peut aussi être changé directement dans la barre de chat.</div>' +
       '</div>' +
 
+      /* Google Gemini key */
+      '<div class="form-field" id="apiKeyFieldGemini" style="'+(cur==='gemini'?'':'display:none')+'">' +
+        '<label class="form-label">Clé API Google Gemini</label>' +
+        '<input type="password" class="form-input" id="sApiKeyGemini" placeholder="AIza..." value="'+esc(cfg.geminiApiKey||'')+'">' +
+        '<div style="font-size:0.66em;color:var(--text-muted);margin-top:4px">Clé gratuite sur <strong>aistudio.google.com</strong></div>' +
+      '</div>' +
+
       /* OpenAI key */
       '<div class="form-field" id="apiKeyFieldOpenAI" style="'+(cur==='openai'?'':'display:none')+'">' +
         '<label class="form-label">Clé API OpenAI</label>' +
@@ -267,6 +282,45 @@ function renderSettings(section) {
 
       '</div>' + /* fin aiDynConfig */
 
+
+      /* === QUOTAS VISUELS + DÉLAI + REPLI OPT-IN + STUDIO MÉDIA === */
+      '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin:14px 0;">' +
+        '<div style="font-size:0.68em;font-weight:700;color:var(--cyan);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">📊 Quotas & Régulation</div>' +
+        (function(){
+          var qs = (window.EVAProviders && window.EVAProviders.EVAQuotas) ? window.EVAProviders.EVAQuotas.getAll() : [];
+          return qs.filter(function(q){ return Number.isFinite(q.daily) || q.used > 0; }).slice(0, 5).map(function(q){
+            var maxLbl = Number.isFinite(q.daily) ? (q.used + ' / ' + q.daily) : (q.used + ' · Illimité');
+            var barColor = q.pct >= 85 ? '#ef4444' : (q.pct >= 60 ? '#f59e0b' : 'linear-gradient(90deg,#00d4ff,#8b5cf6)');
+            return '<div style="margin-bottom:8px;">' +
+              '<div style="display:flex;justify-content:space-between;font-size:0.72em;margin-bottom:3px;"><span>'+esc(q.label)+'</span><span style="color:var(--text-muted)">'+maxLbl+'</span></div>' +
+              '<div style="height:6px;background:rgba(255,255,255,0.06);border-radius:999px;overflow:hidden;"><div style="height:100%;width:'+(Number.isFinite(q.daily)?q.pct:12)+'%;background:'+barColor+';border-radius:999px;"></div></div>' +
+            '</div>';
+          }).join('');
+        })() +
+        '<div class="settings-row" style="padding:8px 0;border-top:1px solid var(--border);margin-top:8px;">' +
+          '<div><div class="settings-row-label">Délai anti rate-limit</div><div class="settings-row-sub">Pause configurable entre requêtes cloud ('+(cfg.requestDelayMs||1500)+' ms)</div></div>' +
+          '<div style="display:flex;align-items:center;gap:8px;"><input type="number" id="sRequestDelayMs" min="0" max="15000" step="250" value="'+(cfg.requestDelayMs||1500)+'" class="form-input" style="width:82px;padding:4px 8px;font-size:0.76em;"><input type="checkbox" id="sRequestDelayEnabled" '+(cfg.requestDelayEnabled!==false?'checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;"></div>' +
+        '</div>' +
+        '<div class="settings-row" style="padding:8px 0;border-top:1px solid var(--border);">' +
+          '<div><div class="settings-row-label">Cascade fallback automatique</div><div class="settings-row-sub">Opt-in uniquement : bascule si le fournisseur principal échoue (désactivé par défaut)</div></div>' +
+          '<input type="checkbox" id="sAutoFallback" '+(cfg.autoFallback===true?'checked':'')+' style="accent-color:var(--cyan);width:16px;height:16px;">' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin:14px 0;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+          '<div style="font-size:0.68em;font-weight:700;color:#f9a8d4;letter-spacing:0.08em;text-transform:uppercase;">🎨 Génération Image / Audio / Vidéo</div>' +
+          '<input type="checkbox" id="sMediaEnabled" '+(cfg.mediaEnabled===true?'checked':'')+' style="accent-color:#8b5cf6;width:16px;height:16px;">' +
+        '</div>' +
+        '<div style="font-size:0.71em;color:var(--text-muted);margin-bottom:10px;">Désactivée par défaut. Activez pour permettre à E.V.A de générer des images/audio directement dans le chat.</div>' +
+        '<div class="form-field" style="margin-bottom:0;"><label class="form-label">Fournisseur Média</label>' +
+          '<select class="form-select" id="sMediaImageProvider">' +
+            '<option value="pollinations-flux"'+((cfg.mediaImageProvider||'pollinations-flux')==='pollinations-flux'?' selected':'')+'>Pollinations Flux (Gratuit)</option>' +
+            '<option value="gemini-imagen"'+(cfg.mediaImageProvider==='gemini-imagen'?' selected':'')+'>Google Gemini Imagen 3 (Clé Gemini requise)</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+
       /* Contexte */
       '<div class="form-field"><label class="form-label">Contexte mémorisé (messages)</label>' +
         '<div style="display:flex;align-items:center;gap:10px"><input type="range" min="4" max="40" step="2" id="sContextLen" value="'+(cfg.contextLength||10)+'" style="flex:1;accent-color:var(--cyan)">' +
@@ -286,7 +340,7 @@ function renderSettings(section) {
         var hi = document.getElementById('sProvider'); if(hi) hi.value = v;
 
         /* Mettre à jour l'apparence des cartes */
-        ['eva','puter','pollinations','openai','claude','qwen','lmstudio','ollama'].forEach(function(k) {
+        ['eva','puter','pollinations','gemini','openai','claude','qwen','lmstudio','ollama'].forEach(function(k) {
           var card = document.getElementById('aicard-'+k);
           if (!card) return;
           var active = k === v;
@@ -310,12 +364,12 @@ function renderSettings(section) {
         if (warn) warn.style.display = v==='qwen' ? '' : 'none';
 
         /* Champs API/URL */
-        ['Eva','OpenAI','Claude','LMStudio','Ollama'].forEach(function(x){
+        ['Eva','Gemini','OpenAI','Claude','LMStudio','Ollama'].forEach(function(x){
           var f = document.getElementById('apiKeyField'+x); if(f) f.style.display='none';
         });
         var puterF = document.getElementById('puterConnectField');
         if (puterF) puterF.style.display = v==='puter' ? '' : 'none';
-        var apiShow = {eva:'Eva',openai:'OpenAI',claude:'Claude',lmstudio:'LMStudio',ollama:'Ollama'}[v];
+        var apiShow = {eva:'Eva',gemini:'Gemini',openai:'OpenAI',claude:'Claude',lmstudio:'LMStudio',ollama:'Ollama'}[v];
         if (apiShow) { var f=document.getElementById('apiKeyField'+apiShow); if(f) f.style.display=''; }
 
         /* Modèles */
@@ -335,6 +389,12 @@ function renderSettings(section) {
       if (cur==='puter') refreshPuterStatusUI();
     }, 50);
 
+  } else if (section === 'connectors') {
+    if (window.EVAConnectors && typeof window.EVAConnectors.renderSettingsSection === 'function') {
+      window.EVAConnectors.renderSettingsSection(c);
+    } else {
+      c.innerHTML = '<div class="settings-section"><div class="settings-section-title">Connecteurs</div><div style="font-size:0.8em;color:var(--text-muted);">Module Connecteurs en cours de chargement...</div></div>';
+    }
   } else if (section === 'voice') {
     var curTTSProv = cfg.voiceProvider || 'edge-neural';
     if (curTTSProv === 'piper') curTTSProv = 'eva-custom';
@@ -648,11 +708,11 @@ function renderSettings(section) {
               scales: {
                 x: {
                   grid: { color: 'rgba(255,255,255,0.04)' },
-                  ticks: { color: '#88889a', font: { family: "'Space Mono', monospace", size: 9 } }
+                  ticks: { color: '#88889a', font: { family: "'Inter', 'Segoe UI', system-ui, sans-serif", size: 9 } }
                 },
                 y: {
                   grid: { color: 'rgba(255,255,255,0.04)' },
-                  ticks: { color: '#88889a', font: { family: "'Space Mono', monospace", size: 9 }, precision: 0 },
+                  ticks: { color: '#88889a', font: { family: "'Inter', 'Segoe UI', system-ui, sans-serif", size: 9 }, precision: 0 },
                   beginAtZero: true
                 }
               }
@@ -1087,9 +1147,15 @@ async function saveAISettings() {
   /* Modèle sélectionné pour ce provider */
   var modelSel = document.getElementById('sModel');
   if (modelSel && modelSel.value) {
-    var mk = {eva:'evaModel',puter:'puterModel',pollinations:'pollinationsModel',openai:'openaiModel',claude:'claudeModel',qwen:'qwenModel'}[prov];
+    var mk = {eva:'evaModel',puter:'puterModel',pollinations:'pollinationsModel',gemini:'geminiModel',openai:'openaiModel',claude:'claudeModel',qwen:'qwenModel'}[prov];
     if (mk) S.config[mk] = modelSel.value;
   }
+  k = document.getElementById('sApiKeyGemini'); if(k) S.config.geminiApiKey = k.value.trim();
+  k = document.getElementById('sRequestDelayEnabled'); if(k) S.config.requestDelayEnabled = !!k.checked;
+  k = document.getElementById('sRequestDelayMs'); if(k) S.config.requestDelayMs = Math.max(0, parseInt(k.value, 10) || 1500);
+  k = document.getElementById('sAutoFallback'); if(k) S.config.autoFallback = !!k.checked;
+  k = document.getElementById('sMediaEnabled'); if(k) S.config.mediaEnabled = !!k.checked;
+  k = document.getElementById('sMediaImageProvider'); if(k) S.config.mediaImageProvider = k.value;
   k = document.getElementById('sApiKeyOpenAI'); if(k) S.config.openaiApiKey = k.value.trim();
   k = document.getElementById('sApiKeyClaude'); if(k) S.config.claudeApiKey = k.value.trim();
   k = document.getElementById('sLMStudioURL'); if(k && k.value.trim()) S.config.lmstudioUrl = k.value.trim();
@@ -1138,7 +1204,7 @@ async function saveAISettings() {
   }
 
   /* Noms lisibles */
-  var provNames = {puter:'Puter Cloud',openai:'OpenAI',claude:'Claude (Anthropic)',qwen:'Qwen Local',lmstudio:'LM Studio',ollama:'Ollama'};
+  var provNames = {eva:'E.V.A Local',pollinations:'Pollinations',gemini:'Google Gemini',puter:'Puter Cloud',openai:'OpenAI',claude:'Claude (Anthropic)',qwen:'Local Privé',lmstudio:'LM Studio',ollama:'Ollama'};
   var provLabel = provNames[prov] || prov;
   toast('✓ Fournisseur IA appliqué : ' + provLabel, 'success');
 
@@ -1684,11 +1750,11 @@ function renderBrainMap() {
   
   var btnAddNode = document.createElement('button');
   btnAddNode.innerHTML = '➕ Nœud';
-  btnAddNode.style.cssText = 'background:rgba(10,15,30,0.9);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:0.8em;font-family:\'Space Mono\';backdrop-filter:blur(5px);transition:0.2s;';
+  btnAddNode.style.cssText = 'background:rgba(10,15,30,0.9);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:0.8em;font-family:\'Inter\';backdrop-filter:blur(5px);transition:0.2s;';
   
   var btnAddLink = document.createElement('button');
   btnAddLink.innerHTML = '🔗 Lien';
-  btnAddLink.style.cssText = 'background:rgba(10,15,30,0.9);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:0.8em;font-family:\'Space Mono\';backdrop-filter:blur(5px);transition:0.2s;';
+  btnAddLink.style.cssText = 'background:rgba(10,15,30,0.9);color:var(--text);border:1px solid var(--border);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:0.8em;font-family:\'Inter\';backdrop-filter:blur(5px);transition:0.2s;';
   
   toolbar.appendChild(btnAddNode);
   toolbar.appendChild(btnAddLink);
@@ -2440,227 +2506,99 @@ window.saveVoiceSettings = saveVoiceSettings;
 
 
 
+
+/* ═══════════════════════════════════════════════════
+   UNIFIED SESSIONS & CLOUDWORKS BIDIRECTIONAL SYNC (D2)
+   ═══════════════════════════════════════════════════ */
+var _sessionsUnsub = null;
+var _cwDevicesSessUnsub = null;
+
+
+/* ═══════════════════════════════════════════════════
+   UNIFIED SESSIONS & CLOUDWORKS BIDIRECTIONAL SYNC (D2)
+   ═══════════════════════════════════════════════════ */
+var _sessionsUnsub = null;
+var _cwDevicesSessUnsub = null;
+
 window.loadSessions = function() {
-  var c = document.getElementById('sessionsListContainer');
-  if(!c) return;
-  db.collection('users').doc(S.user.uid).collection('sessions').orderBy('lastSeen', 'desc').onSnapshot(function(snap) {
-    if(!document.getElementById('sessionsListContainer')) return;
-    c.innerHTML = '';
-    if(snap.empty) {
-      c.innerHTML = '<div style="color:var(--text-muted);font-size:0.8em;text-align:center;">Aucune session trouvée.</div>';
-      return;
-    }
-    snap.forEach(function(doc) {
-      var d = doc.data();
-      if(d.revoke) return;
-      var isCurrent = (S.sessionId === doc.id);
-      
-      var lastSeenDate = d.lastSeen && d.lastSeen.toDate ? d.lastSeen.toDate() : new Date();
-      var diffMins = Math.floor((new Date() - lastSeenDate) / 60000);
-      var isOnline = diffMins < 6 || d.online;
-      
-      var connDateStr = d.connectedAt && d.connectedAt.toDate ? d.connectedAt.toDate().toLocaleDateString('fr-FR', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : 'Inconnu';
-      
-      var div = document.createElement('div');
-      div.style.cssText = 'background:var(--surface2);border:1px solid ' + (isCurrent ? 'rgba(123,139,245,0.4)' : 'var(--border)') + ';border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;';
-      
-      var left = '<div style="display:flex;flex-direction:column;">' +
-        '<div style="font-weight:700;color:var(--text);font-size:0.9em;display:flex;align-items:center;gap:6px;">' +
-        (d.device==='Application PC'?'💻':(d.device==='Mobile'?'📱':'🌐')) + ' ' + (d.os || 'Inconnu') + ' - ' + (d.browser || 'Inconnu') +
-        (isCurrent ? '<span style="font-size:0.65em;background:var(--cyan);color:#000;padding:2px 6px;border-radius:4px;">ACTUELLE</span>' : '') +
-        '</div>' +
-        '<div style="font-size:0.7em;color:var(--text-muted);margin-top:4px;">Connecté le: ' + connDateStr + '</div>' +
-        '<div style="font-size:0.7em;color:' + (isOnline ? 'var(--green)' : 'var(--text-dim)') + ';margin-top:2px;">' + 
-        (isOnline ? '🟢 En ligne' : '⚪ Hors ligne (Vu il y a ' + (diffMins>60 ? Math.floor(diffMins/60)+'h' : diffMins+'m') + ')') + 
-        '</div>' +
-      '</div>';
-      
-      var right = isCurrent ? '' : '<button class="btn btn-danger" style="padding:6px 10px;font-size:0.75em;" onclick="revokeSession(\''+doc.id+'\')">Retirer</button>';
-      
-      div.innerHTML = left + right;
-      c.appendChild(div);
-    });
-  }, function(e) {
-    c.innerHTML = '<div style="color:#ff4d6d;font-size:0.8em;text-align:center;">Erreur de lecture</div>';
-  });
-};
-
-window.revokeSession = function(sid) {
-  if(confirm('Voulez-vous déconnecter cet appareil ?')) {
-    db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).update({ revoke: true }).catch(function(e){
-      console.error(e);
-      alert('Erreur: ' + e.message);
-    });
+  var c = document.getElementById('accountSessionsList') || document.getElementById('sessionsListContainer');
+  if (!c) return;
+  if (!S.user || !window.db) {
+    c.innerHTML = '<div style="color:var(--text-muted);font-size:0.8em;">Connectez-vous pour voir vos sessions.</div>';
+    return;
   }
-};
+  if (_sessionsUnsub) { try { _sessionsUnsub(); } catch(_) {} _sessionsUnsub = null; }
+  c.innerHTML = '<div style="color:var(--text-muted);font-size:0.8em;">Chargement des sessions...</div>';
 
-
-/* --- SESSIONS ACTIVES --- */
-function loadActiveSessions() {
-  if (!S.user) return;
-  db.collection('users').doc(S.user.uid).collection('sessions').orderBy('lastSeen', 'desc').get().then(function(snap) {
-    var c = document.getElementById('activeSessionsContainer');
-    if (!c) return;
-    if (snap.empty) { c.innerHTML = 'Aucune session.'; return; }
-    
-    var html = '<div style="display:flex;flex-direction:column;gap:8px">';
-    snap.forEach(function(doc) {
-      var d = doc.data();
-      var isCurrent = doc.id === S.sessionId;
-      var dateStr = d.connectedAt ? new Date(d.connectedAt.toMillis ? d.connectedAt.toMillis() : d.connectedAt).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Inconnu';
-      var seenStr = d.lastSeen ? new Date(d.lastSeen.toMillis ? d.lastSeen.toMillis() : d.lastSeen).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Inconnu';
-      
-      var deviceName = d.device || 'Inconnu';
-      var osName = d.os || '';
-      var browserName = d.browser || '';
-      var icon = d.device === 'Application PC' ? '💻' : (d.device === 'Mobile' ? '📱' : '🌐');
-      
-      var statusDot = d.online ? '<span style="color:#4ade80">●</span> En ligne' : '<span style="color:var(--text-muted)">○</span> Hors ligne';
-      if (isCurrent) statusDot = '<span style="color:#4ade80">●</span> Actuel';
-
-      html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;">' +
-        '<div style="font-size:1.5em">' + icon + '</div>' +
-        '<div style="flex:1;min-width:0;">' +
-          '<div style="font-weight:600;color:var(--text);font-size:1em;margin-bottom:2px;">' + deviceName + ' ' + (osName ? '('+osName+')' : '') + '</div>' +
-          '<div style="font-size:0.85em;color:var(--text-muted);">' + browserName + ' • ' + statusDot + '</div>' +
-          '<div style="font-size:0.75em;color:var(--text-dim);margin-top:4px;">Connecté le: ' + dateStr + '<br>Vu: ' + seenStr + '</div>' +
-        '</div>' +
-        (!isCurrent ? '<button class="btn btn-danger" style="padding:6px 12px;font-size:0.8em;flex-shrink:0" onclick="revokeSession(\'' + doc.id + '\')">Déconnecter</button>' : '') +
-      '</div>';
-    });
-    html += '</div>';
-    c.innerHTML = html;
-  }).catch(function(e) {
-    var c = document.getElementById('activeSessionsContainer');
-    if(c) c.innerHTML = 'Erreur: ' + e.message;
-  });
-}
-
-function revokeSession(sid) {
-  if (!S.user) return;
-  db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).delete().then(function() {
-    loadActiveSessions();
-    toast('Session déconnectée avec succès', 'success');
-  }).catch(function(e) {
-    toast('Erreur: ' + e.message, 'error');
-  });
-}
-window.revokeSession = revokeSession;
-
-
-
-function loadConnectedSessions() {
-  const container = document.getElementById('sessionsListContainer');
-  if(!container || !S.user) return;
-  window.db.collection('cloudworks').doc(S.user.uid).collection('devices').onSnapshot(snap => {
-    let html = '';
-    if(snap.empty) {
-      html = '<div style="font-size:0.85em;color:#888;">Aucune session détectée.</div>';
-    } else {
-      snap.forEach(doc => {
-        const d = doc.data();
-        const isOnline = d.online ? '<span style="color:#10b981">● En ligne</span>' : '<span style="color:#ef4444">○ Hors-ligne</span>';
-        const lastSeen = d.updatedAt ? (d.updatedAt.toDate ? d.updatedAt.toDate().toLocaleString() : new Date(d.updatedAt).toLocaleString()) : 'Inconnu';
-        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.1);">';
-        html += '<div><strong style="display:block;margin-bottom:4px;">'+(d.deviceName||doc.id)+'</strong><div style="font-size:0.8em;color:#aaa;">'+isOnline+' - Dernière activité: '+lastSeen+'</div></div>';
-        html += '<button class="btn btn-danger" style="padding:4px 8px;font-size:0.8em;" onclick="revokeSession(\''+doc.id+'\')">Déconnecter</button>';
-        html += '</div>';
+  _sessionsUnsub = db.collection('users').doc(S.user.uid).collection('sessions')
+    .orderBy('lastSeen', 'desc')
+    .onSnapshot(function(snap) {
+      var target = document.getElementById('accountSessionsList') || document.getElementById('sessionsListContainer');
+      if (!target) return;
+      var items = [];
+      snap.forEach(function(doc) {
+        var d = doc.data() || {};
+        if (d.revoke === true) return;
+        items.push({ id: doc.id, data: d });
       });
-    }
-    container.innerHTML = html;
-  });
-}
-
-window.revokeSession = async function(deviceId) {
-  if(confirm("Êtes-vous sûr de vouloir déconnecter cet appareil ?")) {
-    if(confirm("DOUBLE VALIDATION : Confirmez-vous la révocation définitive de l'accès pour cet appareil ?")) {
-      try {
-        await window.db.collection('cloudworks').doc(S.user.uid).collection('devices').doc(deviceId).set({ forceLogout: true }, { merge: true });
-        if(window.toast) window.toast("Session révoquée avec succès. L'appareil sera déconnecté.", "success");
-      } catch(e) {
-        if(window.toast) window.toast("Erreur: "+e.message, "error");
+      if (!items.length) {
+        target.innerHTML = '<div style="color:var(--text-muted);font-size:0.8em;">Aucune session active.</div>';
+        return;
       }
+      target.innerHTML = items.map(function(entry) {
+        var d = entry.data;
+        var isCurrent = (entry.id === S.sessionId);
+        var lastMs = d.lastSeen && d.lastSeen.toDate ? d.lastSeen.toDate().getTime() : 0;
+        var diffMins = lastMs ? Math.max(0, Math.floor((Date.now() - lastMs) / 60000)) : 0;
+        var isOnline = isCurrent || d.online === true || diffMins < 6;
+        var seenStr = lastMs ? new Date(lastMs).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : 'Récente';
+        var devIcon = d.device === 'Application PC' ? '💻' : (d.device === 'Mobile' ? '📱' : '🌐');
+        var modeBadge = d.appMode === 'dev'
+          ? '<span style="font-size:0.65em;padding:1px 6px;border-radius:999px;background:rgba(245,158,11,0.16);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);">DEV</span>'
+          : (d.appMode === 'app'
+            ? '<span style="font-size:0.65em;padding:1px 6px;border-radius:999px;background:rgba(139,92,246,0.18);color:#c4b5fd;border:1px solid rgba(139,92,246,0.35);">APP INSTALLÉE</span>'
+            : '<span style="font-size:0.65em;padding:1px 6px;border-radius:999px;background:rgba(0,212,255,0.12);color:#38bdf8;border:1px solid rgba(0,212,255,0.3);">WEB</span>');
+        var curBadge = isCurrent ? '<span style="font-size:0.65em;padding:1px 7px;border-radius:999px;background:linear-gradient(135deg,#00d4ff,#8b5cf6);color:#070912;font-weight:800;">Cette session</span>' : '';
+        var fpLabel = d.fingerprint ? (' · ID ' + esc(String(d.fingerprint).slice(0, 14))) : '';
+
+        return '<div style="background:var(--surface2);border:1px solid ' + (isCurrent ? 'rgba(0,212,255,0.45)' : 'var(--border)') + ';border-radius:11px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+          '<div style="min-width:0;flex:1;">' +
+            '<div style="font-weight:700;color:var(--text);font-size:0.84em;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+              '<span>' + devIcon + ' ' + esc(d.browser || 'Navigateur') + ' · ' + esc(d.os || 'OS') + '</span>' +
+              modeBadge + curBadge +
+            '</div>' +
+            '<div style="font-size:0.7em;color:' + (isOnline ? '#4ade80' : 'var(--text-muted)') + ';margin-top:4px;">' +
+              (isOnline ? '● En ligne' : '○ Hors ligne') + ' · Dernière activité : ' + seenStr + fpLabel +
+            '</div>' +
+          '</div>' +
+          (isCurrent ? '' : '<button class="btn btn-danger" style="padding:5px 11px;font-size:0.74em;flex-shrink:0;" data-sid="' + esc(entry.id) + '" data-dev="' + esc(d.linkedDeviceId || '') + '" onclick="revokeSession(this.dataset.sid, this.dataset.dev)">Révoquer</button>') +
+        '</div>';
+      }).join('');
+    }, function(err) {
+      var target = document.getElementById('accountSessionsList') || document.getElementById('sessionsListContainer');
+      if (target) target.innerHTML = '<div style="color:#f87171;font-size:0.8em;">Erreur chargement sessions : ' + esc(err.message || '') + '</div>';
+    });
+};
+
+window.revokeSession = async function(sid, linkedDeviceId) {
+  if (!S.user || !window.db) return;
+  if (!confirm('Révoquer immédiatement cette session ? L’appareil sera déconnecté en direct.')) return;
+  try {
+    var uid = S.user.uid;
+    var sesRef = db.collection('users').doc(uid).collection('sessions').doc(sid);
+    var sesSnap = await sesRef.get();
+    var devId = linkedDeviceId || (sesSnap.exists ? sesSnap.data().linkedDeviceId : null);
+    await sesRef.set({ revoke: true, online: false, revokedAt: window.timestamp ? window.timestamp() : new Date() }, { merge: true });
+    if (devId) {
+      await db.collection('cloudworks').doc(uid).collection('devices').doc(devId).set({
+        forceLogout: true, online: false, updatedAt: window.timestamp ? window.timestamp() : new Date()
+      }, { merge: true }).catch(function(){});
     }
+    if (typeof toast === 'function') toast('Session révoquée et déconnectée ✓', 'success');
+  } catch (e) {
+    if (typeof toast === 'function') toast('Erreur révocation : ' + e.message, 'error');
   }
-}
-
-window.loadSessions = function() {
-    var container = document.getElementById('accountSessionsList');
-    if(!container || !S.user) return;
-    db.collection('users').doc(S.user.uid).collection('sessions').orderBy('lastSeen', 'desc').get().then(function(snap) {
-        if(snap.empty) {
-            container.innerHTML = 'Aucune session trouv�e.';
-            return;
-        }
-        var html = '';
-        snap.forEach(function(doc) {
-            var s = doc.data();
-            if(s.revoke === true) return;
-            var isCurrent = doc.id === S.sessionId;
-            var dateStr = s.lastSeen && s.lastSeen.toDate ? s.lastSeen.toDate().toLocaleString('fr-FR') : 'Inconnue';
-            var statusStr = s.online ? '<span style="color:#4ade80">En ligne</span>' : '<span style="color:var(--text-muted)">Derni�re activit�: ' + dateStr + '</span>';
-            var devIcon = s.device === 'Mobile' ? '??' : (s.device === 'Application PC' ? '??' : '??');
-            
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-lighter);padding:10px 14px;border-radius:8px;border:1px solid ' + (isCurrent ? 'var(--cyan)' : 'var(--border)') + ';">' +
-                    '<div style="display:flex;align-items:center;gap:12px;">' +
-                    '<div style="font-size:1.6em;">' + devIcon + '</div>' +
-                    '<div style="display:flex;flex-direction:column;">' +
-                    '<div style="font-weight:600;color:var(--text);">' + (s.browser || 'Inconnu') + ' sur ' + (s.os || 'Inconnu') + (isCurrent ? ' <span style="font-size:0.7em;background:var(--cyan);color:#000;padding:2px 6px;border-radius:10px;margin-left:4px;">Actuelle</span>' : '') + '</div>' +
-                    '<div style="font-size:0.9em;">' + statusStr + '</div>' +
-                    '</div></div>' +
-                    (isCurrent ? '' : '<button class="btn" style="background:transparent;border:1px solid var(--border);color:#f87171;padding:6px 10px;font-size:0.85em;" onclick="revokeSession(\'' + doc.id + '\')">R�voquer</button>') +
-                    '</div>';
-        });
-        container.innerHTML = html || 'Aucune session active.';
-    }).catch(function(e) {
-        container.innerHTML = 'Erreur de chargement des sessions.';
-    });
 };
 
-window.revokeSession = function(sid) {
-    if(!confirm('R�voquer cette session ? Elle sera d�connect�e imm�diatement.')) return;
-    db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).update({revoke: true}).then(function() {
-        window.loadSessions();
-    }).catch(function(e){ alert('Erreur: ' + e.message); });
-};
-
-window.loadSessions = function() {
-    var container = document.getElementById('accountSessionsList');
-    if(!container || !S.user) return;
-    db.collection('users').doc(S.user.uid).collection('sessions').orderBy('lastSeen', 'desc').get().then(function(snap) {
-        if(snap.empty) {
-            container.innerHTML = 'Aucune session trouvée.';
-            return;
-        }
-        var html = '';
-        snap.forEach(function(doc) {
-            var s = doc.data();
-            if(s.revoke === true) return;
-            var isCurrent = doc.id === S.sessionId;
-            var dateStr = s.lastSeen && s.lastSeen.toDate ? s.lastSeen.toDate().toLocaleString('fr-FR') : 'Inconnue';
-            var statusStr = s.online ? '<span style="color:#4ade80">En ligne</span>' : '<span style="color:var(--text-muted)">Dernière activité: ' + dateStr + '</span>';
-            var devIcon = s.device === 'Mobile' ? '📱' : (s.device === 'Application PC' ? '💻' : '🌐');
-            
-            html += '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-lighter);padding:10px 14px;border-radius:8px;border:1px solid ' + (isCurrent ? 'var(--cyan)' : 'var(--border)') + ';">' +
-                    '<div style="display:flex;align-items:center;gap:12px;">' +
-                    '<div style="font-size:1.6em;">' + devIcon + '</div>' +
-                    '<div style="display:flex;flex-direction:column;">' +
-                    '<div style="font-weight:600;color:var(--text);">' + (s.browser || 'Inconnu') + ' sur ' + (s.os || 'Inconnu') + (isCurrent ? ' <span style="font-size:0.7em;background:var(--cyan);color:#000;padding:2px 6px;border-radius:10px;margin-left:4px;">Actuelle</span>' : '') + '</div>' +
-                    '<div style="font-size:0.9em;">' + statusStr + '</div>' +
-                    '</div></div>' +
-                    (isCurrent ? '' : '<button class="btn" style="background:transparent;border:1px solid var(--border);color:#f87171;padding:6px 10px;font-size:0.85em;" onclick="revokeSession(\'' + doc.id + '\')">Révoquer</button>') +
-                    '</div>';
-        });
-        container.innerHTML = html || 'Aucune session active.';
-    }).catch(function(e) {
-        container.innerHTML = 'Erreur de chargement des sessions.';
-    });
-};
-
-window.revokeSession = function(sid) {
-    if(!confirm('Révoquer cette session ? Elle sera déconnectée immédiatement.')) return;
-    db.collection('users').doc(S.user.uid).collection('sessions').doc(sid).update({revoke: true}).then(function() {
-        window.loadSessions();
-    }).catch(function(e){ alert('Erreur: ' + e.message); });
-};
-
+window.loadActiveSessions = window.loadSessions;
+window.loadConnectedSessions = window.loadSessions;
