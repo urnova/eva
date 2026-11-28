@@ -163,13 +163,14 @@ class QwenProvider {
 
       try {
         const model = this.config.puterModel || 'gpt-4o-mini';
+        const maxTokens = Number(this.config.maxTokens) || 2048;
 
         const formattedMessages = [
           { role: 'system', content: systemPrompt },
           ...messages
         ];
 
-        const response = await puter.ai.chat(formattedMessages, { model, max_tokens: 8000 });
+        const response = await puter.ai.chat(formattedMessages, { model, max_tokens: maxTokens });
 
         // Gestion des différents formats de réponse Puter
         let content = '';

@@ -1,6 +1,11 @@
 ﻿# STATE — E.V.A Multiplateforme
 
-- **Phase actuelle** : D1 finalisée et publiée (`eva-pc` v5.6.34 sur GitHub Releases + Web sur `main` / Vercel).
+- **Phase actuelle** : D1 finalisée et publiée (`eva-pc` v5.6.35 sur GitHub Releases + Web sur `main` / Vercel).
+- **Correctifs v5.6.35** :
+  - `eva-pc/package.json` & `eva-pc/electron/main.ts` : ajout de `"scripts/**"` et `"dist/scripts/**"` dans `asarUnpack` et priorité à `app.asar.unpacked` dans `getWhisperScriptPath()` pour résoudre `WHISPER_EXITED_2` (`eva_whisper_service.py` inaccessible dans `app.asar` pour Python) ; garde `!mainWindow.isDestroyed()` sur `loadURL().catch()`.
+  - `eva-pc/web/js/voice/wake-word.js`, `stt.js`, `pc-bridge.js` : purge active de Vosk (`retrieveFinalResult()` + `_dropNextVoskFinal`) lors des transitions d'énoncé (car `KaldiRecognizer` n'a pas `.reset()`), garde de 450 ms à l'ouverture de la fenêtre de suivi Jarvis, empêchant toute ré-accumulation de phrases dans la bulle vocale.
+  - `eva-pc/web/js/ai/web-search.js` & `messages.js` : correction de `CITY_PATTERNS` (suppression du flag `/i` qui faisait correspondre `"est"` à `Estonie` sur `"Où ça en est au niveau météo"`), liste d'exclusion française, capture de `"je suis à <Ville>"` dans `eva_user_city`, géolocalisation IP automatique (`geojs.io` / `ipwho.is` en cache 30 min) sans ville précisée, et préférence pays sur Open-Meteo.
+  - `eva-pc/web/js/ai/providers.js`, `memory.js`, `messages.js` : plafond `max_tokens` Puter réduit de `8000` à `2048` par défaut, priorité à Pollinations gratuit pour l'extraction mémoire en arrière-plan (au lieu de consommer Puter en double), et bouton 1-clic `Passer sur Pollinations (Gratuit)` sur la carte `PUTER_QUOTA_EXCEEDED`.
 - **Correctifs v5.6.34** :
   - `eva-pc/electron/cw-runtime.ts` :
     - `app_resolve` / `app_check` / `app_launch` / `web_browse` : résolution complète des sites web courants (`YouTube`, `Google`, `Gmail`, `ChatGPT`, `GitHub`, `Twitch`, `Netflix`, domaines directs) et des applications Windows via alias FR/EN (`Edge`/`Microsoft Edge` → `msedge.exe`, `Chrome`, `Firefox`, `Brave`, `Calculatrice`, `Bloc-notes`, `Explorateur`, `VS Code`, `Paramètres` → `ms-settings:`), registre `App Paths` (`HKCU`/`HKLM`/`WOW6432Node`) priorisé avant les correspondances partielles (évitant `Breathedge` sur requête `Edge` et `YouTube Music` sur requête `YouTube`), `Get-StartApps` (avec ou sans `!`), `Get-Command` et raccourcis Menu Démarrer `.lnk`, ainsi que lancement navigateur ciblé avec URL (`app_launch` `Edge` + URL) ;

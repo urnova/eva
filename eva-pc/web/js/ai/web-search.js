@@ -36,12 +36,34 @@ var DATE_TRIGGERS = [
   /\bon est le combien\b/i
 ];
 
-/* ── Extraction de ville ─────────────────────────────────── */
+/* ── Extraction de ville (sans /i sur les majuscules pour ne pas confondre "est" et "Estonie") ── */
 var CITY_PATTERNS = [
-  /\b(?:à|a|en|sur|pour|de|au)\s+([A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][a-zàâäéèêëîïôöùûüçœ\-]+(?:\s+[A-Za-zàâäéèêëîïôöùûüçœ\-]+)?)\b/,
-  /\b([A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][a-zàâäéèêëîïôöùûüçœ]+)\b(?=.*\b(?:météo|meteo|temps|weather)\b)/i,
-  /\b(?:météo|meteo|temps|weather)\b.*\b([A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][a-zàâäéèêëîïôöùûüçœ]+)\b/i
+  /(?:à|a|sur|pour|chez)\s+(?:la\s+ville\s+de\s+)?([A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][a-zàâäéèêëîïôöùûüçœ'\-]+(?:\s+[A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜÇa-zàâäéèêëîïôöùûüçœ'\-]+){0,2})/,
+  /\bm[eé]t[eé]o\s+(?:à|a|de|du|d'|pour|sur)\s+([A-Za-zÀ-ÖØ-öø-ÿ'\-]{2,30}(?:\s+[A-Za-zÀ-ÖØ-öø-ÿ'\-]{2,20})?)/i,
+  /\b([A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][a-zàâäéèêëîïôöùûüçœ\-]{2,})\b(?=.*\b(?:m[eé]t[eé]o|temps|weather|temp[eé]rature)\b)/,
+  /\b(?:m[eé]t[eé]o|temps|weather|temp[eé]rature)\b.*\b(?:à|a|en|sur|pour|de)\s+([A-ZÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][a-zàâäéèêëîïôöùûüçœ\-]{2,})\b/
 ];
+
+var CITY_STOPWORDS = new Set([
+  'la','le','les','un','une','des','ce','cette','ces','mon','ma','mes','son','sa','ses','du','au','aux','de','en','dans','sur','sous','pour','par','avec','sans','vers','chez',
+  'est','sont','etait','était','sera','etre','être','fait','faire','fais','dit','dis','va','vas','aller','niveau','moment','etat','état','point',
+  'meteo','météo','temps','weather','temperature','température','quel','quelle','quels','quelles','comment','pourquoi','quand','ou','où','ici','la-bas','là-bas','dehors','moi','nous','toi','vous',
+  'aujourd','aujourdhui','aujourd\'hui','demain','hier','matin','soir','midi','nuit','semaine','weekend','week-end','jour','mois','annee','année',
+  'bien','mal','beau','chaud','froid','pluie','neige','vent','soleil','orage','nuage','bruine','france','bonjour','salut','eva','éva'
+]);
+
+function _cleanCandidateCity(raw) {
+  if (!raw) return null;
+  var cleaned = String(raw).trim().replace(/^['"\s,.;:!?]+|['"\s,.;:!?]+$/g, '');
+  if (!cleaned || cleaned.length < 2) return null;
+  var tokens = cleaned.split(/\s+/).filter(Boolean);
+  while (tokens.length > 0 && CITY_STOPWORDS.has(tokens[0].toLowerCase())) tokens.shift();
+  while (tokens.length > 0 && CITY_STOPWORDS.has(tokens[tokens.length - 1].toLowerCase())) tokens.pop();
+  if (!tokens.length) return null;
+  var res = tokens.join(' ');
+  if (res.length < 2 || CITY_STOPWORDS.has(res.toLowerCase())) return null;
+  return res;
+}
 
 var WMO_CODES = {
   0:'Ciel dégagé', 1:'Principalement dégagé', 2:'Partiellement nuageux', 3:'Couvert',
@@ -92,15 +114,70 @@ function needsDateOnly(msg) {
 }
 
 function extractCity(msg) {
+  var stated = String(msg || '').match(/\b(?:je suis|j['’]habite|ma ville est|ici c['’]est)\s+(?:à|a|en)?\s*([A-Za-zÀ-ÖØ-öø-ÿ'\-]{2,30})/i);
+  if (stated && stated[1]) {
+    var stCity = _cleanCandidateCity(stated[1]);
+    if (stCity) {
+      try { localStorage.setItem('eva_user_city', stCity); } catch(_) {}
+      return stCity;
+    }
+  }
   for (var i = 0; i < CITY_PATTERNS.length; i++) {
     var m = msg.match(CITY_PATTERNS[i]);
     if (m && m[1]) {
-      var city = m[1];
-      var ignore = ['La','Le','Les','Un','Une','Des','Ce','Cette','Mon','Ma','Mes','Son','Sa','Ses','Du','Au','Aux'];
-      if (ignore.indexOf(city) === -1 && city.length > 2) return city;
+      var cand = _cleanCandidateCity(m[1]);
+      if (cand) return cand;
     }
   }
-  return 'Paris';
+  return null;
+}
+
+var _geoCache = null;
+var _geoCacheAt = 0;
+async function _detectUserLocation() {
+  if (_geoCache && (Date.now() - _geoCacheAt < 1800000)) return _geoCache;
+  try {
+    var ss = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('eva_ip_geo') : null;
+    if (ss) {
+      var parsed = JSON.parse(ss);
+      if (parsed && parsed.ts && (Date.now() - parsed.ts < 1800000) && parsed.city) {
+        _geoCache = parsed; _geoCacheAt = parsed.ts;
+        return parsed;
+      }
+    }
+  } catch(_) {}
+  var endpoints = [
+    { url: 'https://get.geojs.io/v1/ip/geo.json', map: function(d){ return d && d.city ? { city: d.city, countryCode: (d.country_code || d.country || '').toUpperCase(), lat: Number(d.latitude), lon: Number(d.longitude) } : null; } },
+    { url: 'https://ipwho.is/', map: function(d){ return d && d.success !== false && d.city ? { city: d.city, countryCode: (d.country_code || '').toUpperCase(), lat: Number(d.latitude), lon: Number(d.longitude) } : null; } }
+  ];
+  for (var i = 0; i < endpoints.length; i++) {
+    try {
+      var r = await _fetchWithTimeout(endpoints[i].url, 2500);
+      if (r.ok) {
+        var mapped = endpoints[i].map(await r.json());
+        if (mapped && mapped.city) {
+          mapped.ts = Date.now();
+          _geoCache = mapped; _geoCacheAt = mapped.ts;
+          try { sessionStorage.setItem('eva_ip_geo', JSON.stringify(mapped)); } catch(_) {}
+          return mapped;
+        }
+      }
+    } catch(_) {}
+  }
+  return null;
+}
+
+async function resolveDefaultCityAndCountry() {
+  var saved = null;
+  try {
+    saved = (window.S && window.S.profile && window.S.profile.city) || localStorage.getItem('eva_user_city') || null;
+  } catch(_) {}
+  var geo = await _detectUserLocation();
+  return {
+    city: saved || (geo && geo.city) || 'Paris',
+    countryCode: (geo && geo.countryCode) || 'FR',
+    coords: (!saved && geo && Number.isFinite(geo.lat) && Number.isFinite(geo.lon)) ? { lat: geo.lat, lon: geo.lon, name: geo.city, country: geo.countryCode } : null
+  };
 }
 
 function currentDateTimeStr() {
@@ -122,17 +199,27 @@ async function _fetchWithTimeout(url, ms) {
 }
 
 /* ── Météo via Open-Meteo (gratuit, sans clé) ─────────────── */
-async function fetchWeather(city) {
+async function fetchWeather(city, preferredCountry, fallbackCoords) {
   try {
-    var geoRes = await _fetchWithTimeout(
-      'https://geocoding-api.open-meteo.com/v1/search?name=' +
-      encodeURIComponent(city) + '&count=1&language=fr&format=json',
-      5000
-    );
-    if (!geoRes.ok) return null;
-    var geoData = await geoRes.json();
-    if (!geoData.results || geoData.results.length === 0) return null;
-    var loc = geoData.results[0];
+    var loc = null;
+    if (city) {
+      var geoRes = await _fetchWithTimeout(
+        'https://geocoding-api.open-meteo.com/v1/search?name=' +
+        encodeURIComponent(city) + '&count=5&language=fr&format=json',
+        5000
+      );
+      if (geoRes.ok) {
+        var geoData = await geoRes.json();
+        if (geoData.results && geoData.results.length > 0) {
+          var cc = (preferredCountry || 'FR').toUpperCase();
+          loc = geoData.results.find(function(x) { return (x.country_code || '').toUpperCase() === cc; }) || geoData.results[0];
+        }
+      }
+    }
+    if (!loc && fallbackCoords) {
+      loc = { name: fallbackCoords.name || city, admin1: fallbackCoords.country || '', country: fallbackCoords.country || '', latitude: fallbackCoords.lat, longitude: fallbackCoords.lon };
+    }
+    if (!loc) return null;
 
     var weatherRes = await _fetchWithTimeout(
       'https://api.open-meteo.com/v1/forecast' +
@@ -245,13 +332,15 @@ async function search(userMessage) {
   }
 
   if (needsWeather(userMessage)) {
-    var city = extractCity(userMessage);
-    var weatherData = await fetchWeather(city);
+    var explicitCity = extractCity(userMessage);
+    var defLoc = await resolveDefaultCityAndCountry();
+    var targetCity = explicitCity || defLoc.city;
+    var weatherData = await fetchWeather(targetCity, defLoc.countryCode, explicitCity ? null : defLoc.coords);
     if (weatherData) {
       context += '\n' + weatherData;
       return context;
     }
-    context += '\n(Impossible de récupérer la météo pour "' + city + '")';
+    context += '\n(Impossible de récupérer la météo pour "' + targetCity + '")';
     return context;
   }
 

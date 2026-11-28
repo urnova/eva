@@ -15,6 +15,7 @@ var _onEndCallback = null;
 var _isListening = false;
 var _committed = '';
 var _sttGen = 0;
+var _dropNextVoskFinal = false;
 
 // IPC Electron Whisper
 var _ipcSttUnsub = null;
@@ -91,6 +92,7 @@ async function _startVoskSTT(stream, onResult) {
     _voskRecognizer = new model.KaldiRecognizer(16000);
 
     _voskRecognizer.on('result', function(message) {
+      if (_dropNextVoskFinal) { _dropNextVoskFinal = false; return; }
       if (!_isListening) return;
       var text = message && message.result && message.result.text;
       if (text && text.trim()) {
@@ -100,6 +102,7 @@ async function _startVoskSTT(stream, onResult) {
     });
 
     _voskRecognizer.on('partialresult', function(message) {
+      if (_dropNextVoskFinal) return;
       if (!_isListening) return;
       var partial = message && message.result && message.result.partial;
       if (partial && partial.trim()) {
@@ -325,8 +328,14 @@ function getCommitted() { return _committed; }
 function resetCommitted() {
   _committed = '';
   _sttGen++;
-  if (_voskRecognizer && typeof _voskRecognizer.reset === 'function') {
-    try { _voskRecognizer.reset(); } catch(e) {}
+  if (_voskRecognizer) {
+    if (typeof _voskRecognizer.reset === 'function') {
+      try { _voskRecognizer.reset(); } catch(e) {}
+    } else if (typeof _voskRecognizer.retrieveFinalResult === 'function') {
+      _dropNextVoskFinal = true;
+      try { _voskRecognizer.retrieveFinalResult(); } catch(e) {}
+      setTimeout(function() { _dropNextVoskFinal = false; }, 650);
+    }
   }
   if (_isElectron() && window.eva.stt && typeof window.eva.stt.reset === 'function') {
     try { window.eva.stt.reset(); } catch(e) {}

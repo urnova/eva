@@ -19,6 +19,22 @@ var currentUtterance = '';
 var _silenceTimer = null;
 var _lastDispatchTime = 0;
 var _ignoreTranscriptUntil = 0;
+var _dropNextVoskFinal = false;
+
+function _flushActiveRecognizer() {
+  if (_recognizer) {
+    if (typeof _recognizer.reset === 'function') {
+      try { _recognizer.reset(); } catch(_) {}
+    } else if (typeof _recognizer.retrieveFinalResult === 'function') {
+      _dropNextVoskFinal = true;
+      try { _recognizer.retrieveFinalResult(); } catch(_) {}
+      setTimeout(function() { _dropNextVoskFinal = false; }, 650);
+    }
+  }
+  if (window.eva && window.eva.stt && typeof window.eva.stt.reset === 'function') {
+    try { window.eva.stt.reset(); } catch(_) {}
+  }
+}
 
 // Web Audio & Vosk
 var _audioStream = null;
@@ -251,12 +267,7 @@ function _handleTranscript(text, isFinal) {
     _lastDispatchTime = Date.now();
     _ignoreTranscriptUntil = Date.now() + 750;
     currentUtterance = '';
-    if (_recognizer && typeof _recognizer.reset === 'function') {
-      try { _recognizer.reset(); } catch(_) {}
-    }
-    if (window.eva && window.eva.stt && typeof window.eva.stt.reset === 'function') {
-      try { window.eva.stt.reset(); } catch(_) {}
-    }
+    _flushActiveRecognizer();
     if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
     _dispatchCommand(finalCmd);
   }
@@ -404,11 +415,13 @@ async function _startVoskRecognizer() {
     });
 
     _recognizer.on('result', function(msg) {
+      if (_dropNextVoskFinal) { _dropNextVoskFinal = false; return; }
       var txt = msg && msg.result && msg.result.text;
       if (txt) _handleTranscript(txt, true);
     });
 
     _recognizer.on('partialresult', function(msg) {
+      if (_dropNextVoskFinal) return;
       var part = msg && msg.result && msg.result.partial;
       if (part) _handleTranscript(part, false);
     });
@@ -596,15 +609,10 @@ window.evaResetWakeWordState = function() {
   state = 'idle';
   currentUtterance = '';
   _lastDispatchTime = 0;
-  _ignoreTranscriptUntil = Date.now() + 450;
+  _ignoreTranscriptUntil = Date.now() + 500;
   if (triggerTimer) { clearTimeout(triggerTimer); triggerTimer = null; }
   if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
-  if (_recognizer && typeof _recognizer.reset === 'function') {
-    try { _recognizer.reset(); } catch(_) {}
-  }
-  if (window.eva && window.eva.stt && typeof window.eva.stt.reset === 'function') {
-    try { window.eva.stt.reset(); } catch(_) {}
-  }
+  _flushActiveRecognizer();
 };
 
 window.EVAWakeWord = {

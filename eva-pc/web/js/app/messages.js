@@ -514,6 +514,10 @@ async function handleSend(customText) {
   try {
   var input = document.getElementById('msgInput');
   var text = (typeof customText === 'string' && customText.trim()) ? customText.trim() : ((input && input.value) || '').trim();
+  try {
+    var _cityStmt = text.match(/\b(?:je suis|j[']habite|ma ville est|j suis)\s+(?:\u00e0|a|en)\s+([A-Za-z\u00c0-\u00ff'\-]{2,30})/i);
+    if (_cityStmt && _cityStmt[1]) { localStorage.setItem('eva_user_city', _cityStmt[1].trim()); }
+  } catch(_) {}
   if (input && !customText) { input.value = ''; input.style.height = 'auto'; }
   /* CW_UNIFIED_V2 */
   if (window.CWChat && await window.CWChat.route(text)) return;
@@ -912,9 +916,24 @@ async function handleSend(customText) {
           'Vous n\'avez plus de quota d\'utilisation sur ce compte Puter. Changez de compte Puter ou passez sur un autre fournisseur IA.' +
           '</div>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button id="puterUsePollinationsBtn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #10b981;border-radius:10px;background:rgba(16,185,129,0.12);color:#34d399;font-size:0.78em;font-weight:700;cursor:pointer;font-family:inherit;">\u26a1 Passer sur Pollinations (Gratuit)</button>' +
           '<button id="puterSwitchBtn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid var(--cyan);border-radius:10px;background:rgba(0,212,255,0.08);color:var(--cyan);font-size:0.78em;font-weight:700;cursor:pointer;font-family:inherit;">\u2601\ufe0f Changer de compte Puter</button>' +
           '<button onclick="openSettings(\'ai\')" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid rgba(245,158,11,0.45);border-radius:10px;background:rgba(245,158,11,0.08);color:#f59e0b;font-size:0.78em;font-weight:600;cursor:pointer;font-family:inherit;">\u2699\ufe0f Changer de provider IA</button>' +
           '</div>';
+        var _polBtn = document.getElementById('puterUsePollinationsBtn');
+        if (_polBtn) {
+          _polBtn.addEventListener('click', async function() {
+            if (S && S.config) {
+              S.config.aiProvider = 'pollinations';
+              try { localStorage.setItem('eva_config', JSON.stringify(S.config)); } catch(_) {}
+              if (typeof saveConfig === 'function') try { await saveConfig(); } catch(_) {}
+              if (window.EVAChatHandler && typeof window.EVAChatHandler.switchProvider === 'function') {
+                try { await window.EVAChatHandler.switchProvider('pollinations', S.config); } catch(_) {}
+              }
+              _lbQuota.innerHTML = '\u2705 Fournisseur bascul\u00e9 sur Pollinations (gratuit, sans quota Puter). Renvoyez votre message.';
+            }
+          });
+        }
         document.getElementById('puterSwitchBtn').addEventListener('click', async function() {
           this.disabled = true;
           this.textContent = 'Connexion...';

@@ -280,8 +280,9 @@ function createWindow() {
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
     mainWindow.loadURL('http://127.0.0.1:' + localServerPort + '/splash.html').catch(err => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
       console.error('[EVA] Échec chargement URL splash, bascule sur fichier local:', err);
-      mainWindow?.loadFile(join(__dirname, '../dist/splash.html'));
+      mainWindow.loadFile(join(__dirname, '../dist/splash.html')).catch(() => {});
     });
   }
 
@@ -2042,11 +2043,25 @@ let _sttEngine = '';
 let _sttStartPromise: Promise<{ success: boolean; alreadyRunning?: boolean; engine?: string; error?: string }> | null = null;
 
 function getWhisperScriptPath(): string {
+  const candidates: string[] = [];
+  if (app.isPackaged) {
+    const unpacked = path.join(process.resourcesPath, 'app.asar.unpacked');
+    candidates.push(
+      path.join(unpacked, 'scripts', 'eva_whisper_service.py'),
+      path.join(unpacked, 'dist', 'scripts', 'eva_whisper_service.py'),
+      path.join(process.resourcesPath, 'scripts', 'eva_whisper_service.py')
+    );
+  }
   const devPath = path.join(__dirname, '..', 'scripts', 'eva_whisper_service.py');
-  if (fs.existsSync(devPath)) return devPath;
-  const prodPath = path.join(app.getAppPath(), 'scripts', 'eva_whisper_service.py');
-  if (fs.existsSync(prodPath)) return prodPath;
-  return path.join(process.resourcesPath, 'scripts', 'eva_whisper_service.py');
+  if (!devPath.toLowerCase().includes('app.asar')) candidates.push(devPath);
+  const srcFallback = path.join(app.getAppPath().replace(/app\.asar$/i, 'app.asar.unpacked'), 'scripts', 'eva_whisper_service.py');
+  candidates.push(srcFallback);
+  for (const c of candidates) {
+    try {
+      if (!c.toLowerCase().includes('app.asar\\') && !c.toLowerCase().includes('app.asar/') && fs.existsSync(c)) return c;
+    } catch (_) {}
+  }
+  return candidates[0];
 }
 
 function getPythonPath(): string {

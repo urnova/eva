@@ -82,15 +82,26 @@ async function extractUserInsights(lastUserMsg, lastEvaMsg) {
         }
       } catch(e) { console.warn('[Mémoire] OpenAI extraction failed:', e); }
     }
-    /* Tentative 2 (fallback) : Puter AI si pas deja resolu */
-    if (!newMemoryText && window.puter && S.config && S.config.puterUsername) {
+    /* Tentative 2 : Pollinations gratuit en priorite (economise le quota Puter) */
+    if (!newMemoryText && window.EVAProviders && typeof window.EVAProviders.createProvider === 'function') {
       try {
-        var puterResp = await puter.ai.chat(extractPrompt, { model: 'gpt-4o-mini', response_format: { type: 'json_object' }, max_tokens: 4000 });
+        var pol = window.EVAProviders.createProvider('pollinations', S.config || {});
+        var polResp = await pol.sendMessage([{ role: 'user', content: extractPrompt }], 'Tu es un parseur JSON. Renvoie uniquement du JSON valide sans markdown.');
+        if (polResp && polResp.success && polResp.content) {
+          newMemoryText = polResp.content.trim();
+          usedProvider = 'Pollinations';
+        }
+      } catch(e) { console.warn('[M\u00e9moire] Pollinations extraction failed:', e); }
+    }
+    /* Tentative 2b : Puter uniquement si Puter est explicitement le fournisseur actif */
+    if (!newMemoryText && S.config && S.config.aiProvider === 'puter' && window.puter && S.config.puterUsername) {
+      try {
+        var puterResp = await puter.ai.chat(extractPrompt, { model: 'gpt-4o-mini', response_format: { type: 'json_object' }, max_tokens: 1200 });
         var puterContent = typeof puterResp === 'string' ? puterResp
           : (puterResp && puterResp.message && puterResp.message.content) || (puterResp && puterResp.content) || '';
         newMemoryText = puterContent.trim();
         usedProvider = 'Puter';
-      } catch(e) { console.warn('[Mémoire] Puter extraction failed:', e); }
+      } catch(e) { console.warn('[M\u00e9moire] Puter extraction failed:', e); }
     }
 
     

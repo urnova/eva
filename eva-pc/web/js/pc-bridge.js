@@ -598,6 +598,7 @@
   function startJarvisListeningWindow() {
     if (!window._isJarvisActive) return;
     window._jarvisState = 'awaiting_followup';
+    var listenOpenedAt = Date.now();
     if (typeof window.evaResetWakeWordState === 'function') window.evaResetWakeWordState();
     if (window.eva && window.eva.stt && typeof window.eva.stt.reset === 'function') {
       try { window.eva.stt.reset(); } catch(_) {}
@@ -612,12 +613,15 @@
       if (!text || !text.trim()) return false;
       var clean = text.trim();
 
-      // Filtrer immédiatement l'écho de la question posée par EVA
-      if (/(?:tout ce que je peux faire|faire pour vous|besoin d['’]autre|autre chose)/i.test(clean)) {
+      // Filtrer les résidus juste après ouverture de fenêtre ou arrêt TTS
+      if (Date.now() - listenOpenedAt < 450) {
         return true;
       }
-      // Filtrer si TTS était actif il y a moins de 700ms
-      if (window._lastTtsEndTime && (Date.now() - window._lastTtsEndTime < 700)) {
+      if (window._lastTtsEndTime && (Date.now() - window._lastTtsEndTime < 850)) {
+        return true;
+      }
+      // Filtrer immédiatement l'écho de la question posée par EVA
+      if (/(?:tout ce que je peux faire|faire pour vous|besoin d['’]autre|autre chose)/i.test(clean)) {
         return true;
       }
 
@@ -656,6 +660,7 @@
           if (_jarvisFollowUpSilence) { clearTimeout(_jarvisFollowUpSilence); _jarvisFollowUpSilence = null; }
           window._jarvisListener = null;
           window._jarvisState = 'processing';
+          if (typeof window.evaResetWakeWordState === 'function') window.evaResetWakeWordState();
           if (window.eva && window.eva.stt && typeof window.eva.stt.reset === 'function') {
             try { window.eva.stt.reset(); } catch(_) {}
           }
