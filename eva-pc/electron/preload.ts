@@ -129,6 +129,7 @@ const evaAPI = {
   stt: {
     start: () => ipcRenderer.invoke('stt:start'),
     stop: () => ipcRenderer.invoke('stt:stop'),
+    reset: () => ipcRenderer.invoke('stt:reset'),
     onResult: (callback: (result: {text: string, isFinal?: boolean}) => void) => {
       const listener = (_: unknown, result: {text: string, isFinal?: boolean}) => callback(result);
       ipcRenderer.on('stt:result', listener);

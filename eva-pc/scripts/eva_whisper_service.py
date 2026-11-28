@@ -185,13 +185,21 @@ def main():
     audio_queue = queue.Queue()
     is_paused = False
     is_running = True
+    reset_requested = False
 
     def audio_callback(indata, frames, time_info, status):
         if not is_paused and is_running:
             audio_queue.put(indata.copy())
 
+    def flush_audio_queue():
+        while not audio_queue.empty():
+            try:
+                audio_queue.get_nowait()
+            except Exception:
+                break
+
     def stdin_listener():
-        nonlocal is_paused, is_running
+        nonlocal is_paused, is_running, reset_requested
         while is_running:
             try:
                 line = sys.stdin.readline()
@@ -204,14 +212,15 @@ def main():
                 cmd = cmd_data.get("command")
                 if cmd == "pause":
                     is_paused = True
-                    while not audio_queue.empty():
-                        try: audio_queue.get_nowait()
-                        except: break
+                    reset_requested = True
+                    flush_audio_queue()
                 elif cmd == "resume":
-                    while not audio_queue.empty():
-                        try: audio_queue.get_nowait()
-                        except: break
+                    flush_audio_queue()
+                    reset_requested = True
                     is_paused = False
+                elif cmd == "reset":
+                    flush_audio_queue()
+                    reset_requested = True
                 elif cmd == "stop":
                     is_running = False
                     break
@@ -236,13 +245,24 @@ def main():
 
     pre_speech_blocks = []
     MAX_PRE_SPEECH = 4
+    MAX_SPEECH_SAMPLES = SAMPLE_RATE * 14
     speech_blocks = []
     in_speech = False
     silence_blocks_count = 0
     SILENCE_THRESHOLD_BLOCKS = 8
     NOISE_FLOOR = 0.005
     peak_rms = 0.0
+    speech_started_at = 0.0
     last_interim_time = 0
+
+    def reset_utterance_state():
+        nonlocal in_speech, speech_blocks, pre_speech_blocks, silence_blocks_count, peak_rms, speech_started_at
+        in_speech = False
+        speech_blocks = []
+        pre_speech_blocks = []
+        silence_blocks_count = 0
+        peak_rms = 0.0
+        speech_started_at = 0.0
 
     def filter_segments(segments, seg_peak_rms):
         kept = []
@@ -266,9 +286,18 @@ def main():
 
     try:
         while is_running:
+            if reset_requested:
+                reset_requested = False
+                reset_utterance_state()
+                flush_audio_queue()
             try:
                 block = audio_queue.get(timeout=0.2)
             except queue.Empty:
+                continue
+            if is_paused or reset_requested:
+                if reset_requested:
+                    reset_requested = False
+                reset_utterance_state()
                 continue
 
             flat = block.flatten()
@@ -278,12 +307,15 @@ def main():
                 NOISE_FLOOR = min(max(0.001, NOISE_FLOOR * 0.99 + rms * 0.01), 0.05)
                 vad_threshold = max(0.018, NOISE_FLOOR * 3.5)
             else:
+                if speech_started_at and (time.time() - speech_started_at > 4.0) and rms < max(peak_rms * 0.35, 0.035):
+                    NOISE_FLOOR = min(0.05, max(NOISE_FLOOR, NOISE_FLOOR * 0.96 + rms * 0.04))
                 vad_threshold = max(0.013, NOISE_FLOOR * 2.5)
 
             if rms > vad_threshold:
                 silence_blocks_count = 0
                 if not in_speech:
                     in_speech = True
+                    speech_started_at = time.time()
                     peak_rms = rms
                     speech_blocks = list(pre_speech_blocks)
                     last_interim_time = time.time()
@@ -294,54 +326,53 @@ def main():
                 if in_speech:
                     speech_blocks.append(flat)
                     silence_blocks_count += 1
-                    if silence_blocks_count >= SILENCE_THRESHOLD_BLOCKS:
-                        total_samples = sum(len(b) for b in speech_blocks)
-                        duration_sec = total_samples / SAMPLE_RATE
-
-                        if duration_sec >= 0.45 and peak_rms >= max(0.020, NOISE_FLOOR * 3.5):
-                            audio_data = np.concatenate(speech_blocks)
-                            try:
-                                segments, _ = model.transcribe(
-                                    audio_data,
-                                    language="fr",
-                                    initial_prompt=INITIAL_PROMPT,
-                                    condition_on_previous_text=False,
-                                    beam_size=2 if device == "cuda" else 1,
-                                    vad_filter=True,
-                                    vad_parameters={"min_silence_duration_ms": 400, "speech_pad_ms": 180}
-                                )
-                                final_text = filter_segments(segments, peak_rms)
-                                if final_text:
-                                    has_ww, cmd = check_wakeword(final_text)
-                                    send_json({
-                                        "type": "final",
-                                        "text": final_text,
-                                        "hasWakeWord": has_ww,
-                                        "command": cmd
-                                    })
-                                    if has_ww:
-                                        send_json({
-                                            "type": "wakeword",
-                                            "phrase": final_text,
-                                            "command": cmd or ""
-                                        })
-                            except Exception as e:
-                                sys.stderr.write(f"[Transcribe Error] {e}\n")
-
-                        in_speech = False
-                        speech_blocks = []
-                        silence_blocks_count = 0
-                        peak_rms = 0.0
                 else:
                     pre_speech_blocks.append(flat)
                     if len(pre_speech_blocks) > MAX_PRE_SPEECH:
                         pre_speech_blocks.pop(0)
 
+            total_samples = sum(len(b) for b in speech_blocks) if in_speech else 0
+            should_finalize = in_speech and (
+                silence_blocks_count >= SILENCE_THRESHOLD_BLOCKS or total_samples >= MAX_SPEECH_SAMPLES
+            )
+            if should_finalize:
+                duration_sec = total_samples / SAMPLE_RATE
+                if duration_sec >= 0.45 and peak_rms >= max(0.020, NOISE_FLOOR * 3.5):
+                    audio_data = np.concatenate(speech_blocks)
+                    try:
+                        segments, _ = model.transcribe(
+                            audio_data,
+                            language="fr",
+                            initial_prompt=INITIAL_PROMPT,
+                            condition_on_previous_text=False,
+                            beam_size=2 if device == "cuda" else 1,
+                            vad_filter=True,
+                            vad_parameters={"min_silence_duration_ms": 400, "speech_pad_ms": 180}
+                        )
+                        final_text = filter_segments(segments, peak_rms)
+                        if final_text and not reset_requested and not is_paused:
+                            has_ww, cmd = check_wakeword(final_text)
+                            send_json({
+                                "type": "final",
+                                "text": final_text,
+                                "hasWakeWord": has_ww,
+                                "command": cmd
+                            })
+                            if has_ww:
+                                send_json({
+                                    "type": "wakeword",
+                                    "phrase": final_text,
+                                    "command": cmd or ""
+                                })
+                    except Exception as e:
+                        sys.stderr.write(f"[Transcribe Error] {e}\n")
+                reset_utterance_state()
+                continue
+
             # Sur GPU uniquement : prévisualisation intermédiaire toutes les 500ms
             # Sur CPU : préservé à 100% en n'exécutant l'inférence qu'à la fin de phrase
-            if device == "cuda" and in_speech and (time.time() - last_interim_time > 0.5):
+            if device == "cuda" and in_speech and not reset_requested and not is_paused and (time.time() - last_interim_time > 0.5):
                 last_interim_time = time.time()
-                total_samples = sum(len(b) for b in speech_blocks)
                 if total_samples / SAMPLE_RATE >= 0.6 and peak_rms >= max(0.020, NOISE_FLOOR * 3.5):
                     audio_data = np.concatenate(speech_blocks)
                     try:
@@ -355,7 +386,7 @@ def main():
                             vad_parameters={"min_silence_duration_ms": 400, "speech_pad_ms": 180}
                         )
                         interim_text = filter_segments(segments, peak_rms)
-                        if interim_text:
+                        if interim_text and not reset_requested and not is_paused:
                             send_json({"type": "interim", "text": interim_text})
                     except Exception:
                         pass

@@ -831,6 +831,14 @@ function _setSttMicPaused(paused: boolean) {
   }
 }
 
+function _resetSttBuffer() {
+  if (_sttProcess && _sttProcess.stdin) {
+    try {
+      _sttProcess.stdin.write(JSON.stringify({ command: 'reset' }) + '\n');
+    } catch(e) {}
+  }
+}
+
 // IPC Handler — Mode Jarvis : synchronisation état overlay et microphone
 ipcMain.handle('jarvis:state', (_event, data: { state: string, text?: string, pauseMic?: boolean }) => {
   if (data.state === 'hidden') {
@@ -2246,6 +2254,11 @@ ipcMain.handle('stt:start', async () => {
     console.error('[STT] Erreur SAPI:', e);
     return { success: false, error: String(e) };
   }
+});
+
+ipcMain.handle('stt:reset', async () => {
+  _resetSttBuffer();
+  return { success: true };
 });
 
 ipcMain.handle('stt:stop', async () => {

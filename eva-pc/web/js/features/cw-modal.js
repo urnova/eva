@@ -523,12 +523,20 @@ w.appendCloudWorksTracker = function(id, prompt, container) {
 w.cancelCloudWorksTask = id => w.CWBus.cancel(id);
 
 w.cwConfirmAndExecute = async action => {
-  const types = ['agentic_task', 'screenshot', 'sysinfo', 'run_script', 'lock', 'sleep', 'shutdown', 'open_ide_file'];
+  const types = ['agentic_task', 'screenshot', 'sysinfo', 'run_script', 'lock', 'sleep', 'shutdown', 'open_ide_file', 'open_explorer'];
   if (!types.includes(action.type)) return w.executeEvaAction?.(action);
   try {
-    const payload = action.type === 'agentic_task' ? { prompt: action.prompt } : {};
-    const id = await w.CWBus.submit(action.type, payload, { deviceId: action.deviceId });
-    w.appendCloudWorksTracker(id, action.prompt || action.type);
+    let subType = action.type;
+    let payload = subType === 'agentic_task' ? { prompt: action.prompt } : {};
+    if (subType === 'run_script') {
+      subType = 'agentic_task';
+      payload = { prompt: action.prompt || ('Exécuter PowerShell : ' + (action.command || '')) };
+    } else if (subType === 'open_ide_file') {
+      subType = 'agentic_task';
+      payload = { prompt: action.prompt || ('Ouvrir le fichier : ' + (action.filePath || '')) };
+    }
+    const id = await w.CWBus.submit(subType, payload, { deviceId: action.deviceId });
+    w.appendCloudWorksTracker(id, payload.prompt || action.prompt || action.type);
     return id;
   } catch (e) {
     w.toast?.(e.message, 'error');

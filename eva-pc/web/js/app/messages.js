@@ -175,9 +175,14 @@ function skipTTS() {
 }
 window.skipTTS = skipTTS;
 
+var _lastVoiceCmd = '', _lastVoiceCmdAt = 0;
 function sendVoiceCommand(cmd) {
   if (!cmd || !cmd.trim()) return;
   var clean = cmd.trim();
+  var nowMs = Date.now();
+  if (clean.toLowerCase() === _lastVoiceCmd && (nowMs - _lastVoiceCmdAt < 2500)) { console.log('[sendVoiceCommand] Doublon vocal ignore:', clean); return; }
+  _lastVoiceCmd = clean.toLowerCase();
+  _lastVoiceCmdAt = nowMs;
   console.log('[sendVoiceCommand] Exécution commande vocale :', clean);
   if (window.S) {
     window.S.busy = false;
@@ -528,13 +533,17 @@ async function handleSend(customText) {
   }
 
   /* Arrêter le micro s'il est actif — l'utilisateur envoie manuellement */
-  if (window.EVASTS && window.EVASTS.getIsListening()) {
-    window.EVASTS.stopListening();
-    var micBtn = document.getElementById('micBtn');
-    if (micBtn) micBtn.classList.remove('recording');
-    if (window.EvaCharacter) window.EvaCharacter.setIdle();
-    setEvaStatusHeader(null);
-    if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 800);
+  if (window.EVASTS) {
+    var wasListening = window.EVASTS.getIsListening();
+    if (wasListening) window.EVASTS.stopListening();
+    if (typeof window.EVASTS.resetCommitted === 'function') window.EVASTS.resetCommitted();
+    if (wasListening) {
+      var micBtn = document.getElementById('micBtn');
+      if (micBtn) micBtn.classList.remove('recording');
+      if (window.EvaCharacter) window.EvaCharacter.setIdle();
+      setEvaStatusHeader(null);
+      if (S.wakeWordOn && window.EVAWakeWord) setTimeout(function(){ window.EVAWakeWord.start(); }, 800);
+    }
   }
 
   var doc = S.document || (S.documents && S.documents[0]) || null;

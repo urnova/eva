@@ -599,6 +599,9 @@
     if (!window._isJarvisActive) return;
     window._jarvisState = 'awaiting_followup';
     if (typeof window.evaResetWakeWordState === 'function') window.evaResetWakeWordState();
+    if (window.eva && window.eva.stt && typeof window.eva.stt.reset === 'function') {
+      try { window.eva.stt.reset(); } catch(_) {}
+    }
     console.log('[Jarvis] Début fenêtre écoute réponse utilisateur (7s)...');
 
     if (window.eva && window.eva.overlay) {
@@ -653,6 +656,9 @@
           if (_jarvisFollowUpSilence) { clearTimeout(_jarvisFollowUpSilence); _jarvisFollowUpSilence = null; }
           window._jarvisListener = null;
           window._jarvisState = 'processing';
+          if (window.eva && window.eva.stt && typeof window.eva.stt.reset === 'function') {
+            try { window.eva.stt.reset(); } catch(_) {}
+          }
 
           console.log('[Jarvis Follow-up] Nouvelle consigne validée :', clean);
           updateJarvisConversationTitle(clean);
@@ -687,11 +693,21 @@
   }
   window.startJarvisListeningWindow = startJarvisListeningWindow;
 
+  if (window.eva && window.eva.window && typeof window.eva.window.onVisibility === 'function') {
+    window.eva.window.onVisibility(function(visible) {
+      if (visible && window._isJarvisActive) {
+        if (window.eva.overlay) try { window.eva.overlay.hide(); } catch(_) {}
+        closeJarvisConversation();
+      }
+    });
+  }
+
   /* ── Wake Word depuis l'overlay / Chat (application au premier plan) ── */
   // Canal principal : main.ts → chat via wakeword:command
   if (window.eva.onWakeWordCommand) {
     window.eva.onWakeWordCommand(function(text) {
       console.log('[PC Bridge] Wake word commande reçue:', text);
+      if (window._isJarvisActive) closeJarvisConversation();
       _submitWakeWordCommand(text);
     });
   }

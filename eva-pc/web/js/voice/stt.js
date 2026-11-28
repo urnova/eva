@@ -14,6 +14,7 @@ var _onResultCallback = null;
 var _onEndCallback = null;
 var _isListening = false;
 var _committed = '';
+var _sttGen = 0;
 
 // IPC Electron Whisper
 var _ipcSttUnsub = null;
@@ -197,6 +198,8 @@ async function startListening(onResult, onEnd) {
   _onResultCallback = onResult || null;
   _onEndCallback = onEnd || null;
   _committed = '';
+  _sttGen++;
+  var myGen = _sttGen;
   _isListening = true;
   _shouldKeepListening = true;
 
@@ -204,12 +207,15 @@ async function startListening(onResult, onEnd) {
     // 1. Sur Electron PC : privilégier Faster-Whisper GPU si disponible
     if (_isElectron()) {
       try {
+        if (window.eva.stt && typeof window.eva.stt.reset === 'function') {
+          try { await window.eva.stt.reset(); } catch(_) {}
+        }
         var stRes = await window.eva.stt.start();
         if (stRes && stRes.success && stRes.engine === 'whisper-gpu') {
           _ipcSttActive = true;
           if (_ipcSttUnsub) { try { _ipcSttUnsub(); } catch(_) {} _ipcSttUnsub = null; }
           _ipcSttUnsub = window.eva.stt.onResult(function(result) {
-            if (!_isListening || !result || !result.text) return;
+            if (!_isListening || myGen !== _sttGen || !result || !result.text) return;
             if (result.isFinal) {
               _committed += (_committed ? ' ' : '') + result.text.trim();
               if (_onResultCallback) _onResultCallback(_committed, true);
@@ -290,12 +296,17 @@ function stopListening() {
   }
 
   // Nettoyage Electron IPC
+  _sttGen++;
+  _committed = '';
   if (_ipcSttUnsub) {
     try { _ipcSttUnsub(); } catch(e) {}
     _ipcSttUnsub = null;
   }
   if (_ipcSttActive && _isElectron()) {
     _ipcSttActive = false;
+    if (window.eva.stt && typeof window.eva.stt.reset === 'function') {
+      try { window.eva.stt.reset(); } catch(e) {}
+    }
     if (!(window.S && window.S.wakeWordOn)) {
       try { window.eva.stt.stop(); } catch(e) {}
     }
@@ -311,6 +322,16 @@ function stopListening() {
 
 function getIsListening() { return _isListening; }
 function getCommitted() { return _committed; }
+function resetCommitted() {
+  _committed = '';
+  _sttGen++;
+  if (_voskRecognizer && typeof _voskRecognizer.reset === 'function') {
+    try { _voskRecognizer.reset(); } catch(e) {}
+  }
+  if (_isElectron() && window.eva.stt && typeof window.eva.stt.reset === 'function') {
+    try { window.eva.stt.reset(); } catch(e) {}
+  }
+}
 
 async function requestMicPermission() {
   try {
@@ -331,6 +352,7 @@ window.EVASTS = {
   stopListening: stopListening,
   getIsListening: getIsListening,
   getCommitted: getCommitted,
+  resetCommitted: resetCommitted,
   requestMicPermission: requestMicPermission,
   initVosk: _initVoskModel,
   getModel: function() { return _voskModel; },

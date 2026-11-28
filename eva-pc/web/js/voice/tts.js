@@ -477,9 +477,20 @@ function _speakPowerShell(text, config) {
 
   _speaking = true;
   _updateSkipBtn();
+  if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) {
+    try { window.eva.tts.setMicPaused(true); } catch(_) {}
+  }
   window.eva.system.exec('powershell -Command "' + cmd + '"')
-    .then(function() { _speaking = false; _updateSkipBtn(); _onSpeakEnd(); })
+    .then(function() {
+      if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) {
+        try { window.eva.tts.setMicPaused(false); } catch(_) {}
+      }
+      _speaking = false; _updateSkipBtn(); _onSpeakEnd();
+    })
     .catch(function(e) {
+      if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) {
+        try { window.eva.tts.setMicPaused(false); } catch(_) {}
+      }
       console.warn('[EVA TTS] PowerShell TTS échoué:', e && e.message);
       // Fallback Web Speech API
       _speakWebSpeech(text, config);
@@ -516,14 +527,22 @@ function _speakWebSpeech(text, config) {
       if (best) { utt.voice = best; utt.lang = best.lang; }
     } catch(e) {}
 
-    utt.onend   = function() { _speaking = false; _updateSkipBtn(); _onSpeakEnd(); };
+    utt.onend   = function() {
+      if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) { try { window.eva.tts.setMicPaused(false); } catch(_) {} }
+      _speaking = false; _updateSkipBtn(); _onSpeakEnd();
+    };
     utt.onerror = function(err) {
+      if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) { try { window.eva.tts.setMicPaused(false); } catch(_) {} }
       console.warn('[EVA TTS] SpeechSynthesis error:', err);
       _speaking = false; _updateSkipBtn(); _onSpeakEnd();
     };
     _speaking = true;
     _updateSkipBtn();
-    try { speechSynthesis.speak(utt); } catch(e) { _speaking = false; _updateSkipBtn(); }
+    if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) { try { window.eva.tts.setMicPaused(true); } catch(_) {} }
+    try { speechSynthesis.speak(utt); } catch(e) {
+      if (window.eva && window.eva.tts && window.eva.tts.setMicPaused) { try { window.eva.tts.setMicPaused(false); } catch(_) {} }
+      _speaking = false; _updateSkipBtn();
+    }
   });
 }
 

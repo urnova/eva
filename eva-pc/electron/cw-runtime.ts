@@ -26,15 +26,71 @@ function validate(name,args){
  }
  return JSON.parse(JSON.stringify(args));
 }
+const KNOWN_SITES:Record<string,string>={
+ youtube:'https://www.youtube.com','youtube.com':'https://www.youtube.com',
+ google:'https://www.google.com','google.fr':'https://www.google.fr','google.com':'https://www.google.com',
+ gmail:'https://mail.google.com',chatgpt:'https://chatgpt.com',
+ github:'https://github.com',twitch:'https://www.twitch.tv',netflix:'https://www.netflix.com',
+ wikipedia:'https://fr.wikipedia.org',reddit:'https://www.reddit.com',
+ instagram:'https://www.instagram.com',twitter:'https://x.com',x:'https://x.com',
+ linkedin:'https://www.linkedin.com',amazon:'https://www.amazon.fr',
+ canva:'https://www.canva.com',notion:'https://www.notion.so',facebook:'https://www.facebook.com'
+};
+const APP_ALIASES:Record<string,string>={
+ edge:'msedge.exe','microsoft edge':'msedge.exe',msedge:'msedge.exe',
+ chrome:'chrome.exe','google chrome':'chrome.exe',
+ firefox:'firefox.exe','mozilla firefox':'firefox.exe',
+ brave:'brave.exe',opera:'opera.exe',
+ vscode:'code.exe','vs code':'code.exe','visual studio code':'code.exe',
+ 'bloc-notes':'notepad.exe','bloc notes':'notepad.exe',blocnotes:'notepad.exe',notepad:'notepad.exe',
+ calculatrice:'calc.exe',calc:'calc.exe',calculator:'calc.exe',
+ explorateur:'explorer.exe','explorateur de fichiers':'explorer.exe',explorer:'explorer.exe',
+ paint:'mspaint.exe',mspaint:'mspaint.exe',
+ terminal:'wt.exe','windows terminal':'wt.exe',
+ word:'winword.exe',excel:'excel.exe',powerpoint:'powerpnt.exe',
+ 'gestionnaire des taches':'taskmgr.exe','gestionnaire des tâches':'taskmgr.exe','task manager':'taskmgr.exe',
+ parametres:'ms-settings:',paramètres:'ms-settings:',settings:'ms-settings:'
+};
+function resolveSiteUrl(raw:string):string|null{
+ const s=String(raw||'').trim().replace(/^["']|["']$/g,'');
+ if(!s)return null;
+ if(/^https?:\/\//i.test(s))return httpURL(s).href;
+ const low=s.toLowerCase();
+ if(Object.hasOwn(KNOWN_SITES,low))return KNOWN_SITES[low];
+ if(!/[\\/\s]/.test(s)&&/^[a-z0-9-]+(\.[a-z0-9-]+)+([/?#].*)?$/i.test(s)&&!/\.(exe|com|bat|cmd|ps1|vbs|js|py|txt|md|html?|css|pdf|xlsx|csv|json|xml|png|jpe?g|svg|lnk|dll)$/i.test(s)){
+  return httpURL('https://'+s).href;
+ }
+ return null;
+}
+function normalizeAppAlias(raw:string):string{
+ const clean=String(raw||'').trim().replace(/^["']|["']$/g,'');
+ const low=clean.toLowerCase();
+ return Object.hasOwn(APP_ALIASES,low)?APP_ALIASES[low]:clean;
+}
+async function resolveDesktopDir(){
+ for(const c of [path.join(os.homedir(),'Desktop'),path.join(os.homedir(),'Bureau'),path.join(os.homedir(),'OneDrive','Desktop'),path.join(os.homedir(),'OneDrive','Bureau')]){
+  try{if((await fs.stat(c)).isDirectory())return c;}catch(_){}
+ }
+ return path.join(os.homedir(),'Desktop');
+}
 function httpURL(value){const u=new URL(text(value,4096));if(!['https:','http:'].includes(u.protocol)||u.username||u.password)throw Error('URL_NOT_ALLOWED');return u;}
 async function localPath(value,write=false){
- let p=text(value,4096).replace(/\$env:USERPROFILE|%USERPROFILE%|^~/gi,os.homedir());
+ let p=text(value,4096).trim().replace(/^["']|["']$/g,'');
+ const desk=await resolveDesktopDir();
+ p=p.replace(/\$env:DESKTOP|%DESKTOP%/gi,desk)
+  .replace(/\$env:USERPROFILE|%USERPROFILE%|\$env:HOME|\$HOME|%HOMEPATH%|^~/gi,os.homedir())
+  .replace(/\$env:USERNAME|%USERNAME%/gi,os.userInfo().username);
+ if(/^(Desktop|Bureau)([\\/]|$)/i.test(p))p=path.join(desk,p.replace(/^(Desktop|Bureau)[\\/]?/i,''));
+ else if(/^Documents([\\/]|$)/i.test(p))p=path.join(os.homedir(),'Documents',p.replace(/^Documents[\\/]?/i,''));
+ else if(/^(Downloads|T[eé]l[eé]chargements)([\\/]|$)/i.test(p))p=path.join(os.homedir(),'Downloads',p.replace(/^(Downloads|T[eé]l[eé]chargements)[\\/]?/i,''));
  if(!path.isAbsolute(p)||/^\\\\/.test(p)||/^\\[?.]\\/.test(p)||/\$env:|%[A-Z_]+%/i.test(p))throw Error('ABSOLUTE_LOCAL_PATH_REQUIRED');
  p=path.resolve(p);
  const frDesktop=path.join(os.homedir(),'Bureau');
  const enDesktop=path.join(os.homedir(),'Desktop');
- if((p.toLowerCase()===frDesktop.toLowerCase()||p.toLowerCase().startsWith(frDesktop.toLowerCase()+path.sep))){
-  try{await fs.stat(frDesktop);}catch(_){try{if((await fs.stat(enDesktop)).isDirectory())p=enDesktop+p.slice(frDesktop.length);}catch(_2){}}
+ if(p.toLowerCase()===frDesktop.toLowerCase()||p.toLowerCase().startsWith(frDesktop.toLowerCase()+path.sep)){
+  try{await fs.stat(frDesktop);}catch(_){p=desk+p.slice(frDesktop.length);}
+ }else if(p.toLowerCase()===enDesktop.toLowerCase()||p.toLowerCase().startsWith(enDesktop.toLowerCase()+path.sep)){
+  try{await fs.stat(enDesktop);}catch(_){p=desk+p.slice(enDesktop.length);}
  }
  if(process.platform==='win32'&&p.slice(3).includes(':'))throw Error('NTFS_STREAM_NOT_ALLOWED');
  // Resolve nearest existing parent and reject symlinks/reparse escapes.
@@ -93,9 +149,14 @@ function zipStored(entries){
  const central=Buffer.concat(centrals),end=Buffer.alloc(22);end.writeUInt32LE(0x06054b50);end.writeUInt16LE(entries.length,8);end.writeUInt16LE(entries.length,10);end.writeUInt32LE(central.length,12);end.writeUInt32LE(offset,16);
  return Buffer.concat([...locals,central,end]);
 }
+function parseJsonArray(v:any,label:string){
+ if(Array.isArray(v))return v;
+ try{const p=JSON.parse(String(v||''));if(Array.isArray(p))return p;}catch(_){}
+ throw Error(label+'_INVALID_JSON_ARRAY');
+}
 function xlsx(args){
- const headers=JSON.parse(args.headersJson),rows=JSON.parse(args.rowsJson);
- if(!Array.isArray(headers)||!Array.isArray(rows)||headers.length>100||rows.length>1000||rows.some(r=>!Array.isArray(r)||r.length>100))throw Error('INVALID_TABLE');
+ const headers=parseJsonArray(args.headersJson,'HEADERS'),rows=parseJsonArray(args.rowsJson,'ROWS');
+ if(!headers.length||rows.some(r=>!Array.isArray(r)||r.length>100)||headers.length>100||rows.length>1000)throw Error('INVALID_TABLE');
  const cell=(v)=>typeof v==='number'&&Number.isFinite(v)?'<c><v>'+v+'</v></c>':'<c t="inlineStr"><is><t xml:space="preserve">'+xml(v)+'</t></is></c>';
  const sheet='<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'+[headers,...rows].map(row=>'<row>'+row.map(cell).join('')+'</row>').join('')+'</sheetData></worksheet>';
  return zipStored([
@@ -126,6 +187,8 @@ export function installCWRuntime({ipcMain,dialog,shell,BrowserWindow,store,mainW
    id=text(context.taskId,200);if(!id)throw Error('TASK_ID_REQUIRED');if(cancelled.has(id))throw Error('CANCELLED');
    if(running.has(id))throw Error('TOOL_BUSY');
    const args=validate(name,input);controller=new AbortController();running.set(id,controller);
+   if(name==='pdf_create'&&args.path&&!/\.pdf$/i.test(args.path))args.path+='.pdf';
+   if(name==='excel_create'&&args.path&&!/\.xlsx$/i.test(args.path))args.path+='.xlsx';
    // Normalise every path before showing the exact operation for approval.
    for(const k of ['path','sourcePath','destination'])if(args[k]!=null)args[k]=await localPath(args[k],['file_create','folder_create','folder_organize','pdf_create','excel_create','document_create'].includes(name));
    if(name==='document_create'){
@@ -172,41 +235,138 @@ export function installCWRuntime({ipcMain,dialog,shell,BrowserWindow,store,mainW
    switch(name){
     case 'system_status':result={platform:os.platform(),hostname:os.hostname(),cpu:os.cpus()[0]?.model,totalmem:os.totalmem(),freemem:os.freemem(),summary:'Informations systeme recuperees'};break;
     case 'app_resolve':case 'app_check':{
-     const q=text(args.query||args.name,100);
-     const out=await ps('$q=$p.q; $items=@(); $apps=Get-StartApps | Where-Object { $_.Name -like ("*"+$q+"*") -or $_.AppID -eq $q } | Select-Object -First 10 Name,AppID; foreach($a in $apps){ $isPwa=($a.AppID -match "_|chrome|msedge|brave|Web|App" -or $a.AppID -like "*!*"); $items+=@{Name=$a.Name;AppID=$a.AppID;isPWA=[bool]$isPwa} }; $regPaths=@("HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*","HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*"); foreach($rp in $regPaths){ Get-ItemProperty $rp -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like ("*"+$q+"*") } | Select-Object -First 5 | ForEach-Object { $items+=@{Name=$_.DisplayName;icon=$_.DisplayIcon;installLocation=$_.InstallLocation;isPWA=($_.DisplayIcon -match "msedge|chrome|brave" -or $_.UninstallString -match "--app-id=")} } }; $cmd=Get-Command -Name $q -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1; if($cmd){$items+=@{Name=$cmd.Name;path=$cmd.Source;isPWA=$false}}; ConvertTo-Json -InputObject @($items) -Compress',{q},signal);
+     const qRaw=text(args.query||args.name,100).trim();
+     const siteUrl=resolveSiteUrl(qRaw);
+     const normalized=normalizeAppAlias(qRaw);
+     const psQuery=`$q=$p.q; $nq=$p.nq; $items=@();
+      $qEsc=[regex]::Escape($q);
+      $allApps=@(Get-StartApps);
+      $exactApps=$allApps | Where-Object { $_.Name -ieq $q -or $_.AppID -ieq $q -or $_.Name -ieq $nq -or $_.AppID -ieq $nq -or $_.Name -ieq ("Microsoft "+$q) -or $_.Name -ieq ("Google "+$q) };
+      $wordApps=$allApps | Where-Object { $_.Name -match ("\\b"+$qEsc+"\\b") };
+      $subApps=$allApps | Where-Object { $_.Name -like ("*"+$q+"*") -or ($nq -ne $q -and $_.Name -like ("*"+$nq+"*")) };
+      foreach($ap in @("HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\*","HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\*","HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\*")){
+       Get-ItemProperty $ap -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -ieq $nq -or $_.PSChildName -ieq ($q+".exe") -or $_.PSChildName -like ("*"+$q+"*") } | Select-Object -First 5 | ForEach-Object {
+        $exe=$_.('(default)'); if($exe){ $exe=([string]$exe).Trim('"'); if(Test-Path $exe){ $items+=@{Name=$_.PSChildName;path=$exe;isPWA=$false} } }
+       }
+      };
+      $cmd=Get-Command -Name $nq -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1;
+      if(-not $cmd -and $nq -ne $q){ $cmd=Get-Command -Name $q -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1 };
+      if($cmd){$items+=@{Name=$cmd.Name;path=$cmd.Source;isPWA=$false}};
+      $seenApps=@{};
+      foreach($a in @($exactApps) + @($wordApps) + @($subApps)){
+       if(-not $a -or -not $a.AppID -or $seenApps.ContainsKey($a.AppID)){ continue };
+       $seenApps[$a.AppID]=$true;
+       $isPwa=($a.AppID -match "_|chrome|msedge|brave|Web|App" -or $a.AppID -like "*!*");
+       $items+=@{Name=$a.Name;AppID=$a.AppID;isPWA=[bool]$isPwa};
+       if($items.Count -ge 12){ break }
+      };
+      $regPaths=@("HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*","HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*","HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*");
+      foreach($rp in $regPaths){
+       Get-ItemProperty $rp -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like ("*"+$q+"*") } | Select-Object -First 5 | ForEach-Object {
+        $iconExe=$null; if($_.DisplayIcon){ $m=[regex]::Match($_.DisplayIcon,'([^",]+\.exe)'); if($m.Success -and (Test-Path $m.Groups[1].Value)){ $iconExe=$m.Groups[1].Value } };
+        $items+=@{Name=$_.DisplayName;path=$iconExe;icon=$_.DisplayIcon;installLocation=$_.InstallLocation;isPWA=($_.DisplayIcon -match "msedge|chrome|brave" -or $_.UninstallString -match "--app-id=")}
+       }
+      };
+      ConvertTo-Json -InputObject @($items) -Compress`;
+     const out=await ps(psQuery,{q:qRaw,nq:normalized},signal);
      const matches=JSON.parse(out||'[]');
-     const pwaFirst=matches.find((m:any)=>m.AppID)||matches[0]||null;
-     result={found:matches.length>0,installed:matches.length>0,matches,primaryMatch:pwaFirst};break;
+     if(siteUrl){
+      matches.unshift({Name:qRaw+' (Web)',url:siteUrl,isWeb:true,isPWA:false});
+     }
+     const primaryMatch=matches.find((m:any)=>m.url)||matches.find((m:any)=>m.AppID||m.path)||matches[0]||null;
+     result={found:matches.length>0,installed:matches.length>0,matches,primaryMatch};break;
     }
     case 'app_launch':case 'web_browse':{
-     const target=text(args.target||args.url,4096),launchArgs=args.args||'';
-     if(/^https?:/i.test(target)){if(launchArgs)throw Error('URL_ARGUMENTS_NOT_SUPPORTED');await shell.openExternal(httpURL(target).href);result={accepted:true,verifiedRunning:false,summary:'URL transmise au navigateur par defaut : '+target};break;}
-     if(name==='web_browse')throw Error('HTTP_URL_REQUIRED');
-     const browserURL=launchArgs?httpURL(launchArgs).href:null;
-     if(browserURL&&!/^(msedge|chrome|firefox|brave|opera)(\.exe)?$/i.test(path.basename(target)))throw Error('BROWSER_ARGUMENTS_ONLY');
-     if(path.isAbsolute(target)||/(\/|\\|\$env:|%USERPROFILE%|^~)/i.test(target)){
+     const rawTarget=text(args.target||args.url,4096).trim().replace(/^["']|["']$/g,'');
+     const rawArgs=String(args.args||'').trim().replace(/^["']|["']$/g,'');
+     if(name==='web_browse'){
+      const url=resolveSiteUrl(rawTarget);
+      if(!url)throw Error('HTTP_URL_REQUIRED');
+      await shell.openExternal(url);
+      result={accepted:true,opened:url,verifiedRunning:false,summary:'URL ouverte dans le navigateur : '+url};break;
+     }
+     const browserURL=rawArgs?(resolveSiteUrl(rawArgs)||httpURL(rawArgs).href):null;
+     if(!browserURL){
+      const directSite=resolveSiteUrl(rawTarget);
+      if(directSite){
+       await shell.openExternal(directSite);
+       result={accepted:true,opened:directSite,verifiedRunning:false,summary:'Site web ouvert dans le navigateur : '+directSite};break;
+      }
+     }
+     const target=normalizeAppAlias(rawTarget);
+     const baseLower=path.basename(target).toLowerCase();
+     const isAllowedBrowser=/^(msedge|chrome|firefox|brave|opera)(\.exe)?$/i.test(baseLower);
+     if(browserURL&&!isAllowedBrowser)throw Error('BROWSER_ARGUMENTS_ONLY');
+     if(/^ms-settings:[\w-]*$/i.test(target)){
+      await ps('Start-Process $p.uri -ErrorAction Stop',{uri:target},signal);
+      result={accepted:true,opened:target,verifiedRunning:false,summary:'Parametres Windows ouverts : '+target};break;
+     }
+     const looksLikeFsPath=path.isAbsolute(target)||/^(\$env:|%[A-Z_]+%|~|(Desktop|Bureau|Documents|Downloads|T[eé]l[eé]chargements)[\\/])/i.test(target)||(/[\\/]/.test(target)&&!/^[a-z0-9._-]+![a-z0-9._-]+$/i.test(target));
+     if(looksLikeFsPath){
       const p=await localPath(target);const stat=await fs.stat(p);
       if(stat.isDirectory()){if(browserURL)throw Error('DIRECTORY_ARGUMENTS_DENIED');const err=await shell.openPath(p);if(err)throw Error(err);result={accepted:true,opened:p,summary:'Dossier ouvert : '+p};break;}
       else if(/\.exe$/i.test(p)){await ps('if($p.arg){Start-Process -FilePath $p.target -ArgumentList $p.arg -ErrorAction Stop}else{Start-Process -FilePath $p.target -ErrorAction Stop}',{target:p,arg:browserURL},signal);result={accepted:true,opened:p,summary:'Application lancee : '+p};break;}
       else if(!dangerousExtensions.test(p)){if(browserURL)throw Error('FILE_ARGUMENTS_DENIED');const err=await shell.openPath(p);if(err)throw Error(err);result={accepted:true,opened:p,summary:'Fichier ouvert : '+p};break;}
       else throw Error('EXECUTABLE_OPEN_DENIED');
-     }else if(target.includes('!')&&/^[\w.{}!\-]+$/.test(target)){
-      if(browserURL)throw Error('APP_ID_ARGUMENTS_DENIED');
-      const out=await ps('$a=@(Get-StartApps | Where-Object {$_.AppID -eq $p.id}); if($a.Count -ne 1){throw "APP_ID_NOT_RESOLVED"}; Start-Process explorer.exe -ArgumentList ("shell:AppsFolder\\"+$p.id)',{id:target},signal);
-     }else{
-      if(!/^[\w. -]{1,100}$/.test(target)||/^(powershell|pwsh|cmd|wscript|cscript|mshta|rundll32|regsvr32)(\.exe)?$/i.test(target))throw Error('APP_TARGET_NOT_ALLOWED');
-      await ps('$c=Get-Command -Name $p.target -CommandType Application -ErrorAction Stop | Select-Object -First 1; if($p.arg){Start-Process -FilePath $c.Source -ArgumentList $p.arg -ErrorAction Stop}else{Start-Process -FilePath $c.Source -ErrorAction Stop}',{target,arg:browserURL},signal);
      }
-     result={accepted:true,verifiedRunning:false,summary:'Demande de lancement acceptee par Windows : '+target};break;
+     if(/^(powershell|pwsh|cmd|wscript|cscript|mshta|rundll32|regsvr32)(\.exe)?$/i.test(target))throw Error('APP_TARGET_NOT_ALLOWED');
+     if(!/^[\w.{}!() \-:@+]{1,200}$/i.test(target))throw Error('APP_TARGET_NOT_ALLOWED');
+     const launchScript=`
+      $t=$p.target; $raw=$p.raw; $arg=$p.arg;
+      $exePath=$null;
+      $c=Get-Command -Name $t -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1;
+      if($c -and $c.Source){ $exePath=$c.Source };
+      if(-not $exePath){
+       $names=@($t); if($t -notmatch '\\.exe$'){ $names+=($t+".exe") };
+       foreach($nm in $names){
+        foreach($rk in @("HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\"+$nm,"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\"+$nm,"HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\"+$nm)){
+         $val=(Get-ItemProperty $rk -ErrorAction SilentlyContinue).'(default)';
+         if($val){ $val=$val.Trim('"'); if(Test-Path $val){ $exePath=$val; break } }
+        }
+        if($exePath){ break }
+       }
+      };
+      if($exePath){
+       if($arg){ Start-Process -FilePath $exePath -ArgumentList $arg -ErrorAction Stop }
+       else{ Start-Process -FilePath $exePath -ErrorAction Stop };
+       Write-Output ("EXE:"+$exePath); exit 0
+      };
+      if($arg){ throw "BROWSER_EXE_NOT_FOUND" };
+      $apps=@(Get-StartApps);
+      $rawEsc=[regex]::Escape($raw);
+      $app=$apps | Where-Object { $_.AppID -ieq $raw -or $_.AppID -ieq $t } | Select-Object -First 1;
+      if(-not $app){ $app=$apps | Where-Object { $_.Name -ieq $raw -or $_.Name -ieq $t -or $_.Name -ieq ("Microsoft "+$raw) -or $_.Name -ieq ("Google "+$raw) } | Select-Object -First 1 };
+      if(-not $app){ $app=$apps | Where-Object { $_.Name -match ("\\b"+$rawEsc+"\\b") } | Select-Object -First 1 };
+      if(-not $app){ $app=$apps | Where-Object { $_.Name -like ("*"+$raw+"*") } | Select-Object -First 1 };
+      if($app -and $app.AppID){
+       Start-Process explorer.exe -ArgumentList ("shell:AppsFolder\\"+$app.AppID) -ErrorAction Stop;
+       Write-Output ("APPID:"+$app.Name); exit 0
+      };
+      $lnk=$null;
+      foreach($dir in @($env:ProgramData+"\\Microsoft\\Windows\\Start Menu\\Programs",$env:APPDATA+"\\Microsoft\\Windows\\Start Menu\\Programs")){
+       if(Test-Path $dir){
+        $lnk=Get-ChildItem -Path $dir -Recurse -Filter "*.lnk" -ErrorAction SilentlyContinue | Where-Object { $_.BaseName -ieq $raw -or $_.BaseName -like ("*"+$raw+"*") } | Select-Object -First 1;
+        if($lnk){ break }
+       }
+      };
+      if($lnk){ Start-Process -FilePath $lnk.FullName -ErrorAction Stop; Write-Output ("LNK:"+$lnk.FullName); exit 0 };
+      throw ("APP_NOT_FOUND: "+$raw)`;
+     const launchOut=(await ps(launchScript,{target,raw:rawTarget,arg:browserURL},signal)).trim();
+     result={accepted:true,opened:launchOut||target,verifiedRunning:false,summary:'Application lancee : '+(launchOut.replace(/^(EXE|APPID|LNK):/,'')||rawTarget)};break;
     }
     case 'file_list':case 'file_search':{
      const base=args.path||os.homedir(),items=[];const maxDepth=name==='file_search'?3:Math.max(0,Math.min(3,Number(args.depth)||0));
-     const walk=async(p,depth)=>{for(const d of await fs.readdir(p,{withFileTypes:true})){
-      if(signal.aborted)throw Error('CANCELLED');if(items.length>=100)return;
-      const full=path.join(p,d.name);if(d.isSymbolicLink())continue;
-      if(name!=='file_search'||d.name.toLowerCase().includes(args.query.toLowerCase()))items.push({name:d.name,path:full,isDir:d.isDirectory()});
-      if(depth>0&&d.isDirectory())await walk(full,depth-1);
-     }};
+     const walk=async(p,depth)=>{
+      let entries=[];
+      try{entries=await fs.readdir(p,{withFileTypes:true});}
+      catch(e){if(['EPERM','EACCES','ENOENT','ENOTDIR'].includes(e.code))return;throw e;}
+      for(const d of entries){
+       if(signal.aborted)throw Error('CANCELLED');if(items.length>=100)return;
+       const full=path.join(p,d.name);if(d.isSymbolicLink())continue;
+       if(name!=='file_search'||d.name.toLowerCase().includes(args.query.toLowerCase()))items.push({name:d.name,path:full,isDir:d.isDirectory()});
+       if(depth>0&&d.isDirectory())await walk(full,depth-1);
+      }
+     };
      await walk(await localPath(base),maxDepth);result={items,truncated:items.length>=100,summary:items.length+' elements retournes'};break;
     }
     case 'file_read':{const stat=await fs.stat(args.path);if(stat.size>65536)throw Error('FILE_TOO_LARGE');result={path:args.path,content:await fs.readFile(args.path,'utf8')};break;}
@@ -253,7 +413,11 @@ export function installCWRuntime({ipcMain,dialog,shell,BrowserWindow,store,mainW
      result={dryRun:args.dryRun,moves,summary:args.dryRun?'Plan de tri, aucun fichier deplace':moves.length+' fichiers deplaces'};break;
     }
     case 'process_verify':{
-     if(args.type==='process'){const si=await import('systeminformation');const p=await si.processes();result={exists:p.list.some(p=>p.name.toLowerCase()===args.target.toLowerCase())};}
+     if(args.type==='process'){
+      const si=await import('systeminformation');const p=await si.processes();
+      const want=args.target.toLowerCase(),wantBare=want.replace(/\.exe$/,'');
+      result={exists:p.list.some(pr=>pr.name.toLowerCase()===want||pr.name.replace(/\.exe$/i,'').toLowerCase()===wantBare)};
+     }
      else{const p=await localPath(args.target);let st=null;try{st=await fs.stat(p);}catch(e){if(e.code!=='ENOENT')throw e;}result={exists:!!st&&(args.type==='file'?st.isFile():st.isDirectory()),size:st?.size||0};}break;
     }
     case 'screenshot_take':{const mod=await import('screenshot-desktop');const data=await mod.default({format:'png'});result={imageBase64:data.toString('base64'),summary:'Capture obtenue localement; non envoyee dans Firestore'};break;}

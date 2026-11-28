@@ -14,7 +14,7 @@ async function saveChatMsg(role,text){
  }
  await convsCol.doc(w.S.convId).collection('messages').add({role,content:text,timestamp:now});
 }
-const PC_HINT_RE=/(ouvr|lanc|cr[eé]|effac|supprim|d[eé]plac|rang|tri|copi|coll|renomm|ferm|quitt|tue|kill|arr[eê]t|red[eé]marr|[eé]teins|verrouill|veille|captur|screenshot|ex[eé]cut|install|d[eé]sinstall|t[eé]l[eé]charg|cherch.*sur\s|va\s+sur\s|script|powershell|cmd|terminal|syst[eè]me|sysinfo|cpu|gpu|ram|disque|batterie|volume|luminosit|wifi|bluetooth|fichier|dossier|r[eé]pertoire|bureau|desktop|document|t[eé]l[eé]chargement|downloads|html|txt|pdf|json|csv|xlsx|word|excel|powerpoint|app|appli|logiciel|programme|fen[eê]tre|pc|ordinateur|machine|whatsapp|discord|spotify|chrome|edge|firefox|brave|youtube|google|github|tetris|bloc[- ]?notes?|notepad|calculatrice|calc|vscode|explorateur|explorer)/i;
+const PC_HINT_RE=/(ouvr|lanc|cr[eé]|fais|g[eé]n[eè]re|[eé]cris|effac|supprim|d[eé]plac|rang|tri|copi|coll|renomm|ferm|quitt|tue|kill|arr[eê]t|red[eé]marr|[eé]teins|verrouill|veille|captur|screenshot|ex[eé]cut|install|d[eé]sinstall|t[eé]l[eé]charg|cherch.*sur\s|va\s+sur\s|script|powershell|cmd|terminal|syst[eè]me|sysinfo|cpu|gpu|ram|disque|batterie|volume|luminosit|wifi|bluetooth|fichier|dossier|r[eé]pertoire|bureau|desktop|document|t[eé]l[eé]chargement|downloads|html|\.html?|\.py|python|txt|\.txt|pdf|\.pdf|json|csv|xlsx|word|excel|powerpoint|app|appli|logiciel|programme|fen[eê]tre|pc|ordinateur|machine|whatsapp|discord|spotify|chrome|edge|firefox|brave|youtube|google|github|tetris|bloc[- ]?notes?|notepad|calculatrice|calc|vscode|explorateur|explorer|param[eè]tres)/i;
 async function route(text){
  if(!text||!w.S?.user||!w.CWBus)return false;
  if(/^\/chat\s/i.test(text))return false;

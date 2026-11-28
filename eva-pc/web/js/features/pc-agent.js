@@ -63,6 +63,10 @@ async function routeMessage(id,prompt){
   {role:'assistant',content:'{"route":"conversation"}'},
   {role:'user',content:'Ouvre YouTube'},
   {role:'assistant',content:'{"route":"action"}'},
+  {role:'user',content:'Ouvre Edge'},
+  {role:'assistant',content:'{"route":"action"}'},
+  {role:'user',content:'Crée une page HTML en code Python sur le bureau'},
+  {role:'assistant',content:'{"route":"action"}'},
   {role:'user',content:'N\'ouvre pas YouTube et ne fais rien'},
   {role:'assistant',content:'{"route":"conversation"}'},
   {role:'user',content:prompt}
@@ -136,10 +140,9 @@ async function consume(uid,id,epoch){
   if(data.payload?.command||data.payload?.tool||data.payload?.name)throw Error('LEGACY_DIRECT_EXECUTION_DISABLED: renvoyer la demande en langage naturel');
   if(data.type==='chat_request'){
    const route=await routeMessage(id,prompt);
-   if(route==='conversation'){
+   if(route!=='action'){
     await ownedUpdate(r,{routing:'conversation',status:'done',state:'succeeded',step:'Message conversationnel; aucune action PC',result:{success:true,routed:true,executed:false},completedAt:ts()});return;
    }
-   if(route!=='action')throw Error('CLARIFICATION_REQUIRED: precise la demande PC');
    if(!await ownedUpdate(r,{routing:'action'}))throw Error('CANCELLED');
   }
   overlayShown=true;

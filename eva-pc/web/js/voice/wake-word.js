@@ -18,6 +18,7 @@ var triggerTimer = null;
 var currentUtterance = '';
 var _silenceTimer = null;
 var _lastDispatchTime = 0;
+var _ignoreTranscriptUntil = 0;
 
 // Web Audio & Vosk
 var _audioStream = null;
@@ -63,16 +64,24 @@ if (!window.eva && typeof document !== 'undefined') {
   });
 }
 
-// Suivi direct et précis de la visibilité de la fenêtre Electron (non minimisée, non masquée)
-if (typeof window !== 'undefined' && window.eva) {
+  // Suivi direct et précis de la visibilité de la fenêtre Electron (non minimisée, non masquée)
+  if (typeof window !== 'undefined' && window.eva) {
   if (typeof window.eva.onWindowVisibility === 'function') {
     window.eva.onWindowVisibility(function(visible) {
       _isWindowVisibleOnScreen = !!visible;
+      if (_isWindowVisibleOnScreen && window._isJarvisActive) {
+        if (typeof window.closeJarvisConversation === 'function') window.closeJarvisConversation();
+        else { window._isJarvisActive = false; window._jarvisListener = null; }
+      }
       console.log('[WakeWord] Visibilité fenêtre mise à jour via Electron :', _isWindowVisibleOnScreen);
     });
   } else if (window.eva.window && typeof window.eva.window.onVisibility === 'function') {
     window.eva.window.onVisibility(function(visible) {
       _isWindowVisibleOnScreen = !!visible;
+      if (_isWindowVisibleOnScreen && window._isJarvisActive) {
+        if (typeof window.closeJarvisConversation === 'function') window.closeJarvisConversation();
+        else { window._isJarvisActive = false; window._jarvisListener = null; }
+      }
       console.log('[WakeWord] Visibilité fenêtre mise à jour via Electron window :', _isWindowVisibleOnScreen);
     });
   }
@@ -147,7 +156,11 @@ function _dispatchCommand(cmd) {
       onCommandCallback(cleanCmd);
     }
   } else {
-    // Premier plan : affichage et envoi direct dans le chat
+    // Premier plan : affichage et envoi direct dans le chat (jamais de ré-écoute auto type Jarvis)
+    if (window._isJarvisActive) {
+      if (typeof window.closeJarvisConversation === 'function') window.closeJarvisConversation();
+      else { window._isJarvisActive = false; window._jarvisListener = null; }
+    }
     if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
     if (typeof window.sendVoiceCommand === 'function') {
       window.sendVoiceCommand(cleanCmd);
@@ -162,6 +175,7 @@ function _dispatchCommand(cmd) {
    ══════════════════════════════════════════════════════════ */
 function _handleTranscript(text, isFinal) {
   if (!isActive || !text || !text.trim()) return;
+  if (_ignoreTranscriptUntil && Date.now() < _ignoreTranscriptUntil) return;
 
   // Anti-écho : ne pas écouter pendant qu'EVA parle ni dans les 800ms suivant l'arrêt de parole
   if (window.EVATTS && typeof window.EVATTS.isSpeaking === 'function' && window.EVATTS.isSpeaking()) {
@@ -235,7 +249,14 @@ function _handleTranscript(text, isFinal) {
     console.log('[WakeWord] Commande finalisée et validée :', finalCmd);
     state = 'idle';
     _lastDispatchTime = Date.now();
+    _ignoreTranscriptUntil = Date.now() + 750;
     currentUtterance = '';
+    if (_recognizer && typeof _recognizer.reset === 'function') {
+      try { _recognizer.reset(); } catch(_) {}
+    }
+    if (window.eva && window.eva.stt && typeof window.eva.stt.reset === 'function') {
+      try { window.eva.stt.reset(); } catch(_) {}
+    }
     if (window.setEvaStatusHeader) window.setEvaStatusHeader(null);
     _dispatchCommand(finalCmd);
   }
@@ -575,8 +596,15 @@ window.evaResetWakeWordState = function() {
   state = 'idle';
   currentUtterance = '';
   _lastDispatchTime = 0;
+  _ignoreTranscriptUntil = Date.now() + 450;
   if (triggerTimer) { clearTimeout(triggerTimer); triggerTimer = null; }
   if (_silenceTimer) { clearTimeout(_silenceTimer); _silenceTimer = null; }
+  if (_recognizer && typeof _recognizer.reset === 'function') {
+    try { _recognizer.reset(); } catch(_) {}
+  }
+  if (window.eva && window.eva.stt && typeof window.eva.stt.reset === 'function') {
+    try { window.eva.stt.reset(); } catch(_) {}
+  }
 };
 
 window.EVAWakeWord = {
