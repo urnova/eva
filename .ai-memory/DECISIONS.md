@@ -46,13 +46,13 @@
 - `E:\eva\` → INTERDIT en écriture (installation production)
 - Lire uniquement pour debug si nécessaire
 
-## Décisions UI/UX & Architecture D2 (implémentées)
+## Décisions UI/UX & Architecture D2 / V4.1 (implémentées)
 
-- Redesign complet PC + Web : palette `#0d0d14 / #13131f / #1a1a2e`, dégradé `#00d4ff -> #8b5cf6`, polices auto-hébergées `/assets/styles/fonts.css` (`Inter` + `Orbitron`) sans requêtes Google Fonts externes
-- Suppression complète du panneau/personnage 3D `EvaCharacter`
-- Barre de saisie arrondie unifiée avec sélecteur de modèle, Recherche approfondie (`deepSearchBtn`), Mode Live (`liveModeBtn`), micro Antigravity, chips de fichiers compactes
-- Séparation des conversations textuelles (`Chats`) et vocales (`isVoiceSession: true` -> onglet `🎙️ Vocal`)
-- Connecteurs Dual MCP + Codemod + Natifs mutuellement exclusifs par service (`js/features/connectors.js`) avec persistance Firestore sur `/users/{uid}.connectors` (compatible `firestore.rules`)
+- Redesign complet PC + Web aligné Showcase + Prototype V4 : palette matte `#111113 / #131316 / #18181b / #222228`, `--cyan: #00d4ff`, `--purple: #b794f6`, polices auto-hébergées `/assets/styles/fonts.css` (`Inter` + `Orbitron`) sans requêtes Google Fonts externes
+- Suppression complète du panneau/personnage 3D `EvaCharacter`, de `#providerChip`, de `#localModeBanner`, et des tutoriels legacy PC/Mobile (`tutorialOverlay`, `tutorial.js`, Step 8 `L'ORBE D'E.V.A` remplacé par Google Workspace OAuth 1 clic dans `onboarding.html`)
+- Modèles locaux (`eva`, `qwen`, `ollama`, `lmstudio`) isolés de la détection réseau (`timeoutMs: 120000`, `_isNetworkErr` ignoré en mode local, payload native GGUF borné <= 46 KB)
+- Vue dédiée **`#viewMail`** (`window.EVAMail`) + **Agenda natif/Google sync** (`#viewCalendar` + `calGoogleSyncBtn`) + **Live Code** sandbox iframe sur blocs HTML/SVG/JS et `[ACTION:{"type":"live_code"}]`
+- Connecteurs élargis (`calendar`, `gmail`, `gdrive`, `github`, `notion`, `slack`, `discord`, `linear`, `spotify`) + serveurs MCP personnalisés HTTP JSON-RPC 2.0 (`tools/list` / `tools/call`) mutuellement exclusifs par service (`js/features/connectors.js`) avec persistance Firestore sur `/users/{uid}.connectors` (compatible `firestore.rules`)
 - Providers `GeminiProvider` + `EVAQuotas` + délai configurable (`1500 ms` par défaut) + cascade fallback strictement opt-in (`autoFallback: false` par défaut) + génération média (`EVAMedia`) désactivée par défaut
 - Sessions & appareils unifiés avec empreinte déterministe `UUID`/`MAC`/`WEB` et révocation bidirectionnelle Compte ↔ CloudWorks
 - Moteurs TTS inchangés : SAPI Windows, ElevenLabs, Piper, eva-custom

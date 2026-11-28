@@ -56,21 +56,21 @@ function _renderPCLayout(container, uid) {
         <span class="cw-section-title">Contrôle CloudWorks — Ce PC</span>
         <div id="cwEnabledBadge" class="cw-badge cw-badge-off">Vérification...</div>
       </div>
-      <div class="cw-section-body" style="display:flex;flex-direction:column;gap:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;background:rgba(0,0,0,0.22);border-radius:10px;border:1px solid rgba(0,212,255,0.12);">
+      <div class="cw-section-body" style="display:flex;flex-direction:column;gap:10px;">
+        <div class="cw-toggle-card">
           <div>
-            <div style="font-weight:700;font-size:0.84em;color:#f1f5f9;">CloudWorks actif sur ce PC</div>
-            <div style="font-size:0.74em;color:#94a3b8;margin-top:2px;">Autorise le contrôle Windows local et l'exécution de tâches à distance.</div>
+            <div style="font-weight:700;font-size:0.84em;color:var(--text);">CloudWorks actif sur ce PC</div>
+            <div style="font-size:0.74em;color:var(--text-muted);margin-top:2px;">Autorise le contrôle Windows local et l'exécution de tâches à distance.</div>
           </div>
           <label class="cw-switch">
             <input type="checkbox" id="cwEnabledToggle" onchange="window._cwToggleEnabled(this.checked)">
             <span class="cw-switch-slider"></span>
           </label>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;background:rgba(249,115,22,0.06);border-radius:10px;border:1px solid rgba(249,115,22,0.25);">
+        <div class="cw-toggle-card cw-toggle-warn">
           <div>
-            <div style="font-weight:700;font-size:0.84em;color:#fb923c;">Mode autonome <span style="font-size:0.75em;background:rgba(249,115,22,0.2);color:#fdba74;padding:2px 6px;border-radius:8px;margin-left:4px;">SANS VALIDATION</span></div>
-            <div style="font-size:0.74em;color:#94a3b8;margin-top:2px;">Désactivé = mode validation (demande Autoriser / Refuser avant action sensible).</div>
+            <div style="font-weight:700;font-size:0.84em;color:#fbbf24;">Mode autonome <span class="cw-pill-warn">SANS VALIDATION</span></div>
+            <div style="font-size:0.74em;color:var(--text-muted);margin-top:2px;">Désactivé = mode validation (demande Autoriser / Refuser avant action sensible).</div>
           </div>
           <label class="cw-switch">
             <input type="checkbox" id="cwAutonomousToggle" onchange="window._cwToggleAutonomous(this.checked)">

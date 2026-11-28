@@ -330,11 +330,11 @@ function renderUserUI(p) {
     var resolved = resolveRoleLabel(p);
     if (resolved.color) {
       badge.innerHTML =
-        '<span style="display:inline-flex;align-items:center;gap:3px;' +
-        'border:1.5px solid ' + resolved.color + ';' +
+        '<span style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;' +
+        'border:1px solid ' + resolved.color + '88;' +
         'color:' + resolved.color + ';' +
-        'border-radius:20px;padding:1px 9px 2px 7px;font-size:0.95em;font-weight:700;letter-spacing:0.03em;' +
-        'box-shadow:0 0 7px ' + resolved.color + '44;white-space:nowrap;">' +
+        'border-radius:999px;padding:1px 8px;font-size:0.92em;font-weight:700;letter-spacing:0.02em;' +
+        'background:rgba(255,215,0,0.06);">' +
         esc(resolved.text) + '</span>';
     } else {
       badge.textContent = resolved.text;
@@ -343,7 +343,7 @@ function renderUserUI(p) {
   }
 
   var firstLabel = (p.nickname || p.displayName || (p.email ? p.email.split('@')[0] : '') || '').trim();
-  var firstWord = firstLabel ? firstLabel.split(/s+/)[0] : '';
+  var firstWord = firstLabel ? firstLabel.split(/\s+/)[0] : '';
   var welcomeEl = document.getElementById('welcomeGreeting');
   if (welcomeEl) {
     var hr = new Date().getHours();

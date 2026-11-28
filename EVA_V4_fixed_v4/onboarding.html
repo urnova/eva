@@ -587,55 +587,34 @@ body::before{
       </div>
     </div>
 
-    <!-- Step 8: Avatar / Personnage EVA (PC uniquement) -->
+    <!-- Step 8: Connecteurs Google Workspace (Agenda & Gmail) -->
     <div class="ob-view" id="ob8">
-      <div class="step-label">Étape 8 — Présence d'E.V.A</div>
+      <div class="step-label">Étape 8 — Google Workspace</div>
 
-      <div style="text-align:center;margin-bottom:20px">
-        <div style="font-size:2.8em;margin-bottom:10px">🔮</div>
-        <div style="font-family:'Orbitron',monospace;font-size:1.05em;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:8px">L'ORBE D'E.V.A</div>
-        <div style="font-size:0.82em;color:var(--text-muted);line-height:1.6;max-width:340px;margin:0 auto">
-          L'orbe holographique d'E.V.A est sa <strong style="color:var(--cyan)">présence visuelle à l'écran</strong> — une sphère lumineuse qui pulse et change de couleur selon son état. Vous pouvez la désactiver pour gagner en performance.
+      <div style="text-align:center;margin-bottom:18px">
+        <div style="font-size:2.5em;margin-bottom:8px">🔗</div>
+        <div style="font-family:'Orbitron',monospace;font-size:1.02em;font-weight:700;color:var(--cyan);letter-spacing:1px;margin-bottom:8px">AGENDA &amp; GMAIL EN 1 CLIC</div>
+        <div style="font-size:0.81em;color:var(--text-muted);line-height:1.6;max-width:360px;margin:0 auto">
+          Connectez votre compte Google pour synchroniser <strong style="color:var(--cyan)">Google Agenda</strong>, consulter vos <strong style="color:var(--cyan)">Mails</strong> et laisser E.V.A préparer vos brouillons (avec validation manuelle avant chaque envoi).
         </div>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
-        <!-- Option: Activé -->
-        <div id="obAvatarOn" onclick="obSelectAvatar(true)" style="
-          border:2px solid var(--cyan);background:rgba(0,212,255,0.07);
-          border-radius:14px;padding:16px 18px;cursor:pointer;transition:all 0.2s;
-          display:flex;align-items:center;gap:14px;position:relative;
-        ">
-          <div style="font-size:2em;flex-shrink:0">🧊</div>
-          <div>
-            <div style="font-weight:700;font-size:0.88em;color:var(--cyan)">Avatar activé <span style="font-size:0.75em;color:var(--text-muted)">(recommandé)</span></div>
-            <div style="font-size:0.74em;color:var(--text-muted);margin-top:3px;line-height:1.5">E.V.A apparaît en haut à droite de l'écran. Expérience complète et immersive.</div>
-          </div>
-          <div id="obAvatarOnChk" style="position:absolute;top:10px;right:12px;color:var(--cyan);font-size:0.85em">✓</div>
-        </div>
-
-        <!-- Option: Désactivé -->
-        <div id="obAvatarOff" onclick="obSelectAvatar(false)" style="
-          border:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);
-          border-radius:14px;padding:16px 18px;cursor:pointer;transition:all 0.2s;
-          display:flex;align-items:center;gap:14px;position:relative;
-        ">
-          <div style="font-size:2em;flex-shrink:0">⚡</div>
-          <div>
-            <div style="font-weight:700;font-size:0.88em;color:var(--text-base)">Avatar désactivé</div>
-            <div style="font-size:0.74em;color:var(--text-muted);margin-top:3px;line-height:1.5">Interface chat uniquement. Meilleures performances, moins de ressources CPU/GPU.</div>
-          </div>
-          <div id="obAvatarOffChk" style="display:none;position:absolute;top:10px;right:12px;color:var(--cyan);font-size:0.85em">✓</div>
+      <div style="background:rgba(24,24,28,0.92);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:16px;margin-bottom:14px;display:flex;flex-direction:column;gap:12px;">
+        <button type="button" id="obGwsConnectBtn" onclick="obConnectGoogleWorkspace()" class="btn-next" style="width:100%;font-size:0.86em;">
+          📅✉️ Connecter Google Workspace
+        </button>
+        <div id="obGwsStatus" style="font-size:0.76em;color:var(--text-muted);text-align:center;">
+          Facultatif — vous pouvez aussi activer cela plus tard dans <strong>Paramètres → Connecteurs</strong>.
         </div>
       </div>
 
-      <div style="font-size:0.71em;color:var(--text-dim);text-align:center;line-height:1.6">
-        Ce réglage peut être modifié à tout moment dans Paramètres → Apparence.
+      <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.28);border-radius:12px;padding:11px 13px;font-size:0.74em;color:#fde68a;line-height:1.55;margin-bottom:16px;">
+        <strong>💡 Astuce écran Google :</strong> Si Google affiche <em>« Google n'a pas pu vérifier cette application »</em> pendant la bêta, cliquez simplement sur <strong>« Paramètres avancés »</strong> puis sur <strong>« Accéder à eva... (non sécurisé) »</strong> pour autoriser votre compte.
       </div>
 
-      <div class="ob-actions" style="margin-top:20px">
+      <div class="ob-actions" style="margin-top:16px">
         <button class="btn-skip" onclick="goStep(7)">← Retour</button>
-        <button class="btn-next" onclick="goStep(9)">SUIVANT →</button>
+        <button class="btn-next" onclick="goStep(9)">CONTINUER →</button>
       </div>
     </div>
 
@@ -1645,6 +1624,37 @@ function obSelectAvatar(enabled) {
 }
 window.obSelectAvatar = obSelectAvatar;
 
+window.obConnectGoogleWorkspace = async function() {
+  var btn = document.getElementById('obGwsConnectBtn');
+  var stEl = document.getElementById('obGwsStatus');
+  if (!window.firebase || !window.firebase.auth || !window.auth) {
+    if (stEl) stEl.textContent = 'Auth Google disponible après entrée dans le chat.';
+    return;
+  }
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Connexion Google...'; }
+    var p = new firebase.auth.GoogleAuthProvider();
+    p.addScope('https://www.googleapis.com/auth/calendar.events');
+    p.addScope('https://www.googleapis.com/auth/gmail.modify');
+    p.setCustomParameters({ prompt: 'consent', access_type: 'offline' });
+    var u = auth.currentUser;
+    var res = u ? await u.reauthenticateWithPopup(p).catch(function(){ return auth.signInWithPopup(p); }) : await auth.signInWithPopup(p);
+    var tok = res && res.credential && res.credential.accessToken;
+    if (tok) {
+      localStorage.setItem('eva_gws_oauth', JSON.stringify({
+        accessToken: tok,
+        email: (res.user && res.user.email) || '',
+        expiresAt: Date.now() + 55 * 60 * 1000
+      }));
+      if (btn) btn.textContent = '✓ Google Workspace connecté !';
+      if (stEl) stEl.innerHTML = '<span style="color:#4ade80;font-weight:600;">Agenda &amp; Gmail activés ✓</span>';
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '📅✉️ Connecter Google Workspace'; }
+    if (stEl) stEl.textContent = 'Connexion annulée ou reportée — configurable plus tard dans Paramètres → Connecteurs.';
+  }
+};
+
 function goStep(n) {
   /* Sauter étape 2 pour comptes Google-only sans mot de passe */
   if (!isGoogleOnlyUser && n === 2) { n = 3; }
@@ -1655,11 +1665,6 @@ function goStep(n) {
   }
   if (n === 6 && currentStep === 5) {
     setTimeout(renderOnboardingBrainMap, 100);
-  }
-
-  /* Étape 8 (Avatar) — sauter automatiquement sur mobile */
-  if (n === 8 && _obIsMobile) {
-    n = (currentStep > 8) ? 7 : 9;
   }
 
   /* Hooks sur certaines étapes */

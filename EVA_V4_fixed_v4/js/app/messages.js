@@ -768,7 +768,7 @@ async function handleSend(customText) {
 
   var _isDeep = !!window._evaDeepSearch && !isCWPCTask;
   window._lastAgentMeta = _isDeep ? { key: 'deep-search', label: 'Recherche approfondie', icon: '🔍' } : null;
-  var _shouldSearch = !isCWPCTask && window.EVAWebSearch && (
+  var _shouldSearch = !isCWPCTask && (typeof navigator === 'undefined' || navigator.onLine !== false) && window.EVAWebSearch && (
     _isDeep ||
     window.EVAWebSearch.needsSearch(msgContent) ||
     (_isLocalProv && window.EVAWebSearch.needsSearchLocal && window.EVAWebSearch.needsSearchLocal(msgContent))
@@ -794,7 +794,14 @@ async function handleSend(customText) {
   var origSys = window.EVA_SYSTEM_PROMPT;
   window.EVA_SYSTEM_PROMPT = sysPrompt;
 
-  var result = await window.EVAChatHandler.sendMessage(msgContent, { tone: S.tone });
+  var _aiTimeoutMs = _isLocalProv ? 120000 : 40000;
+  var _aiPromise = window.EVAChatHandler.sendMessage(msgContent, { tone: S.tone });
+  var _timeoutPromise = new Promise(function(_, reject) {
+    setTimeout(function() { reject(new Error("Le modèle d'intelligence artificielle met trop de temps à répondre.")); }, _aiTimeoutMs);
+  });
+  var result = await Promise.race([_aiPromise, _timeoutPromise]).catch(function(err) {
+    return { success: false, error: (err && err.message) ? err.message : String(err) };
+  });
 
   window.EVA_SYSTEM_PROMPT = origSys;
 
@@ -937,21 +944,23 @@ async function handleSend(customText) {
       }
       toast('Edge bloque Puter — voir les instructions', 'warning');
 
-    /* ── Erreur réseau générique ── */
+    /* ── Erreur réseau générique (jamais affichée pour un provider local) ── */
     } else {
-      var _isNetworkErr = !navigator.onLine ||
+      var _isNetworkErr = !_isLocalProv && (!navigator.onLine ||
         (typeof _errMsg === 'string' && (
           _errMsg.toLowerCase().indexOf('network') !== -1 ||
           _errMsg.toLowerCase().indexOf('failed to fetch') !== -1 ||
           _errMsg.toLowerCase().indexOf('connexion') !== -1 ||
           _errMsg.toLowerCase().indexOf('inaccessible') !== -1 ||
           _errMsg.toLowerCase().indexOf('timeout') !== -1
-        ));
+        )));
       if (_isNetworkErr && _netBanner) {
         document.getElementById('networkErrorMsg').textContent = 'Connexion perdue — vérifie ta connexion internet et réessaie.';
         _netBanner.style.display = 'flex';
       } else {
-        var _errText = "Désolée, une erreur est survenue : " + (typeof _errMsg === 'string' ? _errMsg : "Erreur inconnue");
+        var _errText = _isLocalProv
+          ? ("Modèle local : " + (typeof _errMsg === 'string' ? _errMsg : "indisponible"))
+          : ("Désolée, une erreur est survenue : " + (typeof _errMsg === 'string' ? _errMsg : "Erreur inconnue"));
         appendMsg('eva', _errText);
         console.error("Erreur IA détaillée :", _errMsg);
         var _bubbles = document.querySelectorAll('.message.eva .msg-bubble');
@@ -963,14 +972,16 @@ async function handleSend(customText) {
           _reportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Signaler ce problème';
           _lastBubble.appendChild(_reportBtn);
         }
-        toast('Erreur IA — vérifiez les paramètres', 'error');
+        toast(_isLocalProv ? 'Modèle local indisponible' : 'Erreur IA — vérifiez les paramètres', 'error');
       }
     }
     }
 }
 
-/* Bannière réseau auto via browser offline event */
+/* Bannière réseau auto via browser offline event (ignorée en mode local) */
 window.addEventListener('offline', function() {
+  var _p = typeof getActiveProvider === 'function' ? getActiveProvider() : (window.S?.config?.aiProvider || '');
+  if (['eva', 'qwen', 'lmstudio', 'ollama'].indexOf(_p) !== -1) return;
   var _nb = document.getElementById('networkErrorBanner');
   if (_nb) {
     document.getElementById('networkErrorMsg').textContent = 'Connexion perdue — vérifie ta connexion internet.';
@@ -1032,13 +1043,8 @@ function streamEvaMsg(content) {
   }
   window.clearThinkingHistory = function() { _thinkHistory = []; };
 
-  // Badge agent contextuel D2
+  // Badge discret uniquement si outil explicite déclenché (Deep Search, CloudWorks, Gmail, Agenda, MCP)
   var agentMeta = window._lastAgentMeta;
-  if (!agentMeta && content) {
-    if (/\[(ACTION|CW)[:\{]/.test(content) && /cloudworks|agentic_task|pc/i.test(content)) agentMeta = { key: 'cloudworks', label: 'Agent CloudWorks', icon: '⚡' };
-    else if (/agenda|événement|calendrier|event/i.test(_lastUserMsg || '') && /agenda|événement|planifié|calendrier/i.test(content)) agentMeta = { key: 'calendar', label: 'Agent Agenda', icon: '📅' };
-    else if (/mail|gmail|courriel|message/i.test(_lastUserMsg || '') && /brouillon|gmail|mail|objet/i.test(content)) agentMeta = { key: 'gmail', label: 'Agent Gmail', icon: '✉️' };
-  }
   if (agentMeta) {
     var ab = document.createElement('div');
     ab.className = 'eva-agent-badge agent-' + agentMeta.key;
@@ -1092,13 +1098,6 @@ function streamEvaMsg(content) {
   // Rendu markdown
   renderMdDom(content, bubble);
   scrollDown();
-
-  // Rendu 3 suggestions de suivi Perplexity-style
-  try {
-    if (!isSystemAbortMsg && !window._isJarvisActive && content && content.length > 35 && typeof _generateFollowupChips === 'function') {
-      _generateFollowupChips(msgContent, _lastUserMsg || '', content);
-    }
-  } catch(_) {}
 
   // Pseudo-streaming
   _revealMsgBlocks(bubble, function() {

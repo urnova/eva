@@ -108,18 +108,20 @@ function _ensureWebControlBar() {
 
   var panel = document.createElement('div');
   panel.id = 'cwWebCommandPanel';
-  panel.style.cssText = 'margin:14px 0 18px;padding:14px 16px;background:rgba(15,23,42,0.72);border:1px solid rgba(0,212,255,0.2);border-radius:14px;';
+  panel.className = 'cw-web-cmd';
   panel.innerHTML =
-    '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
-      '<div style="font-size:0.78em;font-weight:700;color:var(--cyan,#00d4ff);letter-spacing:0.6px;text-transform:uppercase;">⚡ Contrôle à distance (IA locale sur votre PC)</div>' +
-      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
-        '<select id="cwWebTargetSelect" style="background:rgba(0,0,0,0.4);border:1px solid rgba(0,212,255,0.28);color:#e2e8f0;border-radius:8px;padding:5px 10px;font-size:12px;"><option value="">PC cible automatique</option></select>' +
-        '<button onclick="window.cwPurgeOfflineDevices()" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);color:#fca5a5;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;">🧹 Purger hors ligne</button>' +
-        '<a href="/download" style="background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.35);color:#38bdf8;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;text-decoration:none;">⬇ E.V.A Desktop</a>' +
+    '<div class="cw-web-cmd-top">' +
+      '<div class="cw-web-cmd-title">⚡ Contrôle à distance — PC connecté</div>' +
+      '<div class="cw-web-cmd-actions">' +
+        '<select id="cwWebTargetSelect" class="cw-select"><option value="">PC cible automatique</option></select>' +
+        '<button class="cw-btn cw-btn-muted" onclick="window.cwPurgeOfflineDevices()">🧹 Purger hors ligne</button>' +
+        '<a class="cw-btn cw-btn-cyan" href="/download">⬇ E.V.A Desktop</a>' +
       '</div>' +
     '</div>' +
-    '<textarea id="cwAgenticPrompt" rows="2" placeholder="Ex: Crée un fichier notes.txt sur le Bureau ou ouvre la calculatrice..." style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.35);border:1px solid rgba(0,212,255,0.18);border-radius:9px;padding:9px 11px;color:#f1f5f9;font-size:13px;resize:vertical;margin-bottom:8px;"></textarea>' +
-    '<button onclick="window._cwWebRunAgentic()" style="width:100%;padding:9px 14px;border:none;border-radius:9px;background:linear-gradient(90deg,#00d4ff,#3b82f6);color:#040814;font-weight:700;font-size:13px;cursor:pointer;">🤖 Exécuter sur le PC sélectionné</button>' +
+    '<div class="cw-web-cmd-row">' +
+      '<textarea id="cwAgenticPrompt" class="cw-textarea" rows="2" placeholder="Ex: Crée un fichier notes.txt sur le Bureau ou ouvre la calculatrice..."></textarea>' +
+      '<button class="cw-btn cw-btn-primary cw-web-run-btn" onclick="window._cwWebRunAgentic()">▶ Exécuter sur le PC</button>' +
+    '</div>' +
     '<div id="cwAgenticStatus" style="display:none;margin-top:10px;"></div>';
 
   listEl.parentNode.insertBefore(panel, listEl);

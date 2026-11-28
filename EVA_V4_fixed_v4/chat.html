@@ -79,6 +79,10 @@
         <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Agenda
       </div>
+      <div class="nav-item" data-view="mail" id="navMail">
+        <svg viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+        Mails
+      </div>
       <div class="nav-item" data-view="cloudworks" id="navCloudWorks" style="display:none;">
         <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
         Cloud Works
@@ -107,13 +111,13 @@
     </div>
 
     <div class="conv-section">
-      <div class="conv-header">
-        <span class="conv-label">Conversations</span>
-        <button class="new-conv-icon-btn" id="newConvBtn" title="Nouvelle conversation" aria-label="Nouvelle conversation"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-      </div>
+      <button class="new-conv-v4" id="newConvBtn" title="Nouvelle conversation" aria-label="Nouvelle conversation">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Nouvelle conversation</span>
+      </button>
       <div class="conv-tabs" id="convTabs">
         <button type="button" class="conv-tab active" id="convTabChat" onclick="setConvTab('chat')">Chats <span class="conv-tab-count" id="convTabChatCount">0</span></button>
-        <button type="button" class="conv-tab" id="convTabVoice" onclick="setConvTab('voice')">🎙️ Vocal <span class="conv-tab-count" id="convTabVoiceCount">0</span></button>
+        <button type="button" class="conv-tab" id="convTabVoice" onclick="setConvTab('voice')">Vocal <span class="conv-tab-count" id="convTabVoiceCount">0</span></button>
       </div>
       <div id="convList"><div class="conv-empty">Aucune conversation</div></div>
     </div>
@@ -336,7 +340,6 @@
             <svg id="ttsBtnIcon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
           </button>
         </div>
-        <div class="hdr-provider-chip" id="providerChip" onclick="openSettings('ai')" title="Fournisseur IA actif"><div class="provider-dot"></div><span id="providerName">Pollinations (Gratuit)</span></div>
       </div>
     </div>
 
@@ -356,13 +359,6 @@
           </div>
         </div>
         <div id="messagesList"></div>
-      </div>
-
-      <!-- Bannière avertissement mode local -->
-      <div id="localModeBanner" style="display:none;align-items:center;gap:10px;background:rgba(245,158,11,0.12);border-top:1px solid rgba(245,158,11,0.35);padding:7px 16px;font-size:0.72em;color:#fbbf24;line-height:1.4;">
-        <span style="font-size:1.1em;">⚠️</span>
-        <span><strong>Mode local actif</strong> — Pour changer de modèle ou de fournisseur, <span style="text-decoration:underline;cursor:pointer;" onclick="openSettings('ai')">ouvrez les paramètres IA</span>.</span>
-        <button onclick="document.getElementById('localModeBanner').style.display='none'" style="margin-left:auto;background:none;border:none;color:#fbbf24;cursor:pointer;font-size:1em;opacity:0.7;">✕</button>
       </div>
 
       <!-- Bannière erreur réseau -->
@@ -600,9 +596,12 @@
       <div class="view-header">
         <div>
           <div class="view-title">AGENDA</div>
-          <div class="view-sub">Vos événements et rendez-vous</div>
+          <div class="view-sub">Agenda E.V.A natif &amp; synchronisation Google Agenda</div>
         </div>
-        <button class="btn btn-primary" id="newEventBtn">+ Événement</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary cal-gws-btn" id="calGoogleSyncBtn">🔗 Connecter Google Agenda</button>
+          <button class="btn btn-primary" id="newEventBtn">+ Événement</button>
+        </div>
       </div>
       <div class="view-content">
         <!-- Event modal -->
@@ -667,6 +666,23 @@
           <div class="events-list-title" id="eventsListTitle">TOUS LES ÉVÉNEMENTS</div>
           <div id="eventsList"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- View: Mail -->
+    <div class="view" id="viewMail">
+      <div class="view-header">
+        <div>
+          <div class="view-title">MAILS</div>
+          <div class="view-sub">Boîte Gmail &amp; actions intelligentes avec confirmation humaine</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" id="mailRefreshBtn" onclick="EVAMail && EVAMail.load()">↻ Synchroniser</button>
+          <button class="btn btn-primary" id="mailComposeBtn" onclick="EVAMail && EVAMail.openCompose()">+ Nouveau mail</button>
+        </div>
+      </div>
+      <div class="view-content" id="mailViewBody">
+        <div class="empty-state"><p>Chargement de votre boîte mail...</p></div>
       </div>
     </div>
 
@@ -1059,10 +1075,6 @@
           <svg style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           Expérimental
         </button>
-        <button class="settings-nav" data-section="tutorial">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-          Tutoriel
-        </button>
       </div>
       <div class="modal-content" id="settingsContent"></div>
     </div>
@@ -1151,36 +1163,6 @@
   </div>
 </div>
 
-
-
-<style>
-@keyframes tutoLogoPulse{0%,100%{transform:scale(1);filter:drop-shadow(0 0 8px rgba(0,212,255,0.35))}50%{transform:scale(1.06);filter:drop-shadow(0 0 22px rgba(0,212,255,0.75))}}
-@keyframes tmDotBlink{0%,100%{opacity:1}50%{opacity:0.3}}
-@keyframes tmGlow{0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,0)}50%{box-shadow:0 0 0 5px rgba(0,212,255,0)}}
-@keyframes tmGlowBorder{0%,100%{border-color:rgba(0,212,255,0.3);background:rgba(0,212,255,0.08)}50%{border-color:rgba(0,212,255,0.7);background:rgba(0,212,255,0.18)}}
-@keyframes tmWave{0%,100%{height:5px}50%{height:28px}}
-@keyframes tmFadeSlide{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-@keyframes tmBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@keyframes tmSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-</style>
-<div id="tutorialOverlay" class="tuto-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Tutorial E.V.A">
-  <div class="tuto-box">
-    <div class="tuto-progress-bar"><div class="tuto-progress-fill" id="tutoPFill" style="width:0%"></div></div>
-    <div class="tuto-body">
-      <div id="tutoVisualArea" style="width:100%;display:flex;align-items:center;justify-content:center;min-height:90px;flex-shrink:0;"></div>
-      <div class="tuto-step-lbl" id="tutoStepLbl"></div>
-      <div class="tuto-title" id="tutoTitle"></div>
-      <div class="tuto-desc" id="tutoDesc"></div>
-      <div class="tuto-tip" id="tutiTip" style="display:none"></div>
-    </div>
-    <div class="tuto-footer">
-      <button class="tuto-skip" onclick="tutoSkip()">Passer le tutoriel</button>
-      <div class="tuto-dots" id="tutoDots"></div>
-      <button class="tuto-next" id="tutoNextBtn" onclick="tutoNext()">Suivant →</button>
-    </div>
-  </div>
-</div>
-
 <!-- ════════════════ SCRIPTS ════════════════ -->
 <script src="/js/core/firebase-config.js"></script>
 <script src="/js/features/cloudworks.js"></script>
@@ -1211,7 +1193,6 @@
 <script src="/js/app/reports.js"></script>
 <script src="/js/app/advanced.js"></script>
 <script src="/js/app/experimental.js"></script>
-<script src="/js/ui/tutorial.js"></script>
 
 <!-- File Viewer Overlay -->
 <div id="fileViewerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(5px);z-index:999999;align-items:center;justify-content:center;flex-direction:column;opacity:0;transition:opacity 0.2s;">

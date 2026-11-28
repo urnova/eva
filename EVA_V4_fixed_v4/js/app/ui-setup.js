@@ -277,7 +277,7 @@ window._initPathRouter = function() {
   } else {
     var view = p.replace(/^\/chat\//, '') || 'chat';
     if (view === 'agenda') view = 'calendar';
-    var valid = ['notes','alarms','reminders','calendar','cloudworks','reports','visionRepair','visionAssist'];
+    var valid = ['notes','alarms','reminders','calendar','mail','cloudworks','reports','visionRepair','visionAssist'];
     if (valid.indexOf(view) !== -1) {
       setTimeout(function() { setView(view); }, 900);
     }
@@ -294,7 +294,7 @@ window.addEventListener('popstate', function() {
     if (m) m.classList.remove('open');
     var view = p.replace(/^\/chat\//, '') || 'chat';
     if (view === 'agenda') view = 'calendar';
-    var valid = ['notes','alarms','reminders','calendar','reports','visionRepair','visionAssist'];
+    var valid = ['notes','alarms','reminders','calendar','mail','cloudworks','reports','visionRepair','visionAssist'];
     setView(valid.indexOf(view) !== -1 ? view : 'chat');
   }
 });
@@ -315,6 +315,7 @@ function setView(name) {
   if (name === 'alarms') loadAlarms();
   if (name === 'reminders') loadReminders();
   if (name === 'calendar') { loadEvents(); renderCalendar(); }
+  if (name === 'mail' && window.EVAMail && window.EVAMail.load) window.EVAMail.load();
   if (name === 'cloudworks' && window.loadCloudWorks) loadCloudWorks();
   pushRoute(name === 'chat' ? '/chat' : '/chat/' + name);
 }

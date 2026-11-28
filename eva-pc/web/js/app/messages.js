@@ -812,7 +812,7 @@ async function handleSend(customText) {
 
   var _isDeep = !!window._evaDeepSearch && !isCWPCTask;
   window._lastAgentMeta = _isDeep ? { key: 'deep-search', label: 'Recherche approfondie', icon: '🔍' } : null;
-  var _shouldSearch = !isCWPCTask && window.EVAWebSearch && (
+  var _shouldSearch = !isCWPCTask && (typeof navigator === 'undefined' || navigator.onLine !== false) && window.EVAWebSearch && (
     _isDeep ||
     window.EVAWebSearch.needsSearch(msgContent) ||
     (_isLocalProv && window.EVAWebSearch.needsSearchLocal && window.EVAWebSearch.needsSearchLocal(msgContent))
@@ -841,10 +841,11 @@ async function handleSend(customText) {
   var origSys = window.EVA_SYSTEM_PROMPT;
   window.EVA_SYSTEM_PROMPT = sysPrompt;
 
-  // Timeout de 20s sur l'appel IA pour éviter tout blocage indéfini
+  // Timeout adapté : 120s en local (GGUF/WebGPU), 40s sur le cloud
+  var _aiTimeoutMs = _isLocalProv ? 120000 : 40000;
   var aiPromise = window.EVAChatHandler.sendMessage(msgContent, { tone: S.tone });
   var timeoutPromise = new Promise(function(_, reject) {
-    setTimeout(function() { reject(new Error("Le modèle d'intelligence artificielle met trop de temps à répondre.")); }, 20000);
+    setTimeout(function() { reject(new Error("Le modèle d'intelligence artificielle met trop de temps à répondre.")); }, _aiTimeoutMs);
   });
   var result = await Promise.race([aiPromise, timeoutPromise]).catch(function(err) {
     console.error('[handleSend] Erreur ou timeout sendMessage:', err);
@@ -1024,16 +1025,16 @@ async function handleSend(customText) {
       }
       toast('Edge bloque Puter — voir les instructions', 'warning');
 
-    /* ── Erreur réseau générique ── */
+    /* ── Erreur réseau générique (jamais affichée pour un provider local) ── */
     } else {
-      var _isNetworkErr = !navigator.onLine ||
+      var _isNetworkErr = !_isLocalProv && (!navigator.onLine ||
         (typeof _errMsg === 'string' && (
           _errMsg.toLowerCase().indexOf('network') !== -1 ||
           _errMsg.toLowerCase().indexOf('failed to fetch') !== -1 ||
           _errMsg.toLowerCase().indexOf('connexion') !== -1 ||
           _errMsg.toLowerCase().indexOf('inaccessible') !== -1 ||
           _errMsg.toLowerCase().indexOf('timeout') !== -1
-        ));
+        )));
       if (_isNetworkErr && _netBanner) {
         document.getElementById('networkErrorMsg').textContent = 'Connexion perdue \u2014 v\u00e9rifie ta connexion internet et r\u00e9essaie.';
         _netBanner.style.display = 'flex';
@@ -1049,9 +1050,13 @@ async function handleSend(customText) {
           if (typeof saveConvMsg === 'function') await saveConvMsg(text || '[Vocal]', netVoiceErr);
         }
       } else {
-        var _errText = "D\u00e9sol\u00e9e, une erreur est survenue : " + (typeof _errMsg === 'string' ? _errMsg : "Erreur inconnue");
+        var _errText = _isLocalProv
+          ? ("Mod\u00e8le local : " + (typeof _errMsg === 'string' ? _errMsg : "indisponible"))
+          : ("D\u00e9sol\u00e9e, une erreur est survenue : " + (typeof _errMsg === 'string' ? _errMsg : "Erreur inconnue"));
         if (window._isJarvisActive) {
-          var voiceErr = "D\u00e9sol\u00e9e, je n'ai pas pu obtenir de r\u00e9ponse. V\u00e9rifiez les param\u00e8tres de votre fournisseur IA.";
+          var voiceErr = _isLocalProv
+            ? "Le mod\u00e8le local n'a pas pu r\u00e9pondre. V\u00e9rifiez sa configuration dans les param\u00e8tres."
+            : "D\u00e9sol\u00e9e, je n'ai pas pu obtenir de r\u00e9ponse. V\u00e9rifiez les param\u00e8tres de votre fournisseur IA.";
           window._jarvisState = 'answering';
           if (window.eva && window.eva.overlay) {
             window.eva.overlay.setState('speaking', voiceErr);
@@ -1072,7 +1077,7 @@ async function handleSend(customText) {
           _reportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Signaler ce probl\u00e8me';
           _lastBubble.appendChild(_reportBtn);
         }
-        toast('Erreur IA \u2014 v\u00e9rifiez les param\u00e8tres', 'error');
+        toast(_isLocalProv ? 'Mod\u00e8le local indisponible' : 'Erreur IA \u2014 v\u00e9rifiez les param\u00e8tres', 'error');
       }
     }
     if (window.S) {
@@ -1105,8 +1110,10 @@ async function handleSend(customText) {
   }
 }
 
-/* Bannière réseau auto via browser offline event */
+/* Bannière réseau auto via browser offline event (ignorée en mode local) */
 window.addEventListener('offline', function() {
+  var _p = typeof getActiveProvider === 'function' ? getActiveProvider() : (window.S?.config?.aiProvider || '');
+  if (['eva', 'qwen', 'lmstudio', 'ollama'].indexOf(_p) !== -1) return;
   var _nb = document.getElementById('networkErrorBanner');
   if (_nb) {
     document.getElementById('networkErrorMsg').textContent = 'Connexion perdue — vérifie ta connexion internet.';
@@ -1168,13 +1175,8 @@ function streamEvaMsg(content) {
   }
   window.clearThinkingHistory = function() { _thinkHistory = []; };
 
-  // Badge agent contextuel D2
+  // Badge discret uniquement si outil explicite déclenché (Deep Search, CloudWorks, Gmail, Agenda, MCP)
   var agentMeta = window._lastAgentMeta;
-  if (!agentMeta && content) {
-    if (/\[(ACTION|CW)[:\{]/.test(content) && /cloudworks|agentic_task|pc/i.test(content)) agentMeta = { key: 'cloudworks', label: 'Agent CloudWorks', icon: '⚡' };
-    else if (/agenda|événement|calendrier|event/i.test(_lastUserMsg || '') && /agenda|événement|planifié|calendrier/i.test(content)) agentMeta = { key: 'calendar', label: 'Agent Agenda', icon: '📅' };
-    else if (/mail|gmail|courriel|message/i.test(_lastUserMsg || '') && /brouillon|gmail|mail|objet/i.test(content)) agentMeta = { key: 'gmail', label: 'Agent Gmail', icon: '✉️' };
-  }
   if (agentMeta) {
     var ab = document.createElement('div');
     ab.className = 'eva-agent-badge agent-' + agentMeta.key;
@@ -1264,13 +1266,6 @@ function streamEvaMsg(content) {
   // Rendu markdown
   renderMdDom(content, bubble);
   scrollDown();
-
-  // Rendu 3 suggestions de suivi Perplexity-style
-  try {
-    if (!isSystemAbortMsg && !window._isJarvisActive && content && content.length > 35 && typeof _generateFollowupChips === 'function') {
-      _generateFollowupChips(msgContent, _lastUserMsg || '', content);
-    }
-  } catch(_) {}
 
   // Pseudo-streaming
   _revealMsgBlocks(bubble, function() {

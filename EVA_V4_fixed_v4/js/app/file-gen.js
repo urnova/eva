@@ -335,6 +335,12 @@ async function executeEvaAction(action) {
     } else if (action.type === 'github_query' && window.EVAConnectors) {
       await window.EVAConnectors.handleGithubQuery(action);
 
+    } else if ((action.type === 'mcp_call' || action.type === 'gdrive_query' || action.type === 'slack_query') && window.EVAConnectors && window.EVAConnectors.handleConnectorAction) {
+      await window.EVAConnectors.handleConnectorAction(action);
+
+    } else if (action.type === 'live_code' && window.evaRenderLiveCodeCard) {
+      window.evaRenderLiveCodeCard(action);
+
     } else if (action.type === 'pdf') {
       _evaGenerateHtmlPdf(action);
 

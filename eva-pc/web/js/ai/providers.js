@@ -26,14 +26,22 @@ function _stripLeakedPrefix(text) {
 const _webLlmEngines = new Map();
 const _webLlmPending = new Map();
 
+let _cachedWebLlmMod = null;
 async function _importWebLLM() {
+  if (_cachedWebLlmMod) return _cachedWebLlmMod;
   const urls = [
     'https://esm.run/@mlc-ai/web-llm',
     'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm/+esm'
   ];
   let lastErr = null;
   for (const u of urls) {
-    try { return await import(u); } catch (e) { lastErr = e; }
+    try {
+      _cachedWebLlmMod = await import(u);
+      return _cachedWebLlmMod;
+    } catch (e) { lastErr = e; }
+  }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    throw new Error('Moteur WebGPU local non mis en cache pour le mode hors-ligne. Rechargez une fois en ligne pour le préparer.');
   }
   throw lastErr || new Error('Impossible de charger le moteur WebLLM.');
 }
@@ -66,6 +74,7 @@ async function _getOrCreateWebLLMEngine(modelId, label, opts = {}) {
         }
       });
       _webLlmEngines.set(modelId, engine);
+      try { localStorage.setItem('eva_webllm_cached_' + modelId, '1'); } catch (_) {}
       if (window.hideQwenDownloadModal) window.hideQwenDownloadModal(label || modelId);
       return engine;
     } catch (error) {
@@ -81,18 +90,23 @@ async function _getOrCreateWebLLMEngine(modelId, label, opts = {}) {
 }
 
 function _formatNativeMessages(messages, systemPrompt) {
-  const sys = String(systemPrompt || 'Tu es EVA, assistante IA bienveillante créée par Astral Technologie.');
-  const trimmed = (Array.isArray(messages) ? messages : [])
+  const sys = String(systemPrompt || 'Tu es EVA, assistante IA bienveillante créée par Astral Technologie.').slice(0, 7500);
+  const raw = (Array.isArray(messages) ? messages : [])
     .filter(m => m && (m.role === 'user' || m.role === 'assistant'))
-    .slice(-10)
+    .slice(-8)
     .map(m => ({
       role: m.role,
-      content: typeof m.content === 'string' ? m.content.slice(0, 8000) : String(m.content || '')
+      content: typeof m.content === 'string' ? m.content.slice(0, 4000) : String(m.content || '').slice(0, 4000)
     }));
-  if (!trimmed.length || trimmed[trimmed.length - 1].role !== 'user') {
-    trimmed.push({ role: 'user', content: 'Bonjour' });
+  if (!raw.length || raw[raw.length - 1].role !== 'user') {
+    raw.push({ role: 'user', content: 'Bonjour' });
   }
-  return [{ role: 'system', content: sys.slice(0, 12000) }, ...trimmed];
+  const sysMsg = { role: 'system', content: sys };
+  let out = [sysMsg, ...raw];
+  while (out.length > 2 && JSON.stringify(out).length > 46000) {
+    out.splice(1, 1);
+  }
+  return out;
 }
 
 // ═══ QWEN 3 (PC Natif GPU + WebLLM WebGPU) ═══
@@ -112,15 +126,17 @@ class QwenProvider {
   async _ensureReady(silent = false) {
     if (this.ready && (this._useNativePC || this.engine)) return;
     if (window.eva?.system?.llmChat && window.eva?.system?.llmCheck) {
-      try {
-        const chk = await window.eva.system.llmCheck();
-        if (chk && chk.exists) {
-          this._useNativePC = true;
-          this.ready = true;
-          window.eva.system.llmStart?.().catch(() => {});
-          return;
-        }
-      } catch (_) {}
+      const chk = await window.eva.system.llmCheck();
+      if (chk && chk.exists) {
+        this._useNativePC = true;
+        this.ready = true;
+        window.eva.system.llmStart?.().catch(() => {});
+        return;
+      }
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        throw new Error('Modèle local PC non encore téléchargé. Téléchargez-le une fois en ligne dans Paramètres → IA.');
+      }
+      throw new Error('Modèle local PC (Qwen/EVA 3B) non téléchargé. Lancez le téléchargement dans Paramètres → IA.');
     }
     const selectedModel = this.config.qwenModel || 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
     this.engine = await _getOrCreateWebLLMEngine(selectedModel, selectedModel, { silent });
@@ -595,41 +611,42 @@ class EvaProvider {
     if (this.ready && (this._useNativePC || this.engine)) return;
     // Sur EVA Desktop PC : privilégier le moteur natif CUDA/Vulkan (node-llama-cpp) ultra-rapide !
     if (window.eva?.system?.llmChat && window.eva?.system?.llmCheck) {
-      try {
-        const chk = await window.eva.system.llmCheck();
-        if (chk && chk.exists) {
-          this._useNativePC = true;
-          this.ready = true;
-          window.eva.system.llmStart?.().catch(() => {});
-          return;
-        }
-        // Si modèle GGUF non téléchargé et sélection manuelle : proposer téléchargement natif en arrière-plan
-        if (!silent && window.eva.system.llmDownload) {
-          if (window.showQwenDownloadModal) window.showQwenDownloadModal('EVA Officiel 3B (GPU PC)');
-          const offProg = window.eva.onLLMDownloadProgress?.(d => {
-            if (d && typeof d.progress === 'number' && window.updateQwenDownloadProgress) {
-              window.updateQwenDownloadProgress({
-                progress: d.progress / 100,
-                text: `Téléchargement EVA 3B (${Math.round((d.downloadedBytes||0)/1048576)} / ${Math.round((d.totalBytes||2097152000)/1048576)} Mo)…`
-              }, 'EVA Officiel 3B');
-            }
-          });
-          try {
-            const dl = await window.eva.system.llmDownload();
-            if (dl && dl.success) {
-              await window.eva.system.llmStart?.().catch(() => {});
-              this._useNativePC = true;
-              this.ready = true;
-              if (window.hideQwenDownloadModal) window.hideQwenDownloadModal('EVA Officiel 3B');
-              return;
-            }
-          } finally {
-            if (typeof offProg === 'function') offProg();
-          }
-        }
-      } catch (nativeErr) {
-        console.warn('[EvaProvider] Moteur natif indisponible, repli WebGPU:', nativeErr?.message || nativeErr);
+      const chk = await window.eva.system.llmCheck();
+      if (chk && chk.exists) {
+        this._useNativePC = true;
+        this.ready = true;
+        window.eva.system.llmStart?.().catch(() => {});
+        return;
       }
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        throw new Error('Modèle local PC (EVA 3B) non encore téléchargé. Téléchargez-le une fois en ligne dans Paramètres → IA.');
+      }
+      if (!silent && window.eva.system.llmDownload) {
+        if (window.showQwenDownloadModal) window.showQwenDownloadModal('EVA Officiel 3B (GPU PC)');
+        const offProg = window.eva.onLLMDownloadProgress?.(d => {
+          if (d && typeof d.progress === 'number' && window.updateQwenDownloadProgress) {
+            window.updateQwenDownloadProgress({
+              progress: d.progress / 100,
+              text: `Téléchargement EVA 3B (${Math.round((d.downloadedBytes||0)/1048576)} / ${Math.round((d.totalBytes||2097152000)/1048576)} Mo)…`
+            }, 'EVA Officiel 3B');
+          }
+        });
+        try {
+          const dl = await window.eva.system.llmDownload();
+          if (dl && dl.success) {
+            await window.eva.system.llmStart?.().catch(() => {});
+            this._useNativePC = true;
+            this.ready = true;
+            if (window.hideQwenDownloadModal) window.hideQwenDownloadModal('EVA Officiel 3B');
+            return;
+          }
+          throw new Error((dl && dl.error) || 'Téléchargement EVA 3B interrompu ou annulé.');
+        } finally {
+          if (window.hideQwenDownloadModal) window.hideQwenDownloadModal('EVA Officiel 3B');
+          if (typeof offProg === 'function') offProg();
+        }
+      }
+      throw new Error('Modèle local PC (EVA 3B) non téléchargé. Lancez le téléchargement depuis Paramètres → IA.');
     }
     const selectedModelKey = this.config.evaModel || 'EVA-Expert';
     const modelInfo = this._getModelConfig(selectedModelKey);

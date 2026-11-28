@@ -175,10 +175,20 @@ async function sendMessage(userMessage, options) {
     isProcessing = false;
     console.error('Send message error:', error);
 
-    // Message d'erreur personnalisé
-    let errorMessage = 'Erreur IA';
+    // Message d'erreur personnalisé (jamais d'erreur réseau mensongère pour les modèles locaux)
+    const _provErr = (currentConfig && currentConfig.aiProvider) || '';
+    const _isLocalErr = ['eva', 'qwen', 'lmstudio', 'ollama'].includes(_provErr);
+    let errorMessage = error.message || 'Erreur IA';
 
-    if (error.message && (error.message.includes('quota') || error.message.includes('rate limit'))) {
+    if (_isLocalErr) {
+      if (_provErr === 'lmstudio' || _provErr === 'ollama') {
+        errorMessage = 'Serveur local (' + _provErr + ') inaccessible — vérifiez qu\'il est démarré.';
+      } else if (error.message && (error.message.includes('fetch') || error.message.includes('network'))) {
+        errorMessage = 'Modèle local non prêt hors-ligne — téléchargez ou préchargez le modèle en ligne une première fois.';
+      } else {
+        errorMessage = 'Moteur local : ' + (error.message || 'indisponible');
+      }
+    } else if (error.message && (error.message.includes('quota') || error.message.includes('rate limit'))) {
       errorMessage = 'Quota dépassé. Essayez un autre provider.';
     } else if (error.message && (error.message.includes('network') || error.message.includes('fetch'))) {
       errorMessage = 'Erreur réseau. Vérifiez votre connexion.';

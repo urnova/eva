@@ -73,12 +73,12 @@ function updateAttachCapabilities(prov, modelId) {
 window.updateAttachCapabilities = updateAttachCapabilities;
 
 function updateProviderLabel(p) {
-  var labels = {eva:'E.V.A — Officiel Astral',puter:'Puter (Gratuit)',pollinations:'Pollinations (Gratuit)',qwen:'Local Privé',openai:'OpenAI GPT',claude:'Claude',lmstudio:'LM Studio',ollama:'Ollama'};
+  var labels = {eva:'E.V.A Local',puter:'Puter (Gratuit)',pollinations:'Pollinations (Gratuit)',gemini:'Google Gemini',qwen:'Local Privé',openai:'OpenAI GPT',claude:'Claude',lmstudio:'LM Studio',ollama:'Ollama'};
   var el = document.getElementById('providerName');
   if (el) el.textContent = labels[p] || p;
-  /* Bannière d'avertissement mode local */
+  /* Bannière mode local supprimée (interface épurée) */
   var banner = document.getElementById('localModeBanner');
-  if (banner) banner.style.display = (p === 'qwen' || p === 'eva') ? 'flex' : 'none';
+  if (banner) banner.style.display = 'none';
   /* Bouton pièce jointe — toujours actif (les documents fonctionnent partout) */
   var btn = document.getElementById('attachBtn');
   if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }

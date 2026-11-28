@@ -360,14 +360,69 @@ function _mdInline(raw) {
 
 function _codeBlock(lang, content) {
   var enc = encodeURIComponent(content);
+  var l = String(lang || 'code').toLowerCase();
+  var isRunnable = (l === 'html' || l === 'htm' || l === 'svg' || l === 'js' || l === 'javascript');
   return '<div class="eva-code-block" data-tts="no">' +
     '<div class="eva-block-header">' +
       '<span class="eva-block-lang">' + _esc(lang || 'code') + '</span>' +
-      '<button class="eva-block-copy" onclick="evaCopyBlock(this)" data-content="' + enc + '"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copier</button>' +
+      '<div style="display:flex;align-items:center;gap:6px;">' +
+        (isRunnable ? '<button type="button" class="eva-livecode-btn" onclick="evaRunLiveCode(this)" data-lang="' + _esc(l) + '" data-content="' + enc + '">▶ Exécuter Live</button>' : '') +
+        '<button type="button" class="eva-block-copy" onclick="evaCopyBlock(this)" data-content="' + enc + '"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copier</button>' +
+      '</div>' +
     '</div>' +
     '<pre class="eva-code-pre"><code>' + _esc(content) + '</code></pre>' +
   '</div>';
 }
+
+function _buildLiveSandboxSrc(lang, code) {
+  if (lang === 'html' || lang === 'htm' || lang === 'svg') {
+    if (/<html[\s>]/i.test(code)) return code;
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:14px;font-family:Inter,system-ui,sans-serif;background:#111113;color:#ededf2;}</style></head><body>' + code + '</body></html>';
+  }
+  var safeJsonCode = JSON.stringify(String(code || ''));
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:12px;font-family:monospace;font-size:13px;background:#111113;color:#e4e4ec;} .err{color:#f87171;} .ok{color:#4ade80;} pre{white-space:pre-wrap;margin:4px 0;}</style></head><body><div id="out"></div><script>' +
+    'const out=document.getElementById("out");const log=(c,a)=>{const p=document.createElement("pre");p.className=c;p.textContent=a.map(x=>typeof x==="object"?JSON.stringify(x,null,2):String(x)).join(" ");out.appendChild(p);};' +
+    'console.log=(...a)=>log("ok",a);console.warn=(...a)=>log("",a);console.error=(...a)=>log("err",a);' +
+    'try{const r=(0,eval)(' + safeJsonCode + ');if(r!==undefined)log("ok",["→",r]);}catch(e){log("err",["Erreur:",e.message||e]);}' +
+    '</' + 'script></body></html>';
+}
+
+function evaRunLiveCode(btn) {
+  var wrap = btn && btn.closest('.eva-code-block');
+  if (!wrap) return;
+  var existing = wrap.querySelector('.eva-livecode-frame');
+  if (existing) {
+    existing.remove();
+    btn.textContent = '▶ Exécuter Live';
+    return;
+  }
+  var lang = (btn.getAttribute('data-lang') || 'html').toLowerCase();
+  var code = decodeURIComponent(btn.getAttribute('data-content') || '');
+  var frame = document.createElement('iframe');
+  frame.className = 'eva-livecode-frame';
+  frame.setAttribute('sandbox', 'allow-scripts');
+  frame.srcdoc = _buildLiveSandboxSrc(lang, code);
+  wrap.appendChild(frame);
+  btn.textContent = '✕ Fermer Live';
+}
+window.evaRunLiveCode = evaRunLiveCode;
+
+window.evaRenderLiveCodeCard = function(action) {
+  var list = document.getElementById('messagesList');
+  if (!list || !action || !action.code) return;
+  var lang = (action.lang || 'html').toLowerCase();
+  var div = document.createElement('div');
+  div.className = 'message eva';
+  div.innerHTML =
+    '<div class="msg-content" style="max-width:740px;">' +
+      '<div class="eva-agent-badge">⚡ Live Code · ' + _esc(action.title || lang.toUpperCase()) + '</div>' +
+      _codeBlock(lang, action.code) +
+    '</div>';
+  list.appendChild(div);
+  var btn = div.querySelector('.eva-livecode-btn');
+  if (btn) evaRunLiveCode(btn);
+  list.scrollTop = list.scrollHeight;
+};
 
 function _contentBlock(lang, content) {
   var labels = {

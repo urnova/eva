@@ -1002,43 +1002,6 @@ function renderSettings(section) {
       '<button class="btn btn-primary" onclick="activateDevKeyDirect()">🔑 Activer la clé</button>' +
       (devKey ? '<button class="btn btn-secondary" onclick="deactivateDevKeyDirect()">Désactiver</button>' : '') +
       '</div>';
-
-  } else if (section === 'tutorial') {
-    c.innerHTML =
-      '<div class="settings-section">' +
-        '<div class="settings-section-title">Revoir le tutoriel</div>' +
-        '<div style="font-size:0.8em;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">Chaque version du tutoriel est adaptée à son interface. Lancez celui qui correspond à l\'appareil sur lequel vous consultez E.V.A.</div>' +
-
-        /* PC card */
-        '<div style="display:flex;flex-direction:column;gap:12px;">' +
-          '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;align-items:center;gap:16px;">' +
-            '<div style="width:48px;height:48px;border-radius:12px;background:rgba(123,139,245,0.1);border:1px solid rgba(123,139,245,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
-              '<svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--cyan);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>' +
-            '</div>' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="font-weight:700;color:var(--text);font-size:0.9em;margin-bottom:3px;">Tutoriel Ordinateur</div>' +
-              '<div style="font-size:0.74em;color:var(--text-muted);line-height:1.5;">8 étapes · Interface complète, raccourcis clavier, header, tones, contrôle média, paramètres avancés.</div>' +
-            '</div>' +
-            '<button class="btn btn-secondary" style="flex-shrink:0;" onclick="closeSettings();setTimeout(showTutorialPC,200);">Lancer</button>' +
-          '</div>' +
-
-          /* Mobile card */
-          '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;align-items:center;gap:16px;">' +
-            '<div style="width:48px;height:48px;border-radius:12px;background:rgba(124,92,255,0.1);border:1px solid rgba(124,92,255,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
-              '<svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:#7c5cff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="#7c5cff" stroke="none"/></svg>' +
-            '</div>' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="font-weight:700;color:var(--text);font-size:0.9em;margin-bottom:3px;">Tutoriel Mobile</div>' +
-              '<div style="font-size:0.74em;color:var(--text-muted);line-height:1.5;">6 étapes · Gestes tactiles, voix mains libres, menu hamburger, modules en vue mobile.</div>' +
-            '</div>' +
-            '<button class="btn btn-secondary" style="flex-shrink:0;" onclick="closeSettings();setTimeout(showTutorialMobile,200);">Lancer</button>' +
-          '</div>' +
-        '</div>' +
-
-        '<div style="margin-top:20px;padding:12px 14px;background:rgba(123,139,245,0.05);border:1px solid rgba(123,139,245,0.15);border-radius:10px;font-size:0.75em;color:var(--text-muted);line-height:1.6;">' +
-          'Le tutoriel s\'affiche automatiquement à la première connexion en détectant votre type d\'appareil. Vous pouvez le relancer ici autant de fois que vous voulez.' +
-        '</div>' +
-      '</div>';
   }
 }
 

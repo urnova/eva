@@ -289,21 +289,34 @@ async function fetchDDG(query) {
       }
     }
 
-    // 2. Si l'API Instant Answer n'a rien donné, on scrape le HTML via AllOrigins (CORS)
+    // 2. Fallback Wikipedia FR + DuckDuckGo HTML via CORS
+    if (parts.length === 0) {
+      var wikiRes = await _fetchWithTimeout(
+        'https://fr.wikipedia.org/w/api.php?action=query&list=search&srsearch=' + encodeURIComponent(query) + '&utf8=1&format=json&origin=*&srlimit=3',
+        4500
+      ).catch(function() { return null; });
+      if (wikiRes && wikiRes.ok) {
+        var wData = await wikiRes.json().catch(function() { return null; });
+        var hits = wData && wData.query && wData.query.search;
+        if (hits && hits.length > 0) {
+          parts.push('Wikipedia FR :\n' + hits.map(function(h) {
+            return '- ' + h.title + ' : ' + String(h.snippet || '').replace(/<[^>]+>/g, '');
+          }).join('\n'));
+        }
+      }
+    }
+
     if (parts.length === 0) {
       var htmlUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query));
-      var res2 = await _fetchWithTimeout(htmlUrl, 5000);
-      if (res2.ok) {
+      var res2 = await _fetchWithTimeout(htmlUrl, 5000).catch(function() { return null; });
+      if (res2 && res2.ok) {
         var data2 = await res2.json();
-        var html = data2.contents;
-        
-        // Regex pour extraire les snippets et URLs des résultats web
+        var html = data2.contents || '';
         var blockRegex = /<a class="result__url" href="([^"]+)"[^>]*>[\s\S]*?<a class="result__snippet[^>]*>([\s\S]*?)<\/a>/g;
         var match;
         var results = [];
         while ((match = blockRegex.exec(html)) !== null && results.length < 4) {
           var url = match[1];
-          // Nettoyer le HTML du snippet
           var text = match[2].replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
           if (text.length > 20) {
             results.push('- ' + text + '\n  (Source: ' + url + ')');
@@ -356,19 +369,46 @@ async function search(userMessage) {
 
 /* ── Expose ──────────────────────────────────────────────── */
 async function deepSearch(query) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return '[ MODE HORS-LIGNE ] Recherche web ignorée (aucune connexion). Réponds avec tes connaissances locales.';
+  }
+  var cleanQ = String(query || '').replace(/\s+/g, ' ').trim().slice(0, 140);
   var results = [];
-  var tasks = [search(query)];
-  try {
-    var wikiQ = encodeURIComponent(String(query || '').slice(0, 120));
-    tasks.push(
-      fetchWithTimeout('https://fr.wikipedia.org/api/rest_v1/page/summary/' + wikiQ, {}, 3500)
-        .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(j){ return (j && j.extract) ? ('[WIKIPEDIA FR — ' + (j.title || '') + ']\n' + j.extract) : ''; })
-        .catch(function(){ return ''; })
-    );
-  } catch(_) {}
+  var tasks = [
+    search(query),
+    _fetchWithTimeout(
+      'https://fr.wikipedia.org/w/api.php?action=query&list=search&srsearch=' + encodeURIComponent(cleanQ) + '&utf8=1&format=json&origin=*&srlimit=3',
+      4500
+    ).then(function(r) { return r.ok ? r.json() : null; }).then(async function(j) {
+      var hits = j && j.query && j.query.search;
+      if (!hits || !hits.length) return '';
+      var topTitle = hits[0].title;
+      var summaryTxt = '';
+      try {
+        var sRes = await _fetchWithTimeout('https://fr.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(topTitle), 3500);
+        if (sRes.ok) {
+          var sJson = await sRes.json();
+          if (sJson && sJson.extract) summaryTxt = sJson.extract;
+        }
+      } catch(_) {}
+      var listTxt = hits.map(function(h) {
+        return '- ' + h.title + ' : ' + String(h.snippet || '').replace(/<[^>]+>/g, '');
+      }).join('\n');
+      return '[WIKIPEDIA FR — RECHERCHE APPROFONDIE]\n' + (summaryTxt ? ('Synthèse (' + topTitle + ') : ' + summaryTxt + '\n\n') : '') + listTxt;
+    }).catch(function() { return ''; }),
+    _fetchWithTimeout(
+      'https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=' + encodeURIComponent(cleanQ) + '&utf8=1&format=json&origin=*&srlimit=2',
+      4500
+    ).then(function(r) { return r.ok ? r.json() : null; }).then(function(j) {
+      var hits = j && j.query && j.query.search;
+      if (!hits || !hits.length) return '';
+      return '[WIKIPEDIA EN]\n' + hits.map(function(h) {
+        return '- ' + h.title + ' : ' + String(h.snippet || '').replace(/<[^>]+>/g, '');
+      }).join('\n');
+    }).catch(function() { return ''; })
+  ];
   var settled = await Promise.all(tasks);
-  settled.forEach(function(part){ if (part && String(part).trim()) results.push(part); });
+  settled.forEach(function(part) { if (part && String(part).trim()) results.push(part); });
   return results.join('\n\n');
 }
 

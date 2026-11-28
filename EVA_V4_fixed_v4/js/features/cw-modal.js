@@ -12,22 +12,22 @@ function ensureStyles() {
     .cw-tracker-card {
       padding: 14px 16px;
       margin: 10px 0;
-      background: linear-gradient(155deg, rgba(11, 16, 28, 0.94), rgba(16, 23, 38, 0.94));
-      border: 1px solid rgba(249, 115, 22, 0.34);
+      background: #18181c;
+      border: 1px solid rgba(255, 255, 255, 0.09);
       border-radius: 14px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.36);
       font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-      color: #e6ecf7;
-      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+      color: #ededf2;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     .cw-tracker-card.cw-done {
-      border-color: rgba(16, 185, 129, 0.45);
+      border-color: rgba(74, 222, 128, 0.36);
     }
     .cw-tracker-card.cw-error, .cw-tracker-card.cw-cancelled {
-      border-color: rgba(239, 68, 68, 0.45);
+      border-color: rgba(248, 113, 113, 0.36);
     }
     .cw-tracker-card.cw-waiting {
-      border-color: rgba(245, 158, 11, 0.6);
+      border-color: rgba(251, 191, 36, 0.45);
     }
     .cw-card-header {
       display: flex;
@@ -43,34 +43,34 @@ function ensureStyles() {
       min-width: 0;
     }
     .cw-orb-dot {
-      width: 9px;
-      height: 9px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: #f97316;
-      box-shadow: 0 0 8px rgba(249, 115, 22, 0.8);
+      background: #00d4ff;
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.7);
       animation: cwTrackerPulse 1.4s ease-in-out infinite;
       flex-shrink: 0;
     }
     .cw-done .cw-orb-dot {
-      background: #10b981;
-      box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
+      background: #4ade80;
+      box-shadow: 0 0 8px rgba(74, 222, 128, 0.65);
       animation: none;
     }
     .cw-error .cw-orb-dot, .cw-cancelled .cw-orb-dot {
-      background: #ef4444;
-      box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+      background: #f87171;
+      box-shadow: 0 0 8px rgba(248, 113, 113, 0.65);
       animation: none;
     }
     .cw-card-title {
       margin: 0;
-      font-family: 'Orbitron', 'Segoe UI', sans-serif;
+      font-family: 'Orbitron', 'Inter', sans-serif;
       font-size: 11px;
       font-weight: 700;
-      color: #fb923c;
-      letter-spacing: 0.9px;
+      color: #00d4ff;
+      letter-spacing: 0.8px;
       text-transform: uppercase;
     }
-    .cw-done .cw-card-title { color: #34d399; }
+    .cw-done .cw-card-title { color: #4ade80; }
     .cw-error .cw-card-title, .cw-cancelled .cw-card-title { color: #f87171; }
     .cw-badge {
       font-size: 10px;
@@ -78,9 +78,9 @@ function ensureStyles() {
       letter-spacing: 0.4px;
       padding: 3px 9px;
       border-radius: 999px;
-      background: rgba(249, 115, 22, 0.14);
-      border: 1px solid rgba(249, 115, 22, 0.38);
-      color: #fdba74;
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      color: #00d4ff;
       white-space: nowrap;
       flex-shrink: 0;
     }

@@ -1033,16 +1033,75 @@ function renderCalendar() {
   grid.innerHTML = html;
 }
 
+function _updateCalGoogleBtn() {
+  var btn = document.getElementById('calGoogleSyncBtn');
+  if (!btn) return;
+  var tok = window.EVAConnectors && window.EVAConnectors.getGoogleToken && window.EVAConnectors.getGoogleToken();
+  if (tok) {
+    btn.textContent = '🔄 Google Agenda connecté';
+    btn.className = 'btn btn-secondary cal-gws-btn connected';
+    btn.onclick = function() { loadEvents(); if (window.toast) toast('Google Agenda synchronisé ✓', 'success'); };
+  } else {
+    btn.textContent = '🔗 Connecter Google Agenda';
+    btn.className = 'btn btn-secondary cal-gws-btn';
+    btn.onclick = async function() {
+      if (window.EVAConnectors && window.EVAConnectors.connectGoogleWorkspace) {
+        var ok = await window.EVAConnectors.connectGoogleWorkspace();
+        if (ok) loadEvents();
+      } else if (window.openSettings) {
+        openSettings('connectors');
+      }
+    };
+  }
+}
+
 async function loadEvents() {
   if (!S.user) return;
+  _updateCalGoogleBtn();
+  var localItems = [];
   try {
     var snap = await db.collection('users').doc(S.user.uid)
       .collection('events').orderBy('date','asc').get();
-    _eventsCache = [];
-    snap.forEach(function(d){ _eventsCache.push(Object.assign({id:d.id},d.data())); });
-    renderCalendar();
-    _renderFilteredEvents();
+    snap.forEach(function(d){ localItems.push(Object.assign({id:d.id, source:'local'}, d.data())); });
   } catch(e) {}
+
+  var googleItems = [];
+  try {
+    var tok = window.EVAConnectors && window.EVAConnectors.getGoogleToken && window.EVAConnectors.getGoogleToken();
+    if (tok && tok.accessToken) {
+      var monthStart = new Date(S.calYear, S.calMonth, 1).toISOString();
+      var monthEnd = new Date(S.calYear, S.calMonth + 1, 1, 23, 59, 59).toISOString();
+      var r = await fetch(
+        'https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=60&timeMin=' +
+        encodeURIComponent(monthStart) + '&timeMax=' + encodeURIComponent(monthEnd),
+        { headers: { 'Authorization': 'Bearer ' + tok.accessToken } }
+      );
+      if (r.ok) {
+        var g = await r.json();
+        (g.items || []).forEach(function(it) {
+          var s = (it.start && (it.start.dateTime || it.start.date)) || '';
+          var dPart = s.slice(0, 10);
+          var tPart = s.indexOf('T') !== -1 ? s.split('T')[1].slice(0, 5) : '';
+          googleItems.push({
+            id: 'gcal_' + it.id,
+            gcalId: it.id,
+            source: 'google',
+            title: it.summary || '(Google Agenda)',
+            date: dPart,
+            time: tPart,
+            description: it.description || it.location || '',
+            category: 'work'
+          });
+        });
+      }
+    }
+  } catch(e) { console.warn('[Agenda] Google sync warning:', e); }
+
+  _eventsCache = localItems.concat(googleItems).sort(function(a, b) {
+    return String(a.date || '').localeCompare(String(b.date || '')) || String(a.time || '').localeCompare(String(b.time || ''));
+  });
+  renderCalendar();
+  _renderFilteredEvents();
 }
 
 function _renderFilteredEvents() {
@@ -1052,22 +1111,23 @@ function _renderFilteredEvents() {
     ? _eventsCache.filter(function(ev){ return ev.date === _calSelectedDate; })
     : _eventsCache;
   if (!events.length) {
-    list.innerHTML = '<div class="empty-state" style="padding:16px 0"><p>Aucun événement'+(+_calSelectedDate?' ce jour-là':'')+' — créez-en un !</p></div>';
+    list.innerHTML = '<div class="empty-state" style="padding:16px 0"><p>Aucun événement'+(_calSelectedDate?' ce jour-là':'')+' — créez-en un !</p></div>';
     return;
   }
   list.innerHTML = events.map(function(ev) {
-    var color = _eventCatColors[ev.category] || 'var(--cyan)';
+    var isGoogle = ev.source === 'google';
+    var color = isGoogle ? '#00d4ff' : (_eventCatColors[ev.category] || 'var(--cyan)');
     var dateDisp = ev.date ? ev.date.split('-').reverse().join('/') : '';
     return '<div class="event-item" style="border-left-color:'+color+'">' +
       '<div class="event-cat-dot" style="background:'+color+'"></div>' +
       '<div class="event-item-main">' +
         (ev.time ? '<div class="event-time">'+esc(ev.time)+'</div>' : '') +
-        '<div class="event-title-text">'+esc(ev.title||'Événement')+'</div>' +
+        '<div class="event-title-text">'+esc(ev.title||'Événement')+(isGoogle?' <span class="cal-g-tag">Google</span>':'')+'</div>' +
         (ev.description ? '<div class="event-desc">'+esc(ev.description)+'</div>' : '') +
       '</div>' +
       '<div class="event-date-badge">'+dateDisp+'</div>' +
       '<div class="event-acts">' +
-        '<button class="event-act-btn" onclick="openEventModal(\''+ev.id+'\')" title="Modifier">'+_SVG_EDIT+'</button>' +
+        (isGoogle ? '' : '<button class="event-act-btn" onclick="openEventModal(\''+ev.id+'\')" title="Modifier">'+_SVG_EDIT+'</button>') +
         '<button class="event-act-btn del" onclick="deleteEvent(\''+ev.id+'\')" title="Supprimer">'+_SVG_TRASH+'</button>' +
       '</div>' +
     '</div>';
@@ -1133,6 +1193,22 @@ async function saveEvent() {
     } else {
       data.createdAt = window.timestamp();
       await db.collection('users').doc(S.user.uid).collection('events').add(data);
+      // Sync création vers Google Agenda si connecté
+      try {
+        var tok = window.EVAConnectors && window.EVAConnectors.getGoogleToken && window.EVAConnectors.getGoogleToken();
+        if (tok && tok.accessToken) {
+          var startIso = time ? (date + 'T' + time + ':00') : date;
+          var endIso = time ? (date + 'T' + String(Math.min(23, parseInt(time.split(':')[0], 10) + 1)).padStart(2, '0') + ':' + (time.split(':')[1] || '00') + ':00') : date;
+          var gBody = time
+            ? { summary: title, description: desc, start: { dateTime: new Date(startIso).toISOString() }, end: { dateTime: new Date(endIso).toISOString() } }
+            : { summary: title, description: desc, start: { date: date }, end: { date: date } };
+          await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + tok.accessToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify(gBody)
+          }).catch(function(){});
+        }
+      } catch(_) {}
       toast('Événement créé ✓','success');
     }
     closeEventModal();
@@ -1144,10 +1220,20 @@ window.saveEvent = saveEvent;
 async function deleteEvent(id) {
   if (!confirm('Supprimer cet événement ?')) return;
   try {
-    await db.collection('users').doc(S.user.uid).collection('events').doc(id).delete();
+    if (String(id).indexOf('gcal_') === 0) {
+      var tok = window.EVAConnectors && window.EVAConnectors.getGoogleToken && window.EVAConnectors.getGoogleToken();
+      if (!tok || !tok.accessToken) throw new Error('Connectez Google Agenda pour supprimer cet événement');
+      var r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(String(id).slice(5)), {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + tok.accessToken }
+      });
+      if (!r.ok && r.status !== 204) throw new Error('HTTP ' + r.status);
+    } else {
+      await db.collection('users').doc(S.user.uid).collection('events').doc(id).delete();
+    }
     toast('Événement supprimé','success');
     loadEvents();
-  } catch(e) { toast('Erreur','error'); }
+  } catch(e) { toast(e && e.message ? e.message : 'Erreur','error'); }
 }
 window.deleteEvent = deleteEvent;
 

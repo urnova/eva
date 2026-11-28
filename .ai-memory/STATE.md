@@ -1,28 +1,28 @@
 ﻿# STATE — E.V.A Multiplateforme
 
-- **Phase actuelle** : **D2 implémenté et en cours de publication** (`eva-pc` v5.6.36 en construction sur GitHub Releases + miroir complet `EVA_V4_fixed_v4/` prêt pour `origin/main` / Vercel).
+- **Phase actuelle** : **V4.1 / D2.1 publiée** (`eva-pc` **v5.6.37** compilée et publiée sur GitHub Releases + miroir complet `EVA_V4_fixed_v4/` prêt pour `origin/main` / Vercel).
 - **Sauvegarde pré-D2** :
   - Dossier local complet : `F:\code\eva\backup-pre-d2` (250 fichiers).
   - Tag Git distant : `backup-pre-d2` sur `e8b0629`.
-- **Correctifs pré-D2 + Refonte D2 (PC + Web + Mobile)** :
-  - **Modèles locaux E.V.A & Notification MAJ** (`e8b0629`) : routage natif Electron `llmChat`/`llmStart`/`llmDownload` pour `EvaProvider`/`QwenProvider`, progression non bloquante en pilule `#evaLocalModelPill`, `preloadLocalModel()` au démarrage, `EVA-Codeur`, refonte complète `#evaUpdateBanner` et `#update-modal` (`splash.html`).
-  - **Identité D2, Polices auto-hébergées & Suppression 3D** :
-    - Polices `Inter` + `Orbitron` (`.woff2` locaux dans `/assets/fonts/` + `/assets/styles/fonts.css`), suppression totale de `Space Mono` et Google Fonts externes ;
-    - Garde `_canUsePushSW()` dans `modules.js` supprimant l'erreur console `firebase-messaging-sw.js` MIME en Electron ;
-    - Suppression totale de `#evaPanel` / `EvaCharacter` / `eva-neural.js` (PC + Web) ;
-    - Palette unifiée `#0d0d14 / #13131f / #1a1a2e` + accent `#00d4ff -> #8b5cf6`, splash fluide à fermeture unique, salutation dynamique `#welcomeGreeting` + orbe animé, indicateur de réflexion à 3 points `.typing-dots-d2` ;
-    - Barre d'entrée arrondie `.d2-input-pill` intégrant trombone, ton, Recherche approfondie (`#deepSearchBtn`), Live (`#liveModeBtn`), sélecteur de modèle, micro Antigravity (orbe rouge + 4 barres animées), aperçus en chips `.attach-chip`, avatar utilisateur réel Google/Firebase + initiale réelle, badges agents (`CloudWorks`, `Agenda`, `Gmail`, `Recherche approfondie`, `Studio Média`), et 3 suggestions Perplexity cliquables ;
-    - Sidebar modernisée : bouton compact `+`, icône `SlidersHorizontal`, pill `PC DESKTOP` repositionnée dans `.sb-header` (aucun chevauchement), séparation `Chats` vs `🎙️ Vocal` (`isVoiceSession`), responsive mobile `100dvh` / `safe-area-inset-bottom` / onglets Paramètres scrollables.
-  - **Providers, Quotas, Délai & Médias** :
-    - `GeminiProvider` (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`), barres visuelles `EVAQuotas`, délai anti-rate-limit configurable (`1500 ms` activé par défaut), cascade fallback strictement opt-in (`autoFallback: false` par défaut), et génération média (`EVAMedia` Image/Audio) désactivée par défaut jusqu'à activation dans Paramètres → IA.
-  - **Connecteurs Dual MCP + Codemod, Google Workspace & Mode Live** :
-    - `js/features/connectors.js` : source unique par service (`Natif` vs `Codemod` vs `MCP` exclusifs sur Agenda & Gmail), onboarding Google Workspace OAuth 1 clic (avec *Plus tard*), cartes de validation humaine obligatoires avant création/modification/suppression Agenda et avant envoi/suppression Gmail, connecteurs Phase 2 GitHub & Notion, prompt dynamique ;
-    - `js/voice/live-mode.js` : interface Live mains libres avec sessions marquées `isVoiceSession: true` sans altérer les moteurs TTS existants.
-  - **Documents, Viewers & Sessions** :
-    - PDF multi-thèmes A4 portrait/paysage avec pagination et réinjection photo utilisateur, PPTX multi-thèmes avec lecteur slide-par-slide (`◀ Précédent | Diapo X/N | Suivant ▶`), tableur Excel/CSV, éditeur code source VS Code numéroté (et aperçu HTML), Bloc-notes TXT, et persistance Firebase (`docArtifact` + `attachments`) reconstituée au rechargement ;
-    - Suppression des 4 blocs `loadSessions` dupliqués dans `settings-panel.js`, empreinte appareil `UUID`/`MAC`/`WEB` stable, distinction `app` vs `dev` vs `web`, révocation bidirectionnelle temps réel Compte ↔ CloudWorks, correction boucle capture/sysinfo sur Web (`cw-modal.js`), et conscience plateforme dans `getDynamicSysPrompt()`.
+- **Correctifs & Évolutions V4.1 (PC + Web + Mobile)** :
+  - **Modèles locaux hors-ligne & Deep Search** :
+    - `_formatNativeMessages` borné à `46000` caractères (sous la limite IPC 64 KB de `main.ts`) ;
+    - Timeout IA porté à `120000 ms` pour les providers locaux (`eva`, `qwen`, `lmstudio`, `ollama`) vs `40000 ms` cloud ;
+    - `chat-handler.js` et `messages.js` n'affichent plus jamais `"Erreur réseau. Vérifiez votre connexion."` ni `#networkErrorBanner` quand le provider actif est local ou hors-ligne ;
+    - `web-search.js` : `deepSearch` corrigé (`_fetchWithTimeout` + Wikipedia FR/EN CORS-safe `w/api.php` + court-circuit propre hors-ligne).
+  - **Design Showcase + Prototype V4 & Responsive Mobile** :
+    - Palette alignée à la page vitrine : `#111113` / `#131316` / `#18181b` / `#222228`, `--cyan: #00d4ff`, `--purple: #b794f6` ;
+    - Suppression de `#providerChip`, `#localModeBanner`, tutoriels PC/Mobile cassés (`#tutorialOverlay`, `tutorial.js`, section `tutorial`) et de l'ancien step 8 `L'ORBE D'E.V.A` d'`onboarding.html` (remplacé par Google Workspace 1 clic + aide écran non vérifié) ;
+    - Sidebar V4 : bouton pleine largeur `+ Nouvelle conversation`, onglets segmentés `Chats | Vocal`, badge rôle tronqué (`min-width: 0`, `text-overflow: ellipsis`) ne chevauchant plus l'engrenage Paramètres ;
+    - Thread chat centré (`max-width: 780px`), bulle utilisateur cyan-indigo, suppression du spam de 3 chips et des badges heuristiques sur les réponses ordinaires ;
+    - Responsive mobile `< 820px` / `< 540px` (`100dvh`, `overflow-x: hidden`, modales plein écran, barre d'outils compacte sans coupure).
+  - **Mails (`#viewMail`), Agenda Google Sync & CloudWorks V4** :
+    - Vue dédiée **`#viewMail` (`EVAMail`)** avec boîte de réception Gmail, filtres Récents / Non lus / Envoyés, recherche, lecteur, **Résumer / Répondre avec EVA**, corbeille et composition ;
+    - **Agenda (`#viewCalendar`)** conservant l'agenda natif EVA + synchronisation bidirectionnelle Google Agenda (`#calGoogleSyncBtn` + création/suppression synced) ;
+    - **CloudWorks** (`cloudworks.css`, `cloudworks.js`, `cw-modal.js`) refait en surface matte `#18181c` PC & Web ;
+    - **Connecteurs & Live Code** : catalogue élargi (Google Agenda/Gmail/Drive, GitHub, Notion, Slack, Discord, Linear/Trello, Spotify), serveurs **MCP JSON-RPC 2.0 personnalisés** (`tools/list` + `tools/call`), cartes explicatives Natif vs Codemod vs MCP, et **Live Code** (`▶ Exécuter Live` en iframe sandbox HTML/SVG/JS + `[ACTION:{"type":"live_code"}]`).
 - **Vérifications exécutées** :
-  - `verify_d2_all.js` : **167 fichiers** vérifiés (`125` JS, `28` HTML), UTF-8 strict, syntaxe JS/HTML, 0 erreur ;
+  - `verify_v41_all.js` : **167 fichiers** (`125` JS, `28` HTML), UTF-8 strict, syntaxe JS/HTML, tests VM Offline/DeepSearch/Connectors+MCP/LiveCode, 0 erreur ;
   - `npx tsc --noEmit` (PC) : exit `0` ;
-  - `py -m py_compile scripts/eva_whisper_service.py` : exit `0`.
-- **En attente** : Fin de `node deploy.js` (`v5.6.36` en cours) → `git commit` + `git push origin main`.
+  - `py -m py_compile scripts\eva_whisper_service.py` : exit `0` ;
+  - `node deploy.js` (`eva-pc` v5.6.37) : compilé + NSIS `E.V.A-Setup-5.6.37.exe` publié sur GitHub Releases.
