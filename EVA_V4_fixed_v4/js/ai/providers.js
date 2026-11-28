@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    EVA V4 - PROVIDERS.JS
    Gestion des providers IA (Qwen, Puter, OpenAI, Claude, etc.)
    Chargé comme script classique (pas ES6 module)
@@ -22,77 +22,142 @@ function _stripLeakedPrefix(text) {
   return out.trim() || text;
 }
 
-// ═══ QWEN 3 (WebLLM - Local) ═══
+// ═══ SHARED LOCAL ENGINE CACHE & BACKGROUND PRELOADER (PC NATIVE + WEB WEBGPU) ═══
+const _webLlmEngines = new Map();
+const _webLlmPending = new Map();
+
+async function _importWebLLM() {
+  const urls = [
+    'https://esm.run/@mlc-ai/web-llm',
+    'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm/+esm'
+  ];
+  let lastErr = null;
+  for (const u of urls) {
+    try { return await import(u); } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('Impossible de charger le moteur WebLLM.');
+}
+
+async function _ensureWebGPU() {
+  if (typeof navigator === 'undefined' || !navigator.gpu) {
+    throw new Error('WebGPU non supporté par ce navigateur (utilisez Chrome/Edge récent ou l\'application EVA PC).');
+  }
+  const adapter = await navigator.gpu.requestAdapter().catch(() => null);
+  if (!adapter) {
+    throw new Error('Aucun adaptateur GPU WebGPU détecté sur cet appareil.');
+  }
+  return adapter;
+}
+
+async function _getOrCreateWebLLMEngine(modelId, label, opts = {}) {
+  if (_webLlmEngines.has(modelId)) return _webLlmEngines.get(modelId);
+  if (_webLlmPending.has(modelId)) return _webLlmPending.get(modelId);
+
+  const task = (async () => {
+    try {
+      await _ensureWebGPU();
+      if (!opts.silent && window.showQwenDownloadModal) {
+        window.showQwenDownloadModal(label || modelId);
+      }
+      const { CreateMLCEngine } = await _importWebLLM();
+      const engine = await CreateMLCEngine(modelId, {
+        initProgressCallback: (progress) => {
+          if (window.updateQwenDownloadProgress) window.updateQwenDownloadProgress(progress, label || modelId);
+        }
+      });
+      _webLlmEngines.set(modelId, engine);
+      if (window.hideQwenDownloadModal) window.hideQwenDownloadModal(label || modelId);
+      return engine;
+    } catch (error) {
+      if (window.hideQwenDownloadModal) window.hideQwenDownloadModal();
+      throw error;
+    } finally {
+      _webLlmPending.delete(modelId);
+    }
+  })();
+
+  _webLlmPending.set(modelId, task);
+  return task;
+}
+
+function _formatNativeMessages(messages, systemPrompt) {
+  const sys = String(systemPrompt || 'Tu es EVA, assistante IA bienveillante créée par Astral Technologie.');
+  const trimmed = (Array.isArray(messages) ? messages : [])
+    .filter(m => m && (m.role === 'user' || m.role === 'assistant'))
+    .slice(-10)
+    .map(m => ({
+      role: m.role,
+      content: typeof m.content === 'string' ? m.content.slice(0, 8000) : String(m.content || '')
+    }));
+  if (!trimmed.length || trimmed[trimmed.length - 1].role !== 'user') {
+    trimmed.push({ role: 'user', content: 'Bonjour' });
+  }
+  return [{ role: 'system', content: sys.slice(0, 12000) }, ...trimmed];
+}
+
+// ═══ QWEN 3 (PC Natif GPU + WebLLM WebGPU) ═══
 class QwenProvider {
   constructor(config) {
-    this.config = config;
+    this.config = config || {};
     this.engine = null;
     this.ready = false;
     this._initializing = false;
+    this._useNativePC = false;
   }
 
-  // Lazy init — ne télécharge pas au démarrage
   async initialize() {
     return { success: true };
   }
 
-  // Téléchargement réel avec modal de progression
-  async _doDownload() {
-    if (this._initializing) return;
-    this._initializing = true;
-    try {
-      const { CreateMLCEngine } = await import('https://esm.run/@mlc-ai/web-llm');
-      const selectedModel = this.config.qwenModel || 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
-
-      if (window.showQwenDownloadModal) window.showQwenDownloadModal(selectedModel);
-
-      this.engine = await CreateMLCEngine(selectedModel, {
-        initProgressCallback: (progress) => {
-          console.log('Qwen progress:', progress);
-          if (window.updateQwenDownloadProgress) window.updateQwenDownloadProgress(progress);
+  async _ensureReady(silent = false) {
+    if (this.ready && (this._useNativePC || this.engine)) return;
+    if (window.eva?.system?.llmChat && window.eva?.system?.llmCheck) {
+      try {
+        const chk = await window.eva.system.llmCheck();
+        if (chk && chk.exists) {
+          this._useNativePC = true;
+          this.ready = true;
+          window.eva.system.llmStart?.().catch(() => {});
+          return;
         }
-      });
-
-      this.ready = true;
-      if (window.hideQwenDownloadModal) window.hideQwenDownloadModal();
-    } catch (error) {
-      this._initializing = false;
-      if (window.hideQwenDownloadModal) window.hideQwenDownloadModal();
-      console.error('Qwen init error:', error);
-      throw error;
+      } catch (_) {}
     }
-    this._initializing = false;
+    const selectedModel = this.config.qwenModel || 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
+    this.engine = await _getOrCreateWebLLMEngine(selectedModel, selectedModel, { silent });
+    this.ready = true;
+  }
+
+  async _doDownload() {
+    return this._ensureReady(false);
   }
 
   async sendMessage(messages, systemPrompt) {
     if (systemPrompt === undefined) {
       systemPrompt = window.EVA_SYSTEM_PROMPT ||
-        'Tu es Eva, une assistante IA bienveillante créée par Astral Technologie. ' +
-        'Tu es un assistant personnel conversationnel. ' +
-        'IMPORTANT : Tu es l\'IA, PAS l\'utilisateur. Réponds toujours en tant qu\'Eva. ' +
-        '⚠️ Ce modèle Qwen est un assistant uniquement — il ne génère pas de code. ' +
-        'Réponds en français de manière naturelle et bienveillante.';
+        'Tu es Eva, une assistante IA bienveillante créée par Astral Technologie. Réponds en français de manière naturelle et bienveillante.';
     }
-    if (!this.ready) {
-      await this._doDownload();
-    }
-
     try {
-      const formattedMessages = [
-        { role: 'system', content: systemPrompt },
-        ...messages
-      ];
+      await this._ensureReady(false);
+      if (this._useNativePC && window.eva?.system?.llmChat) {
+        const nativeMsgs = _formatNativeMessages(messages, systemPrompt);
+        const r = await window.eva.system.llmChat(nativeMsgs, {
+          sessionId: 'local-qwen-chat',
+          maxTokens: 2048,
+          temperature: 0.7,
+          stopTriggers: [],
+          timeoutMs: 90000
+        });
+        const txt = r?.choices?.[0]?.message?.content || '';
+        return { success: true, content: _stripLeakedPrefix(txt) };
+      }
 
+      const formattedMessages = [{ role: 'system', content: systemPrompt }, ...messages];
       const response = await this.engine.chat.completions.create({
         messages: formattedMessages,
         temperature: 0.7,
-        max_tokens: 8000
+        max_tokens: 2048
       });
-
-      return {
-        success: true,
-        content: response.choices[0].message.content
-      };
+      return { success: true, content: _stripLeakedPrefix(response.choices[0].message.content) };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -163,13 +228,14 @@ class QwenProvider {
 
       try {
         const model = this.config.puterModel || 'gpt-4o-mini';
+        const maxTokens = Number(this.config.maxTokens) || 2048;
 
         const formattedMessages = [
           { role: 'system', content: systemPrompt },
           ...messages
         ];
 
-        const response = await puter.ai.chat(formattedMessages, { model, max_tokens: 8000 });
+        const response = await puter.ai.chat(formattedMessages, { model, max_tokens: maxTokens });
 
         // Gestion des différents formats de réponse Puter
         let content = '';
@@ -198,13 +264,7 @@ class QwenProvider {
           };
         }
 
-        // Quota Puter dépassé
-        if (msgLow.includes('quota') || msgLow.includes('limit') || msgLow.includes('rate')) {
-          return {
-            success: false,
-            error: 'Quota Puter atteint pour aujourd\'hui. Revenez demain ou changez de provider dans les Paramètres.'
-          };
-        }
+        
 
         // Non authentifié ou session expirée
         if (msgLow.includes('auth') || msgLow.includes('login') || msgLow.includes('sign') ||
@@ -502,55 +562,83 @@ class OllamaProvider {
 
 class EvaProvider {
   constructor(config) {
-    this.config = config;
+    this.config = config || {};
     this.engine = null;
     this.ready = false;
     this._initializing = false;
+    this._useNativePC = false;
   }
 
   async initialize() {
     return { success: true };
   }
 
-  // Modèles EVA — utilise le registre WebLLM intégré (téléchargement + cache navigateur automatique)
-  // Les IDs correspondent aux modèles de base fine-tunés par Astral Technologie
   _getModelConfig(modelKey) {
     const models = {
       'EVA-Rapide': {
         id:    'Llama-3.2-1B-Instruct-q4f16_1-MLC',
-        label: 'EVA Rapide (1B)',
+        label: 'EVA Rapide (1B · WebGPU)',
+      },
+      'EVA-Codeur': {
+        id:    'Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC',
+        label: 'EVA Codeur (1.5B · Code)',
       },
       'EVA-Expert': {
         id:    'Llama-3.2-3B-Instruct-q4f16_1-MLC',
-        label: 'EVA Expert (3B)',
+        label: 'EVA Expert (3B · Recommandé)',
       },
     };
     return models[modelKey] || models['EVA-Expert'];
   }
 
-  async _doDownload() {
-    if (this._initializing) return;
-    this._initializing = true;
+  async _ensureReady(silent = false) {
+    if (this.ready && (this._useNativePC || this.engine)) return;
+    // Sur EVA Desktop PC : privilégier le moteur natif CUDA/Vulkan (node-llama-cpp) ultra-rapide !
+    if (window.eva?.system?.llmChat && window.eva?.system?.llmCheck) {
+      try {
+        const chk = await window.eva.system.llmCheck();
+        if (chk && chk.exists) {
+          this._useNativePC = true;
+          this.ready = true;
+          window.eva.system.llmStart?.().catch(() => {});
+          return;
+        }
+        // Si modèle GGUF non téléchargé et sélection manuelle : proposer téléchargement natif en arrière-plan
+        if (!silent && window.eva.system.llmDownload) {
+          if (window.showQwenDownloadModal) window.showQwenDownloadModal('EVA Officiel 3B (GPU PC)');
+          const offProg = window.eva.onLLMDownloadProgress?.(d => {
+            if (d && typeof d.progress === 'number' && window.updateQwenDownloadProgress) {
+              window.updateQwenDownloadProgress({
+                progress: d.progress / 100,
+                text: `Téléchargement EVA 3B (${Math.round((d.downloadedBytes||0)/1048576)} / ${Math.round((d.totalBytes||2097152000)/1048576)} Mo)…`
+              }, 'EVA Officiel 3B');
+            }
+          });
+          try {
+            const dl = await window.eva.system.llmDownload();
+            if (dl && dl.success) {
+              await window.eva.system.llmStart?.().catch(() => {});
+              this._useNativePC = true;
+              this.ready = true;
+              if (window.hideQwenDownloadModal) window.hideQwenDownloadModal('EVA Officiel 3B');
+              return;
+            }
+          } finally {
+            if (typeof offProg === 'function') offProg();
+          }
+        }
+      } catch (nativeErr) {
+        console.warn('[EvaProvider] Moteur natif indisponible, repli WebGPU:', nativeErr?.message || nativeErr);
+      }
+    }
     const selectedModelKey = this.config.evaModel || 'EVA-Expert';
     const modelInfo = this._getModelConfig(selectedModelKey);
-    try {
-      const { CreateMLCEngine } = await import('https://esm.run/@mlc-ai/web-llm');
-      if (window.showQwenDownloadModal) window.showQwenDownloadModal(modelInfo.label);
-      // Utilise le registre intégré WebLLM — pas de appConfig personnalisé nécessaire
-      this.engine = await CreateMLCEngine(modelInfo.id, {
-        initProgressCallback: (progress) => {
-          if (window.updateQwenDownloadProgress) window.updateQwenDownloadProgress(progress);
-        }
-      });
-      this.ready = true;
-      if (window.hideQwenDownloadModal) window.hideQwenDownloadModal();
-    } catch (error) {
-      this._initializing = false;
-      if (window.hideQwenDownloadModal) window.hideQwenDownloadModal();
-      console.error('EVA model init error:', error);
-      throw error;
-    }
-    this._initializing = false;
+    this.engine = await _getOrCreateWebLLMEngine(modelInfo.id, modelInfo.label, { silent });
+    this.ready = true;
+  }
+
+  async _doDownload() {
+    return this._ensureReady(false);
   }
 
   async sendMessage(messages, systemPrompt) {
@@ -561,24 +649,48 @@ class EvaProvider {
         'IMPORTANT : Tu es EVA, PAS l\'utilisateur. Réponds toujours en tant qu\'EVA. ' +
         'Réponds en français de manière naturelle et structurée.';
     }
-    if (!this.ready) {
-      await this._doDownload();
-    }
     try {
-      const formattedMessages = [
-        { role: 'system', content: systemPrompt },
-        ...messages
-      ];
+      await this._ensureReady(false);
+      if (this._useNativePC && window.eva?.system?.llmChat) {
+        const nativeMsgs = _formatNativeMessages(messages, systemPrompt);
+        const r = await window.eva.system.llmChat(nativeMsgs, {
+          sessionId: 'local-eva-chat',
+          maxTokens: 2048,
+          temperature: 0.7,
+          stopTriggers: [],
+          timeoutMs: 90000
+        });
+        return { success: true, content: _stripLeakedPrefix(r?.choices?.[0]?.message?.content || '') };
+      }
+      const formattedMessages = [{ role: 'system', content: systemPrompt }, ...messages];
       const response = await this.engine.chat.completions.create({
         messages: formattedMessages,
         temperature: 0.7,
-        max_tokens: 8000
+        max_tokens: 2048
       });
-      // Strip "cyan actif" et autres préfixes parasites typiques des petits LLM
       return { success: true, content: _stripLeakedPrefix(response.choices[0].message.content) };
     } catch (error) {
       return { success: false, error: error.message };
     }
+  }
+}
+
+async function preloadLocalModel(providerName, config = {}) {
+  try {
+    if (window.eva?.system?.llmCheck) {
+      const chk = await window.eva.system.llmCheck();
+      if (chk && chk.exists) {
+        await window.eva.system.llmStart?.();
+        return { success: true, backend: 'native-pc' };
+      }
+      return { success: false, reason: 'native-not-downloaded' };
+    }
+    if (!['eva', 'qwen'].includes(providerName)) return { success: false, reason: 'not-local-provider' };
+    const inst = providerName === 'eva' ? new EvaProvider(config) : new QwenProvider(config);
+    await inst._ensureReady(true);
+    return { success: true, backend: 'webgpu' };
+  } catch (e) {
+    return { success: false, error: e?.message || String(e) };
   }
 }
 
@@ -672,7 +784,7 @@ class PollinationsProvider {
 
     /* ── Fallback Puter si Pollinations entièrement indisponible ── */
     if (!response) {
-      if (window.puter) { // Fallback Puter actif même sans compte lié
+      if (window.puter) { // Fallback Puter actif mme sans compte li
         console.warn('[EVA Pollinations] Tous les endpoints en échec — fallback Puter AI...');
         if (window.toast) window.toast('Pollinations indisponible — bascule sur Puter AI', 'warning');
         try {
@@ -761,7 +873,8 @@ window.EVAProviders = {
   ClaudeProvider,
   LMStudioProvider,
   OllamaProvider,
-  createProvider
+  createProvider,
+  preloadLocalModel
 };
 
 })();

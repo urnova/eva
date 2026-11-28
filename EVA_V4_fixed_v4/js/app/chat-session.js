@@ -1,4 +1,4 @@
-﻿/* ═══ CHAT SESSION ═══ */
+/* ═══ CHAT SESSION ═══ */
 function initChatSession() {
   var prov = S.config.aiProvider || 'puter';
   if (window.EVAChatHandler) {
@@ -6,6 +6,11 @@ function initChatSession() {
   }
   updateProviderLabel(prov);
   updateModelSelectUI();
+  if (window.EVAProviders && typeof window.EVAProviders.preloadLocalModel === 'function') {
+    setTimeout(function() {
+      window.EVAProviders.preloadLocalModel(prov, S.config).catch(function() {});
+    }, 1200);
+  }
 }
 
 /* ═══ VISION CAPABILITY ═══
@@ -87,7 +92,8 @@ function updateProviderLabel(p) {
 ═══════════════════════════════════════════════════ */
 var CONV_MODELS = {
   eva: [
-    { id:'EVA-Expert', label:'EVA Expert — 3B · Meilleure qualité' },
+    { id:'EVA-Expert', label:'EVA Expert — 3B · Local Recommandé' },
+    { id:'EVA-Codeur', label:'EVA Codeur — 1.5B · Code & Scripts' },
     { id:'EVA-Rapide', label:'EVA Rapide — 1B · Ultra-rapide' }
   ],
   puter: [

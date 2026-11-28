@@ -73,30 +73,30 @@
   <div class="bg-orb bg-orb-1"></div>
   <div class="bg-orb bg-orb-2"></div>
   
-  <!-- Modal de mise à jour -->
-  <div id="update-modal" style="display:none; position:fixed; inset:0; background:rgba(17,17,19,0.85); backdrop-filter:blur(10px); z-index:999999; flex-direction:column; justify-content:center; align-items:center; -webkit-app-region:no-drag; pointer-events:auto;">
-    <div style="background:rgba(25,25,28,0.95); border:1px solid rgba(0,212,255,0.3); border-radius:12px; padding:30px; width:400px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.5);">
-      <h2 style="color:var(--cyan); margin-bottom:15px; font-family:'Orbitron', monospace;">Mise à jour requise</h2>
-      <p style="color:var(--text-muted); font-size:0.9em; margin-bottom:10px; line-height:1.5;">Une nouvelle version d'E.V.A est disponible. Vous devez l'installer pour continuer à utiliser l'application.</p>
-      <div id="update-info" style="color:#aaa; font-size:0.8em; margin-bottom:20px; background:rgba(0,0,0,0.3); padding:10px; border-radius:6px; text-align:left; max-height:150px; overflow-y:auto; display:none; pointer-events:auto; -webkit-app-region:no-drag;"></div>
-      
-      <div id="update-progress" style="display:none; margin-bottom:20px;">
-        <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden; margin-bottom:8px;">
-          <div id="update-bar" style="width:0%; height:100%; background:var(--cyan); transition:width 0.2s;"></div>
-        </div>
-        <div id="update-percent" style="font-size:0.8em; color:var(--cyan);">0%</div>
+  <!-- Modal de mise à jour (Redesigned D2) -->
+  <div id="update-modal" style="display:none; position:fixed; inset:0; background:rgba(10,11,18,0.88); backdrop-filter:blur(16px); z-index:999999; flex-direction:column; justify-content:center; align-items:center; -webkit-app-region:no-drag; pointer-events:auto; padding:24px; font-family:'Inter','Segoe UI',sans-serif;">
+    <div style="background:linear-gradient(155deg,rgba(19,21,36,0.98),rgba(13,13,20,0.98)); border:1px solid rgba(0,212,255,0.4); border-radius:20px; padding:28px; width:410px; max-width:92vw; text-align:center; box-shadow:0 24px 64px rgba(0,0,0,0.65),0 0 36px rgba(0,212,255,0.14);">
+      <div style="width:44px;height:44px;margin:0 auto 14px;border-radius:12px;background:linear-gradient(135deg,rgba(0,212,255,0.18),rgba(139,92,246,0.24));border:1px solid rgba(0,212,255,0.45);display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#00d4ff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
       </div>
-      
-      <div id="update-countdown" style="display:none; color:var(--text); font-size:1.1em; margin-bottom:20px; font-weight:bold;">
+      <h2 style="margin:0 0 8px 0; font-family:'Orbitron','Inter',sans-serif; font-size:1.15em; letter-spacing:1.2px; background:linear-gradient(90deg,#00d4ff,#a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">MISE À JOUR DISPONIBLE</h2>
+      <p style="color:#94a3b8; font-size:0.88em; margin:0 0 14px 0; line-height:1.5;">Une nouvelle version d'E.V.A Desktop est prête. Téléchargez-la pour continuer.</p>
+      <div id="update-info" style="color:#cbd5e1; font-size:0.8em; margin-bottom:18px; background:rgba(0,0,0,0.34); border:1px solid rgba(255,255,255,0.08); padding:10px 12px; border-radius:10px; text-align:left; max-height:140px; overflow-y:auto; display:none; pointer-events:auto; -webkit-app-region:no-drag;"></div>
+      <div id="update-progress" style="display:none; margin-bottom:18px;">
+        <div style="width:100%; height:7px; background:rgba(255,255,255,0.08); border-radius:99px; overflow:hidden; margin-bottom:8px;">
+          <div id="update-bar" style="width:0%; height:100%; background:linear-gradient(90deg,#00d4ff,#8b5cf6); transition:width 0.2s;"></div>
+        </div>
+        <div id="update-percent" style="font-size:0.82em; color:#00d4ff; font-weight:700;">0%</div>
+      </div>
+      <div id="update-countdown" style="display:none; color:#eef2ff; font-size:1.05em; margin-bottom:18px; font-weight:700;">
         Fermeture dans <span id="countdown-val">3</span>...
       </div>
-      
-      <div id="update-actions" style="display:flex; justify-content:center; gap:15px; flex-direction:column; align-items:center;">
-        <div style="display:flex; gap:15px;">
-          <button id="btn-quit" style="padding:10px 20px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:var(--text); border-radius:6px; cursor:pointer; font-family:'Space Mono', monospace; font-size:0.85em; transition:all 0.2s;">Quitter</button>
-          <button id="btn-download" style="padding:10px 24px; border:none; background:var(--cyan); color:#111; border-radius:6px; cursor:pointer; font-weight:bold; font-family:'Space Mono', monospace; font-size:0.85em; transition:all 0.2s; box-shadow:0 0 15px var(--cyan-glow);">Télécharger</button>
+      <div id="update-actions" style="display:flex; justify-content:center; gap:12px; flex-direction:column; align-items:center;">
+        <div style="display:flex; gap:10px; width:100%;">
+          <button id="btn-quit" style="padding:10px 16px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.04); color:#cbd5e1; border-radius:10px; cursor:pointer; font-size:0.85em; font-weight:600; transition:all 0.2s;">Quitter</button>
+          <button id="btn-download" style="flex:1; padding:10px 20px; border:none; background:linear-gradient(135deg,#00d4ff,#8b5cf6); color:#fff; border-radius:10px; cursor:pointer; font-weight:700; font-size:0.86em; transition:all 0.2s; box-shadow:0 6px 20px rgba(0,212,255,0.28);">Télécharger &amp; installer</button>
         </div>
-        <a id="link-manual" href="#" style="color:var(--text-muted); font-size:0.75em; text-decoration:underline; cursor:pointer; margin-top:4px;">Télécharger manuellement sur GitHub</a>
+        <a id="link-manual" href="#" style="color:#64748b; font-size:0.75em; text-decoration:underline; cursor:pointer; margin-top:4px;">Télécharger manuellement sur GitHub</a>
       </div>
     </div>
   </div>

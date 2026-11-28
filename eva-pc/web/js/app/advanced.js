@@ -1,35 +1,52 @@
-/* ═══ QWEN DOWNLOAD MODAL CONTROLS ═══ */
+/* ═══ LOCAL MODEL BACKGROUND PROGRESS PILL (NON-BLOCKING) ═══ */
+function _ensureLocalPill() {
+  var pill = document.getElementById('evaLocalModelPill');
+  if (pill) return pill;
+  pill = document.createElement('div');
+  pill.id = 'evaLocalModelPill';
+  pill.style.cssText = 'position:fixed;right:20px;bottom:84px;z-index:9990;width:320px;max-width:calc(100vw - 32px);' +
+    'background:rgba(13,13,20,0.94);backdrop-filter:blur(16px);border:1px solid rgba(0,212,255,0.35);' +
+    'border-radius:14px;padding:12px 14px;box-shadow:0 12px 32px rgba(0,0,0,0.55);color:#e8eaf6;' +
+    'font-family:"Inter","Segoe UI",sans-serif;transition:opacity 0.25s ease,transform 0.25s ease;';
+  pill.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<span style="width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#8b5cf6);box-shadow:0 0 8px #00d4ff;"></span>' +
+        '<span id="evaLocalPillTitle" style="font-size:11.5px;font-weight:700;letter-spacing:0.5px;color:#00d4ff;">MODÈLE LOCAL E.V.A</span>' +
+      '</div>' +
+      '<span id="evaLocalPillPct" style="font-size:11px;font-weight:700;color:#a78bfa;">0%</span>' +
+    '</div>' +
+    '<div id="evaLocalPillSub" style="font-size:12px;color:#94a3b8;line-height:1.35;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Préparation en arrière-plan…</div>' +
+    '<div style="height:5px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden;">' +
+      '<div id="evaLocalPillBar" style="height:100%;width:0%;background:linear-gradient(90deg,#00d4ff,#8b5cf6);transition:width 0.2s ease;"></div>' +
+    '</div>';
+  document.body.appendChild(pill);
+  return pill;
+}
+
 window.showQwenDownloadModal = function(modelName) {
-  var overlay = document.getElementById('qwenDlOverlay');
-  var title = document.getElementById('qwenDlTitle');
-  var sub = document.getElementById('qwenDlSub');
-  var bar = document.getElementById('qwenDlBar');
-  var pct = document.getElementById('qwenDlPct');
-  var hint = document.getElementById('qwenDlHint');
-  if (!overlay) return;
-  var name = modelName || 'Modèle Local';
-  var isEva = /eva/i.test(name);
-  if (title) title.textContent = isEva ? 'CHARGEMENT DU MODÈLE EVA' : 'CHARGEMENT DU MODÈLE IA';
-  if (sub) {
-    var label = isEva ? 'Modèle Astral — ' + name : name;
-    sub.innerHTML = 'Téléchargement en cours...<br><strong style="color:var(--cyan)">' + label + '</strong><br><span style="color:var(--text-muted)">Veuillez patienter quelques minutes.</span>';
-  }
-  if (hint) {
-    hint.textContent = isEva
-      ? 'Les modèles EVA d\'Astral Technologie fonctionnent entièrement sur votre appareil — aucune donnée n\'est envoyée sur internet.'
-      : 'Le modèle fonctionne entièrement sur votre appareil — aucune donnée n\'est envoyée sur internet.';
-  }
-  if (bar) bar.style.width = '0%';
+  var oldOverlay = document.getElementById('qwenDlOverlay');
+  if (oldOverlay) oldOverlay.classList.remove('active');
+  var pill = _ensureLocalPill();
+  var title = document.getElementById('evaLocalPillTitle');
+  var sub = document.getElementById('evaLocalPillSub');
+  var bar = document.getElementById('evaLocalPillBar');
+  var pct = document.getElementById('evaLocalPillPct');
+  var name = modelName || 'EVA Local';
+  if (title) title.textContent = /eva/i.test(name) ? 'MODÈLE ASTRAL E.V.A' : 'MODÈLE LOCAL IA';
+  if (sub) sub.textContent = 'Chargement en arrière-plan : ' + name;
+  if (bar) bar.style.width = '4%';
   if (pct) pct.textContent = '0%';
-  overlay.dataset.isEva = isEva ? '1' : '0';
-  overlay.classList.add('active');
+  pill.style.display = 'block';
+  pill.style.opacity = '1';
 };
 
-window.updateQwenDownloadProgress = function(progressObj) {
-  var bar = document.getElementById('qwenDlBar');
-  var pct = document.getElementById('qwenDlPct');
-  var sub = document.getElementById('qwenDlSub');
-  if (!bar) return;
+window.updateQwenDownloadProgress = function(progressObj, modelName) {
+  var pill = document.getElementById('evaLocalModelPill') || _ensureLocalPill();
+  pill.style.display = 'block';
+  var bar = document.getElementById('evaLocalPillBar');
+  var pct = document.getElementById('evaLocalPillPct');
+  var sub = document.getElementById('evaLocalPillSub');
   var p = 0;
   if (progressObj && typeof progressObj.progress === 'number') {
     p = Math.round(progressObj.progress * 100);
@@ -38,27 +55,32 @@ window.updateQwenDownloadProgress = function(progressObj) {
     if (m) p = Math.round(parseFloat(m[1]));
   }
   p = Math.min(Math.max(p, 0), 100);
-  bar.style.width = p + '%';
+  if (bar) bar.style.width = Math.max(4, p) + '%';
   if (pct) pct.textContent = p + '%';
-  if (sub && p > 0) {
-    var phase = progressObj && progressObj.text ? progressObj.text : ('Téléchargement en cours... ' + p + '%');
-    sub.innerHTML = '<span style="color:var(--text-muted)">' + phase + '</span>';
+  if (sub && progressObj && progressObj.text) {
+    sub.textContent = String(progressObj.text).slice(0, 80);
+  } else if (sub && modelName && p > 0) {
+    sub.textContent = modelName + ' (' + p + '%)';
   }
 };
 
-window.hideQwenDownloadModal = function() {
-  var overlay = document.getElementById('qwenDlOverlay');
-  if (!overlay) return;
-  var bar = document.getElementById('qwenDlBar');
-  var pct = document.getElementById('qwenDlPct');
-  var title = document.getElementById('qwenDlTitle');
-  var sub = document.getElementById('qwenDlSub');
+window.hideQwenDownloadModal = function(modelName) {
+  var pill = document.getElementById('evaLocalModelPill');
+  var oldOverlay = document.getElementById('qwenDlOverlay');
+  if (oldOverlay) oldOverlay.classList.remove('active');
+  if (!pill) return;
+  var bar = document.getElementById('evaLocalPillBar');
+  var pct = document.getElementById('evaLocalPillPct');
+  var title = document.getElementById('evaLocalPillTitle');
+  var sub = document.getElementById('evaLocalPillSub');
   if (bar) bar.style.width = '100%';
-  if (pct) pct.textContent = '100%';
-  var isEva = overlay.dataset.isEva === '1';
-  if (title) title.textContent = '✓ MODÈLE PRÊT';
-  if (sub) sub.innerHTML = '<span style="color:#00c853">EVA est prête' + (isEva ? ' — modèle Astral chargé.' : '.') + '</span>';
-  setTimeout(function() { overlay.classList.remove('active'); }, 1200);
+  if (pct) pct.textContent = '✓';
+  if (title) title.textContent = 'MODÈLE LOCAL PRÊT';
+  if (sub) sub.textContent = (modelName || 'E.V.A Local') + ' actif en arrière-plan.';
+  setTimeout(function() {
+    pill.style.opacity = '0';
+    setTimeout(function() { pill.style.display = 'none'; }, 260);
+  }, 1800);
 };
 
 /* ═══ PIPER TTS — stubs de compatibilité (Piper non disponible dans Beta V4) ═══ */

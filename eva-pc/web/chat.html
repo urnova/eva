@@ -1289,24 +1289,30 @@
 <script src="/js/features/pc-agent.js"></script>
 <script src="/js/features/cw-chat.js"></script>
 
-<!-- IN-APP AUTO-UPDATER BANNER (EVA PC) -->
-<div id="evaUpdateBanner" style="display:none;position:fixed;right:20px;bottom:20px;z-index:999990;width:360px;max-width:calc(100vw - 40px);background:rgba(15,20,34,0.97);border:1px solid rgba(0,212,255,0.38);border-radius:14px;padding:14px 16px;box-shadow:0 12px 32px rgba(0,0,0,0.55);color:#eef2ff;font-family:'Segoe UI',sans-serif;">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">
-    <div style="font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:#00d4ff;" id="evaUpdTitle">Mise à jour disponible</div>
-    <button id="evaUpdClose" onclick="document.getElementById('evaUpdateBanner').style.display='none'" style="background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:15px;line-height:1;">✕</button>
-  </div>
-  <div id="evaUpdDesc" style="font-size:13px;color:#cbd5e1;line-height:1.4;margin-bottom:10px;">Une nouvelle version d'E.V.A Desktop est prête à être téléchargée.</div>
-  <div id="evaUpdProgWrap" style="display:none;margin-bottom:10px;">
-    <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px;">
-      <span>Téléchargement...</span><span id="evaUpdPct">0%</span>
+<!-- IN-APP AUTO-UPDATER BANNER (EVA PC — Redesigned D2) -->
+<div id="evaUpdateBanner" style="display:none;position:fixed;right:20px;bottom:20px;z-index:999990;width:368px;max-width:calc(100vw - 32px);background:linear-gradient(145deg,rgba(13,13,20,0.96),rgba(20,22,38,0.96));backdrop-filter:blur(20px);border:1px solid rgba(0,212,255,0.42);border-radius:16px;padding:16px 18px;box-shadow:0 18px 48px rgba(0,0,0,0.65),0 0 28px rgba(0,212,255,0.14);color:#eef2ff;font-family:'Inter','Segoe UI',sans-serif;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+    <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+      <span style="width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,rgba(0,212,255,0.2),rgba(139,92,246,0.22));border:1px solid rgba(0,212,255,0.45);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#00d4ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+      </span>
+      <div style="font-family:'Orbitron','Inter',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;background:linear-gradient(90deg,#00d4ff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="evaUpdTitle">Mise à jour disponible</div>
     </div>
-    <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
-      <div id="evaUpdBar" style="height:100%;width:0%;background:linear-gradient(90deg,#00d4ff,#38bdf8);transition:width 0.2s;"></div>
+    <button id="evaUpdClose" title="Plus tard" onclick="document.getElementById('evaUpdateBanner').style.display='none'" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:8px;width:26px;height:26px;color:#94a3b8;cursor:pointer;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+  <div id="evaUpdDesc" style="font-size:13px;color:#cbd5e1;line-height:1.48;margin-bottom:12px;">Une nouvelle version d'E.V.A Desktop est prête à être téléchargée.</div>
+  <div id="evaUpdProgWrap" style="display:none;margin-bottom:12px;background:rgba(0,0,0,0.28);padding:9px 11px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);">
+    <div style="display:flex;justify-content:space-between;font-size:11.5px;color:#94a3b8;margin-bottom:6px;">
+      <span>Téléchargement du correctif…</span><span id="evaUpdPct" style="color:#00d4ff;font-weight:700;">0%</span>
+    </div>
+    <div style="height:6px;background:rgba(255,255,255,0.09);border-radius:99px;overflow:hidden;">
+      <div id="evaUpdBar" style="height:100%;width:0%;background:linear-gradient(90deg,#00d4ff,#8b5cf6);transition:width 0.2s ease;"></div>
     </div>
   </div>
   <div style="display:flex;gap:8px;">
-    <button id="evaUpdDownloadBtn" style="flex:1;padding:8px 12px;border-radius:8px;border:none;background:#00d4ff;color:#050811;font-weight:700;font-size:12px;cursor:pointer;">Télécharger</button>
-    <button id="evaUpdInstallBtn" style="display:none;flex:1;padding:8px 12px;border-radius:8px;border:none;background:#10b981;color:#fff;font-weight:700;font-size:12px;cursor:pointer;">Redémarrer &amp; installer</button>
+    <button onclick="document.getElementById('evaUpdateBanner').style.display='none'" style="padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#cbd5e1;font-weight:600;font-size:12px;cursor:pointer;">Plus tard</button>
+    <button id="evaUpdDownloadBtn" style="flex:1;padding:9px 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#00d4ff,#8b5cf6);color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;box-shadow:0 4px 18px rgba(0,212,255,0.28);">Télécharger la mise à jour</button>
+    <button id="evaUpdInstallBtn" style="display:none;flex:1;padding:9px 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#10b981,#06b6d4);color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;box-shadow:0 4px 18px rgba(16,185,129,0.28);">Redémarrer &amp; installer</button>
   </div>
 </div>
 <script>
